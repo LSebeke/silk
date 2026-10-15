@@ -16,11 +16,13 @@
 
 **Game System**: The rules system a Foundry world runs (v1: DSA5 / Das Schwarze Auge 5). Determines the shape of Actors and Items.
 
-**Campaign**: A long-running game with one group, made up of a sequence of Adventures.
+**Campaign**: A long-running game with one group, made up of a sequence of Adventures played within a Canon.
 
-**Canon**: The authoritative body of Story Elements and Connections for one Campaign, independent of any Foundry world. A Canon can be branched to seed a new Campaign.
+**Canon**: The authoritative body of Story Elements and Connections, independent of any World. Several Campaigns can be played within the same Canon. Usually changes only by merging an Adventure back into it.
 
 **Adventure**: A branch of the Canon that a group plays through. Play changes the Adventure's World State; when the Adventure ends, those changes are merged back into the Canon (git-style).
+
+**World**: A FoundryVTT world. A World houses Adventures and has at most one active Adventure at a time; Adventures that run in parallel need separate Worlds.
 
 **World Canvas**: The canvas belonging to one Foundry world, where the GM lays out and works on that world's Story.
 
@@ -30,8 +32,10 @@
 
 **Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
 
-**Materialize**: Create the Foundry document that represents a Story Element. Whether this happens immediately or on demand is a GM setting.
+**Materialize**: Pull a Story Element into the World by creating the Foundry document that represents it. Story Elements that are not Materialized exist only in the Canon and its branches. Whether Materializing happens immediately or on demand is a GM setting.
 
 **Focus View**: A canvas mode that shows only the Story Elements within a few Connections of a focus (the active Foundry Scene and the actors in it, or an element the GM picks), and hides or dims the rest.
 
 **Scene Preset**: One of a fixed set of templates (Travel, Battle, Narrative, Overview) that sets how a Story Element's Foundry Scene is set up for play.
+
+**Canvas Filter**: A view setting that narrows which Story Elements the canvas shows (e.g. hide non-Materialized, by Tag, within N Connections of a focus). Filters never change the Story itself.
