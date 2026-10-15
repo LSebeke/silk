@@ -28,8 +28,10 @@
 
 **Reveal**: The GM sharing a Story Element, or a single piece of information attached to it, with the players.
 
-**Info Block**: A named piece of information inside a Story Element's body. Each Info Block can be Revealed on its own.
+**Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
 
 **Materialize**: Create the Foundry document that represents a Story Element. Whether this happens immediately or on demand is a GM setting.
 
 **Focus View**: A canvas mode that shows only the Story Elements within a few Connections of a focus (the active Foundry Scene and the actors in it, or an element the GM picks), and hides or dims the rest.
+
+**Scene Preset**: One of a fixed set of templates (Travel, Battle, Narrative, Overview) that sets how a Story Element's Foundry Scene is set up for play.
