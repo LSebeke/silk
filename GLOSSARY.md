@@ -6,7 +6,7 @@
 
 **Element Class**: The fixed kind of a Story Element. Each Element Class maps to one FoundryVTT document type (Actor, Item, Scene, Journal Entry). Some classes map to a Journal Entry with a predefined layout.
 
-**Connection**: A link between two Story Elements, created manually or implicitly when a Story Element is created from an existing one.
+**Connection**: A link between two Story Elements, created manually or implicitly when a Story Element is created from an existing one. A Connection is either directed (A loves B) or mutual (C and D are friends). Each Connection can be Revealed on its own.
 
 **GM**: The game master; the primary user, who plans the Story and runs sessions from it.
 
@@ -26,7 +26,7 @@
 
 **World Canvas**: The canvas belonging to one Foundry world, where the GM lays out and works on that world's Story.
 
-**Behavioural Connection**: A Connection whose type drives Foundry behaviour (e.g. "located in", "owns"). All other Connections are free-form, with a label.
+**Behavioural Connection**: A Connection of a fixed type, valid only between certain Element Classes, that drives behaviour in Foundry or Silk (e.g. "owns", "present at"). All other Connections are free-form, with a label.
 
 **Reveal**: The GM sharing a Story Element, or a single piece of information attached to it, with the players.
 
