@@ -26,9 +26,15 @@
 
 **World Canvas**: The canvas belonging to one Foundry world, where the GM lays out and works on that world's Story.
 
+**Node**: The representation of one Story Element on a World Canvas. Each World places its own Nodes; the Story Element itself lives in the Canon.
+
 **Behavioural Connection**: A Connection of a fixed type, valid only between certain Element Classes, that drives behaviour in Foundry or Silk (e.g. "owns", "present at"). All other Connections are free-form, with a label.
 
-**Reveal**: The GM sharing a Story Element, or a single piece of information attached to it, with the players.
+**Reveal**: The GM sharing a Story Element, a single Info Block, or a single Connection with the whole party of a Campaign. Revealing an Info Block or Connection also Reveals the Story Element(s) it belongs to, but nothing more. Can be undone.
+
+**Revelation Map**: Everything Revealed so far in one Campaign. It belongs to the Campaign, not the Canon: every player in that Campaign, past or new, sees all of it, and another Campaign does not. The GM can merge two Campaigns' Revelation Maps when their groups join.
+
+**Companion Journal**: The Journal Entry holding the Info Blocks of a Story Element whose Foundry document is not itself a Journal Entry (an Actor or Item).
 
 **Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
 
