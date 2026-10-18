@@ -45,3 +45,11 @@
 **Scene Preset**: One of a fixed set of templates (Travel, Battle, Narrative, Overview) that sets how a Story Element's Foundry Scene is set up for play.
 
 **Canvas Filter**: A view setting that narrows which Story Elements the canvas shows (e.g. hide non-Materialized, by Tag, within N Connections of a focus). Filters never change the Story itself.
+
+**Visual Group**: A labelled frame on a World Canvas that holds Nodes for the GM's overview. Visual Groups are layout only: they belong to the World, are never merged into the Canon, and do not change the Story.
+
+**Connection Point**: A spot on a Node from which the GM drags out a Connection. The kind of Connection Point (outgoing, incoming or mutual) sets the new Connection's direction. Connections attach on the side of the Node that faces the other Node.
+
+**Status**: The one toggleable state an Element Class may carry, e.g. dead for a Person, happened for an Event, open/done/failed for a Quest. Classes without one have no Status.
+
+**Creation Pipeline**: The fixed sequence every way of creating a Story Element on the canvas ends in: pick the Element Class, type the name, and, if it was created from another Node, label the Connection.
