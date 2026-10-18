@@ -73,6 +73,7 @@ export async function runMatrix({ counts = [500, 1000, 2000], epfs = [1, 8], con
         store.status = `${n} · ${name} · ${epf}/frame`;
         const s = stat(await fastPan(store.driver.el(), { ms, epf, origin: store.driver.origin?.() }));
         store.results = [...store.results, { n, name, epf, ...s }];
+        save();
         await wait(300);
       }
     }
@@ -81,6 +82,9 @@ export async function runMatrix({ counts = [500, 1000, 2000], epfs = [1, 8], con
   store.status = 'done';
   console.log('silk bench', env, '\n' + toMarkdown());
 }
+
+// Results also land in the user's world flag, so a headless client can read them without the clipboard.
+const save = () => globalThis.game?.user?.setFlag('world', 'silkBench', { env: store.env, results: store.results });
 
 export function toMarkdown() {
   const rs = store.results, epfs = [...new Set(rs.map(r => r.epf))], ns = [...new Set(rs.map(r => r.n))];
