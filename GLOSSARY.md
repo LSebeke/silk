@@ -22,11 +22,15 @@
 
 **Adventure**: A branch of the Canon that a group plays through. Play changes the Adventure's World State; when the Adventure ends, those changes are merged back into the Canon (git-style).
 
-**World**: A FoundryVTT world. A World houses Adventures and has at most one active Adventure at a time; Adventures that run in parallel need separate Worlds.
+**World**: A FoundryVTT world, bound to one Canon. A World always works on exactly one Checkout; Adventures that run in parallel need separate Worlds.
+
+**Checkout**: The one line of the Canon a World is working on: either the Canon itself (Canon edit mode) or one Adventure. It changes only when an Adventure ends.
+
+**Commit**: A saved, labelled point in an Adventure's or the Canon's history. Changes made in a World stay in the World until committed.
 
 **World Canvas**: The canvas belonging to one Foundry world, where the GM lays out and works on that world's Story.
 
-**Node**: The representation of one Story Element on a World Canvas. Each World places its own Nodes; the Story Element itself lives in the Canon.
+**Node**: The representation of one Story Element on a World Canvas. Where Nodes sit is part of the Canon, so every World and Adventure starts from the same layout.
 
 **Behavioural Connection**: A Connection of a fixed type, valid only between certain Element Classes, that drives behaviour in Foundry or Silk (e.g. "owns", "present at"). All other Connections are free-form, with a label.
 
@@ -46,7 +50,7 @@
 
 **Canvas Filter**: A view setting that narrows which Story Elements the canvas shows (e.g. hide non-Materialized, by Tag, within N Connections of a focus). Filters never change the Story itself.
 
-**Visual Group**: A labelled frame on a World Canvas that holds Nodes for the GM's overview. Visual Groups are layout only: they belong to the World, are never merged into the Canon, and do not change the Story.
+**Visual Group**: A labelled frame on a World Canvas that holds Nodes for the GM's overview. Visual Groups are layout: they are part of the Canon like Node positions, but do not change the Story.
 
 **Connection Point**: A spot on a Node from which the GM drags out a Connection. The kind of Connection Point (outgoing, incoming or mutual) sets the new Connection's direction. Connections attach on the side of the Node that faces the other Node.
 
