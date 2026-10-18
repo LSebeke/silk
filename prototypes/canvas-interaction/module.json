@@ -1,0 +1,9 @@
+{
+  "id": "silk-proto-canvas",
+  "title": "Silk Canvas (PROTOTYPE, throwaway)",
+  "description": "Throwaway canvas interaction prototype for the Silk v1 spec (wayfinder ticket #11).",
+  "version": "0.0.1",
+  "compatibility": { "minimum": "14", "verified": "14.369" },
+  "esmodules": ["dist/silk-proto.js"],
+  "styles": ["dist/silk-proto.css"]
+}
