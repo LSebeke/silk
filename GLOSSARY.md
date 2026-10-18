@@ -40,6 +40,8 @@
 
 **Companion Journal**: The Journal Entry holding the Info Blocks of a Story Element whose Foundry document is not itself a Journal Entry (an Actor or Item).
 
+**Cover**: The image a Revealed Story Element shows players first, before any of its Info Blocks are Revealed.
+
 **Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
 
 **Player Note**: An Info Block the players write on a Story Element to record their own thoughts and findings. Player Notes are kept together on the element, become part of the Canon like other Info Blocks, and the GM can turn one into an ordinary Info Block.
