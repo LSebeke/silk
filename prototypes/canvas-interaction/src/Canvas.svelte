@@ -4,6 +4,7 @@
   import Card from './Card.svelte';
   import Frame from './Frame.svelte';
   import StoryEdge from './StoryEdge.svelte';
+  import EdgeCanvas from './EdgeCanvas.svelte';
   import { store, VARIANTS } from './store.svelte.js';
   import { CLASSES, CLASS_NAMES, canFlip } from './model.js';
 
@@ -14,6 +15,18 @@
   let root = $state();
   let menu = $state(null); // { kind, x, y, ... } in root-local px
   let fps = $state(0), bench = $state('');
+
+  // #17: bench driver (fast pan dispatches on the pane) + "moving" flag that ends 150 ms after the viewport stops
+  $effect(() => {
+    store.driver = { el: () => root.querySelector('.svelte-flow__pane'), view1: async () => {
+      const fr = store.nodes.filter(n => n.type === 'frame'), x1 = Math.min(...fr.map(n => n.position.x)), y1 = Math.min(...fr.map(n => n.position.y));
+      const x2 = Math.max(...fr.map(n => n.position.x + n.width)), y2 = Math.max(...fr.map(n => n.position.y + n.height)), r = root.getBoundingClientRect();
+      await flow.setViewport({ x: r.width / 2 - (x1 + x2) / 2, y: r.height / 2 - (y1 + y2) / 2, zoom: 1 }); } };
+    return () => { store.driver = null; };
+  });
+  let moveEnd;
+  const onMoveStart = () => { clearTimeout(moveEnd); if (!store.moving) store.moving = true; };
+  const onMoveEnd = () => { clearTimeout(moveEnd); moveEnd = setTimeout(() => (store.moving = false), 150); };
 
   $effect(() => { const z = viewport.current.zoom; store.zoom = z; store.lod = z > 0.75 ? 'full' : z > 0.35 ? 'mid' : 'low'; });
   $effect(() => { let n = 0, t0 = performance.now(), raf; const tick = t => { n++; if (t - t0 > 500) { fps = Math.round((n * 1000) / (t - t0)); n = 0; t0 = t; } raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf); });
@@ -113,7 +126,8 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div class="silk-root variant-{V} lod-{store.lod}" class:connecting={store.connectFrom} bind:this={root} tabindex="0"
+<div class="silk-root variant-{V} lod-{store.lod}" class:connecting={store.connectFrom} class:moving={store.moving}
+  class:opt-movelod={store.opts.moveLod} class:opt-contain={store.opts.contain} class:opt-layer={store.opts.layer} class:opt-canvasedges={store.opts.canvasEdges} bind:this={root} tabindex="0"
   onkeydown={onKey} ondblclick={onPaneDbl} onpointerenter={() => root.focus({ preventScroll: true })}
   ondragover={e => V === 'C' && e.preventDefault()} ondrop={onDrop}>
   <SvelteFlow bind:nodes={store.nodes} bind:edges={store.edges} {nodeTypes} {edgeTypes} fitView minZoom={0.05} maxZoom={2}
@@ -122,6 +136,7 @@
     onbeforeconnect={c => { store.connect(c.source, c.target); return false; }}
     oninit={() => setTimeout(() => flow.fitView(), 300)}
     onconnectend={onConnectEnd}
+    onmovestart={onMoveStart} onmoveend={onMoveEnd}
     onnodeclick={onNodeClick}
     onpaneclick={close}
     onedgeclick={({ event, edge }) => { if (V === 'A') menu = { kind: 'edge', ...local(event), edge: edge.id }; }}
@@ -132,6 +147,7 @@
     <Background gap={40} />
     <MiniMap pannable zoomable nodeColor={n => n.type === 'frame' ? 'transparent' : CLASSES[n.data.cls].color} />
     <Controls showLock={false} />
+    {#if store.opts.canvasEdges && root}<EdgeCanvas host={root} />{/if}
   </SvelteFlow>
 
   <!-- stats / prototype controls (not part of the design under test) -->
