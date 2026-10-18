@@ -19,8 +19,9 @@ class Store {
   editing = $state(null);     // node id whose title is being edited
   connectFrom = $state(null); // node id in click-to-connect mode (B, C)
   visibleOnly = $state(false);
-  // #17 fast-drag perf toggles: a move-LOD, b CSS containment, l own layer, c canvas edges; renderer 'flow' | 'cy'
-  opts = $state({ moveLod: false, contain: false, layer: false, canvasEdges: false });
+  // #17 fast-drag perf toggles: a move-LOD, b CSS containment, l own layer, c canvas edges, o opaque window (no backdrop blur),
+  // p pause Foundry's PIXI canvas (stand-in for a pop-out window); renderer 'flow' | 'cy'
+  opts = $state({ moveLod: false, contain: false, layer: false, canvasEdges: false, opaque: false, pauseFoundry: false });
   renderer = $state('flow');
   moving = $state(false);
   driver = null;              // { el(), view1() } set by the mounted renderer, used by bench.js

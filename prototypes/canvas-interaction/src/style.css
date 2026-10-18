@@ -101,6 +101,8 @@
 .silk-root.opt-layer .svelte-flow__viewport { will-change: transform; }
 /* c: SVG edges + HTML labels replaced by EdgeCanvas */
 .silk-root.opt-canvasedges .svelte-flow__edges, .silk-root.opt-canvasedges .svelte-flow__edgelabel-renderer { display: none; }
+/* o: Foundry themes give windows a transparent, backdrop-blurred content area over the live PIXI canvas */
+body.silk-opaque .silk-proto-window, body.silk-opaque .silk-proto-window .window-content { backdrop-filter: none !important; background: #f4efe4 !important; }
 /* d */
 .silk-proto-window .window-content { position: relative; }
 .silk-root-cy { position: absolute; inset: 0; background: #f4efe4; }

@@ -42,10 +42,23 @@ export const CONFIGS = [
   ['d cytoscape', 'cy', {}],
   ['d cytoscape+a', 'cy', { moveLod: true }],
 ];
-const OFF = { moveLod: false, contain: false, layer: false, canvasEdges: false };
+// Foundry-environment configs: does the live PIXI canvas behind the window dominate?
+export const ENV_CONFIGS = [
+  ['baseline', 'flow', {}],
+  ['o opaque', 'flow', { opaque: true }],
+  ['p pause Foundry', 'flow', { pauseFoundry: true }],
+  ['o+p', 'flow', { opaque: true, pauseFoundry: true }],
+  ['a+o+p', 'flow', { moveLod: true, opaque: true, pauseFoundry: true }],
+  ['a+c+o', 'flow', { moveLod: true, canvasEdges: true, opaque: true }],
+  ['a+c+o+p', 'flow', { moveLod: true, canvasEdges: true, opaque: true, pauseFoundry: true }],
+  ['a+b+c+o+p', 'flow', { moveLod: true, contain: true, canvasEdges: true, opaque: true, pauseFoundry: true }],
+  ['d cytoscape+o+p', 'cy', { opaque: true, pauseFoundry: true }],
+];
+const OFF = { moveLod: false, contain: false, layer: false, canvasEdges: false, opaque: false, pauseFoundry: false };
 
 // Runs every config × count × epf; results land in store.results (rendered + copyable in the perf panel).
 export async function runMatrix({ counts = [500, 1000, 2000], epfs = [1, 8], configs = CONFIGS, ms = 3000 } = {}) {
+  if (configs === 'env') configs = ENV_CONFIGS;
   store.results = [];
   const env = `${navigator.userAgent.match(/(Firefox|Chrome)\/[\d.]+/)?.[0]} · ${innerWidth}×${innerHeight}@${devicePixelRatio} · Foundry canvas ${globalThis.canvas?.ready ? 'on' : 'off'}`;
   store.env = env;
@@ -64,6 +77,7 @@ export async function runMatrix({ counts = [500, 1000, 2000], epfs = [1, 8], con
       }
     }
   }
+  store.opts = { ...OFF }; store.renderer = 'flow';
   store.status = 'done';
   console.log('silk bench', env, '\n' + toMarkdown());
 }
