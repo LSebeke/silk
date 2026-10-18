@@ -42,6 +42,8 @@
 
 **Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
 
+**Player Note**: An Info Block the players write on a Story Element to record their own thoughts and findings. Player Notes are kept together on the element, become part of the Canon like other Info Blocks, and the GM can turn one into an ordinary Info Block.
+
 **Materialize**: Pull a Story Element into the World by creating the Foundry document that represents it. Story Elements that are not Materialized exist only in the Canon and its branches. Whether Materializing happens immediately or on demand is a GM setting.
 
 **Focus View**: A canvas mode that shows only the Story Elements within a few Connections of a focus (the active Foundry Scene and the actors in it, or an element the GM picks), and hides or dims the rest.
