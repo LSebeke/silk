@@ -50,11 +50,16 @@
 
 **Materialize**: Pull a Story Element into the World by creating the Foundry document that represents it. Story Elements that are not Materialized exist only in the Canon and its branches. Whether Materializing happens immediately or on demand is a GM setting.
 
-**Focus View**: A canvas mode that shows only the Story Elements within a few Connections of a focus (the active Foundry Scene and the actors in it, or an element the GM picks), and hides or dims the rest.
+**Focus View**: A canvas mode that shows only the Story Elements within a few Connections of the active Foundry Scene and the actors in it, or of the selected Story Element, plus any Focus Pins.
+
+**Focus Pin**: A Story Element the GM has marked to always show in Focus View, regardless of distance.
+_Avoid_: anchor, favourite
 
 **Scene Preset**: One of a fixed set of templates (Travel, Battle, Narrative, Overview) that sets how a Story Element's Foundry Scene is set up for play.
 
-**Canvas Filter**: A view setting that narrows which Story Elements the canvas shows (e.g. hide non-Materialized, by Tag, within N Connections of a focus). Filters never change the Story itself.
+**Canvas Filter**: A view setting that hides Story Elements from the canvas by Element Class, Status, Revealed, Materialized, Tag, Visual Group, or distance from a focus. Filters never change the Story itself.
+
+**Tag**: A free-form label the GM puts on a Story Element. Tags are part of the Canon and never shown to players.
 
 **Visual Group**: A labelled frame on a World Canvas that holds Nodes for the GM's overview. Visual Groups are layout: they are part of the Canon like Node positions, but do not change the Story.
 
