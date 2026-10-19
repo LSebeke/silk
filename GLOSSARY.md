@@ -44,7 +44,9 @@
 
 **Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
 
-**Player Note**: An Info Block the players write on a Story Element to record their own thoughts and findings. Player Notes are kept together on the element, become part of the Canon like other Info Blocks, and the GM can turn one into an ordinary Info Block.
+**Player Note**: An Info Block the players write on a Story Element to record their own thoughts and findings. Any player of the party can write, edit or delete any Player Note, and the whole party sees them. Player Notes are kept together on the element and become part of the Canon like other Info Blocks; players of other Campaigns see one only if their GM Reveals it. The GM can turn one into an ordinary Info Block.
+
+**Player Canvas**: The read-only view of the canvas players get: only Revealed Story Elements and Connections, at their Canon positions, without Visual Groups.
 
 **Materialize**: Pull a Story Element into the World by creating the Foundry document that represents it. Story Elements that are not Materialized exist only in the Canon and its branches. Whether Materializing happens immediately or on demand is a GM setting.
 
