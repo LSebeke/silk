@@ -3,22 +3,23 @@
   import { Handle, Position } from '@xyflow/svelte';
   import { CLASSES } from './model.js';
   import { store } from './store.svelte.js';
+  import { focus } from './focus.svelte.js';
   let { id, data, selected } = $props();
   const c = $derived(CLASSES[data.cls]);
   const QUEST = ['open', 'done', 'failed'];
   const chip = (key, e) => { if (store.variant !== 'A') return; e.stopPropagation(); store.toggleStatus(id, key); };
   const commit = e => { store.rename(id, e.currentTarget.value); store.editing = null; };
-  const focus = el => { el.focus(); el.select(); };
+  const focusInput = el => { el.focus(); el.select(); };
 </script>
 
-<div class="card" class:selected class:dead={data.status.dead} class:connect-src={store.connectFrom === id} style="--c:{c.color}">
+<div class="card" class:selected class:dead={data.status.dead} class:connect-src={store.connectFrom === id} class:role-scene={data.role === 'scene'} class:role-token={data.role === 'token'} style="--c:{c.color}">
   <Handle type="target" position={Position.Left} />
   <div class="lowtitle">{data.title}</div>
   <img class="portrait" src={c.icon} alt="" draggable="false" />
   <div class="body">
     <div class="cls">{data.cls}{#if data.blocks}<span class="blocks"> · {data.blocks} Info Blocks</span>{/if}</div>
     {#if store.editing === id}
-      <input class="nodrag title-input" value={data.title} use:focus onblur={commit}
+      <input class="nodrag title-input" value={data.title} use:focusInput onblur={commit}
         onkeydown={e => { e.stopPropagation(); if (e.key === 'Enter') commit(e); if (e.key === 'Escape') store.editing = null; }} />
     {:else}
       <div class="title" ondblclick={() => (store.editing = id)}>{data.title}</div>
@@ -35,4 +36,6 @@
     </div>
   </div>
   <Handle type="source" position={Position.Right} />
+  {#if data.pinned}<span class="pin" title="Focus Pin">📌</span>{/if}
+  {#if data.hiddenN}<button class="hiddenN nodrag" title="Show hidden neighbours" onclick={e => { e.stopPropagation(); focus.showHiddenNeighbours(id); globalThis.silkFocus.refocus('badge'); }}>+{data.hiddenN}</button>{/if}
 </div>

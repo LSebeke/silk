@@ -77,5 +77,22 @@ export function generate(n, uid) {
       else { const [label, dir] = pick(FREE); edges.push({ id: uid('c'), source: a.id, target: b.id, type: 'story', data: { kind: 'free', label, dir, revealed: Math.random() < 0.2 } }); }
     }
   }
+  // #12: each Event gets 2–4 Persons/Creatures from its group "present at" it: its Scene's tokens.
+  for (const ev of cards.filter(c => c.data.cls === 'Event')) {
+    const actors = byGroup[nodes.findIndex(x => x.id === ev.parentId)].filter(c => ['Person', 'Creature'].includes(c.data.cls));
+    for (let j = 0, want = 2 + Math.floor(Math.random() * 3); j < want * 3 && actors.length; j++) {
+      if (edges.filter(e => e.target === ev.id && e.data.kind === 'present at').length >= want) break;
+      const a = pick(actors); if (edges.some(e => e.source === a.id && e.target === ev.id)) continue;
+      edges.push({ id: uid('c'), source: a.id, target: ev.id, type: 'story', data: { kind: 'present at', label: 'present at', dir: 'ab', revealed: false } });
+    }
+  }
   return { nodes, edges };
+}
+
+// #12: fake Scenes = Events with tokens, spread over the Visual Groups.
+export function scenes(nodes, edges) {
+  const seen = new Set();
+  return nodes.filter(n => n.data.cls === 'Event').map(ev => ({ id: ev.id, title: ev.data.title, group: ev.parentId,
+    tokens: edges.filter(e => e.target === ev.id && e.data.kind === 'present at').map(e => e.source) }))
+    .filter(s => s.tokens.length >= 2 && !seen.has(s.group) && seen.add(s.group)).slice(0, 10);
 }

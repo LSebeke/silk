@@ -114,3 +114,23 @@ body.silk-opaque .silk-proto-window, body.silk-opaque .silk-proto-window .window
 .silk-perf table { border-collapse: collapse; margin-top: 4px; }
 .silk-perf td, .silk-perf th { border: 1px solid #444; padding: 1px 4px; text-align: right; }
 .silk-perf td:first-child { text-align: left; }
+
+/* #12 Focus View */
+.silk-root .frame.off { visibility: hidden; } /* empty Visual Group under focus */
+.silk-root .svelte-flow__node-card { animation: silk-in .25s ease-out; }
+@keyframes silk-in { from { opacity: 0; } to { opacity: 1; } }
+.silk-root .card.role-scene { box-shadow: 0 0 0 4px #c07a20aa, 0 1px 2px #0002; }
+.silk-root .card.role-token { box-shadow: 0 0 0 3px #2f7d4f88, 0 1px 2px #0002; }
+.silk-root .card .pin { position: absolute; top: -10px; left: -8px; font-size: 14px; }
+.silk-root .card .hiddenN { all: unset; position: absolute; right: -10px; top: -10px; background: #444; color: #fff; font: 600 10px sans-serif; padding: 1px 5px; border-radius: 999px; cursor: pointer; }
+.silk-root.lod-low .card .hiddenN { font-size: 24px; padding: 2px 10px; top: -24px; right: -24px; }
+.silk-root .focusbar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: #fffdf8f0; border: 1px solid #c9bfa8; border-radius: 999px; padding: 4px 10px; font-size: 12px; box-shadow: 0 2px 8px #0002; max-width: 70%; }
+.silk-root .focusbar button { width: auto; height: 22px; padding: 0 6px; font-size: 11px; }
+.silk-root .focusbar button.on { background: #2b6cb0; color: #fff; }
+.silk-root .focusbar .grp { display: inline-flex; gap: 3px; align-items: center; padding-left: 6px; border-left: 1px solid #ddd; }
+.silk-root .focusbar .scene small { color: #777; }
+.silk-root .focusbar .temp { color: #b45309; font-style: italic; }
+.silk-root .focusbar .count { color: #555; }
+.silk-root .proto-stats .vhint { margin-top: 4px; color: #fd8; }
+.silk-root .proto-stats .keys { margin-top: 4px; color: #ccc; }
+.silk-root .proto-stats kbd { background: #333; border: 1px solid #555; border-radius: 3px; padding: 0 2px; }

@@ -10,7 +10,7 @@
   // o + p act on Foundry, outside the canvas component
   $effect(() => { document.body.classList.toggle('silk-opaque', store.opts.opaque); });
   $effect(() => { const t = globalThis.canvas?.app?.ticker; if (!t) return; store.opts.pauseFoundry ? t.stop() : t.start(); });
-  let open = $state(true), one = $state('');
+  let open = $state(false), one = $state('');
   async function runOne(epf) { store.status = 'running…'; await store.driver.view1(); await new Promise(r => setTimeout(r, 500)); const s = stat(await fastPan(store.driver.el(), { epf, origin: store.driver.origin?.() })); one = `${store.count} @${epf}/f: ${s.fps} fps avg, worst-1% ${s.p99} ms`; store.status = ''; }
   globalThis.silkBench = { runMatrix, toMarkdown, store }; // test hook
   // Zen/Firefox may reject clipboard writes; fall back to a selectable text box.

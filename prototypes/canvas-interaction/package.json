@@ -10,6 +10,7 @@
   "keywords": [],
   "type": "module",
   "devDependencies": {
+    "@dagrejs/dagre": "^1.1.4",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@xyflow/svelte": "^1.7.0",
     "cytoscape": "^3.34.4",
