@@ -55,6 +55,9 @@
 **Focus Pin**: A Story Element the GM has marked to always show in Focus View, regardless of distance.
 _Avoid_: anchor, favourite
 
+**Untangle**: Re-arrange only the selected Nodes so they and their Connections are easier to read. It changes Node positions, so the new layout becomes part of the Canon.
+_Avoid_: auto-layout
+
 **Scene Preset**: One of a fixed set of templates (Travel, Battle, Narrative, Overview) that sets how a Story Element's Foundry Scene is set up for play.
 
 **Canvas Filter**: A view setting that hides Story Elements from the canvas by Element Class, Status, Revealed, Materialized, Tag, Visual Group, or distance from a focus. Filters never change the Story itself.
