@@ -133,7 +133,7 @@
     {#if focus.pins.length}<span class="grp">📌 {focus.pins.length} <button onclick={() => { focus.pins = []; refocus('pins'); }}>✕</button></span>{/if}
     {#if focus.extra.length}<span class="grp">+{focus.extra.length} via badges <button onclick={() => { focus.extra = []; refocus('badge'); }}>✕</button></span>{/if}
     <span class="grp count">{focus.visible.size} of {store.count} shown</span>
-    {#if V === 'C'}<span class="grp"><button onclick={() => focus.untangle()} title="u">⌗ Untangle</button><button disabled={!focus.undo.length} onclick={() => focus.undoUntangle()} title="Ctrl+Z">↶ Undo</button></span>{/if}
+    {#if V === 'C'}<span class="grp"><button disabled={focus.sel.length < 2} onclick={() => focus.untangle()} title="u (select ≥2 Nodes)">⌗ Untangle {focus.sel.length >= 2 ? focus.sel.length : ''}</button><button disabled={!focus.undo.length} onclick={() => focus.undoUntangle()} title="Ctrl+Z">↶ Undo</button></span>{/if}
     {#if V === 'B' && focus.on}<span class="grp temp">positions temporary</span>{/if}
   </div>
 
@@ -142,7 +142,7 @@
     <b>{fps} fps</b> · zoom {store.zoom.toFixed(2)} · LOD {store.lod}
     · <select value={store.count} onchange={e => regen(+e.currentTarget.value)}>{#each [100, 250, 500, 1000, 2000] as n}<option value={n}>{n} elements</option>{/each}</select>
     <div class="vhint"><b>{V} · {FOCUS_VARIANTS[V]}.</b> {FOCUS_HINTS[V]}</div>
-    <div class="keys"><kbd>,</kbd>/<kbd>.</kbd> prev/next Scene (simulated activation) · click/Shift-drag selects (walks the focus) · click empty canvas deselects · <kbd>p</kbd> pin selection · <kbd>f</kbd> focus on/off · <kbd>1</kbd>–<kbd>3</kbd> N · "+N" badge shows hidden neighbours · drag a card's right dot out / right-click canvas to create{#if V === 'C'} · <kbd>u</kbd> untangle · <kbd>Ctrl+Z</kbd> undo{/if}</div>
+    <div class="keys"><kbd>,</kbd>/<kbd>.</kbd> prev/next Scene (simulated activation) · click/Shift-drag selects (walks the focus) · click empty canvas deselects · <kbd>p</kbd> pin selection · <kbd>f</kbd> focus on/off · <kbd>1</kbd>–<kbd>3</kbd> N · "+N" badge shows hidden neighbours · drag a card's right dot out / right-click canvas to create{#if V === 'C'} · <kbd>u</kbd> untangle selection · <kbd>Ctrl+Z</kbd> undo{/if}</div>
     <div class="log">{#each store.log.slice(0, 3) as l}<div>{l}</div>{/each}</div>
   </div>
 

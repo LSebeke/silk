@@ -1,6 +1,6 @@
 // PROTOTYPE, throwaway. Focus View (#12): N-hop filter seeded by the active Scene + its tokens + the selection,
 // plus Focus Pins and "+N" badges (#20). Three variants for follow / layout behaviour, switched from the bottom bar.
-import dagre from '@dagrejs/dagre';
+import { forceSimulation, forceLink, forceManyBody, forceCollide, forceX, forceY } from 'd3-force';
 import { store } from './store.svelte.js';
 import { scenes } from './model.js';
 
@@ -8,7 +8,7 @@ export const FOCUS_VARIANTS = { A: 'Stay-put', B: 'Focus layout (temporary)', C:
 export const FOCUS_HINTS = {
   A: 'Nodes keep their Canon positions; hidden Nodes just vanish. A Scene change animates the camera to fit the focus. Selecting never moves the camera.',
   B: 'The focused subgraph animates into a temporary ring layout around the seeds (hop 1, hop 2 …). Every focus change re-lays out and refits. Positions are NOT saved: dragging here is temporary, leaving focus puts everything back.',
-  C: 'Nodes keep their Canon positions. The camera only moves when something new would be offscreen. "Untangle" lays out the visible Nodes (dagre) and SAVES those positions (undo with Ctrl+Z).',
+  C: 'Nodes keep their Canon positions. The camera only moves when something new would be offscreen. Select ≥2 Nodes (Shift-drag), then "Untangle" (u): force layout of the selection only, unselected neighbours stay put as anchors; positions are SAVED (undo with Ctrl+Z).',
 };
 const W = 190, H = 80, ls = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
 
@@ -118,20 +118,53 @@ class Focus {
   }
   restoreB() { const t = new Map(this.temp); this.temp.clear(); return t.size ? this.animate(t) : Promise.resolve(); }
 
-  // C: dagre left-to-right over the visible Nodes, centred where they are now; positions are kept (undoable).
+  // C: force-directed (Obsidian-graph-like) over the SELECTION only, run to convergence off-screen, applied as one tween.
+  // Unselected visible Nodes stay fixed: connected ones pull (anchors), nearby ones only block overlaps. Selected Nodes
+  // keep their Visual Group; frames grow to fit. One Ctrl+Z undoes it all.
   untangle() {
-    const ids = [...this.visible]; if (ids.length < 2) return Promise.resolve();
-    const g = new dagre.graphlib.Graph(); g.setGraph({ rankdir: 'LR', nodesep: 30, ranksep: 110 }); g.setDefaultEdgeLabel(() => ({}));
-    for (const id of ids) g.setNode(id, { width: W, height: H });
-    for (const e of store.edges) if (this.visible.has(e.source) && this.visible.has(e.target)) g.setEdge(e.source, e.target);
-    dagre.layout(g);
-    const now = ids.map(id => store.abs(store.node(id))), lay = ids.map(id => g.node(id));
-    const dx = now.reduce((s, p) => s + p.x, 0) / ids.length - lay.reduce((s, p) => s + p.x - W / 2, 0) / ids.length;
-    const dy = now.reduce((s, p) => s + p.y, 0) / ids.length - lay.reduce((s, p) => s + p.y - H / 2, 0) / ids.length;
-    this.undo = [...this.undo, new Map(ids.map(id => [id, { ...store.node(id).position }]))];
-    return this.animate(this.#toRel(new Map(ids.map((id, i) => [id, { x: lay[i].x - W / 2 + dx, y: lay[i].y - H / 2 + dy }]))));
+    const sel = this.sel.filter(id => this.visible.has(id)); if (sel.length < 2) return Promise.resolve();
+    const S = new Set(sel), centre = id => { const a = store.abs(store.node(id)); return { x: a.x + W / 2, y: a.y + H / 2 }; };
+    const pts = sel.map(centre), m = 450;
+    const box = { x0: Math.min(...pts.map(p => p.x)) - m, x1: Math.max(...pts.map(p => p.x)) + m, y0: Math.min(...pts.map(p => p.y)) - m, y1: Math.max(...pts.map(p => p.y)) + m };
+    const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length, cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+    const links = store.edges.filter(e => (S.has(e.source) || S.has(e.target)) && this.visible.has(e.source) && this.visible.has(e.target));
+    const fixed = new Set(links.flatMap(e => [e.source, e.target]).filter(id => !S.has(id)));
+    for (const id of this.visible) if (!S.has(id)) { const c = centre(id); if (c.x > box.x0 && c.x < box.x1 && c.y > box.y0 && c.y < box.y1) fixed.add(id); }
+    const sim = [...sel, ...fixed].map((id, i) => {
+      const c = centre(id), n = { id, x: c.x, y: c.y, parent: store.node(id).parentId };
+      if (!S.has(id)) { n.fx = c.x; n.fy = c.y; } else { n.x += Math.cos(i) * 0.5; n.y += Math.sin(i) * 0.5; } // tiny jitter: coincident Nodes
+      return n;
+    });
+    const frameC = new Map(store.nodes.filter(n => n.type === 'frame').map(f => [f.id, { x: f.position.x + (f.width ?? 0) / 2, y: f.position.y + (f.height ?? 0) / 2 }]));
+    const keepInGroup = a => { for (const n of sim) if (n.fx == null && n.parent) { const c = frameC.get(n.parent); n.vx += (c.x - n.x) * 0.04 * a; n.vy += (c.y - n.y) * 0.04 * a; } };
+    const s = forceSimulation(sim).stop()
+      .force('link', forceLink(links.map(e => ({ source: e.source, target: e.target }))).id(n => n.id).distance(240).strength(0.6))
+      .force('charge', forceManyBody().strength(-700).distanceMax(700))
+      .force('collide', forceCollide(112).strength(1).iterations(3))
+      .force('x', forceX(cx).strength(n => (n.fx == null ? 0.03 : 0))).force('y', forceY(cy).strength(n => (n.fx == null ? 0.03 : 0)))
+      .force('group', keepInGroup);
+    s.tick(400);
+    const abs = new Map(sim.filter(n => n.fx == null).map(n => [n.id, { x: n.x - W / 2, y: n.y - H / 2 }]));
+    // grow frames to fit their (moved) children; re-base all children of a frame that moves
+    const frames = [], targets = new Map(), pad = 30;
+    for (const fid of new Set(sel.map(id => store.node(id).parentId).filter(Boolean))) {
+      const f = store.node(fid), kids = store.nodes.filter(n => n.parentId === fid);
+      const kAbs = kids.map(k => abs.get(k.id) ?? store.abs(k));
+      const x0 = Math.min(f.position.x, ...kAbs.map(p => p.x - pad)), y0 = Math.min(f.position.y, ...kAbs.map(p => p.y - pad - 30));
+      const x1 = Math.max(f.position.x + f.width, ...kAbs.map(p => p.x + W + pad)), y1 = Math.max(f.position.y + f.height, ...kAbs.map(p => p.y + H + pad));
+      frames.push({ id: fid, position: { ...f.position }, width: f.width, height: f.height });
+      targets.set(fid, { x: x0, y: y0 }); store.nodes = store.nodes.map(n => (n.id === fid ? { ...n, width: x1 - x0, height: y1 - y0 } : n));
+      kids.forEach((k, i) => targets.set(k.id, { x: kAbs[i].x - x0, y: kAbs[i].y - y0 }));
+    }
+    for (const [id, p] of abs) if (!targets.has(id)) targets.set(id, p);
+    this.undo = [...this.undo, { pos: new Map([...targets.keys()].map(id => [id, { ...store.node(id).position }])), frames }];
+    return this.animate(targets);
   }
-  undoUntangle() { const m = this.undo.at(-1); if (!m) return Promise.resolve(); this.undo = this.undo.slice(0, -1); return this.animate(m); }
+  undoUntangle() {
+    const u = this.undo.at(-1); if (!u) return Promise.resolve(); this.undo = this.undo.slice(0, -1);
+    const size = new Map(u.frames.map(f => [f.id, f]));
+    return this.animate(u.pos).then(() => { store.nodes = store.nodes.map(n => (size.has(n.id) ? { ...n, width: size.get(n.id).width, height: size.get(n.id).height } : n)); });
+  }
 }
 
 export const focus = new Focus();
