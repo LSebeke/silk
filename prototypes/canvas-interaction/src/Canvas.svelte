@@ -33,7 +33,14 @@
   $effect(() => { let n = 0, t0 = performance.now(), raf; const tick = t => { n++; if (t - t0 > 500) { fps = Math.round((n * 1000) / (t - t0)); n = 0; t0 = t; } raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf); });
 
   // ---- Focus View
-  const fit = (ids, opts = {}) => ids.length && flow.fitView({ nodes: ids.map(id => ({ id })), duration: 600, padding: 0.2, maxZoom: 1, ...opts });
+  // Camera holds still while Shift is down (Shift-click/drag selection would otherwise be disrupted); the last wanted move runs on release.
+  let shift = false, pendingFit = null;
+  const doFit = (ids, opts = {}) => ids.length && flow.fitView({ nodes: ids.map(id => ({ id })), duration: 600, padding: 0.2, maxZoom: 1, ...opts });
+  const fit = (ids, opts) => (shift ? ((pendingFit = [ids, opts]), true) : doFit(ids, opts));
+  const onShift = e => { if (e.key !== 'Shift') return; shift = e.type === 'keydown'; if (!shift && pendingFit) { doFit(...pendingFit); pendingFit = null; } };
+  const onBlur = () => { shift = false; pendingFit = null; };
+  $effect(() => { addEventListener('keydown', onShift, true); addEventListener('keyup', onShift, true); addEventListener('blur', onBlur);
+    return () => { removeEventListener('keydown', onShift, true); removeEventListener('keyup', onShift, true); removeEventListener('blur', onBlur); }; });
   function offscreen(ids) {
     const r = root.getBoundingClientRect(), { x, y, zoom } = flow.getViewport();
     return ids.some(id => { const n = store.node(id); if (!n) return false; const a = store.abs(n), sx = a.x * zoom + x, sy = a.y * zoom + y;
@@ -142,7 +149,7 @@
     <b>{fps} fps</b> · zoom {store.zoom.toFixed(2)} · LOD {store.lod}
     · <select value={store.count} onchange={e => regen(+e.currentTarget.value)}>{#each [100, 250, 500, 1000, 2000] as n}<option value={n}>{n} elements</option>{/each}</select>
     <div class="vhint"><b>{V} · {FOCUS_VARIANTS[V]}.</b> {FOCUS_HINTS[V]}</div>
-    <div class="keys"><kbd>,</kbd>/<kbd>.</kbd> prev/next Scene (simulated activation) · click/Shift-drag selects (walks the focus) · click empty canvas deselects · <kbd>p</kbd> pin selection · <kbd>f</kbd> focus on/off · <kbd>1</kbd>–<kbd>3</kbd> N · "+N" badge shows hidden neighbours · drag a card's right dot out / right-click canvas to create{#if V === 'C'} · <kbd>u</kbd> untangle selection · <kbd>Ctrl+Z</kbd> undo{/if}</div>
+    <div class="keys"><kbd>,</kbd>/<kbd>.</kbd> prev/next Scene (simulated activation) · click/Shift-drag selects (walks the focus; camera holds while Shift is down) · click empty canvas deselects · <kbd>p</kbd> pin selection · <kbd>f</kbd> focus on/off · <kbd>1</kbd>–<kbd>3</kbd> N · "+N" badge shows hidden neighbours · drag a card's right dot out / right-click canvas to create{#if V === 'C'} · <kbd>u</kbd> untangle selection · <kbd>Ctrl+Z</kbd> undo{/if}</div>
     <div class="log">{#each store.log.slice(0, 3) as l}<div>{l}</div>{/each}</div>
   </div>
 
