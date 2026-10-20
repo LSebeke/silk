@@ -33,12 +33,12 @@
   $effect(() => { let n = 0, t0 = performance.now(), raf; const tick = t => { n++; if (t - t0 > 500) { fps = Math.round((n * 1000) / (t - t0)); n = 0; t0 = t; } raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf); });
 
   // ---- Focus View
-  // Camera holds still while Shift is down (Shift-click/drag selection would otherwise be disrupted); the last wanted move runs on release.
-  let shift = false, pendingFit = null;
+  // Camera holds still while Shift is down (Shift-click/drag selection would otherwise be disrupted); skipped moves are dropped.
+  let shift = false;
   const doFit = (ids, opts = {}) => ids.length && flow.fitView({ nodes: ids.map(id => ({ id })), duration: 600, padding: 0.2, maxZoom: 1, ...opts });
-  const fit = (ids, opts) => (shift ? ((pendingFit = [ids, opts]), true) : doFit(ids, opts));
-  const onShift = e => { if (e.key !== 'Shift') return; shift = e.type === 'keydown'; if (!shift && pendingFit) { doFit(...pendingFit); pendingFit = null; } };
-  const onBlur = () => { shift = false; pendingFit = null; };
+  const fit = (ids, opts) => !shift && doFit(ids, opts);
+  const onShift = e => { if (e.key === 'Shift') shift = e.type === 'keydown'; };
+  const onBlur = () => { shift = false; };
   $effect(() => { addEventListener('keydown', onShift, true); addEventListener('keyup', onShift, true); addEventListener('blur', onBlur);
     return () => { removeEventListener('keydown', onShift, true); removeEventListener('keyup', onShift, true); removeEventListener('blur', onBlur); }; });
   function offscreen(ids) {
