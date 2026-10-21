@@ -48,7 +48,12 @@
 
 **Player Canvas**: The read-only view of the canvas players get: only Revealed Story Elements and Connections, at their Canon positions, without Visual Groups.
 
-**Materialize**: Pull a Story Element into the World by creating the Foundry document that represents it. Story Elements that are not Materialized exist only in the Canon and its branches. Whether Materializing happens immediately or on demand is a GM setting.
+**Materialize**: Pull a Story Element into the World by creating the Foundry document that represents it. Story Elements that are not Materialized exist only in the Canon and its branches. Whether Materializing happens immediately or on demand is a GM setting of each World.
+
+**Unmaterialize**: Remove a Story Element's Foundry documents from the World while keeping the Story Element, its content and its Connections in the Story. Players lose access to it until it is Materialized again.
+_Avoid_: dematerialize, despawn
+
+**Ghost**: A Node whose Story Element is not Materialized in this World.
 
 **Focus View**: A canvas mode that shows only the Story Elements within a few Connections of the active Foundry Scene and the actors in it, or of the selected Story Element, plus any Focus Pins.
 
