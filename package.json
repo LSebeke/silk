@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "size": "node scripts/bundle-size.mjs",
+    "mcp": "node tools/mcp/main.ts",
     "test:e2e": "npm run build && playwright test"
   },
   "overrides": {
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@playwright/test": "1.64.1",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "eslint": "10.13.0",
@@ -28,6 +30,7 @@
     "fast-check": "4.10.2",
     "fvtt-types": "npm:@league-of-foundry-developers/foundry-vtt-types@14.366.0-beta.20261009164208",
     "globals": "17.13.0",
+    "playwright-core": "1.64.1",
     "prettier": "3.9.10",
     "prettier-plugin-svelte": "4.1.1",
     "svelte": "5.57.2",

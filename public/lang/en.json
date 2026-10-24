@@ -37,6 +37,9 @@
     "Canvas": {
       "Title": "World Canvas",
       "Placeholder": "The World Canvas arrives in a later release."
+    },
+    "Notice": {
+      "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
     }
   }
 }

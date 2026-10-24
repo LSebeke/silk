@@ -13,8 +13,9 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "allowJs": true,
     "checkJs": true
   },
-  "include": ["src", "scripts", "e2e", "*.ts", "*.js"]
+  "include": ["src", "scripts", "tools", "e2e", "*.ts", "*.js"]
 }

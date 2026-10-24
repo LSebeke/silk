@@ -5,3 +5,4 @@ docs/
 GLOSSARY.md
 test-results/
 playwright-report/
+.claude/

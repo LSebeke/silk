@@ -4,6 +4,14 @@ FoundryVTT v14 module for DSA5: map a Story on a World Canvas, branch Adventures
 
 Install: manifest URL `https://github.com/LSebeke/silk/releases/latest/download/module.json`.
 
+## Spoiler secrecy
+
+Silk keeps unrevealed content out of the **player UI**. It does not stop a player who opens the browser console ([ADR 0002](docs/adr/0002-spoiler-secrecy-casual-player-only.md)).
+
+- **Console leak**: Foundry sends every journal page to every client, NONE ownership included. Unrevealed Info Blocks, Silk flags (incl. the real image behind a hooded one) and Canon JSON loaded for the player canvas can be read from the console. Core Foundry and DSA5 leak GM content the same way.
+- **Data folder exposure**: Foundry serves the Data folder without login. The Canon lives under an unguessable `Data/silk/<random 128-bit id>/`, which keeps out people who don't know the path. Players learn the path when their client loads Canon data.
+- **FILES_BROWSE**: a role with "Use File Browser" can list `Data/silk/` and open the Canon directly. Foundry grants it to Trusted Players by default. Silk shows the GM a one-time notice on load if any non-GM role has it; remove it in _Configure Permissions_ if that matters to your table.
+
 ## Development
 
 Node per `.nvmrc`, npm.
@@ -38,6 +46,16 @@ ln -s "$PWD/dist" ~/.local/share/FoundryVTT/Data/modules/silk
 **Commands** ([ADR 0003](docs/adr/0003-every-ui-action-is-a-command.md)): every UI action is a command `{ name, title, keys?, available(ctx), run(args) }`, named `area.verb` per spec §15. A feature exports its commands (e.g. `src/ui/canvas/commands.ts`), `module.ts` registers them. Buttons, menus and keys only call `registry.run(name, args)`; `keys` become Foundry keybindings automatically. Interactive elements get a `data-silk-*` attribute. The registry is `game.modules.get('silk').api`.
 
 **Settings**: add to `SETTINGS` in `src/adapter/settings.ts`, its type to `src/types/silk.d.ts`, and DE + EN strings (a test checks both).
+
+### Dev MCP server
+
+`tools/mcp/` is a dev/test-only MCP server (stdio) over the command API; it is not part of `dist/`. Each registry command becomes a tool, dots mapped to underscores (`canvas.open` → `canvas_open`); tool args are the command's args object. It drives a Foundry page with Playwright and calls `game.modules.get('silk').api`, connecting on the first tool call, so start Foundry with Silk enabled first.
+
+```sh
+claude mcp add silk -- node tools/mcp/main.ts --url http://localhost:30000 --executable /usr/bin/chromium
+# options: --cdp <endpoint> (attach to a running browser's /game tab instead of launching),
+#          --user <name> (default Gamemaster), --password, --headed
+```
 
 ### CI and releases
 
