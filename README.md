@@ -12,6 +12,16 @@ Silk keeps unrevealed content out of the **player UI**. It does not stop a playe
 - **Data folder exposure**: Foundry serves the Data folder without login. The Canon lives under an unguessable `Data/silk/<random 128-bit id>/`, which keeps out people who don't know the path. Players learn the path when their client loads Canon data.
 - **FILES_BROWSE**: a role with "Use File Browser" can list `Data/silk/` and open the Canon directly. Foundry grants it to Trusted Players by default. Silk shows the GM a one-time notice on load if any non-GM role has it; remove it in _Configure Permissions_ if that matters to your table.
 
+## Backup, Share and git
+
+The Canon window's **Backup and Share** section (spec §11.6):
+
+- **Canon Backup** zips everything reachable from the Canon's refs: history, all Adventures, Campaigns and Revelation Maps, plus every referenced `Data/` file (core, system and module files are skipped) with a SHA-256 each. Importing it on a server that has the same Canon fast-forwards; if the histories diverged, Silk offers to import it as a copy with a new id. Files that differ on the server are listed and overwritten only on confirm.
+- **Canon Share** zips one Commit or Adventure head as a single root Commit, without Adventures, Campaigns, Revelation Maps or uncommitted work. The import gets a new Canon id; a file that differs on the server is written as `<name>.silk-<hash8>.<ext>` and references are rewritten.
+- **Garbage collection**: FilePicker can't delete, so files a crash or an Abandon left behind stay on disk. Exports hold only reachable files; export → import into a fresh server is the clean-up. The export dialog shows the orphan count.
+- **Server move**: copy the World folders and import a Canon Backup.
+- **git**: the Canon folder `Data/silk/<canon-id>/` is plain JSON, written append-only (objects and commits never change, refs are small files). You can `git init` it and commit after play sessions; no Silk feature is involved. Restore with `git checkout` while Foundry is stopped.
+
 ## Development
 
 Node per `.nvmrc`, npm.
