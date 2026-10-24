@@ -1,0 +1,42 @@
+{
+  "SILK": {
+    "Title": "Silk",
+    "Settings": {
+      "materializeMode": {
+        "Name": "Materialisierungsmodus",
+        "Hint": "Sofort legt das Foundry-Dokument beim Erstellen eines Elements an. Bei Bedarf wartet, bis du es materialisierst.",
+        "Immediate": "Sofort",
+        "OnDemand": "Bei Bedarf"
+      },
+      "hoodedImage": {
+        "Name": "Standardbild für verhüllte Elemente",
+        "Hint": "Bild, das Spieler für ein Element sehen, dessen Aussehen nicht enthüllt ist."
+      },
+      "detailDrop": {
+        "Name": "Details beim Bewegen ausblenden",
+        "Hint": "Karten beim Verschieben oder Zoomen vereinfachen, damit die Leinwand flüssig bleibt."
+      },
+      "renderBudgetWarning": {
+        "Name": "Warnschwelle Darstellung",
+        "Hint": "Warnen, wenn die Leinwand mehr Elemente als diese Zahl zeichnen würde."
+      },
+      "confirmDelete": {
+        "Name": "Löschen bestätigen",
+        "Hint": "Vor dem Löschen von Elementen nachfragen."
+      },
+      "warnUnmaterializeReveal": {
+        "Name": "Warnung beim Entmaterialisieren enthüllter Inhalte",
+        "Hint": "Warnen, bevor ein Element entmaterialisiert wird, das Spieler sehen können."
+      }
+    },
+    "Commands": {
+      "canvas": {
+        "open": "Weltleinwand öffnen"
+      }
+    },
+    "Canvas": {
+      "Title": "Weltleinwand",
+      "Placeholder": "Die Weltleinwand folgt in einer späteren Version."
+    }
+  }
+}
