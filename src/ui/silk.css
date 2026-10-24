@@ -1,0 +1,4 @@
+/* Global Silk styles. Component styles live in their .svelte files. */
+.silk .window-content {
+  padding: 0;
+}

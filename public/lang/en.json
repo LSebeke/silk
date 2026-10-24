@@ -1,0 +1,42 @@
+{
+  "SILK": {
+    "Title": "Silk",
+    "Settings": {
+      "materializeMode": {
+        "Name": "Materialize mode",
+        "Hint": "Immediate creates the Foundry document when an Element is created. On demand waits until you Materialize it.",
+        "Immediate": "Immediate",
+        "OnDemand": "On demand"
+      },
+      "hoodedImage": {
+        "Name": "Hooded default image",
+        "Hint": "Image players see for an Element whose appearance is not Revealed."
+      },
+      "detailDrop": {
+        "Name": "Drop detail while moving",
+        "Hint": "Simplify cards while panning or zooming the canvas to keep it fast."
+      },
+      "renderBudgetWarning": {
+        "Name": "Render budget warning",
+        "Hint": "Warn when the canvas would draw more Elements than this."
+      },
+      "confirmDelete": {
+        "Name": "Confirm delete",
+        "Hint": "Ask before deleting Elements."
+      },
+      "warnUnmaterializeReveal": {
+        "Name": "Warn on Unmaterialize of Revealed content",
+        "Hint": "Warn before Unmaterializing an Element players can see."
+      }
+    },
+    "Commands": {
+      "canvas": {
+        "open": "Open the World Canvas"
+      }
+    },
+    "Canvas": {
+      "Title": "World Canvas",
+      "Placeholder": "The World Canvas arrives in a later release."
+    }
+  }
+}
