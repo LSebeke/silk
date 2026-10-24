@@ -2,6 +2,7 @@
  * Entry point. Wires the pure core to Foundry through the adapter and exposes the
  * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
  */
+import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { registerKeybindings } from './adapter/keybindings';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
 import { registerSettings } from './adapter/settings';
@@ -20,6 +21,18 @@ Hooks.once('init', () => {
   );
   const module = game.modules?.get(MODULE_ID);
   if (module) module.api = registry;
+});
+
+Hooks.once('ready', () => {
+  showFileBrowseNotice({
+    isGM: game.user?.isGM ?? false,
+    permissions: game.permissions as Record<string, number[] | undefined> | undefined,
+    alreadyShown: game.settings?.get(MODULE_ID, 'fileBrowseNoticeShown') ?? false,
+    localize: (key, data) =>
+      (data ? game.i18n?.format(key, data) : game.i18n?.localize(key)) ?? key,
+    warn: (message) => ui.notifications?.warn(message, { permanent: true }),
+    markShown: () => game.settings?.set(MODULE_ID, 'fileBrowseNoticeShown', true),
+  });
 });
 
 Hooks.on('getSceneControlButtons', (controls) => {
