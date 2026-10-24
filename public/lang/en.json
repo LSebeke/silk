@@ -31,7 +31,9 @@
     },
     "Commands": {
       "canvas": {
-        "open": "Open the World Canvas"
+        "open": "Open the World Canvas",
+        "moveNodes": "Move Nodes",
+        "select": "Select Nodes"
       },
       "canon": {
         "create": "Create Canon",
@@ -40,14 +42,29 @@
       "history": {
         "commit": "Commit",
         "discard": "Discard uncommitted changes"
+      },
+      "element": {
+        "create": "Create Element",
+        "rename": "Rename Element"
       }
     },
     "Canvas": {
       "Title": "World Canvas",
-      "Placeholder": "The World Canvas arrives in a later release."
+      "ClassSearch": "Class…"
     },
     "Notice": {
       "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
+    },
+    "Class": {
+      "person": "Person",
+      "creature": "Creature",
+      "playerCharacter": "Player Character",
+      "location": "Location",
+      "faction": "Faction",
+      "item": "Item",
+      "event": "Event",
+      "quest": "Quest",
+      "note": "Note"
     }
   }
 }

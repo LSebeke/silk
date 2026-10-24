@@ -30,6 +30,21 @@ export interface World {
 async function join(browser: Browser, url: string, userName: string): Promise<Page> {
   const page = await (await browser.newContext({ baseURL: url })).newPage();
   page.on('pageerror', (err) => console.error(`[${userName}] ${err.message}`));
+  // dsa5 opens a modal skin dialog, a patch-notes window and a "Did you know?" tip on fresh
+  // clients at random moments after `ready`; they swallow pointer input. Close them whenever
+  // they get in the way.
+  const DSA5_POPUPS = ['dsa5-skin-selection-dialog', 'dsa5-patch-viewer'];
+  const selector = [...DSA5_POPUPS.map((id) => `#${id}`), '.didYouKnow'].join(', ');
+  await page.addLocatorHandler(page.locator(selector).first(), () =>
+    page.evaluate(async (ids) => {
+      for (const id of ids) {
+        await foundry.applications.instances.get(id)?.close();
+        // The patch viewer is no registered app instance: drop its element.
+        document.getElementById(id)?.remove();
+      }
+      for (const tip of document.querySelectorAll('.didYouKnow')) tip.remove();
+    }, DSA5_POPUPS),
+  );
   await page.goto('/join');
   await page.waitForFunction(() => (game.users?.size ?? 0) > 0);
   const status = await page.evaluate(async (name) => {
