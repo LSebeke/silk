@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "size": "node scripts/bundle-size.mjs",
-    "mcp": "node tools/mcp/main.ts"
+    "mcp": "node tools/mcp/main.ts",
+    "test:e2e": "npm run build && playwright test"
   },
   "overrides": {
     "pixi.js": "7.4.3",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@modelcontextprotocol/sdk": "1.32.2",
+    "@playwright/test": "1.64.1",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "eslint": "10.13.0",
     "eslint-plugin-svelte": "3.23.1",

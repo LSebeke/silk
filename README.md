@@ -23,7 +23,10 @@ npm test           # vitest (+ fast-check)
 npm run typecheck  # svelte-check, strict TS
 npm run lint       # eslint + prettier --check   (npm run format to fix)
 npm run build
+npm run test:e2e   # build + Playwright against headless Foundry (local only)
 ```
+
+**E2E** (`e2e/`, spec §14): each worker starts headless Foundry on a free port with a throwaway data dir (license copied, `dsa5` and `dist/` symlinked), creates and launches world `silk-test-<run>`, enables Silk, adds user `Player`, and deletes everything afterwards. It never sees `silk-dev`. Tests are `*.e2e.ts` and use the `gm` / `player` page fixtures from `e2e/fixtures.ts`. Env overrides: `FOUNDRY_MAIN`, `FOUNDRY_USER_DATA`. One-time: `npx playwright install chromium`.
 
 **Dev loop** (no HMR): symlink `dist/` into Foundry once, run `npm run dev`, press F5 after each rebuild.
 
