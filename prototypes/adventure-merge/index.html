@@ -1,0 +1,473 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Answers: what does the end-of-Adventure 3-way merge UI look like?
+  Three variants of the merge window, switchable via ?variant=A|B|C (or ←/→, bottom bar).
+  Mock data only, no persistence. Open this file in a browser.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE Adventure Merge</title>
+<style>
+  :root {
+    --bg: #1d1b19; --win: #2a2724; --panel: #33302c; --line: #4a4540; --text: #e8e2d8; --dim: #9d958a;
+    --accent: #d9a441; --canon: #6fa8dc; --adv: #e8915a; --ok: #7bbf6a; --bad: #e06666; --conf: #f1c232;
+    font: 13px/1.4 system-ui, sans-serif; color: var(--text);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); min-height: 100vh; padding: 24px 16px 90px; }
+  button { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #1d1b19; border-color: var(--accent); font-weight: 600; }
+  button.primary:disabled { opacity: .4; cursor: not-allowed; }
+  button.ghost { background: none; border-color: transparent; color: var(--dim); }
+  .win { max-width: 1180px; margin: 0 auto; background: var(--win); border: 1px solid #000; border-radius: 6px; box-shadow: 0 8px 30px #000a; overflow: hidden; }
+  .win-head { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: #151311; border-bottom: 1px solid #000; font-weight: 600; }
+  .win-head .x { margin-left: auto; color: var(--dim); }
+  .win-body { height: 720px; display: flex; flex-direction: column; }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .bar.foot { border-top: 1px solid var(--line); border-bottom: 0; margin-top: auto; }
+  .grow { flex: 1; }
+  .dim { color: var(--dim); }
+  .chip { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 11px; border: 1px solid var(--line); white-space: nowrap; }
+  .chip.canon { border-color: var(--canon); color: var(--canon); }
+  .chip.adv { border-color: var(--adv); color: var(--adv); }
+  .chip.conf { border-color: var(--conf); color: var(--conf); }
+  .chip.ok { border-color: var(--ok); color: var(--ok); }
+  .chip.bad { border-color: var(--bad); color: var(--bad); }
+  .cls { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  .val { white-space: pre-wrap; }
+  .val.none { color: var(--dim); font-style: italic; }
+  .scroll { overflow: auto; }
+
+  /* field row (variant A table) */
+  table.fields { width: 100%; border-collapse: collapse; }
+  table.fields th { text-align: left; font-weight: 500; color: var(--dim); padding: 6px 8px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--win); }
+  table.fields td { vertical-align: top; padding: 6px 8px; border-bottom: 1px solid #3a3632; }
+  table.fields tr.group td { color: var(--accent); font-weight: 600; padding-top: 12px; border-bottom: 0; }
+  td.pick { cursor: pointer; border-left: 3px solid transparent; }
+  td.pick:hover { background: #3a3632; }
+  td.pick.sel.c { border-left-color: var(--canon); background: #6fa8dc1a; }
+  td.pick.sel.a { border-left-color: var(--adv); background: #e8915a1a; }
+  tr.conflict.open td:first-child { box-shadow: inset 3px 0 var(--conf); }
+  tr.ctx { opacity: .55; }
+
+  /* A: sidebar list */
+  .a-wrap { display: flex; flex: 1; min-height: 0; }
+  .a-side { width: 280px; border-right: 1px solid var(--line); overflow: auto; }
+  .a-side h4 { margin: 10px 12px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--dim); }
+  .a-item { display: flex; align-items: center; gap: 6px; padding: 5px 12px; cursor: pointer; }
+  .a-item:hover { background: var(--panel); }
+  .a-item.cur { background: #d9a44122; box-shadow: inset 3px 0 var(--accent); }
+  .a-item .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .a-main { flex: 1; overflow: auto; padding: 0 12px 12px; }
+  .a-main h2 { margin: 12px 0 2px; font-size: 18px; }
+
+  /* B: canvas */
+  .b-wrap { display: flex; flex: 1; min-height: 0; position: relative; }
+  .b-canvas { flex: 1; position: relative; background: radial-gradient(#ffffff0d 1px, transparent 1px) 0 0/22px 22px, #22201d; }
+  .b-canvas svg { width: 100%; height: 100%; display: block; }
+  .b-legend { position: absolute; left: 10px; bottom: 10px; background: #000a; padding: 6px 8px; border-radius: 4px; display: flex; gap: 8px; flex-wrap: wrap; max-width: 60%; }
+  .b-drawer { width: 380px; border-left: 1px solid var(--line); overflow: auto; padding: 12px; background: var(--win); }
+  .b-field { border: 1px solid var(--line); border-radius: 5px; margin: 8px 0; padding: 8px; }
+  .b-field.conflict.open { border-color: var(--conf); }
+  .b-field .lbl { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; font-weight: 600; }
+  .b-opt { display: block; width: 100%; text-align: left; margin: 4px 0; padding: 6px 8px; border-left: 3px solid var(--line); }
+  .b-opt.c.sel { border-left-color: var(--canon); background: #6fa8dc22; }
+  .b-opt.a.sel { border-left-color: var(--adv); background: #e8915a22; }
+  .b-opt small { display: block; color: var(--dim); }
+
+  /* C: wizard */
+  .c-steps { display: flex; gap: 2px; padding: 0 12px; }
+  .c-steps span { flex: 1; height: 4px; background: var(--line); border-radius: 2px; cursor: pointer; }
+  .c-steps span.done { background: var(--ok); }
+  .c-steps span.cur { background: var(--accent); }
+  .c-steps span.conf { background: var(--conf); }
+  .c-body { flex: 1; overflow: auto; padding: 18px 28px; }
+  .c-body h2 { margin: 0 0 4px; font-size: 20px; }
+  .c-three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 16px; }
+  .c-card { border: 1px solid var(--line); border-radius: 6px; padding: 12px; min-height: 140px; display: flex; flex-direction: column; gap: 8px; }
+  .c-card.pickable { cursor: pointer; }
+  .c-card.pickable:hover { border-color: var(--accent); }
+  .c-card.sel.c { border-color: var(--canon); box-shadow: 0 0 0 2px #6fa8dc55; }
+  .c-card.sel.a { border-color: var(--adv); box-shadow: 0 0 0 2px #e8915a55; }
+  .c-card h3 { margin: 0; font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  .kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; color: var(--dim); }
+  .c-sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0; }
+  .c-sum div { background: var(--panel); border-radius: 6px; padding: 10px; }
+  .c-sum b { display: block; font-size: 22px; }
+  details.c-auto { border: 1px solid var(--line); border-radius: 5px; margin: 6px 0; padding: 6px 10px; }
+  details.c-auto summary { cursor: pointer; }
+  textarea { width: 100%; min-height: 90px; background: #1d1b19; color: var(--text); border: 1px solid var(--line); border-radius: 4px; font: inherit; padding: 6px; }
+
+  /* scene minimap */
+  .scene { background: #1a1816; border: 1px solid var(--line); border-radius: 4px; }
+
+  /* prototype chrome (not part of the design) */
+  .proto-bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: #fff; color: #111; border-radius: 999px; padding: 6px 10px; box-shadow: 0 4px 20px #0008; z-index: 99; font: 600 13px system-ui; }
+  .proto-bar button { background: #111; color: #fff; border: 0; border-radius: 999px; width: 28px; height: 28px; padding: 0; }
+  .proto-state { position: fixed; right: 12px; bottom: 16px; z-index: 98; font: 11px ui-monospace, monospace; }
+  .proto-state pre { background: #000e; color: #9f9; padding: 8px; border-radius: 6px; max-height: 50vh; overflow: auto; width: 340px; margin: 0 0 6px; }
+  .proto-state button { background: #fff; color: #111; border: 0; border-radius: 999px; font: 600 11px system-ui; padding: 6px 10px; }
+  .proto-note { max-width: 1180px; margin: 0 auto 10px; color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="proto-note" id="note"></div>
+<div id="app"></div>
+<div class="proto-bar"><button id="prev">←</button><span id="vlabel"></span><button id="next">→</button></div>
+<div class="proto-state"><pre id="state" hidden></pre><button id="stbtn">state</button></div>
+
+<script>
+// ---------- mock merge: Adventure "Die Blutige Klinge" (Dienstagsgruppe) → Canon main ----------
+const ADV = { name: 'Die Blutige Klinge', campaign: 'Dienstagsgruppe', started: '02.08.2026' };
+const OTHER = { name: 'Schatten über Gareth', campaign: 'Freitagsrunde', date: '12.09.2026' };
+const COLORS = { Person: '#c98b4a', 'Player Character': '#4aa3c9', Location: '#5fae6a', Faction: '#a05fc9', Item: '#c9b64a', Event: '#c95f5f', Quest: '#c94a8f' };
+
+// field: base / canon (main now) / adv (Adventure). null = absent. by = which merge changed main.
+const F = (group, label, base, canon, adv, extra = {}) => ({ group, label, base, canon, adv, ...extra });
+const ELEMENTS = [
+  { id: 'answin', cls: 'Person', name: 'Graf Answin', pos: [330, 230], fields: [
+    F('Story', 'Status', 'alive', 'alive', 'dead'),
+    F('Story', 'Title', 'Graf von Falkenhorst', 'Reichsverräter', 'Graf von Falkenhorst'),
+    F('Info Block', 'Secret: The Pact', 'Answin hat einen Pakt mit dem Namenlosen geschlossen.',
+      'Answin hat einen Pakt mit dem Namenlosen geschlossen. Der Bund der Klinge weiß davon.',
+      'Answin hat einen Pakt mit dem Namenlosen geschlossen. Das Pfand: Siebenstreich.', { text: true }),
+    F('Sheet · Values', 'LeP', '32', '32', '0'),
+    F('Sheet · Attributes', 'MU', '14', '15', '14'),
+    F('Sheet · Inventory', 'Langschwert', 'TP 1W6+4', 'TP 1W6+5', null, { advNote: 'looted' }),
+    F('Sheet · Inventory', 'Heiltrank', 'x2', 'x2', 'x0'),
+  ]},
+  { id: 'rondrik', cls: 'Player Character', name: 'Rondrik', pos: [640, 130], fields: [
+    F('Sheet · Values', 'AP', '1200', '1200', '1450'),
+    F('Sheet · Inventory', 'Langschwert', null, null, 'TP 1W6+4'),
+  ]},
+  { id: 'sieben', cls: 'Item', name: 'Siebenstreich', pos: [640, 330], fields: [
+    F('Info Block', 'Curse', 'Wer es führt, hört Stimmen.', 'Wer es führt, hört Stimmen.', 'Wer es führt, hört Stimmen. Rondrik hört sie seit Tag 3.', { text: true }),
+  ]},
+  { id: 'ugo', cls: 'Person', name: 'Spitzel Ugo', pos: [110, 120], deletedIn: 'adv', fields: [
+    F('Element', 'Exists', 'yes', 'yes · Info Block "Loyalty" edited: „…verkauft aber an den Bund.“', null, { exists: true, advNote: 'deleted in Adventure (killed, Unmaterialized → deleted)' }),
+  ]},
+  { id: 'falken', cls: 'Location', name: 'Ruine Falkenhorst', pos: [180, 420], addedIn: 'adv', fields: [
+    F('Element', 'Exists', null, null, 'yes (new)', { exists: true }),
+    F('Info Block', 'Description', null, null, 'Verfallene Burg über dem Pass. Schatzkammer unter der Kapelle.', { text: true }),
+  ]},
+  { id: 'pass', cls: 'Event', name: 'Überfall am Pass', pos: [470, 450], fields: [
+    F('Story', 'Status', 'not happened', 'not happened', 'happened'),
+    F('Event Scene', 'Walls', '14 walls', '17 walls (gate added)', '14 walls'),
+  ], scene: { tokens: [
+    { name: 'Bandit 1', base: [40, 50], canon: [40, 50], adv: null },
+    { name: 'Bandit 2', base: [70, 40], canon: [70, 40], adv: null },
+    { name: 'Bandit-Anführer', base: [110, 70], canon: [150, 30], adv: [90, 90] },
+    { name: 'Wolf', base: null, canon: null, adv: [160, 80] },
+    { name: 'Rondrik', base: null, canon: null, adv: [60, 100] },
+  ]}},
+  { id: 'quest', cls: 'Quest', name: 'Die Blutige Klinge', pos: [830, 450], fields: [
+    F('Story', 'Status', 'open', 'open', 'done'),
+  ]},
+  { id: 'gareth', cls: 'Location', name: 'Gareth', pos: [860, 230], basePos: [760, 230], canonPos: [760, 60], fields: [] },
+  { id: 'bund', cls: 'Faction', name: 'Bund der Klinge', pos: [120, 260], addedIn: 'canon', fields: [
+    F('Element', 'Exists', null, 'yes (new)', null, { exists: true }),
+  ]},
+  { id: 'hesi', cls: 'Person', name: 'Hesindiane', pos: [500, 60], fields: [] },
+];
+const CONNECTIONS = [
+  { id: 'c1', from: 'answin', to: 'rondrik', fields: [F('Connection', 'Label', 'distrusts', 'despises', 'fears')] },
+  { id: 'c2', from: 'rondrik', to: 'sieben', label: 'owns', beh: true, fields: [F('Connection', 'Owner', 'Graf Answin', 'Graf Answin', 'Rondrik')] },
+  { id: 'c3', from: 'answin', to: 'falken', label: 'hid treasure at', fields: [F('Connection', 'Exists', null, null, 'hid treasure at', { exists: true })] },
+  { id: 'c4', from: 'ugo', to: 'answin', label: 'spies for', fields: [F('Connection', 'Exists', 'spies for', 'spies for', null, { exists: true, advNote: 'follows Ugo' })] },
+  { id: 'c5', from: 'hesi', to: 'answin', label: 'old friends', mutual: true, fields: [] },
+  { id: 'c6', from: 'bund', to: 'answin', label: 'hunts', fields: [F('Connection', 'Exists', null, 'hunts', null, { exists: true })] },
+  { id: 'c7', from: 'rondrik', to: 'pass', label: 'present at', beh: true, fields: [F('Connection', 'Exists', null, null, 'present at', { exists: true })] },
+];
+const LAYOUT = [
+  { label: 'Node · Gareth', base: '(760, 230)', canon: '(880, 90)', adv: '(860, 230)', layout: true },
+  { label: 'Node · Ruine Falkenhorst', base: null, canon: null, adv: '(180, 420)', layout: true },
+  { label: 'Visual Group · Falkenhorst-Intrige', base: null, canon: null, adv: 'Answin, Falkenhorst, Ugo', layout: true },
+  { label: '11 more Node moves', base: '…', canon: '…', adv: '…', layout: true, bulk: true },
+];
+
+// ---------- derive rows ----------
+const fmtPos = p => p ? `(${p[0]}, ${p[1]})` : null;
+const ROWS = []; // every field row in the merge
+function addRow(owner, f, i) {
+  const same = (a, b) => a === b;
+  let kind;
+  if (same(f.adv, f.base) && same(f.canon, f.base)) kind = 'same';
+  else if (same(f.adv, f.base)) kind = 'canonOnly';         // only other merges touched it: context
+  else if (same(f.canon, f.base) || same(f.canon, f.adv)) kind = 'auto';  // only Adventure touched it
+  else if (f.layout) kind = 'autoIncoming';                 // both moved: incoming wins, no prompt
+  else kind = 'conflict';
+  const row = { id: `${owner.id}:${i}`, owner, ...f, kind, by: f.canon !== f.base ? OTHER : null };
+  ROWS.push(row);
+}
+for (const e of ELEMENTS) {
+  e.kindOf = 'element';
+  e.fields.forEach((f, i) => addRow(e, f, i));
+  (e.scene?.tokens || []).forEach((t, i) => addRow(e, F('Event Scene', `Token · ${t.name}`, fmtPos(t.base), fmtPos(t.canon), fmtPos(t.adv), { tok: t }), 't' + i));
+  if (e.basePos) addRow(e, F('Layout', 'Position', fmtPos(e.basePos), fmtPos(e.canonPos), fmtPos(e.pos), { layout: true }), 'pos');
+}
+for (const c of CONNECTIONS) { c.kindOf = 'connection'; c.name = `${byId(c.from).name} → ${byId(c.to).name}`; c.fields.forEach((f, i) => addRow(c, f, i)); }
+const LAYOUT_OWNER = { id: 'layout', kindOf: 'layout', name: 'Canvas layout', cls: null };
+LAYOUT.forEach((f, i) => addRow(LAYOUT_OWNER, { group: 'Layout', ...f }, i));
+function byId(id) { return ELEMENTS.find(e => e.id === id); }
+
+const rowsOf = o => ROWS.filter(r => r.owner === o);
+const OWNERS = [...ELEMENTS, ...CONNECTIONS, LAYOUT_OWNER];
+function ownerKind(o) {
+  const rs = rowsOf(o);
+  if (rs.some(r => r.kind === 'conflict')) return 'conflict';
+  if (o.addedIn === 'adv') return 'added';
+  if (o.deletedIn === 'adv') return 'deleted';
+  if (rs.some(r => r.kind === 'auto' || r.kind === 'autoIncoming')) return 'changed';
+  if (rs.some(r => r.kind === 'canonOnly')) return 'canonOnly';
+  return 'same';
+}
+const KIND_CHIP = { conflict: ['conf', 'conflict'], added: ['ok', 'added'], deleted: ['bad', 'deleted'], changed: ['adv', 'changed'], canonOnly: ['canon', 'Canon only'], same: ['', 'unchanged'] };
+
+// ---------- resolution state ----------
+const S = { variant: new URLSearchParams(location.search).get('variant') || 'A', res: {}, edit: {}, showCtx: false, a: { cur: 'answin' }, b: { sel: 'answin' }, c: { step: 0 }, merged: false };
+const defaultPick = r => r.kind === 'canonOnly' || r.kind === 'same' ? 'c' : r.kind === 'conflict' ? null : 'a';
+const pick = r => S.res[r.id] ?? defaultPick(r);
+const result = r => { const p = pick(r); return p === 'e' ? S.edit[r.id] : p === 'c' ? r.canon : p === 'a' ? r.adv : undefined; };
+const conflicts = () => ROWS.filter(r => r.kind === 'conflict');
+const openConflicts = () => conflicts().filter(r => !pick(r));
+function setPick(id, p) { S.res[id] = p; if (p === 'e' && S.edit[id] == null) { const r = ROWS.find(x => x.id === id); S.edit[id] = [r.canon, r.adv].filter(Boolean).join('\n'); } render(); }
+
+// ---------- shared bits ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const val = (v, note) => v == null ? `<span class="val none">${note ? esc(note) : '— none'}</span>` : `<span class="val">${esc(v)}</span>`;
+const clsDot = o => o.cls ? `<span class="cls" style="background:${COLORS[o.cls]}"></span>` : '';
+const byChip = r => r.by ? `<span class="chip canon" title="Merged ${r.by.date}">via ${esc(r.by.name)} · ${esc(r.by.campaign)}</span>` : '';
+const header = () => `
+  <div class="win-head">⛓ Merge Adventure <span style="color:var(--adv)">${ADV.name}</span> → <span style="color:var(--canon)">Canon</span><span class="x">✕</span></div>`;
+const footer = () => {
+  const n = openConflicts().length;
+  return `<div class="bar foot">
+    <span class="dim">Auto-commit "Before merge" done · Cancel keeps the Adventure checked out.</span><span class="grow"></span>
+    <button data-act="cancel">Cancel</button>
+    <button class="primary" data-act="merge" ${n ? 'disabled' : ''}>${n ? `${n} conflict${n > 1 ? 's' : ''} left` : 'Merge into Canon'}</button></div>`;
+};
+function sceneMap(e, w = 200, h = 120, highlight) {
+  const toks = e.scene.tokens;
+  const dot = (p, color, dashed, title) => p ? `<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="${dashed ? 'none' : color}" stroke="${color}" stroke-width="2" ${dashed ? 'stroke-dasharray="3 2"' : ''}><title>${title}</title></circle>` : '';
+  return `<svg class="scene" viewBox="0 0 200 120" width="${w}" height="${h}">
+    <path d="M10 10 H190 V110 H10 Z M100 10 V50" fill="none" stroke="#555" stroke-width="3"/>
+    ${toks.map(t => {
+      const hl = highlight && highlight !== t.name ? ' opacity=".3"' : '';
+      const line = (a, b, c) => a && b ? `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${c}" stroke-dasharray="2 2"/>` : '';
+      return `<g${hl}>${line(t.base, t.canon, 'var(--canon)')}${line(t.base, t.adv, 'var(--adv)')}
+        ${dot(t.base, '#888', true, t.name + ' (base)')}
+        ${JSON.stringify(t.canon) !== JSON.stringify(t.base) ? dot(t.canon, 'var(--canon)', false, t.name + ' (Canon)') : ''}
+        ${dot(t.adv, 'var(--adv)', false, t.name + ' (Adventure)')}
+        ${t.base && !t.adv ? `<text x="${t.base[0]}" y="${t.base[1] + 4}" text-anchor="middle" fill="var(--bad)" font-size="11">✕</text>` : ''}</g>`;
+    }).join('')}
+    <text x="14" y="22" fill="#777" font-size="9">○ base  ● Canon  ● Adventure</text></svg>`;
+}
+
+// ================= Variant A: Merge editor (list + 3-column table) =================
+function VariantA() {
+  const groups = [['conflict', 'Conflicts'], ['added', 'Added'], ['deleted', 'Deleted'], ['changed', 'Changed'], ['canonOnly', 'Changed in Canon only']];
+  const side = groups.map(([k, label]) => {
+    const os = OWNERS.filter(o => ownerKind(o) === k);
+    if (!os.length || (k === 'canonOnly' && !S.showCtx)) return '';
+    return `<h4>${label} · ${os.length}</h4>` + os.map(o => {
+      const open = rowsOf(o).filter(r => r.kind === 'conflict' && !pick(r)).length;
+      return `<div class="a-item ${S.a.cur === o.id ? 'cur' : ''}" data-a="${o.id}">${clsDot(o)}<span class="n">${esc(o.name)}</span>
+        ${o.kindOf === 'connection' ? '<span class="dim">⟶</span>' : ''}${open ? `<span class="chip conf">${open}</span>` : k === 'conflict' ? '<span class="chip ok">✓</span>' : ''}</div>`;
+    }).join('');
+  }).join('');
+  const o = OWNERS.find(x => x.id === S.a.cur);
+  const rs = rowsOf(o).filter(r => r.kind !== 'same' && (S.showCtx || r.kind !== 'canonOnly'));
+  let lastG;
+  const body = rs.map(r => {
+    const g = r.group !== lastG ? `<tr class="group"><td colspan="5">${esc(r.group)}</td></tr>` : ''; lastG = r.group;
+    const p = pick(r), cf = r.kind === 'conflict';
+    const res = p === 'e' ? `<textarea data-edit="${r.id}">${esc(S.edit[r.id])}</textarea>` : p ? val(result(r), 'removed') : '<span class="chip conf">pick one</span>';
+    const tag = { auto: '<span class="chip adv">auto</span>', autoIncoming: '<span class="chip adv" title="Layout conflicts resolve to the incoming branch">incoming wins</span>', canonOnly: '<span class="chip canon">kept</span>', conflict: '' }[r.kind] || '';
+    return g + `<tr class="${cf ? 'conflict' : ''} ${cf && !p ? 'open' : ''} ${r.kind === 'canonOnly' ? 'ctx' : ''}">
+      <td>${esc(r.label)}<br>${tag}</td>
+      <td>${val(r.base, 'none')}</td>
+      <td class="pick ${p === 'c' ? 'sel c' : ''}" data-pick="${r.id}" data-p="c">${val(r.canon, 'removed')}<br>${byChip(r)}</td>
+      <td class="pick ${p === 'a' ? 'sel a' : ''}" data-pick="${r.id}" data-p="a">${val(r.adv, r.advNote || 'removed')}</td>
+      <td>${res}${r.text && cf ? `<br><button class="ghost" data-pick="${r.id}" data-p="e">✎ edit</button>` : ''}</td></tr>`;
+  }).join('');
+  const scene = o.scene ? `<div style="margin:8px 0">${sceneMap(o, 300, 180)}</div>` : '';
+  return `<div class="win">${header()}<div class="win-body">
+    <div class="bar"><b>${ROWS.filter(r => r.kind !== 'same' && r.kind !== 'canonOnly').length}</b> changes from this Adventure ·
+      <b style="color:var(--conf)">${conflicts().length}</b> conflicts with Canon (merged since ${ADV.started}: <span class="chip canon">${OTHER.name} · ${OTHER.campaign} · ${OTHER.date}</span>)
+      <span class="grow"></span><label><input type="checkbox" data-act="ctx" ${S.showCtx ? 'checked' : ''}> show Canon-only changes</label>
+      <button data-act="nextConf">Next conflict ⏎</button></div>
+    <div class="a-wrap"><div class="a-side">${side}</div>
+      <div class="a-main"><h2>${clsDot(o)}${esc(o.name)}</h2><div class="dim">${o.cls || o.kindOf}${o.beh ? ' · Behavioural' : ''} · click a Canon or Adventure cell to take it</div>${scene}
+        <table class="fields"><tr><th style="width:18%">Field</th><th>Base <span class="dim">(Adventure start)</span></th><th style="color:var(--canon)">Canon now</th><th style="color:var(--adv)">Adventure</th><th>Result</th></tr>${body || '<tr><td colspan=5 class="dim">No changes.</td></tr>'}</table>
+      </div></div>
+    ${footer()}</div></div>`;
+}
+
+// ================= Variant B: Diff on the canvas =================
+function VariantB() {
+  const W = 1000, H = 560;
+  const color = { conflict: 'var(--conf)', added: 'var(--ok)', deleted: 'var(--bad)', changed: 'var(--adv)', canonOnly: 'var(--canon)', same: '#5a554e' };
+  const badge = { conflict: '!', added: '+', deleted: '−', changed: '~', canonOnly: 'C', same: '' };
+  const visible = o => S.showCtx || ownerKind(o) !== 'canonOnly';
+  const ctr = e => [e.pos[0] + 65, e.pos[1] + 22];
+  const edges = CONNECTIONS.filter(c => visible(c) && visible(byId(c.from)) && visible(byId(c.to))).map(c => {
+    const [x1, y1] = ctr(byId(c.from)), [x2, y2] = ctr(byId(c.to)), k = ownerKind(c);
+    const lbl = c.fields[0] && c.fields[0].label === 'Label' ? (pick(rowsOf(c)[0]) ? result(rowsOf(c)[0]) : `${c.fields[0].canon} / ${c.fields[0].adv}?`) : c.label;
+    const sel = S.b.sel === c.id;
+    return `<g data-b="${c.id}" style="cursor:pointer"><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color[k]}" stroke-width="${sel ? 4 : k === 'same' ? 1.5 : 2.5}" ${k === 'deleted' ? 'stroke-dasharray="6 4"' : ''} marker-end="${c.mutual ? '' : 'url(#arr)'}"/>
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="14"/>
+      <text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 5}" fill="${color[k]}" font-size="11" text-anchor="middle" style="paint-order:stroke" stroke="#22201d" stroke-width="4">${esc(lbl)}</text></g>`;
+  }).join('');
+  const moves = ELEMENTS.filter(e => e.basePos).map(e => `<rect x="${e.canonPos[0]}" y="${e.canonPos[1]}" width="130" height="44" rx="5" fill="none" stroke="var(--canon)" stroke-dasharray="4 3"/>
+    <rect x="${e.basePos[0]}" y="${e.basePos[1]}" width="130" height="44" rx="5" fill="none" stroke="#777" stroke-dasharray="2 3"/>
+    <line x1="${e.basePos[0] + 65}" y1="${e.basePos[1] + 22}" x2="${e.pos[0] + 65}" y2="${e.pos[1] + 22}" stroke="var(--adv)" stroke-dasharray="3 3" marker-end="url(#arr2)"/>
+    <text x="${e.canonPos[0] + 4}" y="${e.canonPos[1] - 4}" fill="var(--canon)" font-size="10">Canon put it here · incoming wins</text>`).join('');
+  const group = `<rect x="80" y="90" width="400" height="400" rx="8" fill="#e8915a0a" stroke="var(--ok)" stroke-dasharray="6 4"/><text x="90" y="106" fill="var(--ok)" font-size="11">+ Visual Group · Falkenhorst-Intrige</text>`;
+  const nodes = ELEMENTS.filter(visible).map(e => {
+    const k = ownerKind(e), open = rowsOf(e).filter(r => r.kind === 'conflict' && !pick(r)).length, sel = S.b.sel === e.id;
+    const resolved = k === 'conflict' && !open;
+    return `<g data-b="${e.id}" style="cursor:pointer" transform="translate(${e.pos[0]},${e.pos[1]})" opacity="${k === 'deleted' && pick(rowsOf(e)[0]) === 'a' ? .45 : 1}">
+      <rect width="130" height="44" rx="5" fill="#2f2c28" stroke="${resolved ? 'var(--ok)' : color[k]}" stroke-width="${sel ? 4 : k === 'same' ? 1 : 2.5}"/>
+      <rect width="6" height="44" rx="2" fill="${COLORS[e.cls]}"/>
+      <text x="14" y="19" fill="var(--text)" font-size="12" font-weight="600" ${k === 'deleted' ? 'text-decoration="line-through"' : ''}>${esc(e.name)}</text>
+      <text x="14" y="35" fill="var(--dim)" font-size="10">${e.cls}</text>
+      ${badge[k] ? `<circle cx="128" cy="2" r="10" fill="${resolved ? 'var(--ok)' : color[k]}"/><text x="128" y="6" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1b19">${resolved ? '✓' : open || badge[k]}</text>` : ''}</g>`;
+  }).join('');
+  const o = OWNERS.find(x => x.id === S.b.sel);
+  const drawer = o ? `<h3 style="margin:0">${clsDot(o)}${esc(o.name)}</h3><div class="dim">${o.cls || o.kindOf}${o.beh ? ' · Behavioural' : ''}</div>
+    ${o.scene ? `<div style="margin-top:8px">${sceneMap(o, 356, 210)}</div>` : ''}
+    ${rowsOf(o).filter(r => r.kind !== 'same' && (S.showCtx || r.kind !== 'canonOnly')).map(r => {
+      const p = pick(r), cf = r.kind === 'conflict';
+      if (!cf) return `<div class="b-field"><div class="lbl">${esc(r.group)} · ${esc(r.label)} <span class="grow"></span>${r.kind === 'canonOnly' ? '<span class="chip canon">Canon</span>' : r.kind === 'autoIncoming' ? '<span class="chip adv">incoming wins</span>' : '<span class="chip adv">auto</span>'}</div>
+        <span class="dim">${val(r.base, 'none')} → </span>${val(result(r), r.advNote || 'removed')} ${r.kind === 'canonOnly' ? byChip(r) : ''}</div>`;
+      return `<div class="b-field conflict ${p ? '' : 'open'}"><div class="lbl">${esc(r.group)} · ${esc(r.label)} <span class="grow"></span><span class="chip ${p ? 'ok' : 'conf'}">${p ? 'resolved' : 'conflict'}</span></div>
+        <div class="dim">was: ${val(r.base, 'none')}</div>
+        <button class="b-opt c ${p === 'c' ? 'sel' : ''}" data-pick="${r.id}" data-p="c"><small>Keep Canon ${r.by ? `· via ${esc(r.by.name)} (${esc(r.by.campaign)})` : ''}</small>${val(r.canon, 'removed')}</button>
+        <button class="b-opt a ${p === 'a' ? 'sel' : ''}" data-pick="${r.id}" data-p="a"><small>Take Adventure</small>${val(r.adv, r.advNote || 'removed')}</button>
+        ${r.text ? (p === 'e' ? `<textarea data-edit="${r.id}">${esc(S.edit[r.id])}</textarea>` : `<button class="ghost" data-pick="${r.id}" data-p="e">✎ write combined text</button>`) : ''}</div>`;
+    }).join('') || '<p class="dim">No changes.</p>'}`
+    : '<p class="dim">Click a Node or Connection.</p>';
+  const counts = Object.entries(KIND_CHIP).filter(([k]) => k !== 'same').map(([k, [c, l]]) => `<span class="chip ${c}">${badge[k]} ${l} ${OWNERS.filter(o => ownerKind(o) === k).length}</span>`).join('');
+  return `<div class="win">${header()}<div class="win-body">
+    <div class="bar"><span>The merged Canon, as it will look.</span> <span class="grow"></span>
+      <label><input type="checkbox" data-act="ctx" ${S.showCtx ? 'checked' : ''}> show Canon-only changes</label>
+      <button data-act="nextConf">Next conflict ⏎</button></div>
+    <div class="b-wrap"><div class="b-canvas"><svg viewBox="0 0 ${W} ${H}">
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#888"/></marker>
+      <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--adv)"/></marker></defs>
+      ${group}${moves}${edges}${nodes}</svg>
+      <div class="b-legend">${counts}<span class="chip">+11 Node moves, incoming wins</span></div></div>
+      <div class="b-drawer">${drawer}</div></div>
+    ${footer()}</div></div>`;
+}
+
+// ================= Variant C: Step-through wizard =================
+function VariantC() {
+  const cs = conflicts();
+  const steps = ['summary', ...cs.map(r => r.id), 'auto', 'confirm'];
+  const step = Math.min(S.c.step, steps.length - 1), cur = steps[step];
+  const bar = `<div class="c-steps">${steps.map((s, i) => {
+    const r = ROWS.find(x => x.id === s);
+    return `<span data-step="${i}" title="${r ? esc(r.owner.name + ' · ' + r.label) : s}" class="${i === step ? 'cur' : r && pick(r) ? 'done' : r ? 'conf' : i < step ? 'done' : ''}"></span>`;
+  }).join('')}</div>`;
+  let body;
+  if (cur === 'summary') {
+    const n = k => OWNERS.filter(o => ownerKind(o) === k).length;
+    body = `<h2>Merge “${ADV.name}” into the Canon</h2>
+      <div class="dim">Campaign ${ADV.campaign} · started ${ADV.started} · 6 commits</div>
+      <div class="c-sum"><div><b>${n('added')}</b>added</div><div><b>${n('changed')}</b>changed</div><div><b>${n('deleted')}</b>deleted</div><div style="outline:1px solid var(--conf)"><b style="color:var(--conf)">${cs.length}</b>conflicts</div></div>
+      <p>Since this Adventure started, the Canon received <b>1 merge</b>:</p>
+      <p><span class="chip canon">${OTHER.name} · ${OTHER.campaign} · ${OTHER.date}</span> — changed ${ROWS.filter(r => r.by).length} fields you may also have touched. Conflicts below say which side came from there.</p>
+      <p class="dim">You'll go through each conflict one by one, then skim what merges automatically.</p>`;
+  } else if (cur === 'auto') {
+    const byOwner = OWNERS.map(o => [o, rowsOf(o).filter(r => r.kind === 'auto' || r.kind === 'autoIncoming')]).filter(([, rs]) => rs.length);
+    body = `<h2>Merges automatically</h2><div class="dim">Only the Adventure changed these, or it's layout (incoming wins). Open one to override.</div>` +
+      byOwner.map(([o, rs]) => `<details class="c-auto"><summary>${clsDot(o)}<b>${esc(o.name)}</b> <span class="dim">— ${rs.map(r => esc(r.label)).join(', ')}</span></summary>
+        ${o.scene ? sceneMap(o, 260, 156) : ''}
+        ${rs.map(r => `<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><span style="width:180px">${esc(r.label)}</span>${val(r.base, 'none')} → ${val(result(r), r.advNote || 'removed')}
+          <span class="grow"></span><button class="ghost" data-pick="${r.id}" data-p="${pick(r) === 'a' ? 'c' : 'a'}">${pick(r) === 'a' ? 'keep Canon instead' : 'take Adventure'}</button></div>`).join('')}</details>`).join('');
+  } else if (cur === 'confirm') {
+    const n = openConflicts().length;
+    body = `<h2>Ready to merge</h2>
+      ${n ? `<p style="color:var(--conf)">${n} conflict(s) still open — go back.</p>` : '<p>All conflicts resolved.</p>'}
+      <ul>${cs.map(r => `<li>${esc(r.owner.name)} · ${esc(r.label)}: <b>${{ c: 'Canon', a: 'Adventure', e: 'edited' }[pick(r)] || '—'}</b></li>`).join('')}</ul>
+      <p class="dim">After merging, this World checks out the Canon and keeps its Materialized documents.</p>`;
+  } else {
+    const r = ROWS.find(x => x.id === cur), p = pick(r), o = r.owner, i = cs.indexOf(r) + 1;
+    body = `<div class="dim">Conflict ${i} of ${cs.length}</div>
+      <h2>${clsDot(o)}${esc(o.name)} <span class="dim" style="font-weight:400">· ${esc(r.group)} · ${esc(r.label)}</span></h2>
+      ${r.tok ? `<div style="margin-top:10px">${sceneMap(o, 320, 192, r.tok.name)}</div>` : ''}
+      <div class="c-three">
+        <div class="c-card"><h3 class="dim">Base · when the Adventure started</h3>${val(r.base, 'none')}</div>
+        <div class="c-card pickable ${p === 'c' ? 'sel c' : ''}" data-pick="${r.id}" data-p="c"><h3 style="color:var(--canon)">Canon now <span class="grow"></span><span class="kbd">C</span></h3>${val(r.canon, 'removed')}<div style="margin-top:auto">${byChip(r)}</div></div>
+        <div class="c-card pickable ${p === 'a' ? 'sel a' : ''}" data-pick="${r.id}" data-p="a"><h3 style="color:var(--adv)">This Adventure <span class="grow"></span><span class="kbd">A</span></h3>${val(r.adv, r.advNote || 'removed')}<div style="margin-top:auto"><span class="chip adv">${ADV.campaign}</span></div></div>
+      </div>
+      ${r.text ? (p === 'e' ? `<p>Combined:</p><textarea data-edit="${r.id}">${esc(S.edit[r.id])}</textarea>` : `<p><button data-pick="${r.id}" data-p="e">✎ Write combined text <span class="kbd">E</span></button></p>`) : ''}`;
+  }
+  const last = step === steps.length - 1;
+  return `<div class="win">${header()}<div class="win-body">
+    <div class="bar"><span>Step ${step + 1} / ${steps.length}</span><span class="grow"></span><span class="dim"><span class="kbd">C</span>/<span class="kbd">A</span> pick · <span class="kbd">⏎</span> next · <span class="kbd">⌫</span> back</span></div>
+    ${bar}<div class="c-body">${body}</div>
+    <div class="bar foot"><button data-act="back" ${step ? '' : 'disabled'}>Back</button><span class="grow"></span>
+      <button data-act="cancel">Cancel</button>
+      ${last ? `<button class="primary" data-act="merge" ${openConflicts().length ? 'disabled' : ''}>Merge into Canon</button>` : `<button class="primary" data-act="fwd">Next</button>`}</div>
+    </div></div>`;
+}
+
+// ---------- prototype switcher + wiring ----------
+const VARIANTS = { A: ['Merge editor', VariantA], B: ['Canvas diff', VariantB], C: ['Step-through', VariantC] };
+const NOTES = {
+  A: 'A — list of changed elements grouped by kind; per-field 3-column table (Base | Canon now | Adventure), click a cell to take it.',
+  B: 'B — the diff drawn on the canvas itself (merged result); click a Node/Connection for a drawer with per-field picks.',
+  C: 'C — wizard: summary → one conflict per screen (C/A/E keys) → skim auto-merged changes → confirm.',
+};
+function render() {
+  if (S.merged) { app.innerHTML = `<div class="win">${header()}<div class="win-body" style="align-items:center;justify-content:center"><h2>✓ Merged. World now has the Canon checked out.</h2><button data-act="reset">Reset prototype</button></div></div>`; }
+  else app.innerHTML = VARIANTS[S.variant][1]();
+  vlabel.textContent = `${S.variant} (${VARIANTS[S.variant][0]})`;
+  note.textContent = 'PROTOTYPE · ' + NOTES[S.variant];
+  state.textContent = JSON.stringify({ variant: S.variant, openConflicts: openConflicts().map(r => `${r.owner.name} · ${r.label}`), picks: Object.fromEntries(conflicts().map(r => [`${r.owner.name} · ${r.label}`, pick(r) === 'e' ? { edit: S.edit[r.id] } : pick(r)])), overrides: Object.fromEntries(Object.entries(S.res).filter(([id]) => ROWS.find(r => r.id === id).kind !== 'conflict')) }, null, 2);
+}
+function go(d) { const ks = Object.keys(VARIANTS); S.variant = ks[(ks.indexOf(S.variant) + d + ks.length) % ks.length]; history.replaceState(null, '', '?variant=' + S.variant); render(); }
+function nextConflict() {
+  const r = openConflicts()[0] || conflicts()[0];
+  if (S.variant === 'A') S.a.cur = r.owner.id; else S.b.sel = r.owner.id;
+  render();
+}
+prev.onclick = () => go(-1); next.onclick = () => go(1);
+stbtn.onclick = () => { state.hidden = !state.hidden; };
+const app = document.getElementById('app');
+app.addEventListener('click', e => {
+  const t = e.target.closest('[data-pick],[data-a],[data-b],[data-act],[data-step]'); if (!t) return;
+  if (t.dataset.pick) return setPick(t.dataset.pick, t.dataset.p);
+  if (t.dataset.a) { S.a.cur = t.dataset.a; return render(); }
+  if (t.dataset.b) { S.b.sel = t.dataset.b; return render(); }
+  if (t.dataset.step) { S.c.step = +t.dataset.step; return render(); }
+  const a = t.dataset.act;
+  if (a === 'ctx') { S.showCtx = t.checked; return render(); }
+  if (a === 'nextConf') return nextConflict();
+  if (a === 'fwd') { S.c.step++; return render(); }
+  if (a === 'back') { S.c.step = Math.max(0, S.c.step - 1); return render(); }
+  if (a === 'merge') { S.merged = true; return render(); }
+  if (a === 'cancel') { alert('Cancel → Adventure stays checked out, nothing written.'); }
+  if (a === 'reset') { S.res = {}; S.edit = {}; S.merged = false; S.c.step = 0; render(); }
+});
+app.addEventListener('input', e => { if (e.target.dataset.edit) { S.edit[e.target.dataset.edit] = e.target.value; } });
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea,[contenteditable]')) return;
+  if (e.key === 'ArrowLeft') return go(-1);
+  if (e.key === 'ArrowRight') return go(1);
+  if (S.variant === 'C') {
+    const cs = conflicts(), cur = cs[S.c.step - 1];
+    if (cur && 'cae'.includes(e.key.toLowerCase())) { setPick(cur.id, e.key.toLowerCase()); return; }
+    if (e.key === 'Enter') { S.c.step = Math.min(S.c.step + 1, cs.length + 2); render(); }
+    if (e.key === 'Backspace') { S.c.step = Math.max(0, S.c.step - 1); render(); }
+  } else if (e.key === 'Enter') nextConflict();
+});
+render();
+</script>
+</body>
+</html>
