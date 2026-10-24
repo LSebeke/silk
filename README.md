@@ -4,6 +4,14 @@ FoundryVTT v14 module for DSA5: map a Story on a World Canvas, branch Adventures
 
 Install: manifest URL `https://github.com/LSebeke/silk/releases/latest/download/module.json`.
 
+## Spoiler secrecy
+
+Silk keeps unrevealed content out of the **player UI**. It does not stop a player who opens the browser console ([ADR 0002](docs/adr/0002-spoiler-secrecy-casual-player-only.md)).
+
+- **Console leak**: Foundry sends every journal page to every client, NONE ownership included. Unrevealed Info Blocks, Silk flags (incl. the real image behind a hooded one) and Canon JSON loaded for the player canvas can be read from the console. Core Foundry and DSA5 leak GM content the same way.
+- **Data folder exposure**: Foundry serves the Data folder without login. The Canon lives under an unguessable `Data/silk/<random 128-bit id>/`, which keeps out people who don't know the path. Players learn the path when their client loads Canon data.
+- **FILES_BROWSE**: a role with "Use File Browser" can list `Data/silk/` and open the Canon directly. Foundry grants it to Trusted Players by default. Silk shows the GM a one-time notice on load if any non-GM role has it; remove it in _Configure Permissions_ if that matters to your table.
+
 ## Development
 
 Node per `.nvmrc`, npm.

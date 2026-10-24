@@ -37,6 +37,9 @@
     "Canvas": {
       "Title": "Weltleinwand",
       "Placeholder": "Die Weltleinwand folgt in einer späteren Version."
+    },
+    "Notice": {
+      "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
     }
   }
 }

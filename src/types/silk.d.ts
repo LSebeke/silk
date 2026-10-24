@@ -17,5 +17,6 @@ declare module 'fvtt-types/configuration' {
     'silk.confirmDelete': boolean;
     'silk.warnUnmaterializeReveal': boolean;
     'silk.windowState': object;
+    'silk.fileBrowseNoticeShown': boolean;
   }
 }
