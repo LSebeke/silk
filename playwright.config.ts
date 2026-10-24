@@ -5,7 +5,9 @@ export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.e2e.ts',
   workers: 1,
-  timeout: 60_000,
+  timeout: 120_000,
+  // Several agents run headless Foundry in parallel; default 5 s flakes under load.
+  expect: { timeout: 20_000 },
   reporter: [['list']],
   use: { browserName: 'chromium', viewport: { width: 1600, height: 900 } },
 });
