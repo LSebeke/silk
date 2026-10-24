@@ -32,6 +32,14 @@
     "Commands": {
       "canvas": {
         "open": "Weltleinwand öffnen"
+      },
+      "canon": {
+        "create": "Kanon anlegen",
+        "bind": "Welt an Kanon binden"
+      },
+      "history": {
+        "commit": "Commit",
+        "discard": "Ungespeicherte Änderungen verwerfen"
       }
     },
     "Canvas": {

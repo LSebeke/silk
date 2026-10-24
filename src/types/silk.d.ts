@@ -1,9 +1,10 @@
 /// <reference types="vite/client" />
+import type { Session } from '../adapter/session';
 import type { CommandRegistry } from '../core/commands/registry';
 
 declare module 'fvtt-types/configuration' {
   interface ModuleConfig {
-    silk: { api: CommandRegistry };
+    silk: { api: CommandRegistry; session: () => Session };
   }
 
   /** Mirrors `SETTINGS` in src/adapter/settings.ts. */
