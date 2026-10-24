@@ -9,12 +9,19 @@ import { getSession, startSession } from './adapter/session';
 import { registerSettings } from './adapter/settings';
 import { MODULE_ID } from './constants';
 import { createRegistry } from './core/commands/registry';
+import { campaignCommands } from './core/campaigns/commands';
 import { historyCommands } from './core/history';
+import { canonCommands } from './ui/canon/commands';
 import { canvasCommands } from './ui/canvas/commands';
 import './ui/silk.css';
 
 const registry = createRegistry(() => ({ isGM: game.user?.isGM ?? false }));
-for (const command of [...canvasCommands, ...historyCommands(() => getSession().history)])
+for (const command of [
+  ...canvasCommands,
+  ...canonCommands,
+  ...historyCommands(() => getSession().history),
+  ...campaignCommands(() => getSession().campaigns),
+])
   registry.register(command);
 
 Hooks.once('init', () => {

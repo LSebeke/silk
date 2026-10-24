@@ -35,16 +35,46 @@
       },
       "canon": {
         "create": "Kanon anlegen",
-        "bind": "Welt an Kanon binden"
+        "bind": "Welt an Kanon binden",
+        "openWindow": "Kanon-Fenster öffnen"
       },
       "history": {
         "commit": "Commit",
         "discard": "Ungespeicherte Änderungen verwerfen"
+      },
+      "campaign": {
+        "create": "Kampagne anlegen",
+        "rename": "Umbenennen",
+        "close": "Schließen",
+        "reopen": "Wieder öffnen"
+      },
+      "adventure": {
+        "start": "Abenteuer starten"
       }
     },
     "Canvas": {
       "Title": "Weltleinwand",
       "Placeholder": "Die Weltleinwand folgt in einer späteren Version."
+    },
+    "Canon": {
+      "Title": "Kanon",
+      "Unbound": "Diese Welt ist noch an keinen Kanon gebunden.",
+      "Name": "Name des Kanons",
+      "Checkout": "Checkout",
+      "Main": "main (Kanon-Bearbeitung)",
+      "Dirty": "ungespeicherte Änderungen",
+      "ReadOnly": "schreibgeschützt, Silk aktualisieren",
+      "Adventures": "Abenteuer",
+      "AdventureName": "Name des Abenteuers",
+      "PickCampaign": "Kampagne…",
+      "StartNeedsClean": "Committe oder verwirf ungespeicherte Änderungen, um ein Abenteuer zu starten.",
+      "NoAdventures": "Noch keine Abenteuer.",
+      "History": "Verlauf",
+      "Unlabelled": "(ohne Titel)",
+      "NoCommits": "Noch keine Commits.",
+      "Campaigns": "Kampagnen",
+      "CampaignName": "Name der neuen Kampagne",
+      "Closed": "geschlossen"
     },
     "Notice": {
       "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
