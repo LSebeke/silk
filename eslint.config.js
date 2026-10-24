@@ -4,7 +4,7 @@ import globals from 'globals';
 import ts from 'typescript-eslint';
 
 export default ts.config(
-  { ignores: ['dist/', 'node_modules/'] },
+  { ignores: ['dist/', 'node_modules/', '.claude/'] },
   js.configs.recommended,
   ...ts.configs.strict,
   ...svelte.configs.recommended,
