@@ -44,6 +44,16 @@ ln -s "$PWD/dist" ~/.local/share/FoundryVTT/Data/modules/silk
 
 **Settings**: add to `SETTINGS` in `src/adapter/settings.ts`, its type to `src/types/silk.d.ts`, and DE + EN strings (a test checks both).
 
+### Dev MCP server
+
+`tools/mcp/` is a dev/test-only MCP server (stdio) over the command API; it is not part of `dist/`. Each registry command becomes a tool, dots mapped to underscores (`canvas.open` → `canvas_open`); tool args are the command's args object. It drives a Foundry page with Playwright and calls `game.modules.get('silk').api`, connecting on the first tool call, so start Foundry with Silk enabled first.
+
+```sh
+claude mcp add silk -- node tools/mcp/main.ts --url http://localhost:30000 --executable /usr/bin/chromium
+# options: --cdp <endpoint> (attach to a running browser's /game tab instead of launching),
+#          --user <name> (default Gamemaster), --password, --headed
+```
+
 ### CI and releases
 
 CI runs typecheck, lint, unit tests, build and a bundle-size gate: the gzipped entry chunk may grow at most 10% vs `main` unless the PR has the `allow-size` label (lazy chunks are reported only).
