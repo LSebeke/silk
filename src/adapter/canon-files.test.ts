@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createFilePickerFiles, type FilePickerApi } from './canon-files';
+import { createFilePickerAssets, createFilePickerFiles, type FilePickerApi } from './canon-files';
 
 /** Fake Foundry Data folder: FilePicker semantics plus HTTP serving. */
 function fakeData() {
@@ -34,6 +34,7 @@ function fakeData() {
         ok: text !== undefined,
         status: text === undefined ? 404 : 200,
         text: async () => text ?? '',
+        arrayBuffer: async () => new TextEncoder().encode(text ?? '').buffer,
       };
     },
     route: (path) => `/route/${path}`,
@@ -81,5 +82,20 @@ describe('FilePicker canon files', () => {
     await expect(createFilePickerFiles(data.api).write('abc/x.json', '1')).rejects.toThrow(
       /upload/,
     );
+  });
+});
+
+describe('FilePicker asset files', () => {
+  it('reads and writes Data files as bytes, outside silk/', async () => {
+    const data = fakeData();
+    const assets = createFilePickerAssets(data.api);
+
+    await assets.write('worlds/w/art/map one.png', new TextEncoder().encode('map'));
+
+    expect(data.files.get('worlds/w/art/map one.png')).toBe('map');
+    expect(
+      new TextDecoder().decode((await assets.read('worlds/w/art/map one.png')) ?? undefined),
+    ).toBe('map');
+    expect(await assets.read('worlds/w/none.png')).toBeNull();
   });
 });
