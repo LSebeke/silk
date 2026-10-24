@@ -35,16 +35,46 @@
       },
       "canon": {
         "create": "Create Canon",
-        "bind": "Bind World to Canon"
+        "bind": "Bind World to Canon",
+        "openWindow": "Open the Canon window"
       },
       "history": {
         "commit": "Commit",
         "discard": "Discard uncommitted changes"
+      },
+      "campaign": {
+        "create": "Create Campaign",
+        "rename": "Rename",
+        "close": "Close",
+        "reopen": "Reopen"
+      },
+      "adventure": {
+        "start": "Start Adventure"
       }
     },
     "Canvas": {
       "Title": "World Canvas",
       "Placeholder": "The World Canvas arrives in a later release."
+    },
+    "Canon": {
+      "Title": "Canon",
+      "Unbound": "This World is not bound to a Canon yet.",
+      "Name": "Canon name",
+      "Checkout": "Checkout",
+      "Main": "main (Canon edit mode)",
+      "Dirty": "uncommitted changes",
+      "ReadOnly": "read-only, update Silk",
+      "Adventures": "Adventures",
+      "AdventureName": "Adventure name",
+      "PickCampaign": "Campaign…",
+      "StartNeedsClean": "Commit or discard uncommitted changes to start an Adventure.",
+      "NoAdventures": "No Adventures yet.",
+      "History": "History",
+      "Unlabelled": "(no label)",
+      "NoCommits": "No Commits yet.",
+      "Campaigns": "Campaigns",
+      "CampaignName": "New Campaign name",
+      "Closed": "closed"
     },
     "Notice": {
       "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
