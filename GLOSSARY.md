@@ -4,7 +4,7 @@
 
 **Story Element**: A single node in a Story (a person, place, thing, event…). Every Story Element has exactly one Element Class.
 
-**Element Class**: The fixed kind of a Story Element. Each Element Class maps to one FoundryVTT document type (Actor, Item, Scene, Journal Entry). Some classes map to a Journal Entry with a predefined layout.
+**Element Class**: The fixed kind of a Story Element. Each Element Class maps to one FoundryVTT document type (Actor, Item, Scene, Journal Entry). Some classes map to a Journal Entry with a predefined layout. The GM can change a Story Element's Element Class only to another class backed by the same kind of Foundry document (e.g. Note to Location).
 
 **Connection**: A link between two Story Elements, created manually or implicitly when a Story Element is created from an existing one. A Connection is either directed (A loves B) or mutual (C and D are friends). Each Connection can be Revealed on its own.
 
@@ -53,6 +53,9 @@
 **Unmaterialize**: Remove a Story Element's Foundry documents from the World while keeping the Story Element, its content and its Connections in the Story. Players lose access to it until it is Materialized again.
 _Avoid_: dematerialize, despawn
 
+**Adopt**: Make an existing Foundry document a Story Element. The document stays where it is, and the Story Element is Materialized from the start.
+_Avoid_: import, promote, link
+
 **Ghost**: A Node whose Story Element is not Materialized in this World.
 
 **Focus View**: A canvas mode that shows only the Story Elements within a few Connections of the active Foundry Scene and the actors in it, or of the selected Story Element, plus any Focus Pins.
@@ -69,7 +72,7 @@ _Avoid_: auto-layout
 
 **Tag**: A free-form label the GM puts on a Story Element. Tags are part of the Canon and never shown to players.
 
-**Visual Group**: A labelled frame on a World Canvas that holds Nodes for the GM's overview. Visual Groups are layout: they are part of the Canon like Node positions, but do not change the Story.
+**Visual Group**: A labelled frame on a World Canvas that holds Nodes for the GM's overview. Visual Groups can sit inside other Visual Groups. Visual Groups are layout: they are part of the Canon like Node positions, but do not change the Story.
 
 **Connection Point**: A spot on a Node from which the GM drags out a Connection. The kind of Connection Point (outgoing, incoming or mutual) sets the new Connection's direction. Connections attach on the side of the Node that faces the other Node.
 
