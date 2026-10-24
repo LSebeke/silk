@@ -20,6 +20,10 @@
 
 **Canon**: The authoritative body of Story Elements and Connections, independent of any World. Several Campaigns can be played within the same Canon. Usually changes only by merging an Adventure back into it.
 
+**Canon Backup**: A complete copy of a Canon, with its whole history, all Adventures and all Revelation Maps, that can be restored or carried to another Foundry installation as the same Canon.
+
+**Canon Share**: A copy of one point in a Canon's history, handed to another GM without its history, Campaigns, Revelation Maps or Player Notes. Importing it starts a new, separate Canon.
+
 **Adventure**: A branch of the Canon that a group plays through. Play changes the Adventure's World State; when the Adventure ends, those changes are merged back into the Canon (git-style).
 
 **World**: A FoundryVTT world, bound to one Canon. A World always works on exactly one Checkout; Adventures that run in parallel need separate Worlds.
