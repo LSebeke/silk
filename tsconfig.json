@@ -17,5 +17,5 @@
     "allowJs": true,
     "checkJs": true
   },
-  "include": ["src", "scripts", "tools", "*.ts", "*.js"]
+  "include": ["src", "scripts", "tools", "e2e", "*.ts", "*.js"]
 }
