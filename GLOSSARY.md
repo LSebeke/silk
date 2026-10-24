@@ -16,7 +16,10 @@
 
 **Game System**: The rules system a Foundry world runs (v1: DSA5 / Das Schwarze Auge 5). Determines the shape of Actors and Items.
 
-**Campaign**: A long-running game with one group, made up of a sequence of Adventures played within a Canon.
+**Campaign**: A long-running game with one group, made up of a sequence of Adventures played within a Canon. A Campaign can be closed: no new Adventures start in it, and its Revelation Map no longer changes; it can be reopened.
+
+**Join Campaigns**: Folding one Campaign (the source) into another (the target) when their groups become one party. Everything Revealed in the source becomes Revealed in the target, except what the GM chooses to keep hidden, and the source's Player Notes become the target's. The source usually closes.
+_Avoid_: merge Revelation Maps, merge Campaigns
 
 **Canon**: The authoritative body of Story Elements and Connections, independent of any World. Several Campaigns can be played within the same Canon. Usually changes only by merging an Adventure back into it.
 
@@ -40,7 +43,7 @@
 
 **Reveal**: The GM sharing a Story Element, a single Info Block, or a single Connection with the whole party of a Campaign. Revealing an Info Block or Connection also Reveals the Story Element(s) it belongs to, but nothing more. Can be undone.
 
-**Revelation Map**: Everything Revealed so far in one Campaign. It belongs to the Campaign, not the Canon: every player in that Campaign, past or new, sees all of it, and another Campaign does not. The GM can merge two Campaigns' Revelation Maps when their groups join.
+**Revelation Map**: Everything Revealed so far in one Campaign. It belongs to the Campaign, not the Canon: every player in that Campaign, past or new, sees all of it, and another Campaign does not. When two groups become one, the GM can Join Campaigns.
 
 **Companion Journal**: The Journal Entry holding the Info Blocks of a Story Element whose Foundry document is not itself a Journal Entry (an Actor or Item).
 
