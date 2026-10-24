@@ -38,7 +38,10 @@
       "canon": {
         "create": "Kanon anlegen",
         "bind": "Welt an Kanon binden",
-        "openWindow": "Kanon-Fenster öffnen"
+        "openWindow": "Kanon-Fenster öffnen",
+        "exportBackup": "Kanon-Backup",
+        "exportShare": "Kanon teilen",
+        "import": "Kanon importieren"
       },
       "history": {
         "commit": "Commit",
@@ -104,7 +107,27 @@
       "NoCommits": "Noch keine Commits.",
       "Campaigns": "Kampagnen",
       "CampaignName": "Name der neuen Kampagne",
-      "Closed": "geschlossen"
+      "Closed": "geschlossen",
+      "Portability": {
+        "Heading": "Backup und Teilen",
+        "ShareCommit": "Teilen ab",
+        "AdventureHead": "Abenteuer",
+        "ImportFile": "Backup oder geteilten Kanon importieren (.zip)",
+        "BackupTitle": "Kanon-Backup",
+        "ShareTitle": "Kanon teilen",
+        "Summary": "{objects} Dateien, {assets} Assets gebündelt.",
+        "Orphans": "Unerreichbare Dateien ausgelassen (Aufräumen): {count}.",
+        "Missing": "Referenzierte Dateien fehlen auf diesem Server und sind nicht enthalten:",
+        "Uncommitted": "Diese Welt hat ungespeicherte Änderungen. Sie sind nicht im Export; committe vorher, um sie mitzunehmen.",
+        "Download": "Zip herunterladen?",
+        "DivergedTitle": "Kanon ist auseinandergelaufen",
+        "Diverged": "Dieses Backup setzt den Kanon auf diesem Server nicht fort (sein main stammt nicht vom lokalen main ab). Stattdessen als Kopie mit neuer Id importieren?",
+        "OverwriteTitle": "Dateien überschreiben?",
+        "Overwrite": "Diese Dateien gibt es schon mit anderem Inhalt. Mit der Version aus dem Backup überschreiben?",
+        "Imported": "Kanon „{name}“ ({id}) importiert.",
+        "ImportedMissing": "Im Import fehlende Dateien: {files}",
+        "Cancelled": "Import abgebrochen. Nichts wurde geschrieben."
+      }
     },
     "Notice": {
       "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
