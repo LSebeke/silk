@@ -18,6 +18,8 @@ export interface ElementData {
   position: Point;
   /** UUID of the Foundry doc once Materialized (T8). Absent = Ghost. */
   uuid?: string;
+  /** Innermost Visual Group holding the Node (T26, `canvas/groups.ts`). Layout. */
+  group?: string;
 }
 
 export interface StoryElement extends ElementData {

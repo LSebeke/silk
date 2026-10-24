@@ -12,7 +12,10 @@ import {
   canvasCoreCommands,
   createCanvasState,
   createCreationPipeline,
+  createLayoutTween,
   createViewState,
+  joinFrameOnCreate,
+  layoutCommands,
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
 import { campaignCommands } from './core/campaigns/commands';
@@ -39,13 +42,19 @@ const viewState = createViewState({
 });
 /** `element.create` hooks: T7 (Connection to `from`) and T8 (immediate Materialize) push here. */
 const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
+/** T26: a Node created inside a Visual Group frame joins it. */
+afterCreate.push(joinFrameOnCreate(workingCopy));
+/** Untangle tween: layout commands announce old positions, the canvas animates. */
+const layoutTween = createLayoutTween();
 
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
+  available: (name) => registry.isAvailable(name),
   workingCopy: workingCopy(),
   state: canvasState,
   pipeline,
   viewState,
+  layoutTween,
   detailDrop: game.settings?.get(MODULE_ID, 'detailDrop') ?? true,
   localize,
 });
@@ -53,6 +62,13 @@ const canvasContext = (): CanvasContext => ({
 for (const command of [
   ...elementCommands({ workingCopy, newId: () => foundry.utils.randomID(16), afterCreate }),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
+  ...layoutCommands({
+    workingCopy,
+    state: canvasState,
+    newId: () => foundry.utils.randomID(16),
+    groupLabel: () => localize('SILK.Canvas.NewGroup'),
+    tween: (from) => layoutTween.start(from),
+  }),
   ...canvasUiCommands(canvasContext),
   ...canonCommands,
   ...historyCommands(() => getSession().history),

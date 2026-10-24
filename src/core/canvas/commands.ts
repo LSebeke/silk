@@ -1,8 +1,8 @@
 /** Canvas commands that live in the core (spec §15, "Canvas"). `canvas.open` is UI. */
-import type { CanonRecord } from '../canon';
 import type { Command } from '../commands/registry';
 import type { WorkingCopy } from '../working-copy';
 import type { CanvasState } from './canvas-state';
+import { applyMoves } from './groups';
 
 export interface CanvasCommandDeps {
   workingCopy(): WorkingCopy;
@@ -22,15 +22,8 @@ export function canvasCoreCommands(deps: CanvasCommandDeps): Command[] {
     available: (ctx) => ctx.isGM,
     async run({ moves }) {
       const wc = deps.workingCopy();
-      const changed: CanonRecord[] = [];
-      for (const { id, x, y } of moves) {
-        const record = wc.get(id);
-        // Visual Groups (T26) are layout records too; they extend this switch.
-        if (record?.kind !== 'element') continue;
-        const position = record.data['position'] as { x: number; y: number } | undefined;
-        if (position?.x === x && position.y === y) continue;
-        changed.push({ ...record, data: { ...record.data, position: { x, y } } });
-      }
+      // Elements and Visual Groups: frames carry their contents, Nodes join frames (§10.4).
+      const changed = applyMoves(wc.records(), moves);
       if (changed.length) await wc.set(changed);
     },
   };

@@ -33,7 +33,12 @@
       "canvas": {
         "open": "Open the World Canvas",
         "moveNodes": "Move Nodes",
-        "select": "Select Nodes"
+        "select": "Select Nodes",
+        "group": "Group into a Visual Group",
+        "ungroup": "Dissolve Visual Group",
+        "renameGroup": "Rename Visual Group",
+        "untangle": "Untangle",
+        "undo": "Undo Untangle"
       },
       "canon": {
         "create": "Create Canon",
@@ -60,7 +65,11 @@
     },
     "Canvas": {
       "Title": "World Canvas",
-      "ClassSearch": "Class…"
+      "ClassSearch": "Class…",
+      "NewGroup": "Group",
+      "Group": "Group",
+      "Ungroup": "Dissolve group",
+      "Untangle": "Untangle"
     },
     "Canon": {
       "Title": "Canon",
