@@ -2,9 +2,10 @@
  * Creation Pipeline (spec §10.3): every way of creating ends here.
  *   1. class box (searchable, at the spot) → `element.create`
  *   2. name field, focused → `element.rename`
- *   3. (T7) Connection editor when created from a Node: `element.create` returns a
- *      `connectionId`; add a `connection` step here.
- * Entry points (right-click, drag-out, digit keys, palette) differ only in `open()` args.
+ *   3. Connection editor, focused on its label, when created from a Node (`element.create`
+ *      returned a `connectionId`) → `connection.setLabel`
+ * Entry points (right-click, drag-out, palette) differ only in `open()` args; digit keys
+ * skip the class box with `create()`. A Connection made on its own opens step 3 directly.
  * Pure: runs commands through the injected `run`.
  */
 import { ELEMENT_CLASSES, type ElementClass, type ElementClassId } from '../elements/classes';
@@ -23,7 +24,9 @@ export interface PipelineOrigin {
 export type PipelineStep =
   | { step: 'idle' }
   | ({ step: 'classBox'; query: string } & PipelineOrigin)
-  | { step: 'name'; id: string };
+  | { step: 'name'; id: string }
+  /** `id` = Connection; `elementId` set when it belongs to a new element. */
+  | { step: 'connection'; id: string; elementId?: string };
 
 export interface CreationPipelineDeps {
   run(name: string, args: object): Promise<unknown>;
@@ -40,7 +43,14 @@ export interface CreationPipeline {
   options(): ElementClass[];
   pickClass(id: ElementClassId): Promise<string>;
   pickFirst(): Promise<string | undefined>;
+  /** Class box skipped (digit keys): create at once, then the name step. */
+  create(origin: PipelineOrigin, id: ElementClassId): Promise<string>;
   submitName(name: string): Promise<void>;
+  /** Open the Connection editor on an existing Connection (made on its own, `F2`). */
+  editConnection(id: string): void;
+  submitLabel(label: string): Promise<void>;
+  /** Rename an existing element (`F2`) through the name step. */
+  rename(id: string, current: string): void;
   cancel(): void;
   /** Called once a created element has finished the pipeline. */
   onComplete(listener: (done: { id: string }) => void): () => void;
@@ -49,6 +59,9 @@ export interface CreationPipeline {
 export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipeline {
   let step: PipelineStep = { step: 'idle' };
   let defaultName = '';
+  let connectionId: string | undefined;
+  /** The name step belongs to a rename, not a creation. */
+  let renaming = false;
   const subscribers = new Set<(step: PipelineStep) => void>();
   const listeners = new Set<(done: { id: string }) => void>();
 
@@ -68,12 +81,17 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
 
   async function pickClass(id: ElementClassId) {
     if (step.step !== 'classBox') throw new Error('Silk: the class box is not open');
-    const { at, from, connection } = step;
+    return createAt(step, id);
+  }
+
+  async function createAt({ at, from, connection }: PipelineOrigin, id: ElementClassId) {
     defaultName = deps.label(id);
     const args: ElementCreateArgs = { class: id, name: defaultName, at };
     if (from) args.from = from;
     if (connection) args.connection = connection;
     const result = (await deps.run('element.create', args)) as ElementCreateResult;
+    connectionId = result.connectionId;
+    renaming = false;
     set({ step: 'name', id: result.id });
     return result.id;
   }
@@ -82,9 +100,25 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     if (step.step !== 'name') return;
     const { id } = step;
     const trimmed = name.trim();
-    set({ step: 'idle' });
+    const connection = connectionId;
+    connectionId = undefined;
+    set(connection ? { step: 'connection', id: connection, elementId: id } : { step: 'idle' });
     if (trimmed && trimmed !== defaultName) await deps.run('element.rename', { id, name: trimmed });
-    for (const l of listeners) l({ id });
+    if (!connection && !renaming) complete(id);
+    renaming = false;
+  }
+
+  function complete(id: string | undefined) {
+    if (id) for (const l of listeners) l({ id });
+  }
+
+  async function submitLabel(label: string) {
+    if (step.step !== 'connection') return;
+    const { id, elementId } = step;
+    set({ step: 'idle' });
+    const trimmed = label.trim();
+    if (trimmed) await deps.run('connection.setLabel', { id, label: trimmed });
+    complete(elementId);
   }
 
   return {
@@ -104,10 +138,20 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
       const first = options()[0];
       return first && pickClass(first.id);
     },
+    create: createAt,
     submitName,
+    editConnection: (id) => set({ step: 'connection', id }),
+    submitLabel,
+    rename(id, current) {
+      defaultName = current;
+      connectionId = undefined;
+      renaming = true;
+      set({ step: 'name', id });
+    },
     cancel() {
       // Leaving the name step keeps the default name; the element still completes.
       if (step.step === 'name') void submitName('');
+      else if (step.step === 'connection') void submitLabel('');
       else set({ step: 'idle' });
     },
     onComplete(listener) {

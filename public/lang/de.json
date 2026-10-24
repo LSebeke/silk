@@ -59,11 +59,35 @@
       "element": {
         "create": "Element erstellen",
         "rename": "Element umbenennen"
+      },
+      "connection": {
+        "create": "Verbinden",
+        "setLabel": "Verbindungstext bearbeiten",
+        "cycleDirection": "Verbindungsrichtung wechseln",
+        "cycleType": "Verbindungsart wechseln",
+        "flip": "Verbindung umkehren",
+        "delete": "Verbindung löschen"
       }
     },
     "Canvas": {
       "Title": "Weltleinwand",
-      "ClassSearch": "Klasse…"
+      "ClassSearch": "Klasse…",
+      "ConnectHint": "Ziel-Knoten anklicken oder leere Fläche für einen neuen Knoten. Esc bricht ab.",
+      "LabelPlaceholder": "Text…"
+    },
+    "Connection": {
+      "Type": {
+        "free": "frei",
+        "owns": "besitzt",
+        "presentAt": "anwesend bei",
+        "locatedIn": "befindet sich in",
+        "takesPlaceAt": "findet statt in"
+      },
+      "Point": {
+        "out": "Ausgehend",
+        "in": "Eingehend",
+        "mutual": "Gegenseitig"
+      }
     },
     "Canon": {
       "Title": "Kanon",

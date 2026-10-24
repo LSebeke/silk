@@ -59,11 +59,35 @@
       "element": {
         "create": "Create Element",
         "rename": "Rename Element"
+      },
+      "connection": {
+        "create": "Connect",
+        "setLabel": "Edit Connection label",
+        "cycleDirection": "Cycle Connection direction",
+        "cycleType": "Cycle Connection type",
+        "flip": "Flip Connection",
+        "delete": "Delete Connection"
       }
     },
     "Canvas": {
       "Title": "World Canvas",
-      "ClassSearch": "Class…"
+      "ClassSearch": "Class…",
+      "ConnectHint": "Click the target Node, or empty canvas for a new Node. Esc cancels.",
+      "LabelPlaceholder": "label…"
+    },
+    "Connection": {
+      "Type": {
+        "free": "free-form",
+        "owns": "owns",
+        "presentAt": "present at",
+        "locatedIn": "located in",
+        "takesPlaceAt": "takes place at"
+      },
+      "Point": {
+        "out": "Outgoing",
+        "in": "Incoming",
+        "mutual": "Mutual"
+      }
     },
     "Canon": {
       "Title": "Canon",
