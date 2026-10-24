@@ -31,7 +31,9 @@
     },
     "Commands": {
       "canvas": {
-        "open": "Weltleinwand öffnen"
+        "open": "Weltleinwand öffnen",
+        "moveNodes": "Knoten verschieben",
+        "select": "Knoten auswählen"
       },
       "canon": {
         "create": "Kanon anlegen",
@@ -53,11 +55,15 @@
       },
       "adventure": {
         "start": "Abenteuer starten"
+      },
+      "element": {
+        "create": "Element erstellen",
+        "rename": "Element umbenennen"
       }
     },
     "Canvas": {
       "Title": "Weltleinwand",
-      "Placeholder": "Die Weltleinwand folgt in einer späteren Version."
+      "ClassSearch": "Klasse…"
     },
     "Canon": {
       "Title": "Kanon",
@@ -101,6 +107,17 @@
     },
     "Notice": {
       "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
+    },
+    "Class": {
+      "person": "Person",
+      "creature": "Kreatur",
+      "playerCharacter": "Spielercharakter",
+      "location": "Ort",
+      "faction": "Fraktion",
+      "item": "Gegenstand",
+      "event": "Ereignis",
+      "quest": "Quest",
+      "note": "Notiz"
     }
   }
 }

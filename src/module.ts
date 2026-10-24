@@ -8,16 +8,52 @@ import { addSilkSceneControl, type SceneControls } from './adapter/scene-control
 import { getSession, startSession } from './adapter/session';
 import { registerSettings } from './adapter/settings';
 import { MODULE_ID } from './constants';
+import {
+  canvasCoreCommands,
+  createCanvasState,
+  createCreationPipeline,
+  createViewState,
+} from './core/canvas';
 import { createRegistry } from './core/commands/registry';
 import { campaignCommands } from './core/campaigns/commands';
+import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
 import { canonCommands } from './ui/canon/commands';
-import { canvasCommands } from './ui/canvas/commands';
+import { canvasUiCommands } from './ui/canvas/commands';
+import type { CanvasContext } from './ui/canvas/context';
 import './ui/silk.css';
 
+const localize = (key: string) => game.i18n?.localize(key) ?? key;
 const registry = createRegistry(() => ({ isGM: game.user?.isGM ?? false }));
+const workingCopy = () => getSession().workingCopy;
+
+/** Client-local canvas state (selection) and the Creation Pipeline, shared by every entry point. */
+const canvasState = createCanvasState();
+const pipeline = createCreationPipeline({
+  run: (name, args) => registry.run(name, args),
+  label: (id) => localize(`SILK.Class.${id}`),
+});
+const viewState = createViewState({
+  load: () => game.settings?.get(MODULE_ID, 'viewState'),
+  save: async (value) => void (await game.settings?.set(MODULE_ID, 'viewState', value)),
+});
+/** `element.create` hooks: T7 (Connection to `from`) and T8 (immediate Materialize) push here. */
+const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
+
+const canvasContext = (): CanvasContext => ({
+  run: (name, args) => registry.run(name, args),
+  workingCopy: workingCopy(),
+  state: canvasState,
+  pipeline,
+  viewState,
+  detailDrop: game.settings?.get(MODULE_ID, 'detailDrop') ?? true,
+  localize,
+});
+
 for (const command of [
-  ...canvasCommands,
+  ...elementCommands({ workingCopy, newId: () => foundry.utils.randomID(16), afterCreate }),
+  ...canvasCoreCommands({ workingCopy, state: canvasState }),
+  ...canvasUiCommands(canvasContext),
   ...canonCommands,
   ...historyCommands(() => getSession().history),
   ...campaignCommands(() => getSession().campaigns),
