@@ -37,14 +37,20 @@ describe('settings (spec §13)', () => {
       confirmDelete: { scope: 'client', default: true },
       warnUnmaterializeReveal: { scope: 'client', default: true },
       windowState: { scope: 'client' },
+      fileBrowseNoticeShown: { scope: 'world', default: false },
     });
-    expect(s.size).toBe(9);
+    expect(s.size).toBe(10);
   });
 
   it('hides internal settings from the config dialog', () => {
     const s = collect();
     const hidden = [...s].filter(([, d]) => !d.config).map(([k]) => k);
-    expect(hidden.sort()).toEqual(['playerView', 'viewState', 'windowState']);
+    expect(hidden.sort()).toEqual([
+      'fileBrowseNoticeShown',
+      'playerView',
+      'viewState',
+      'windowState',
+    ]);
   });
 
   it('offers immediate and on-demand Materialize modes', () => {

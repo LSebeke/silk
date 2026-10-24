@@ -73,6 +73,8 @@ export const SETTINGS: Record<string, SettingData> = {
   },
   /** Internal: window position and detached state per window (§2). */
   windowState: { scope: 'client', config: false, type: Object, default: {} },
+  /** Internal: a GM has seen the one-time FILES_BROWSE notice (§12). */
+  fileBrowseNoticeShown: { scope: 'world', config: false, type: Boolean, default: false },
 };
 
 export function registerSettings(register: RegisterSetting): void {
