@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Stamp version and download URL into module.json
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("dist/module.json", "utf8"));
+            m.version = process.env.TAG.replace(/^v/, "");
+            m.manifest = `https://github.com/${process.env.REPO}/releases/latest/download/module.json`;
+            m.download = `https://github.com/${process.env.REPO}/releases/download/${process.env.TAG}/silk.zip`;
+            fs.writeFileSync("dist/module.json", JSON.stringify(m, null, 2) + "\n");
+          '
+      - name: Package
+        run: cd dist && zip -r ../silk.zip .
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" silk.zip dist/module.json \
+            --title "Silk ${{ github.ref_name }}" --generate-notes \
+            --notes "Manifest URL: https://github.com/${{ github.repository }}/releases/latest/download/module.json"

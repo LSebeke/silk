@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Measure bundle size
+        run: node scripts/bundle-size.mjs measure dist > "$RUNNER_TEMP/head.json"
+
+      - name: Build main for size baseline
+        if: github.event_name == 'pull_request'
+        id: base
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          git worktree add "$RUNNER_TEMP/base" FETCH_HEAD
+          cd "$RUNNER_TEMP/base"
+          if [ ! -f package.json ]; then echo "No package.json on base; skipping size gate."; exit 0; fi
+          npm ci && npm run build
+          node "$GITHUB_WORKSPACE/scripts/bundle-size.mjs" measure dist > "$RUNNER_TEMP/base.json"
+          echo "measured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Bundle size gate (> 10% entry growth needs the allow-size label)
+        if: steps.base.outputs.measured == 'true'
+        run: >
+          node scripts/bundle-size.mjs compare "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json"
+          ${{ contains(github.event.pull_request.labels.*.name, 'allow-size') && '--allow-size' || '' }}
