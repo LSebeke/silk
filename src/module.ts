@@ -15,8 +15,10 @@ import {
   createViewState,
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
+import { campaignCommands } from './core/campaigns/commands';
 import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
+import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
 import './ui/silk.css';
@@ -52,7 +54,9 @@ for (const command of [
   ...elementCommands({ workingCopy, newId: () => foundry.utils.randomID(16), afterCreate }),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
   ...canvasUiCommands(canvasContext),
+  ...canonCommands,
   ...historyCommands(() => getSession().history),
+  ...campaignCommands(() => getSession().campaigns),
 ])
   registry.register(command);
 

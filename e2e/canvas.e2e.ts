@@ -12,12 +12,21 @@ const elements = (page: Page): Promise<CanonRecord[]> =>
   });
 
 /** Earlier tests share the worker's world: start from no elements and a 1:1 view. */
-const resetCanvas = (page: Page) =>
-  page.evaluate(async () => {
+async function resetCanvas(page: Page) {
+  // `game.ready` precedes Silk's async `ready` hook: wait for the session.
+  await page.waitForFunction(() => {
+    try {
+      return !!game.modules?.get('silk')?.session?.();
+    } catch {
+      return false;
+    }
+  });
+  await page.evaluate(async () => {
     const wc = game.modules?.get('silk')?.session?.().workingCopy;
     await wc?.delete([...(wc.records().keys() ?? [])]);
     await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
   });
+}
 
 async function openCanvas(page: Page) {
   await api(page, 'canvas.open');
@@ -153,10 +162,22 @@ test('a detached canvas re-detaches on open and works in its own window', async 
   await expect(win.locator('[data-silk-canvas] .svelte-flow__pane')).toBeVisible();
   await expect.poll(() => savedDetached(gm)).toBe(true);
   await closeCanvas(gm);
+  // Foundry reuses an open popup with the same id: wait until the first one is gone.
+  await expect.poll(() => win.isClosed()).toBe(true);
 
-  const reopened = gm.context().waitForEvent('page');
   await api(gm, 'canvas.open');
-  const win2 = await reopened;
+  // The re-detached popup: the context's page that holds the canvas.
+  let win2 = gm;
+  await expect
+    .poll(async () => {
+      for (const p of gm.context().pages())
+        if (p !== gm && !p.isClosed() && (await p.locator('[data-silk-canvas]').count())) {
+          win2 = p;
+          return true;
+        }
+      return false;
+    })
+    .toBe(true);
   const pane = win2.locator('[data-silk-canvas] .svelte-flow__pane');
   await expect(pane).toBeVisible();
 
