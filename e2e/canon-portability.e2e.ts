@@ -58,8 +58,10 @@ async function confirmDialog(page: Page, text?: RegExp) {
   const dialog = page.locator('.application:has([data-silk-portability-dialog])').last();
   await expect(dialog).toBeVisible({ timeout: 30_000 });
   if (text) await expect(dialog).toContainText(text);
+  // The next dialog may open right away: wait for this one by id.
+  const id = await dialog.getAttribute('id');
   await dialog.locator('button[data-action="yes"]').click();
-  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(`[id="${id}"]`)).toHaveCount(0);
 }
 
 /** `canon.import` through the command API with zip bytes; resolves after dialogs are answered. */
