@@ -52,6 +52,8 @@ export interface InfoBlock {
 export interface ClassFields {
   /** Person: mirrors DSA5 `system.merchant.merchantType`. */
   merchantType?: string;
+  /** Event (Location: Overview): the Scene Preset its Scene is generated from (T13). */
+  scenePreset?: string;
 }
 
 export interface StoryElement extends ElementData {

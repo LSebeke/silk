@@ -9,6 +9,10 @@ export function canvasUiCommands(getContext: () => CanvasContext): Command[] {
       title: 'SILK.Commands.canvas.open',
       available: (ctx) => ctx.isGM,
       async run() {
+        // Reveal/checkout may have changed the Revelation Map behind the Revealed filter.
+        void getContext()
+          .refreshRevealed()
+          .catch(() => {});
         // Lazy chunk: the canvas UI is not part of the entry bundle.
         const { CanvasWindow } = await import('./CanvasWindow');
         const existing = foundry.applications.instances.get(CanvasWindow.ID);
