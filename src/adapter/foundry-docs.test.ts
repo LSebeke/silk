@@ -14,6 +14,7 @@ function fakeApi() {
     createEmbeddedDocuments: async (...args) => void calls.push({ op: 'createEmbedded', args }),
     updateEmbeddedDocuments: async (...args) => void calls.push({ op: 'updateEmbedded', args }),
     deleteEmbeddedDocuments: async (...args) => void calls.push({ op: 'deleteEmbedded', args }),
+    delete: async (...args) => void calls.push({ op: 'delete', args: [uuid, ...args] }),
     sheet: { render: (...args) => calls.push({ op: 'render', args }) },
   });
   const api: FoundryApi = {
@@ -179,5 +180,33 @@ describe('FoundryDocs adapter', () => {
     await docs.setStatusEffect('Actor.a', 'dead', false);
     await docs.setStatusEffect('Actor.a', 'dead', false);
     expect(ops).toEqual(['add dead', 'remove dead']);
+  });
+
+  it('deletes and unflags as Silk writes', async () => {
+    const { api, calls } = fakeApi();
+    const docs = createFoundryDocs(api);
+    await docs.delete('Actor.a1');
+    await docs.unflag('Actor.a1');
+    expect(calls).toEqual([
+      { op: 'delete', args: ['Actor.a1', { silk: { internal: true } }] },
+      { op: 'update', args: [{ flags: { '-=silk': null } }, { silk: { internal: true } }] },
+    ]);
+  });
+
+  it('open resolves once the sheet has rendered (AppV2 render is async)', async () => {
+    const { api } = fakeApi();
+    let rendered = false;
+    const sheet = {
+      render: async () => {
+        await new Promise((r) => setTimeout(r, 5));
+        rendered = true;
+      },
+    };
+    const docs = createFoundryDocs({
+      ...api,
+      fromUuid: (uuid) => ({ ...(api.fromUuid(uuid) as FoundryDoc), sheet }),
+    });
+    await docs.open('Actor.a1');
+    expect(rendered).toBe(true);
   });
 });

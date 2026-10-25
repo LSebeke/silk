@@ -304,6 +304,9 @@
       case 'editConnection':
         if (edge) pipeline.editConnection(edge.id);
         break;
+      case 'delete':
+        void run('element.delete', { ids: canvasState.get().selection });
+        break;
       case 'command':
         if (edge) void run(action.name, { id: edge.id });
         break;

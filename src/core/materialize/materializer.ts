@@ -38,6 +38,7 @@ import {
   missingLayout,
   planDocs,
   readBack,
+  type DocPlan,
   type LayoutContext,
 } from './layout';
 import type { DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
@@ -70,7 +71,15 @@ export interface MaterializerDeps {
   deferImmediate?(): boolean;
   /** T12: the Actor uuid an Item Materializes into (its owner's inventory), else world. */
   parentOf?(id: string): string | undefined;
-  /** T12: runs after an element Materialized (owned Items move into a new actor). */
+  /** Create data from an Unmaterialize snapshot, if the element has one (T9 `lifecycle.ts`). */
+  restorePlan?(
+    element: StoryElement,
+    folders: { main: string; companion?: string },
+  ): DocPlan | undefined;
+  /**
+   * After a Materialize created the docs (T9: contributors restore ownership, Event Scene;
+   * T12: owned Items move into a new actor).
+   */
   afterMaterialize?(id: string): Promise<void>;
 }
 
@@ -174,7 +183,8 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const companion = hasCompanion(el.class)
       ? await docs.ensureFolder('JournalEntry', 'companions', folderName('companions'))
       : undefined;
-    const plan = planDocs(el, companion ? { main, companion } : { main }, ctx);
+    const folders = companion ? { main, companion } : { main };
+    const plan = deps.restorePlan?.(el, folders) ?? planDocs(el, folders, ctx);
     const parent = name === 'Item' ? deps.parentOf?.(id) : undefined;
     if (parent) plan.main.folder = null;
     // Companion first: the doc's flag points at it.

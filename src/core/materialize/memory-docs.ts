@@ -130,6 +130,10 @@ export function createMemoryDocs(): MemoryDocs {
       must(uuid);
       if (!questJournals.some((q) => q.uuid === uuid)) questJournals.push({ uuid, name });
     },
+    async unflag(uuid) {
+      const doc = must(uuid);
+      doc.flags = { ...doc.flags, silk: {} };
+    },
     async open(uuid) {
       must(uuid);
       opened.push(uuid);

@@ -102,6 +102,8 @@ export interface FoundryDocs {
   setStatusEffect(uuid: string, statusId: string, active: boolean): Promise<void>;
   /** Registers a quest journal in the Game System's quest log (DSA5 `questlogJournals`). */
   registerQuestJournal(uuid: string, name: string): Promise<void>;
+  /** Removes `flags.silk` from the doc (element delete, Keep Foundry doc, §6). */
+  unflag(uuid: string): Promise<void>;
   /** Opens the doc's sheet. */
   open(uuid: string): Promise<void>;
 }

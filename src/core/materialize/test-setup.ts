@@ -1,8 +1,11 @@
 /** Shared unit-test wiring: registry + working copy + in-memory Foundry docs. */
 import { dsa5Mapping } from '../../adapter/dsa5';
+import type { Snapshot } from '../canon';
 import { createRegistry } from '../commands/registry';
+import { connectionCommands } from '../connections';
 import { elementCommands, readElement, type InfoBlock, type StoryElement } from '../elements';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
+import { createLifecycle, lifecycleCommands, type DeleteAnswer, type Lifecycle } from './lifecycle';
 import { createMaterializer, materializeCommands, type MaterializeMode } from './materializer';
 import { createMemoryDocs } from './memory-docs';
 import type { CategoryData, DocSnapshot, PageData, SilkDocFlags } from './port';
@@ -29,7 +32,13 @@ export const pageNames = (doc: TestDoc) =>
   [...doc.pages].sort((a, b) => a.sort - b.sort).map((p) => p.name);
 
 export function setup(
-  opts: { mode?: MaterializeMode; visible?: string[]; confirm?: boolean } = {},
+  opts: {
+    mode?: MaterializeMode;
+    visible?: string[];
+    confirm?: boolean;
+    /** Also register the Connection commands. */
+    connections?: boolean;
+  } = {},
 ) {
   const workingCopy = createWorkingCopy(createMemoryBackend(), { canWrite: () => true });
   const docs = createMemoryDocs();
@@ -54,8 +63,45 @@ export function setup(
     },
     visibleIds: () => opts.visible ?? [...workingCopy.records().keys()],
     selection: () => selection,
+    restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
+    afterMaterialize: (id) => lifecycle.afterMaterialize(id),
+  });
+  const revealed = new Set<string>();
+  const warnings: string[] = [];
+  const settings = { warnUnmaterializeReveal: true, confirmDelete: false };
+  const prompts = {
+    unmaterialize: [] as string[][],
+    delete: [] as { names: string[]; adopted: number; keepFoundryDoc: boolean }[],
+  };
+  const answers: { unmaterialize: boolean; delete: DeleteAnswer | null } = {
+    unmaterialize: true,
+    delete: { keepFoundryDoc: true },
+  };
+  let lastCommit: { hash: string; snapshot: Snapshot } | null = null;
+  const lifecycle: Lifecycle = createLifecycle({
+    workingCopy: () => workingCopy,
+    docs,
+    system: dsa5Mapping,
+    materializer,
+    newId,
+    localize: (key, data) => `${key.split('.').pop() ?? key}${data ? JSON.stringify(data) : ''}`,
+    warn: (message) => warnings.push(message),
+    isRevealed: async (id) => revealed.has(id),
+    warnRevealed: () => settings.warnUnmaterializeReveal,
+    confirmUnmaterialize: async (names) => {
+      prompts.unmaterialize.push(names);
+      return answers.unmaterialize;
+    },
+    confirmDeleteEnabled: () => settings.confirmDelete,
+    confirmDelete: async (args) => {
+      prompts.delete.push(args);
+      return answers.delete;
+    },
+    lastCommit: async () => lastCommit,
   });
   for (const command of [
+    ...(opts.connections ? connectionCommands({ workingCopy: () => workingCopy, newId }) : []),
+    ...lifecycleCommands(lifecycle, () => selection),
     ...elementCommands({
       workingCopy: () => workingCopy,
       newId,
@@ -86,6 +132,14 @@ export function setup(
     workingCopy,
     docs,
     materializer,
+    lifecycle,
+    revealed,
+    warnings,
+    settings,
+    prompts,
+    answers,
+    /** Simulate a Commit: the head snapshot is the working copy now. */
+    commit: (hash: string) => (lastCommit = { hash, snapshot: new Map(workingCopy.records()) }),
     toasts,
     confirms,
     create,

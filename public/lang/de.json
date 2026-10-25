@@ -71,7 +71,8 @@
         "tag": "Tag hinzufügen",
         "untag": "Tag entfernen",
         "setStatus": "Status setzen",
-        "toggleStatus": "Status umschalten"
+        "toggleStatus": "Status umschalten",
+        "delete": "Element löschen"
       },
       "connection": {
         "create": "Verbinden",
@@ -83,7 +84,8 @@
       },
       "materialize": {
         "elements": "Materialisieren",
-        "visible": "Sichtbare materialisieren"
+        "visible": "Sichtbare materialisieren",
+        "unmaterialize": "Entmaterialisieren"
       },
       "infoBlock": {
         "create": "Infoblock hinzufügen",
@@ -256,6 +258,22 @@
         "materialized": "materialisiert",
         "ghost": "Ghost"
       }
+    },
+    "Lifecycle": {
+      "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Silk nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",
+      "RestoredBadge": "Wiederhergestellt aus Commit {commit}",
+      "CompanionRestored": "Das Begleitjournal von {name} wurde aus dem letzten Commit wiederhergestellt. Nicht committete Änderungen an Infoblöcken sind verloren.",
+      "DeleteTitle": "Elemente löschen",
+      "DeleteConfirm": "{names} löschen? Ihre Verbindungen, Foundry-Dokumente und Einträge in der Enthüllungskarte werden mitgelöscht. Nur das Verwerfen nicht committeter Änderungen macht das rückgängig.",
+      "DeleteAdopted": "{count} davon wurden aus bestehenden Foundry-Dokumenten übernommen.",
+      "KeepDoc": "Foundry-Dokument behalten",
+      "DeleteEverything": "Alles löschen",
+      "Delete": "Löschen",
+      "Cancel": "Abbrechen",
+      "DontAsk": "Nicht mehr fragen",
+      "UnmaterializeTitle": "Entmaterialisieren",
+      "UnmaterializeRevealed": "{names} ist enthüllt. Die Spieler verlieren den Zugriff, bis es wieder materialisiert wird.",
+      "Unmaterialize": "Entmaterialisieren"
     }
   }
 }

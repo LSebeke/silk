@@ -20,6 +20,8 @@ export interface HistoryDeps {
   author(): string;
   /** Written to a new Canon's manifest, e.g. `silk 1.2.0`. */
   createdWith: string;
+  /** Before every Commit: capture World State from Foundry into the working copy (T9 sheets). */
+  beforeCommit?(): Promise<void>;
 }
 
 export interface History {
@@ -35,6 +37,8 @@ export interface History {
   isDirty(): Promise<boolean>;
   /** Commits from the head back, newest first (history is linear). */
   log(): Promise<(Commit & { hash: string })[]>;
+  /** The checked-out head Commit and its snapshot; `null` before the first Commit or unbound. */
+  lastCommit(): Promise<{ hash: string; snapshot: Snapshot } | null>;
   /** The bound Canon, or `null` for a fresh World. */
   canon(): Promise<CanonStore | null>;
 }
@@ -110,6 +114,8 @@ export function createHistory(deps: HistoryDeps): History {
     },
 
     async commit({ label }) {
+      requireBinding();
+      await deps.beforeCommit?.();
       const binding = requireBinding();
       if (binding.head && !(await isDirty())) return binding.head;
       const snapshot = new Map(workingCopy.records());
@@ -135,6 +141,11 @@ export function createHistory(deps: HistoryDeps): History {
     },
 
     isDirty,
+
+    async lastCommit() {
+      const head = workingCopy.binding?.head;
+      return head ? { hash: head, snapshot: await headSnapshot() } : null;
+    },
 
     async log() {
       const store = await canon();

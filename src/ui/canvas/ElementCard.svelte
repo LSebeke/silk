@@ -91,6 +91,18 @@
         data-silk-status={status}>{statusLabel}</button
       >
     {/if}
+    {#if data.restoredFrom}
+      <div
+        class="restored"
+        data-silk-restored={data.restoredFrom}
+        title={ctx
+          .localize('SILK.Lifecycle.RestoredBadge')
+          .replace('{commit}', data.restoredFrom.slice(0, 8))}
+      >
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        {data.restoredFrom.slice(0, 8)}
+      </div>
+    {/if}
   </div>
   {#if data.hidden}
     <!-- "+N" (§10.5): Connections to filtered-out Nodes; click shows them. -->
@@ -153,6 +165,10 @@
   }
   .silk-card.selected {
     outline: 2px solid #2b6cb0;
+  }
+  .restored {
+    font-size: 0.75em;
+    opacity: 0.8;
   }
   .silk-card.ghost {
     opacity: 0.55;

@@ -36,6 +36,13 @@ export function setRevelationMapApplier(applier: RevelationMapApplier): void {
   applyRevelationMap = applier;
 }
 
+let beforeCommit: () => Promise<void> = async () => {};
+
+/** Seam for World State capture (spec §11.2): runs before every Commit (T9 sheets). */
+export function setBeforeCommit(capture: () => Promise<void>): void {
+  beforeCommit = capture;
+}
+
 export function getSession(): Session {
   if (!session) throw new Error('Silk: not ready yet');
   return session;
@@ -61,6 +68,7 @@ export async function startSession(): Promise<Session> {
     workingCopy,
     author: () => game.user?.name ?? 'GM',
     createdWith: `silk ${game.modules?.get(MODULE_ID)?.version ?? 'dev'}`,
+    beforeCommit: () => beforeCommit(),
   });
 
   Hooks.on('updateJournalEntry', (doc, changed, options, userId) => {

@@ -133,7 +133,7 @@ describe('owns: Foundry-driven changes move the Connection (spec §7 owns)', () 
     const original = t.doc(sword);
     const copy = await t.copyItem(original, t.doc(wolf).uuid);
     t.tick(500);
-    await t.deleteItem(original.uuid);
+    expect(await t.deleteItem(original.uuid)).toBe(true); // no Unmaterialize (T9)
     expect(t.element(sword).uuid).toBe(copy);
     expect(t.doc(sword).flags.silk).toEqual(original.flags.silk);
     expect(t.owners(sword)).toEqual([wolf]);
@@ -156,7 +156,7 @@ describe('owns: Foundry-driven changes move the Connection (spec §7 owns)', () 
 
   it('deleted from the inventory without a move: owns is deleted', async () => {
     const { t, sword } = await owned();
-    await t.deleteItem(t.doc(sword).uuid);
+    expect(await t.deleteItem(t.doc(sword).uuid)).toBe(false);
     expect(t.owners(sword)).toEqual([]);
   });
 
@@ -165,7 +165,7 @@ describe('owns: Foundry-driven changes move the Connection (spec §7 owns)', () 
     const original = t.doc(sword);
     await t.copyItem(original, t.doc(wolf).uuid);
     t.tick(60_000);
-    await t.deleteItem(original.uuid);
+    expect(await t.deleteItem(original.uuid)).toBe(false);
     expect(t.element(sword).uuid).toBe(original.uuid);
     expect(t.owners(sword)).toEqual([]);
   });

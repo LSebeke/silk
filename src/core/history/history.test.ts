@@ -133,4 +133,30 @@ describe('history', () => {
     expect(await canon.getMain()).toBe(base);
     expect((await canon.getAdventure('adv-1'))?.head).toBe(played);
   });
+
+  it('captures World State before a Commit (beforeCommit), and exposes the last Commit', async () => {
+    const files = createMemoryFiles();
+    const workingCopy = createWorkingCopy(createMemoryBackend(), { canWrite: () => true });
+    const sheet: CanonRecord = { kind: 'sheet', id: 'el-gareth-sheet', data: { name: 'G' } };
+    const history = createHistory({
+      files,
+      workingCopy,
+      author: () => 'GM',
+      createdWith: 'silk test',
+      beforeCommit: () => workingCopy.set([sheet]),
+    });
+    await history.createCanon({ name: 'A' });
+    expect(await history.lastCommit()).toBeNull();
+    await workingCopy.set([gareth]);
+
+    const head = await history.commit({});
+
+    expect(await history.lastCommit()).toEqual({
+      hash: head,
+      snapshot: new Map([
+        [gareth.id, gareth],
+        [sheet.id, sheet],
+      ]),
+    });
+  });
 });
