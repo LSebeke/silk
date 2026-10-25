@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import type { CanonRecord } from '../src/core/canon';
-import { expect, test } from './fixtures';
+import { expect, test, waitForSilk } from './fixtures';
 
 const api = (page: Page, name: string, args: object = {}) =>
   page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [name, args] as const);
@@ -139,7 +139,7 @@ test('the canvas window remembers its position', async ({ gm }) => {
     .toMatchObject({ left: 123, top: 45 });
   await closeCanvas(gm);
   await gm.reload();
-  await gm.waitForFunction(() => game.ready === true);
+  await waitForSilk(gm);
   await openCanvas(gm);
   const position = await gm.evaluate(() => {
     const { left, top } = foundry.applications.instances.get('silk-canvas')?.position ?? {};
