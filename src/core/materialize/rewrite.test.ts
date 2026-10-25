@@ -1,0 +1,130 @@
+import { describe, expect, it } from 'vitest';
+import type { CanonRecord, Snapshot } from '../canon';
+import { createDocRewriter } from './rewrite';
+import { must, page, pageNames, setup } from './test-setup';
+
+/** The working copy now, with `change` applied to some records (`null` deletes). */
+function resultOf(
+  records: Snapshot,
+  change: Record<string, ((r: CanonRecord) => CanonRecord) | null>,
+): Snapshot {
+  const out = new Map(records);
+  for (const [id, fn] of Object.entries(change)) {
+    const record = out.get(id);
+    if (fn === null) out.delete(id);
+    else if (record) out.set(id, fn(record));
+  }
+  return out;
+}
+
+const withData =
+  (patch: Record<string, unknown>) =>
+  (r: CanonRecord): CanonRecord => ({ ...r, data: { ...r.data, ...patch } as CanonRecord['data'] });
+
+function rig() {
+  const t = setup({ mode: 'immediate' });
+  const rewriter = createDocRewriter({
+    workingCopy: () => t.workingCopy,
+    docs: t.docs,
+    materializer: t.materializer,
+    lifecycle: t.lifecycle,
+  });
+  return { ...t, rewriter };
+}
+
+describe('rewriting the World to a merge result (spec §11.3)', () => {
+  it('writes name, image and Info Blocks of a Materialized element to its docs', async () => {
+    const t = rig();
+    const wolf = await t.create('creature', 'Wolf');
+    const [appearance, description] = must(t.element(wolf).infoBlocks);
+    const result = resultOf(t.workingCopy.records(), {
+      [wolf]: withData({
+        name: 'Dire Wolf',
+        img: 'wolf.webp',
+        infoBlocks: [
+          { ...must(appearance), text: '<p>Huge</p>' },
+          { _id: 'newblock0000000', name: 'Tactics', text: '<p>Packs</p>' },
+        ],
+      }),
+    });
+
+    await t.rewriter.apply(result);
+
+    expect(t.doc(wolf).name).toBe('Dire Wolf');
+    expect(t.doc(wolf).img).toBe('wolf.webp');
+    expect(t.companion(wolf).name).toBe('Dire Wolf');
+    expect(pageNames(t.companion(wolf))).toEqual(['Appearance', 'Tactics', 'Connections']);
+    expect(page(t.companion(wolf), must(appearance)._id).text?.content).toBe('<p>Huge</p>');
+    expect(t.companion(wolf).pages.some((p) => p._id === must(description)._id)).toBe(false);
+    expect(t.element(wolf)).toMatchObject({ name: 'Dire Wolf', img: 'wolf.webp' });
+    expect(t.element(wolf).infoBlocks.map((b) => b.name)).toEqual(['Appearance', 'Tactics']);
+  });
+
+  it('sets Status and class fields; keeps Silk-owned fields as the result has them', async () => {
+    const t = rig();
+    const alrik = await t.create('person', 'Alrik');
+    const result = resultOf(t.workingCopy.records(), {
+      [alrik]: withData({
+        status: 'dead',
+        fields: { merchantType: 'merchant' },
+        tags: ['villain'],
+        position: { x: 50, y: 60 },
+      }),
+    });
+
+    await t.rewriter.apply(result);
+
+    expect(t.element(alrik)).toMatchObject({
+      status: 'dead',
+      fields: { merchantType: 'merchant' },
+      tags: ['villain'],
+      position: { x: 50, y: 60 },
+    });
+    expect(
+      (t.doc(alrik).system as { merchant?: { merchantType?: string } }).merchant?.merchantType,
+    ).toBe('merchant');
+  });
+
+  it('deletes the docs of elements the result no longer has', async () => {
+    const t = rig();
+    const alrik = await t.create('person', 'Alrik');
+    const uuid = t.doc(alrik).uuid;
+    const companion = t.companion(alrik).uuid;
+
+    await t.rewriter.apply(resultOf(t.workingCopy.records(), { [alrik]: null }));
+
+    expect(t.docs.docs.has(uuid)).toBe(false);
+    expect(t.docs.docs.has(companion)).toBe(false);
+    expect(t.workingCopy.get(alrik)).toBeUndefined();
+  });
+
+  it('a result element Materialized only in another World becomes a Ghost here', async () => {
+    const t = rig();
+    const alrik = await t.create('person', 'Alrik');
+    const result = resultOf(t.workingCopy.records(), {});
+    const added: CanonRecord = {
+      kind: 'element',
+      id: 'el-elsewhere',
+      data: { class: 'person', name: 'Elsewhere', position: { x: 0, y: 0 }, uuid: 'Actor.zzz' },
+    };
+    (result as Map<string, CanonRecord>).set(added.id, added);
+
+    await t.rewriter.apply(result);
+
+    expect(t.element('el-elsewhere').uuid).toBeUndefined();
+    expect(t.element(alrik).uuid).toBeDefined();
+  });
+
+  it('Ghost changes just land in the working copy', async () => {
+    const t = rig();
+    t.setMode('onDemand');
+    const ghost = await t.create('note', 'Idea');
+
+    await t.rewriter.apply(
+      resultOf(t.workingCopy.records(), { [ghost]: withData({ name: 'Better idea' }) }),
+    );
+
+    expect(t.element(ghost).name).toBe('Better idea');
+    expect(t.docs.docs.size).toBe(0);
+  });
+});

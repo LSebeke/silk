@@ -59,7 +59,8 @@
         "reopen": "Reopen"
       },
       "adventure": {
-        "start": "Start Adventure"
+        "start": "Start Adventure",
+        "end": "End Adventure"
       },
       "element": {
         "create": "Create Element",
@@ -72,7 +73,8 @@
         "untag": "Remove Tag",
         "setStatus": "Set Status",
         "toggleStatus": "Toggle Status",
-        "delete": "Delete Element"
+        "delete": "Delete Element",
+        "openDetail": "Element Detail"
       },
       "connection": {
         "create": "Connect",
@@ -107,6 +109,19 @@
         "createScene": "Create Scene",
         "restoreScene": "Restore Scene from last commit",
         "viewScene": "View Scene"
+      },
+      "reveal": {
+        "element": "Reveal",
+        "appearance": "Reveal Appearance",
+        "infoBlock": "Reveal Info Block",
+        "connection": "Reveal Connection",
+        "showToPlayers": "Show to players"
+      },
+      "merge": {
+        "nextConflict": "Next conflict",
+        "pick": "Take this value",
+        "confirm": "Merge into Canon",
+        "cancel": "Cancel merge"
       }
     },
     "Canvas": {
@@ -306,6 +321,62 @@
       "CreateOverview": "Create Overview Scene",
       "None": "No Scene",
       "Restore": "Restore from last commit"
+    },
+    "Reveal": {
+      "Reveal": "Reveal",
+      "Unreveal": "Un-reveal",
+      "RevealAppearance": "Reveal Appearance",
+      "HideAppearance": "Hide Appearance",
+      "Appearance": "Appearance (image)",
+      "NeedsAdventure": "Start an Adventure to Reveal.",
+      "TheConnection": "this Connection",
+      "Confirm": "Reveal {name} to the players?",
+      "UnrevealConfirm": "Hide {name} from the players again?"
+    },
+    "Detail": {
+      "Title": "Element Detail",
+      "InfoBlocks": "Info Blocks",
+      "Connections": "Connections",
+      "Gone": "This element no longer exists."
+    },
+    "Merge": {
+      "Title": "Merge",
+      "Heading": "Merge Adventure",
+      "Into": "into the Canon",
+      "Base": "Base (Adventure start)",
+      "CanonNow": "Canon now",
+      "Adventure": "Adventure",
+      "Result": "Result",
+      "Field": "Field",
+      "ResultHint": "The merged Canon, as it will look.",
+      "ShowCanonOnly": "Show Canon-only changes",
+      "Received": "Merged into the Canon since the Adventure started",
+      "NoneReceived": "Nothing merged into the Canon since the Adventure started.",
+      "ConflictsLeft": "{n} conflict(s) left",
+      "Footer": "Auto-commit \"Before merge\" done. Cancel keeps the Adventure checked out.",
+      "ConfirmTitle": "Merge into the Canon",
+      "ConfirmBody": "Merge the Adventure into the Canon and check out main? There is no undo.",
+      "WriteCombined": "Write combined text",
+      "UseText": "Use this text",
+      "AutoMerged": "Auto-merged",
+      "ClickNode": "Click a Node or Connection to see its changes.",
+      "NoChanges": "No changes.",
+      "Keep": "Keep (with edits)",
+      "Delete": "Delete",
+      "None": "— none",
+      "Whole": "Element",
+      "Layout": "layout changes, incoming wins",
+      "Resume": "Resume merge",
+      "Open": "conflict",
+      "Resolved": "resolved",
+      "Badge": {
+        "conflict": "Conflicts",
+        "added": "Added",
+        "deleted": "Deleted",
+        "changed": "Changed",
+        "layout": "Moved",
+        "canonOnly": "Canon only"
+      }
     }
   }
 }

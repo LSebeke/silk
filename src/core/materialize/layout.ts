@@ -258,7 +258,9 @@ export function readBack(
 ): Partial<ElementData> {
   const out: Partial<ElementData> = { name: main.name };
   if (main.documentName !== 'JournalEntry') {
-    out.img = main.img || undefined;
+    // Hooded until Appearance is Revealed (§8): the real image waits in the flag.
+    const { hood, img } = main.flags.silk;
+    out.img = (hood && main.img === hood ? img : main.img) || undefined;
     const fields = system.fromSystem(cls, main.system);
     out.fields = Object.keys(fields).length ? fields : undefined;
     if (cls === 'person' || cls === 'creature') {

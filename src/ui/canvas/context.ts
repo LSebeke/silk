@@ -7,6 +7,7 @@ import type {
   LayoutTween,
   ViewStateStore,
 } from '../../core/canvas';
+import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
 
 export interface CanvasContext {
@@ -31,6 +32,12 @@ export interface CanvasContext {
   /** Client setting `renderBudgetWarning` (§10.5): warn above this many visible Nodes. */
   renderBudget: number;
   localize(key: string): string;
+  /** Localised command title (context menus, §8 Controls). */
+  title(name: string): string;
+  /** The World's reveal state (eye toggles, menus; §8). Svelte-store `subscribe`. */
+  reveal: Pick<Reveal, 'subscribe' | 'isRevealed'>;
+  /** Warning toast. */
+  warn(message: string): void;
 }
 
 /** Svelte context key for `CanvasContext` (cards read it). */
