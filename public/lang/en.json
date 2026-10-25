@@ -96,6 +96,12 @@
         "set": "Set Canvas Filter",
         "clear": "Clear Canvas Filters",
         "expandBadge": "Show hidden neighbours"
+      },
+      "event": {
+        "activateScene": "Activate Event Scene",
+        "createScene": "Create Scene",
+        "restoreScene": "Restore Scene from last commit",
+        "viewScene": "View Scene"
       }
     },
     "Canvas": {
@@ -217,7 +223,8 @@
       "event": "Events",
       "quest": "Quests",
       "note": "Notes",
-      "companions": "Silk Companions"
+      "companions": "Silk Companions",
+      "scene": "Silk Scenes"
     },
     "Materialize": {
       "Implicit": "Materialized {name}.",
@@ -274,6 +281,18 @@
       "UnmaterializeTitle": "Unmaterialize",
       "UnmaterializeRevealed": "{names} is Revealed. Players will lose access until it is Materialized again.",
       "Unmaterialize": "Unmaterialize"
+    },
+    "EventScene": {
+      "Box": "Present",
+      "Happened": "{name} happened (Event Scene activated). Set the Status back to undo.",
+      "Deleted": "The Scene of {name} was deleted. Its journal offers Create Scene and Restore from last commit.",
+      "NoScene": "This element has no Scene.",
+      "NothingToRestore": "The last commit holds no Scene of {name}.",
+      "Activate": "Activate",
+      "Create": "Create Scene",
+      "CreateOverview": "Create Overview Scene",
+      "None": "No Scene",
+      "Restore": "Restore from last commit"
     }
   }
 }

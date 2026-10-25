@@ -11,6 +11,7 @@ import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { registerOwnsHooks } from './adapter/owns';
 import { foundryOwnershipRevealed } from './adapter/revealed';
+import { createSceneDocs, registerSceneBar, registerSceneHooks } from './adapter/scenes';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
 import { getSession, setBeforeCommit, startSession } from './adapter/session';
 import { registerSettings } from './adapter/settings';
@@ -33,7 +34,8 @@ import { devCoreCommands } from './core/dev/commands';
 import { campaignCommands } from './core/campaigns/commands';
 import { isRevealed, revelationMapCleanup } from './core/campaigns';
 import { connectionCommands, connectOnCreate } from './core/connections';
-import { elementCommands, type ElementCommandDeps } from './core/elements';
+import { elementCommands, readElement, type ElementCommandDeps } from './core/elements';
+import { createEventScenes, eventSceneCommands } from './core/event-scenes';
 import { historyCommands } from './core/history';
 import {
   createConnectionsPages,
@@ -174,6 +176,34 @@ pipeline.onComplete(({ id }) => {
   owns.afterPipeline(id).catch((error: unknown) => console.error(error));
 });
 
+/** T13 Event Scenes: Scene per Event, present at ↔ tokens, Happened on activation. */
+const eventScenes = createEventScenes({
+  workingCopy,
+  docs: foundryDocs,
+  scenes: createSceneDocs({
+    scenes: () => (game.scenes ?? []) as never,
+    get: (id) => game.scenes?.get(id) as never,
+    sceneClass: () => CONFIG.Scene.documentClass as never,
+    async tokenData(actorId, data, scene) {
+      const actor = game.actors?.get(actorId);
+      const token = await actor?.getTokenDocument(data as never, { parent: scene as never });
+      return token?.toObject();
+    },
+    ensureFolder: (name) => foundryDocs.ensureFolder('Scene' as never, 'event', name),
+  }),
+  materializer,
+  mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
+  deferImmediate: () => pipeline.get().step === 'classBox',
+  newId: () => foundry.utils.randomID(16),
+  localize: format,
+  notify: (message) => void ui.notifications?.info(message),
+  lastCommit: () => getSession().history.lastCommit(),
+});
+lifecycle.contribute(eventScenes.contributor);
+pipeline.onComplete(({ id }) => {
+  eventScenes.afterPipeline(id).catch((error: unknown) => console.error(error));
+});
+
 /** Generated Connections pages (spec §5 In journals); only the active GM writes them. */
 const connectionsDocs = createFoundryDocs(foundryApi());
 const connectionsPages = createConnectionsPages({
@@ -209,11 +239,17 @@ for (const command of [
     workingCopy,
     newId: () => foundry.utils.randomID(16),
     afterCreate,
-    afterRename: [(element) => materializer.writeName(element.id)],
+    afterRename: [
+      (element) => materializer.writeName(element.id),
+      (element) => eventScenes.renamed(element.id),
+    ],
   }),
   ...materializeCommands(materializer),
   ...lifecycleCommands(lifecycle, () => canvasState.get().selection),
-  ...owns.wrap(connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) })),
+  ...eventScenes.wrap(
+    owns.wrap(connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) })),
+  ),
+  ...eventSceneCommands(eventScenes),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
   ...layoutCommands({
     workingCopy,
@@ -279,6 +315,24 @@ Hooks.once('ready', async () => {
   registerOwnsHooks(owns, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
+  });
+  registerSceneHooks(eventScenes, {
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isActiveGM: () => isActiveGM(game as never),
+  });
+  registerSceneBar({
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isGM: () => game.user?.isGM ?? false,
+    state(journal) {
+      const id = materializer.elementIdOf(journal);
+      const el = id ? readElement(workingCopy().get(id)) : undefined;
+      if (!el?.uuid || (el.class !== 'event' && el.class !== 'location')) return undefined;
+      const scene = eventScenes.sceneOf(el.id)?.name;
+      return { elementId: el.id, cls: el.class, ...(scene ? { scene } : {}) };
+    },
+    run: (name, args) => registry.run(name, args),
+    localize,
+    error: (message) => void ui.notifications?.error(message),
   });
   // Reconcile on load (§7): missed hooks are never replayed, Foundry is re-read. Missing
   // docs first, then the contributors (Connections pages written while Silk was off, …).
