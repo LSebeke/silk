@@ -143,19 +143,23 @@ test('dsa5 drag between actors: copies get no Silk id; a move takes id and owns 
 
   // Copy (no Alt): the copy is stripped, the original stays the Item.
   await dropItem(gm, original.uuid as string, wolfUuid, false);
-  await expect
-    .poll(() => gm.evaluate((u) => (fromUuidSync(u) as any).items.size, wolfUuid))
-    .toBe(1);
+  // dsa5 gives new actors default skills and money: count only the dropped Item.
+  const swords = (actor: string) =>
+    gm.evaluate(
+      (u) =>
+        [...(fromUuidSync(u) as any).items]
+          .filter((i: any) => i.name === 'Drag Sword')
+          .map((i: any) => i.id as string),
+      actor,
+    );
+  await expect.poll(async () => (await swords(wolfUuid)).length).toBe(1);
   await expect.poll(() => silkItems(gm, wolfUuid)).toEqual([]);
   expect(await where(gm, sword)).toMatchObject({ uuid: original.uuid, exists: true });
   expect(await owners(gm, sword)).toEqual([alrik]);
-  await gm.evaluate(
-    (u) =>
-      (fromUuidSync(u) as any).deleteEmbeddedDocuments('Item', [
-        ...(fromUuidSync(u) as any).items.keys(),
-      ]),
+  await gm.evaluate(([u, ids]) => (fromUuidSync(u) as any).deleteEmbeddedDocuments('Item', ids), [
     wolfUuid,
-  );
+    await swords(wolfUuid),
+  ] as const);
 
   // Move (Alt): dsa5 creates on the target and deletes the source.
   await dropItem(gm, original.uuid as string, wolfUuid, true);
@@ -166,6 +170,8 @@ test('dsa5 drag between actors: copies get no Silk id; a move takes id and owns 
   });
   await expect.poll(() => owners(gm, sword)).toEqual([wolf]);
   expect(await silkItems(gm, alrikUuid)).toEqual([]);
+  expect(await swords(wolfUuid)).toHaveLength(1);
+  expect(await swords(alrikUuid)).toEqual([]);
 
   // Deleted from the inventory: the copy left its actor, owns is deleted.
   await gm.evaluate(async (u) => (fromUuidSync(u) as any).delete(), (await where(gm, sword)).uuid);
