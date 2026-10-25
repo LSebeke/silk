@@ -11,7 +11,10 @@ import type {
   WorkingCopyState,
 } from '../core/working-copy';
 
-/** Update options Silk passes on its own writes, so its hooks can ignore them (spec §2). */
+/**
+ * Update options Silk passes on its own writes, so its hooks can ignore them (spec §2).
+ * Foundry mutates the options object it is given: always pass a copy (`{ ...SILK_WRITE }`).
+ */
 export const SILK_WRITE = { silk: { internal: true } } as const;
 
 export function isSilkWrite(options: unknown): boolean {
@@ -88,7 +91,7 @@ export function journalBackend(entry: () => JournalLike | undefined): WorkingCop
       for (const r of patch.set ?? []) records[r.id] = encodeRecord(r);
       for (const id of patch.delete ?? []) records[`-=${id}`] = null;
       if (Object.keys(records).length) silk.records = records;
-      await doc.update({ flags: { silk } }, SILK_WRITE);
+      await doc.update({ flags: { silk } }, { ...SILK_WRITE });
     },
   };
 }

@@ -2,11 +2,15 @@
  * Entry point. Wires the pure core to Foundry through the adapter and exposes the
  * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
  */
+import { dsa5Mapping } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
+import { createFoundryDocs } from './adapter/foundry-docs';
 import { registerKeybindings } from './adapter/keybindings';
+import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
 import { getSession, startSession } from './adapter/session';
 import { registerSettings } from './adapter/settings';
+import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
@@ -19,6 +23,7 @@ import { campaignCommands } from './core/campaigns/commands';
 import { connectionCommands, connectOnCreate } from './core/connections';
 import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
+import { createMaterializer, materializeCommands } from './core/materialize';
 import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
@@ -42,6 +47,31 @@ const viewState = createViewState({
 const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
 afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
 
+/** Materialize + write-through (spec §6, §7). */
+const materializer = createMaterializer({
+  workingCopy,
+  docs: createFoundryDocs(foundryApi()),
+  system: dsa5Mapping,
+  mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
+  newId: () => foundry.utils.randomID(16),
+  localize: (key, data) => (data ? game.i18n?.format(key, data) : game.i18n?.localize(key)) ?? key,
+  notify: (message) => void ui.notifications?.info(message),
+  confirm: async (count) =>
+    !!(await foundry.applications.api.DialogV2.confirm({
+      window: { title: localize('SILK.Materialize.VisibleTitle') },
+      content: `<p>${game.i18n?.format('SILK.Materialize.VisibleConfirm', { count: String(count) })}</p>`,
+    })),
+  // Canvas Filters / Focus View (T23/T24) narrow this to the rendered Nodes.
+  visibleIds: () => [...workingCopy().records().keys()],
+  selection: () => canvasState.get().selection,
+  // The pipeline is still in the class box while `element.create` runs.
+  deferImmediate: () => pipeline.get().step === 'classBox',
+});
+afterCreate.push((element) => materializer.afterCreate(element));
+pipeline.onComplete(({ id }) => {
+  materializer.afterPipeline(id).catch((error: unknown) => console.error(error));
+});
+
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
   workingCopy: workingCopy(),
@@ -53,7 +83,13 @@ const canvasContext = (): CanvasContext => ({
 });
 
 for (const command of [
-  ...elementCommands({ workingCopy, newId: () => foundry.utils.randomID(16), afterCreate }),
+  ...elementCommands({
+    workingCopy,
+    newId: () => foundry.utils.randomID(16),
+    afterCreate,
+    afterRename: [(element) => materializer.writeName(element.id)],
+  }),
+  ...materializeCommands(materializer),
   ...connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) }),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
   ...canvasUiCommands(canvasContext),
@@ -78,6 +114,10 @@ Hooks.once('init', () => {
 
 Hooks.once('ready', async () => {
   await startSession();
+  registerMaterializeHooks(materializer, {
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isActiveGM: () => isActiveGM(game as never),
+  });
   showFileBrowseNotice({
     isGM: game.user?.isGM ?? false,
     permissions: game.permissions as Record<string, number[] | undefined> | undefined,
