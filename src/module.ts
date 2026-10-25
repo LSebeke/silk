@@ -20,6 +20,7 @@ import {
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
 import { campaignCommands } from './core/campaigns/commands';
+import { connectionCommands, connectOnCreate } from './core/connections';
 import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
 import { createMaterializer, materializeCommands } from './core/materialize';
@@ -44,6 +45,7 @@ const viewState = createViewState({
 });
 /** `element.create` hooks: T7 (Connection to `from`) and T8 (immediate Materialize) push here. */
 const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
+afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
 
 /** Materialize + write-through (spec §6, §7). */
 const materializer = createMaterializer({
@@ -88,6 +90,7 @@ for (const command of [
     afterRename: [(element) => materializer.writeName(element.id)],
   }),
   ...materializeCommands(materializer),
+  ...connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) }),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
   ...canvasUiCommands(canvasContext),
   ...canonCommands,

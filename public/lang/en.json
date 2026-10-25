@@ -38,7 +38,10 @@
       "canon": {
         "create": "Create Canon",
         "bind": "Bind World to Canon",
-        "openWindow": "Open the Canon window"
+        "openWindow": "Open the Canon window",
+        "exportBackup": "Canon Backup",
+        "exportShare": "Canon Share",
+        "import": "Import Canon"
       },
       "history": {
         "commit": "Commit",
@@ -63,6 +66,14 @@
         "tag": "Add Tag",
         "untag": "Remove Tag"
       },
+      "connection": {
+        "create": "Connect",
+        "setLabel": "Edit Connection label",
+        "cycleDirection": "Cycle Connection direction",
+        "cycleType": "Cycle Connection type",
+        "flip": "Flip Connection",
+        "delete": "Delete Connection"
+      },
       "materialize": {
         "elements": "Materialize",
         "visible": "Materialize visible"
@@ -75,7 +86,23 @@
     },
     "Canvas": {
       "Title": "World Canvas",
-      "ClassSearch": "Class…"
+      "ClassSearch": "Class…",
+      "ConnectHint": "Click the target Node, or empty canvas for a new Node. Esc cancels.",
+      "LabelPlaceholder": "label…"
+    },
+    "Connection": {
+      "Type": {
+        "free": "free-form",
+        "owns": "owns",
+        "presentAt": "present at",
+        "locatedIn": "located in",
+        "takesPlaceAt": "takes place at"
+      },
+      "Point": {
+        "out": "Outgoing",
+        "in": "Incoming",
+        "mutual": "Mutual"
+      }
     },
     "Canon": {
       "Title": "Canon",
@@ -95,7 +122,27 @@
       "NoCommits": "No Commits yet.",
       "Campaigns": "Campaigns",
       "CampaignName": "New Campaign name",
-      "Closed": "closed"
+      "Closed": "closed",
+      "Portability": {
+        "Heading": "Backup and Share",
+        "ShareCommit": "Share from",
+        "AdventureHead": "Adventure",
+        "ImportFile": "Import Backup or Share (.zip)",
+        "BackupTitle": "Canon Backup",
+        "ShareTitle": "Canon Share",
+        "Summary": "{objects} files, {assets} assets bundled.",
+        "Orphans": "Unreachable files left out (garbage collection): {count}.",
+        "Missing": "Referenced files not found on this server, not bundled:",
+        "Uncommitted": "This World has uncommitted changes. They are not part of the export; commit first to include them.",
+        "Download": "Download the zip?",
+        "DivergedTitle": "Canon has diverged",
+        "Diverged": "This Backup does not continue the Canon on this server (its main does not descend from local main). Import it as a copy with a new id instead?",
+        "OverwriteTitle": "Overwrite files?",
+        "Overwrite": "These files already exist with different content. Overwrite them with the Backup's version?",
+        "Imported": "Imported Canon \"{name}\" ({id}).",
+        "ImportedMissing": "Files missing from the import: {files}",
+        "Cancelled": "Import cancelled. Nothing was written."
+      }
     },
     "Notice": {
       "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."

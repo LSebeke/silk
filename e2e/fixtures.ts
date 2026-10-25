@@ -34,7 +34,10 @@ async function join(browser: Browser, url: string, userName: string): Promise<Pa
   // clients at random moments after `ready`; they swallow pointer input. Close them whenever
   // they get in the way.
   const DSA5_POPUPS = ['dsa5-skin-selection-dialog', 'dsa5-patch-viewer'];
-  const selector = [...DSA5_POPUPS.map((id) => `#${id}`), '.didYouKnow'].join(', ');
+  // Foundry's welcome tour overlay too.
+  const selector = [...DSA5_POPUPS.map((id) => `#${id}`), '.didYouKnow', '.tour-overlay'].join(
+    ', ',
+  );
   await page.addLocatorHandler(page.locator(selector).first(), () =>
     page.evaluate(async (ids) => {
       for (const id of ids) {
@@ -43,6 +46,9 @@ async function join(browser: Browser, url: string, userName: string): Promise<Pa
         document.getElementById(id)?.remove();
       }
       for (const tip of document.querySelectorAll('.didYouKnow')) tip.remove();
+      (foundry.nue.Tour as unknown as { activeTour?: { exit(): void } }).activeTour?.exit();
+      for (const el of document.querySelectorAll('.tour, .tour-overlay, .tour-fadeout'))
+        el.remove();
     }, DSA5_POPUPS),
   );
   await page.goto('/join');

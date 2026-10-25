@@ -4,8 +4,10 @@
    * so zooming changes classes once, not per card. Ghosts render faint.
    * Later tickets add: Connection Points (T7), Status chip, eye toggle, Focus Pin button.
    */
+  import { Handle, Position } from '@xyflow/svelte';
   import { getContext } from 'svelte';
   import { classLabelKey, elementClass } from '../../core/elements';
+  import { CONNECTION_POINTS } from './connection-points';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
   import type { ElementNodeData } from './flow-model';
 
@@ -73,6 +75,19 @@
       <div class="title" data-silk-node-title>{data.name}</div>
     {/if}
   </div>
+  <!-- Connection Points (§10.2): out/in/mutual on all four sides; dragging one out connects. -->
+  {#each CONNECTION_POINTS as point (point.id)}
+    <Handle
+      id={point.id}
+      type="source"
+      position={Position[point.position]}
+      class="silk-point silk-point-{point.kind}"
+      style={point.style}
+      title={ctx.localize(`SILK.Connection.Point.${point.kind}`)}
+      data-silk-point={point.kind}
+      data-silk-point-side={point.side}
+    />
+  {/each}
 </div>
 
 <style>
@@ -141,6 +156,48 @@
   }
   .block-title {
     display: none;
+  }
+
+  /* Connection Points: always visible at full zoom, larger than Svelte Flow's default. */
+  .silk-card :global(.silk-point) {
+    width: 12px;
+    height: 12px;
+    min-width: 0;
+    min-height: 0;
+    border: 2px solid var(--silk-class);
+    background: #fffdf8;
+    cursor: crosshair;
+  }
+  .silk-card :global(.silk-point-out) {
+    background: var(--silk-class);
+  }
+  .silk-card :global(.silk-point-mutual) {
+    border-radius: 2px;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  .silk-card :global(.silk-point-mutual.svelte-flow__handle-top),
+  .silk-card :global(.silk-point-mutual.svelte-flow__handle-bottom) {
+    transform: translate(-50%, 0) rotate(45deg);
+  }
+  .silk-card :global(.silk-point-mutual.svelte-flow__handle-left),
+  .silk-card :global(.silk-point-mutual.svelte-flow__handle-right) {
+    transform: translate(0, -50%) rotate(45deg);
+  }
+  .silk-card :global(.svelte-flow__handle-top) {
+    top: -7px;
+  }
+  .silk-card :global(.svelte-flow__handle-bottom) {
+    bottom: -7px;
+  }
+  .silk-card :global(.svelte-flow__handle-left) {
+    left: -7px;
+  }
+  .silk-card :global(.svelte-flow__handle-right) {
+    right: -7px;
+  }
+  :global(.lod-title) .silk-card :global(.silk-point),
+  :global(.lod-block) .silk-card :global(.silk-point) {
+    visibility: hidden;
   }
 
   /* Zoom level 2: big title. */

@@ -35,6 +35,16 @@
     newCampaign = '';
   }
 
+  /** Share source: a Commit hash or an Adventure id; defaults to the Checkout's head. */
+  let shareFrom = $state('');
+  const shareCommit = $derived(shareFrom || overview.log[0]?.hash || '');
+
+  async function importFile(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) await run('canon.import', { file });
+  }
+
   async function rename() {
     if (!renaming) return;
     await run('campaign.rename', renaming);
@@ -59,6 +69,7 @@
         </button>
       </form>
     </section>
+    <section>{@render importer()}</section>
   {:else}
     <header>
       <h2 data-silk-canon-title>{overview.canon.name}</h2>
@@ -190,8 +201,54 @@
         </button>
       </form>
     </section>
+
+    <section data-silk-portability>
+      <h3>{t('SILK.Canon.Portability.Heading')}</h3>
+      <div class="row">
+        <button type="button" onclick={() => run('canon.exportBackup')} data-silk-canon-backup>
+          {t('SILK.Commands.canon.exportBackup')}
+        </button>
+      </div>
+      <div class="row">
+        <label for="silk-share-from">{t('SILK.Canon.Portability.ShareCommit')}</label>
+        <select id="silk-share-from" bind:value={shareFrom} data-silk-share-commit>
+          <option value="">{overview.log[0]?.label || t('SILK.Canon.Unlabelled')}</option>
+          {#each overview.log.slice(1) as commit (commit.hash)}
+            <option value={commit.hash}>
+              {commit.label || t('SILK.Canon.Unlabelled')} · {date(commit.date)}
+            </option>
+          {/each}
+          {#each overview.adventures.filter((a) => !a.current) as adventure (adventure.id)}
+            <option value={adventure.id}>
+              {t('SILK.Canon.Portability.AdventureHead')}: {adventure.name}
+            </option>
+          {/each}
+        </select>
+        <button
+          type="button"
+          disabled={!shareCommit}
+          onclick={() => run('canon.exportShare', { commit: shareCommit })}
+          data-silk-canon-share
+        >
+          {t('SILK.Commands.canon.exportShare')}
+        </button>
+      </div>
+      {@render importer()}
+    </section>
   {/if}
 </div>
+
+{#snippet importer()}
+  <label class="row">
+    {t('SILK.Canon.Portability.ImportFile')}
+    <input
+      type="file"
+      accept=".zip,application/zip"
+      onchange={(e) => importFile(e.currentTarget)}
+      data-silk-canon-import
+    />
+  </label>
+{/snippet}
 
 <style>
   .silk-canon {
