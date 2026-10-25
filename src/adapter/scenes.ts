@@ -18,6 +18,7 @@ export interface FoundryScene {
   view(): Promise<unknown>;
   createEmbeddedDocuments(name: string, data: object[], options?: object): Promise<unknown>;
   deleteEmbeddedDocuments(name: string, ids: string[], options?: object): Promise<unknown>;
+  updateEmbeddedDocuments(name: string, data: object[], options?: object): Promise<unknown>;
 }
 
 export interface SceneApi {
@@ -31,6 +32,8 @@ export interface SceneApi {
   /** World Actor's token data from its prototype token. */
   tokenData(actorId: string, data: object, scene: FoundryScene): Promise<object | undefined>;
   ensureFolder(name: string): Promise<string>;
+  /** Embedded Document name of a Scene collection (`walls` → `Wall`), from Scene metadata. */
+  embeddedName(collection: string): string | undefined;
 }
 
 export function sceneSnapshot(scene: FoundryScene): SceneSnapshot {
@@ -90,6 +93,17 @@ export function createSceneDocs(api: SceneApi): SceneDocs {
     },
     async deleteTokens(sceneId, ids) {
       await must(sceneId).deleteEmbeddedDocuments('Token', ids, { ...SILK_WRITE });
+    },
+    async syncEmbedded(sceneId, collection, ops) {
+      const scene = must(sceneId);
+      const name = api.embeddedName(collection);
+      if (!name) throw new Error(`Silk: Scenes have no embedded "${collection}"`);
+      if (ops.delete.length)
+        await scene.deleteEmbeddedDocuments(name, ops.delete, { ...SILK_WRITE });
+      if (ops.update.length)
+        await scene.updateEmbeddedDocuments(name, ops.update, { ...SILK_WRITE, recursive: false });
+      if (ops.create.length)
+        await scene.createEmbeddedDocuments(name, ops.create, { ...SILK_WRITE, keepId: true });
     },
   };
 }

@@ -3,7 +3,7 @@
  * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
  */
 import { registerConnectionsPageHooks } from './adapter/connections-page';
-import { dsa5Mapping } from './adapter/dsa5';
+import { dsa5Mapping, dsa5Sections } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { activeScene, registerFocusHooks } from './adapter/focus';
 import { createFoundryDocs } from './adapter/foundry-docs';
@@ -219,6 +219,14 @@ const eventScenes = createEventScenes({
       return token?.toObject();
     },
     ensureFolder: (name) => foundryDocs.ensureFolder('Scene' as never, 'event', name),
+    embeddedName: (collection) =>
+      Object.entries(
+        (
+          CONFIG.Scene.documentClass as unknown as {
+            metadata: { embedded: Record<string, string> };
+          }
+        ).metadata.embedded,
+      ).find(([, key]) => key === collection)?.[0],
   }),
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
@@ -252,7 +260,13 @@ const connectionsPages = createConnectionsPages({
 lifecycle.contribute({ reconcile: () => connectionsPages.refresh() });
 
 /** End Adventure / merge (spec §11.3, §11.4): one session per World session. */
-const docRewriter = createDocRewriter({ workingCopy, docs: foundryDocs, materializer, lifecycle });
+const docRewriter = createDocRewriter({
+  workingCopy,
+  docs: foundryDocs,
+  materializer,
+  lifecycle,
+  scenes: eventScenes,
+});
 let merges: { session: object; merges: Merges } | undefined;
 function getMerges(): Merges {
   const session = getSession();
@@ -265,6 +279,7 @@ function getMerges(): Merges {
         campaigns: session.campaigns,
         author: () => game.user?.name ?? 'GM',
         applyResult: (result) => docRewriter.apply(result),
+        sections: dsa5Sections,
       }),
     };
   return merges.merges;

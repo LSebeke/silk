@@ -12,12 +12,22 @@
     type NodeTypes,
   } from '@xyflow/svelte';
   import type { Side } from '../../core/canon';
-  import type { Badge, FieldView, RecordView } from '../../core/merge';
+  import type { Attribution, Badge, MergeRow, RecordView } from '../../core/merge';
   import MergeCard from './MergeCard.svelte';
   import MergeEdge from './MergeEdge.svelte';
   import MergeFrame from './MergeFrame.svelte';
+  import MergeMinimap from './MergeMinimap.svelte';
   import MergeOutline from './MergeOutline.svelte';
-  import { combinedText, fieldLabel, formatValue, toMergeEdges, toMergeNodes } from './merge-flow';
+  import {
+    chosen,
+    combinedText,
+    drawerRecords,
+    formatRowValue,
+    nodeOf,
+    sectionsOf,
+    toMergeEdges,
+    toMergeNodes,
+  } from './merge-flow';
   import type { MergePanelProps } from './MergeWindow';
 
   let { view, focus, select, run, t }: MergePanelProps = $props();
@@ -33,10 +43,12 @@
   let showCanonOnly = $state(false);
   let editing = $state<{ recordId: string; field: string; text: string } | null>(null);
 
-  const opts = $derived({ showCanonOnly, selected: focus?.recordId });
+  const nodeId = $derived(view && focus ? nodeOf(view, focus.recordId) : undefined);
+  const opts = $derived({ showCanonOnly, selected: nodeId });
   const nodes = $derived(view ? toMergeNodes(view, opts) : []);
   const edges = $derived(view ? toMergeEdges(view, opts) : []);
-  const record = $derived(view?.records.find((r) => r.id === focus?.recordId));
+  const drawer = $derived(view && focus ? drawerRecords(view, focus.recordId) : []);
+  const record = $derived(drawer[0]);
   const badges: Exclude<Badge, 'same'>[] = [
     'conflict',
     'added',
@@ -51,7 +63,7 @@
   // ⏎ Next conflict: pan the canvas to the focused Node.
   let lastFocus: string | undefined;
   $effect(() => {
-    const id = focus?.recordId;
+    const id = nodeId;
     if (!id || id === lastFocus) return;
     lastFocus = id;
     const node = flow.getNode(id);
@@ -76,8 +88,10 @@
     void run('merge.nextConflict');
   }
 
-  const pick = (r: RecordView, f: FieldView, side: Side) =>
-    run('merge.pick', { recordId: r.id, field: f.field, side });
+  const pick = (row: { recordId: string; field: string }, side: Side) =>
+    run('merge.pick', { recordId: row.recordId, field: row.field, side });
+  const pickWhole = (r: RecordView, side: Side) =>
+    run('merge.pick', { recordId: r.id, field: '', side });
 
   async function useText() {
     if (!editing) return;
@@ -86,16 +100,17 @@
     await run('merge.pick', { recordId, field, value: text });
   }
 
-  /** Which side a cell shows as chosen. */
-  function chosen(f: FieldView): Side | 'value' | null {
-    if (f.pick) return 'side' in f.pick ? f.pick.side : 'value';
-    return f.open ? null : f.auto;
-  }
-
-  const visible = (f: FieldView) => f.field !== '' && (showCanonOnly || !f.canonOnly);
-  const decisions = (r: RecordView) =>
-    r.fields.filter((f) => visible(f) && f.change === 'conflict' && !f.layout);
-  const autos = (r: RecordView) => r.fields.filter((f) => visible(f) && !decisions(r).includes(f));
+  const visible = (row: MergeRow) => showCanonOnly || !row.canonOnly;
+  const decisions = (r: RecordView) => r.rows.filter((row) => visible(row) && row.conflict);
+  const autos = (r: RecordView) => r.rows.filter((row) => visible(row) && !row.conflict);
+  const anyDecision = $derived(drawer.some((r) => decisions(r).length > 0));
+  const by = (a: Attribution) =>
+    a.adventure !== undefined
+      ? `${a.adventure} · ${a.campaign ?? ''} · ${date(a.date)}`
+      : `${a.label} · ${date(a.date)}`;
+  const recordTitle = (r: RecordView) =>
+    t(`SILK.Merge.Record.${r.kind}`) +
+    (r.badge === 'same' ? '' : ` · ${t(`SILK.Merge.Badge.${r.badge}`)}`);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -118,6 +133,11 @@
             >
           {/if}
         {/each}
+        {#if view.counts.moves}
+          <span class="chip layout" data-silk-merge-moves={view.counts.moves}
+            >{view.counts.moves} {t('SILK.Merge.Layout')}</span
+          >
+        {/if}
       </div>
       <span class="grow"></span>
       <label class="toggle">
@@ -175,33 +195,52 @@
             {@const w = record.whole}
             {@const keep = w.theirs !== undefined ? 'theirs' : 'ours'}
             {@const drop = w.theirs === undefined ? 'theirs' : 'ours'}
+            {@const sel = w.pick
+              ? 'side' in w.pick
+                ? w.pick.side
+                : 'value'
+              : w.open
+                ? null
+                : w.auto}
             <div class="whole" class:open={w.open} data-silk-merge-field="">
               <span>{t('SILK.Merge.Whole')}</span>
               <button
                 type="button"
-                class:sel={chosen(w) === keep}
-                onclick={() => pick(record, w, keep)}
+                class:sel={sel === keep}
+                onclick={() => pickWhole(record, keep)}
                 data-silk-merge-whole="keep">{t('SILK.Merge.Keep')}</button
               >
               <button
                 type="button"
-                class:sel={chosen(w) === drop}
-                onclick={() => pick(record, w, drop)}
+                class:sel={sel === drop}
+                onclick={() => pickWhole(record, drop)}
                 data-silk-merge-whole="delete">{t('SILK.Merge.Delete')}</button
               >
             </div>
           {/if}
 
-          {#if decisions(record).length}
-            {@render table(record, decisions(record))}
-          {/if}
-          {#if autos(record).length}
-            <details class="auto" open={!decisions(record).length && !record.whole}>
-              <summary>{t('SILK.Merge.AutoMerged')} ({autos(record).length})</summary>
-              {@render table(record, autos(record))}
-            </details>
-          {/if}
-          {#if !record.whole && !decisions(record).length && !autos(record).length}
+          {#each drawer as r (r.id)}
+            {@const own = decisions(r)}
+            {@const rest = autos(r)}
+            {#if own.length || rest.length}
+              <section class="record" data-silk-merge-record={r.id}>
+                {#if r !== record}<h4>{recordTitle(r)}</h4>{/if}
+                {#if r.kind === 'eventScene' && r.rows.some((row) => row.kind === 'token')}
+                  <MergeMinimap record={r} {t} />
+                {/if}
+                {#if own.length}
+                  {@render table(r, own)}
+                {/if}
+                {#if rest.length}
+                  <details class="auto" open={!anyDecision && !record.whole}>
+                    <summary>{t('SILK.Merge.AutoMerged')} ({rest.length})</summary>
+                    {@render table(r, rest)}
+                  </details>
+                {/if}
+              </section>
+            {/if}
+          {/each}
+          {#if !record.whole && drawer.every((r) => !decisions(r).length && !autos(r).length)}
             <p class="muted">{t('SILK.Merge.NoChanges')}</p>
           {/if}
         {/if}
@@ -229,19 +268,22 @@
   {/if}
 </div>
 
-{#snippet cell(r: RecordView, f: FieldView, side: Side)}
-  {@const value = formatValue(f[side])}
+{#snippet cell(row: MergeRow, side: Side)}
+  {@const value = formatRowValue(row, row[side])}
   <td
     class="pick {side}"
-    class:sel={chosen(f) === side}
-    onclick={() => pick(r, f, side)}
+    class:sel={chosen(row) === side}
+    onclick={() => pick(row, side)}
     data-silk-merge-cell={side}
   >
     {#if value === undefined}<span class="none">{t('SILK.Merge.None')}</span>{:else}{value}{/if}
+    {#if side === 'ours' && row.by}
+      <span class="chip canon by" data-silk-merge-by>{by(row.by)}</span>
+    {/if}
   </td>
 {/snippet}
 
-{#snippet table(r: RecordView, fields: FieldView[])}
+{#snippet table(r: RecordView, rows: MergeRow[])}
   <table class="fields">
     <thead>
       <tr>
@@ -252,47 +294,52 @@
         <th>{t('SILK.Merge.Result')}</th>
       </tr>
     </thead>
-    <tbody>
-      {#each fields as f (f.field)}
-        {@const result = formatValue(f.result)}
-        <tr
-          class:open={f.open}
-          class:focused={focus?.recordId === r.id && focus.field === f.field}
-          data-silk-merge-field={f.field}
-          data-silk-merge-open={f.open ? '' : undefined}
-        >
-          <th scope="row">{fieldLabel(r.display, f.field)}</th>
-          {@render cell(r, f, 'base')}
-          {@render cell(r, f, 'ours')}
-          {@render cell(r, f, 'theirs')}
-          <td class="result" data-silk-merge-result>
-            {#if editing && editing.recordId === r.id && editing.field === f.field}
-              <textarea bind:value={editing.text} data-silk-merge-text></textarea>
-              <button type="button" onclick={useText} data-silk-merge-use-text>
-                {t('SILK.Merge.UseText')}
-              </button>
-            {:else}
-              {#if f.open}
-                <span class="chip conflict">{t('SILK.Merge.Open')}</span>
-              {:else if result === undefined}
-                <span class="none">{t('SILK.Merge.None')}</span>
+    {#each sectionsOf(rows) as group (group.section)}
+      <tbody data-silk-merge-section={group.section}>
+        <tr class="section"><th colspan="5">{t(group.section)}</th></tr>
+        {#each group.rows as row (row.field)}
+          {@const result = formatRowValue(row, row.result)}
+          <tr
+            class:open={row.open}
+            class:focused={focus?.recordId === r.id &&
+              (focus.field === row.field || focus.field?.startsWith(`${row.field}/`))}
+            data-silk-merge-field={row.field}
+            data-silk-merge-kind={row.kind}
+            data-silk-merge-open={row.open ? '' : undefined}
+          >
+            <th scope="row">{row.label}</th>
+            {@render cell(row, 'base')}
+            {@render cell(row, 'ours')}
+            {@render cell(row, 'theirs')}
+            <td class="result" data-silk-merge-result>
+              {#if editing && editing.recordId === r.id && editing.field === row.field}
+                <textarea bind:value={editing.text} data-silk-merge-text></textarea>
+                <button type="button" onclick={useText} data-silk-merge-use-text>
+                  {t('SILK.Merge.UseText')}
+                </button>
               {:else}
-                {result}
+                {#if row.open}
+                  <span class="chip conflict">{t('SILK.Merge.Open')}</span>
+                {:else if result === undefined}
+                  <span class="none">{t('SILK.Merge.None')}</span>
+                {:else}
+                  {result}
+                {/if}
+                {#if row.text}
+                  <button
+                    type="button"
+                    class="ghost"
+                    onclick={() =>
+                      (editing = { recordId: r.id, field: row.field, text: combinedText(row) })}
+                    data-silk-merge-combine>✎ {t('SILK.Merge.WriteCombined')}</button
+                  >
+                {/if}
               {/if}
-              {#if f.text}
-                <button
-                  type="button"
-                  class="ghost"
-                  onclick={() =>
-                    (editing = { recordId: r.id, field: f.field, text: combinedText(f) })}
-                  data-silk-merge-combine>✎ {t('SILK.Merge.WriteCombined')}</button
-                >
-              {/if}
-            {/if}
-          </td>
-        </tr>
-      {/each}
-    </tbody>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    {/each}
   </table>
 {/snippet}
 
@@ -459,6 +506,21 @@
   textarea {
     width: 100%;
     min-height: 5rem;
+  }
+  tr.section th {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+    padding-top: 0.5rem;
+  }
+  .chip.by {
+    display: inline-block;
+    margin-top: 0.15rem;
+  }
+  section.record h4 {
+    margin: 0.8rem 0 0.2rem;
+    border-bottom: 1px solid var(--color-border, #4a4540);
   }
   details.auto summary {
     cursor: pointer;

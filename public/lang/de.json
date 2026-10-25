@@ -376,6 +376,38 @@
         "changed": "Geändert",
         "layout": "Verschoben",
         "canonOnly": "Nur Kanon"
+      },
+      "Record": {
+        "element": "Element",
+        "connection": "Verbindung",
+        "sheet": "Bogen",
+        "eventScene": "Ereignis-Szene",
+        "layoutGroup": "Visuelle Gruppe"
+      },
+      "Section": {
+        "element": "Element",
+        "infoBlocks": "Info-Blöcke",
+        "layout": "Layout",
+        "connection": "Verbindung",
+        "doc": "Dokument",
+        "system": "Bogen",
+        "items": "Eingebettete Items",
+        "effects": "Aktive Effekte",
+        "companion": "Begleit-Journal",
+        "tokens": "Token",
+        "sceneContents": "Wände, Lichter usw. (Anzahl)",
+        "scene": "Szene",
+        "dsa5": {
+          "characteristics": "Eigenschaften",
+          "status": "Status",
+          "details": "Beschreibung",
+          "merchant": "Händler",
+          "skills": "Talente",
+          "combatSkills": "Kampftechniken",
+          "magic": "Zauber und Liturgien",
+          "abilities": "Vor-, Nachteile, Sonderfertigkeiten",
+          "inventory": "Inventar"
+        }
       }
     }
   }

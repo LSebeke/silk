@@ -53,5 +53,15 @@ export function createMemoryScenes(): MemoryScenes {
       const scene = must(sceneId);
       scene.tokens = scene.tokens.filter((t) => !ids.includes(t._id));
     },
+    async syncEmbedded(sceneId, collection, ops) {
+      const scene = must(sceneId) as unknown as Record<string, { _id: string }[] | undefined>;
+      const updates = new Map(ops.update.map((u) => [u._id, u]));
+      scene[collection] = [
+        ...(scene[collection] ?? [])
+          .filter((x) => !ops.delete.includes(x._id))
+          .map((x) => (updates.has(x._id) ? clone(updates.get(x._id) as typeof x) : x)),
+        ...clone(ops.create),
+      ];
+    },
   };
 }

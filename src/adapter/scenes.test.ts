@@ -55,6 +55,7 @@ describe('SceneDocs adapter', () => {
       view: async () => undefined,
       createEmbeddedDocuments: async (...a) => void calls.push(['tokens', ...a]),
       deleteEmbeddedDocuments: async () => undefined,
+      updateEmbeddedDocuments: async () => undefined,
     };
     const docs = createSceneDocs({
       scenes: () => [scene],
@@ -65,6 +66,7 @@ describe('SceneDocs adapter', () => {
       }),
       tokenData: async (actorId, data) => ({ actorId, ...data, proto: true }),
       ensureFolder: async () => 'f',
+      embeddedName: () => undefined,
     });
     await docs.create({ _id: 's1', name: 'S', flags: {} });
     await docs.activate('s1');
@@ -84,6 +86,38 @@ describe('SceneDocs adapter', () => {
       ],
     ]);
     expect(docs.get('s1')?.flags.silk).toEqual({});
+  });
+
+  it('syncs an embedded collection by its Document name, keeping ids, as Silk’s write', async () => {
+    const calls: unknown[][] = [];
+    const scene = {
+      id: 's1',
+      createEmbeddedDocuments: async (...a: unknown[]) => void calls.push(['create', ...a]),
+      updateEmbeddedDocuments: async (...a: unknown[]) => void calls.push(['update', ...a]),
+      deleteEmbeddedDocuments: async (...a: unknown[]) => void calls.push(['delete', ...a]),
+    } as unknown as FoundryScene;
+    const docs = createSceneDocs({
+      scenes: () => [scene],
+      get: () => scene,
+      sceneClass: () => ({ create: async () => scene, migrateData: (d) => d }),
+      tokenData: async () => undefined,
+      ensureFolder: async () => 'f',
+      embeddedName: (c) => ({ walls: 'Wall' })[c],
+    });
+    await docs.syncEmbedded('s1', 'walls', {
+      create: [{ _id: 'w2' }],
+      update: [{ _id: 'w1', c: [1] }],
+      delete: ['w0'],
+    });
+    const silk = { silk: { internal: true } };
+    expect(calls).toEqual([
+      ['delete', 'Wall', ['w0'], silk],
+      ['update', 'Wall', [{ _id: 'w1', c: [1] }], { ...silk, recursive: false }],
+      ['create', 'Wall', [{ _id: 'w2' }], { ...silk, keepId: true }],
+    ]);
+    await expect(
+      docs.syncEmbedded('s1', 'nope', { create: [], update: [], delete: [] }),
+    ).rejects.toThrow(/nope/);
   });
 });
 

@@ -85,6 +85,39 @@ describe('rewriting the World to a merge result (spec §11.3)', () => {
     ).toBe('merchant');
   });
 
+  it('syncs an actor’s embedded Items by id: creates, updates, deletes (spec §11.4)', async () => {
+    const t = rig();
+    const alrik = await t.create('person', 'Alrik');
+    const actor = t.doc(alrik).uuid;
+    const item = (id: string, name: string, quantity: number) => ({
+      _id: id,
+      name,
+      type: 'equipment',
+      folder: null,
+      flags: { silk: {} },
+      system: { quantity: { value: quantity } },
+    });
+    await t.docs.create('Item', item('sword', 'Sword', 1), actor);
+    await t.docs.create('Item', item('torch', 'Torch', 3), actor);
+    await t.lifecycle.capture();
+    const sheetId = `${alrik}-sheet`;
+    const sheet = must(t.workingCopy.get(sheetId));
+    const doc = (items: object[]) =>
+      ({
+        ...sheet,
+        data: { ...sheet.data, doc: { ...(sheet.data.doc as object), items } },
+      }) as CanonRecord;
+    await t.workingCopy.set([doc([item('sword', 'Sword', 1), item('torch', 'Torch', 3)])]);
+    const result = new Map(t.workingCopy.records());
+    result.set(sheetId, doc([item('sword', 'Sword', 2), item('rope', 'Rope', 1)]));
+
+    await t.rewriter.apply(result);
+
+    expect(t.docs.docs.get(`${actor}.Item.sword`)?.system).toEqual({ quantity: { value: 2 } });
+    expect(t.docs.docs.get(`${actor}.Item.rope`)?.name).toBe('Rope');
+    expect(t.docs.docs.has(`${actor}.Item.torch`)).toBe(false);
+  });
+
   it('deletes the docs of elements the result no longer has', async () => {
     const t = rig();
     const alrik = await t.create('person', 'Alrik');

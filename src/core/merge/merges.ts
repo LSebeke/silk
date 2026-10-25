@@ -30,6 +30,8 @@ import {
 import type { Campaigns } from '../campaigns';
 import type { History } from '../history';
 import type { WorkingCopy } from '../working-copy';
+import { attribute, type CanonChange } from './attribution';
+import { rowsOf, type Attribution, type MergeRow, type SheetSections } from './rows';
 
 /** Working Copy meta key of the merge draft. */
 export const MERGE_DRAFT = 'mergeDraft';
@@ -66,6 +68,8 @@ export interface FieldView extends FieldDiff {
   text: boolean;
   /** Changed on the Canon side only (hidden behind the canon-only toggle). */
   canonOnly: boolean;
+  /** The Canon changed it since the Adventure started: by whom (spec §11.4 chip). */
+  by?: Attribution;
 }
 
 export interface RecordView {
@@ -77,6 +81,10 @@ export interface RecordView {
   /** Delete vs edit, or added/deleted: the whole-record row (`field === ''`). */
   whole?: FieldView;
   fields: FieldView[];
+  /** Drawer rows (spec §11.4): sections, tokens, counts. */
+  rows: MergeRow[];
+  /** Sheets and Event Scenes: the element they belong to (its Node opens them). */
+  owner?: string;
   /** Result record (`undefined` = deleted in the result), else the best side for display. */
   result?: CanonRecord;
   display: CanonRecord;
@@ -90,6 +98,8 @@ export interface MergeCounts {
   changed: number;
   canonOnly: number;
   layout: number;
+  /** Layout fields the Adventure changed (Node moves, Visual Groups): shown as a count. */
+  moves: number;
 }
 
 export interface ReceivedMerge {
@@ -123,6 +133,8 @@ export interface MergesDeps {
    * (adapter: `createDocRewriter`). Runs after the merge Commit, with main checked out.
    */
   applyResult(result: Snapshot): Promise<void>;
+  /** Sheet section labels (the Game System adapter's, spec §2). */
+  sections?: SheetSections;
 }
 
 export interface Merges {
@@ -227,27 +239,60 @@ export function createMerges(deps: MergesDeps): Merges {
     return (await (await requireCanon()).getCampaign(id))?.name ?? id;
   }
 
-  async function received(d: MergeDraft): Promise<ReceivedMerge[]> {
+  /** Main's Commits since the Adventure's base, newest first, attributed. */
+  async function mainSince(
+    d: MergeDraft,
+  ): Promise<{ attribution: Attribution; parent?: string }[]> {
     const canon = await requireCanon();
     const refs = await canon.listAdventures();
-    const out: ReceivedMerge[] = [];
+    const out: { attribution: Attribution; parent?: string }[] = [];
     for (let hash: string | undefined = d.ours; hash && hash !== d.base;) {
       const commit = await canon.readCommit(hash);
       const ref = refs.find((r) => r.merged === hash);
-      if (ref)
-        out.push({
-          adventure: ref.name,
-          campaign: await campaignName(ref.campaignId),
-          date: ref.ended ?? commit.date,
+      const parent = commit.parents[0];
+      out.push({
+        attribution: {
           commit: hash,
-        });
-      hash = commit.parents[0];
+          date: ref?.ended ?? commit.date,
+          label: commit.label,
+          ...(ref && { adventure: ref.name, campaign: await campaignName(ref.campaignId) }),
+        },
+        ...(parent && { parent }),
+      });
+      hash = parent;
     }
+    return out;
+  }
+
+  function received(since: { attribution: Attribution }[]): ReceivedMerge[] {
+    const out: ReceivedMerge[] = [];
+    for (const { attribution: a } of since)
+      if (a.adventure !== undefined)
+        out.push({
+          adventure: a.adventure,
+          campaign: a.campaign ?? '',
+          date: a.date,
+          commit: a.commit,
+        });
     return out.reverse();
+  }
+
+  async function canonChanges(since: { attribution: Attribution; parent?: string }[]) {
+    const canon = await requireCanon();
+    const empty: Snapshot = new Map();
+    return Promise.all(
+      since.map(async ({ attribution, parent }): Promise<CanonChange> => ({
+        attribution,
+        snapshot: await snapshot(canon, attribution.commit),
+        parent: parent ? await snapshot(canon, parent) : empty,
+      })),
+    );
   }
 
   async function buildView(d: MergeDraft): Promise<MergeView> {
     const merge = await mergeOf(d);
+    const since = await mainSince(d);
+    const changes = await canonChanges(since);
     const resolution = resolve(merge, d.picks);
     const open = new Set(resolution.unresolved.map((u) => `${u.recordId}\n${u.field}`));
     const counts: MergeCounts = {
@@ -258,6 +303,7 @@ export function createMerges(deps: MergesDeps): Merges {
       changed: 0,
       canonOnly: 0,
       layout: 0,
+      moves: 0,
     };
     const records: RecordView[] = [];
     for (const r of merge.records.values()) {
@@ -266,6 +312,7 @@ export function createMerges(deps: MergesDeps): Merges {
         .filter((f) => !isWorldLocal(r.kind, f.field))
         .map((f) => {
           const pick = d.picks.findLast((p) => p.recordId === r.id && p.field === f.field);
+          const by = f.change === 'theirs' ? undefined : attribute(changes, r.id, f.field);
           return {
             ...f,
             ...(pick && { pick }),
@@ -273,6 +320,7 @@ export function createMerges(deps: MergesDeps): Merges {
             open: open.has(`${r.id}\n${f.field}`),
             text: isTextField(r.kind, f.field),
             canonOnly: f.change === 'ours',
+            ...(by && { by }),
           };
         });
       const openCount = fields.filter((f) => f.open).length;
@@ -289,7 +337,10 @@ export function createMerges(deps: MergesDeps): Merges {
       else badge = 'changed';
       if (badge !== 'same') counts[badge === 'conflict' ? 'conflicts' : badge]++;
       counts.open += openCount;
+      counts.moves += fields.filter((f) => f.layout && f.change !== 'ours').length;
       const display = (result ?? r.theirs ?? r.ours ?? r.base) as CanonRecord;
+      const owner =
+        r.kind === 'sheet' || r.kind === 'eventScene' ? display.data.element : undefined;
       records.push({
         id: r.id,
         kind: r.kind,
@@ -297,6 +348,8 @@ export function createMerges(deps: MergesDeps): Merges {
         open: openCount,
         ...(whole && { whole }),
         fields,
+        rows: rowsOf(r, result, fields, deps.sections),
+        ...(typeof owner === 'string' && { owner }),
         ...(result && { result }),
         display,
       });
@@ -312,7 +365,7 @@ export function createMerges(deps: MergesDeps): Merges {
       },
       records,
       counts,
-      received: await received(d),
+      received: received(since),
       resolution,
     };
   }
@@ -360,8 +413,18 @@ export function createMerges(deps: MergesDeps): Merges {
         throw new Error(`Silk: no record "${pick.recordId}" in this merge`);
       if (isWorldLocal(merge.records.get(pick.recordId)?.kind ?? 'element', pick.field))
         throw new Error(`Silk: "${pick.field}" belongs to this World and is not merged`);
-      const picks = d.picks.filter((p) => p.recordId !== pick.recordId || p.field !== pick.field);
-      await saveDraft({ ...d, picks: [...picks, pick] });
+      // A row covering several fields (an Event Scene token): take the side for each.
+      const record = merge.records.get(pick.recordId);
+      const covered =
+        pick.field !== '' && 'side' in pick && !record?.fields.some((f) => f.field === pick.field)
+          ? (record?.fields ?? []).filter((f) => f.field.startsWith(`${pick.field}/`))
+          : [];
+      const each: Pick[] = covered.length
+        ? covered.map((f) => ({ ...pick, field: f.field }))
+        : [pick];
+      const fields = new Set(each.map((p) => p.field));
+      const picks = d.picks.filter((p) => p.recordId !== pick.recordId || !fields.has(p.field));
+      await saveDraft({ ...d, picks: [...picks, ...each] });
     },
 
     async nextConflict() {

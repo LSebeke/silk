@@ -376,6 +376,38 @@
         "changed": "Changed",
         "layout": "Moved",
         "canonOnly": "Canon only"
+      },
+      "Record": {
+        "element": "Element",
+        "connection": "Connection",
+        "sheet": "Sheet",
+        "eventScene": "Event Scene",
+        "layoutGroup": "Visual Group"
+      },
+      "Section": {
+        "element": "Element",
+        "infoBlocks": "Info Blocks",
+        "layout": "Layout",
+        "connection": "Connection",
+        "doc": "Document",
+        "system": "Sheet",
+        "items": "Embedded Items",
+        "effects": "Active Effects",
+        "companion": "Companion Journal",
+        "tokens": "Tokens",
+        "sceneContents": "Walls, lights etc. (counts)",
+        "scene": "Scene",
+        "dsa5": {
+          "characteristics": "Attributes",
+          "status": "Status",
+          "details": "Description",
+          "merchant": "Merchant",
+          "skills": "Skills",
+          "combatSkills": "Combat skills",
+          "magic": "Spells and liturgies",
+          "abilities": "Advantages, disadvantages, abilities",
+          "inventory": "Inventory"
+        }
       }
     }
   }
