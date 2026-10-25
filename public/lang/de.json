@@ -91,6 +91,12 @@
         "create": "Infoblock hinzufügen",
         "edit": "Infoblock bearbeiten",
         "delete": "Infoblock löschen"
+      },
+      "event": {
+        "activateScene": "Ereignis-Szene aktivieren",
+        "createScene": "Szene erstellen",
+        "restoreScene": "Szene aus letztem Commit wiederherstellen",
+        "viewScene": "Szene ansehen"
       }
     },
     "Canvas": {
@@ -212,7 +218,8 @@
       "event": "Ereignisse",
       "quest": "Quests",
       "note": "Notizen",
-      "companions": "Silk-Begleitjournale"
+      "companions": "Silk-Begleitjournale",
+      "scene": "Silk-Szenen"
     },
     "Materialize": {
       "Implicit": "{name} materialisiert.",
@@ -245,6 +252,18 @@
       "UnmaterializeTitle": "Entmaterialisieren",
       "UnmaterializeRevealed": "{names} ist enthüllt. Die Spieler verlieren den Zugriff, bis es wieder materialisiert wird.",
       "Unmaterialize": "Entmaterialisieren"
+    },
+    "EventScene": {
+      "Box": "Anwesend",
+      "Happened": "{name} ist geschehen (Ereignis-Szene aktiviert). Zum Rückgängigmachen den Status zurücksetzen.",
+      "Deleted": "Die Szene von {name} wurde gelöscht. Ihr Journal bietet Szene erstellen und Aus letztem Commit wiederherstellen.",
+      "NoScene": "Dieses Element hat keine Szene.",
+      "NothingToRestore": "Der letzte Commit enthält keine Szene von {name}.",
+      "Activate": "Aktivieren",
+      "Create": "Szene erstellen",
+      "CreateOverview": "Übersichtsszene erstellen",
+      "None": "Keine Szene",
+      "Restore": "Aus letztem Commit wiederherstellen"
     }
   }
 }
