@@ -8,6 +8,7 @@ import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { createFoundryDocs } from './adapter/foundry-docs';
 import { registerKeybindings } from './adapter/keybindings';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
+import { registerOwnsHooks } from './adapter/owns';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
 import { getSession, startSession } from './adapter/session';
 import { registerSettings } from './adapter/settings';
@@ -33,6 +34,7 @@ import {
   createMaterializer,
   materializeCommands,
 } from './core/materialize';
+import { createOwns, type Owns } from './core/owns';
 import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
@@ -62,9 +64,13 @@ afterCreate.push(joinFrameOnCreate(workingCopy));
 const layoutTween = createLayoutTween();
 
 /** Materialize + write-through (spec §6, §7). */
+const foundryDocs = createFoundryDocs(foundryApi());
+/** T12 owns ↔ inventory; created below, after the materializer it uses. */
+// eslint-disable-next-line prefer-const -- the materializer's deps reach it lazily
+let owns: Owns;
 const materializer = createMaterializer({
   workingCopy,
-  docs: createFoundryDocs(foundryApi()),
+  docs: foundryDocs,
   system: dsa5Mapping,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
   newId: () => foundry.utils.randomID(16),
@@ -80,10 +86,23 @@ const materializer = createMaterializer({
   selection: () => canvasState.get().selection,
   // The pipeline is still in the class box while `element.create` runs.
   deferImmediate: () => pipeline.get().step === 'classBox',
+  parentOf: (id) => owns.parentOf(id),
+  afterMaterialize: (id) => owns.afterMaterialize(id),
+});
+owns = createOwns({
+  workingCopy,
+  docs: foundryDocs,
+  materializer,
+  mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
+  deferImmediate: () => pipeline.get().step === 'classBox',
+  newId: () => foundry.utils.randomID(16),
+  now: () => Date.now(),
+  localize,
 });
 afterCreate.push((element) => materializer.afterCreate(element));
 pipeline.onComplete(({ id }) => {
   materializer.afterPipeline(id).catch((error: unknown) => console.error(error));
+  owns.afterPipeline(id).catch((error: unknown) => console.error(error));
 });
 
 /** Generated Connections pages (spec §5 In journals); only the active GM writes them. */
@@ -119,7 +138,7 @@ for (const command of [
     afterRename: [(element) => materializer.writeName(element.id)],
   }),
   ...materializeCommands(materializer),
-  ...connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) }),
+  ...owns.wrap(connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) })),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
   ...layoutCommands({
     workingCopy,
@@ -170,6 +189,10 @@ Hooks.once('ready', async () => {
   });
   // Reconcile on load (§7): pages written while Silk was off, or by an older version.
   if (isActiveGM(game as never)) void connectionsPages.refresh().catch(() => {});
+  registerOwnsHooks(owns, {
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isActiveGM: () => isActiveGM(game as never),
+  });
   showFileBrowseNotice({
     isGM: game.user?.isGM ?? false,
     permissions: game.permissions as Record<string, number[] | undefined> | undefined,

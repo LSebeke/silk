@@ -23,6 +23,9 @@ export interface FoundryDoc {
   createEmbeddedDocuments(name: string, data: object[], options?: object): Promise<unknown>;
   updateEmbeddedDocuments(name: string, data: object[], options?: object): Promise<unknown>;
   deleteEmbeddedDocuments(name: string, ids: string[], options?: object): Promise<unknown>;
+  delete?(options?: object): Promise<unknown>;
+  /** Embedded docs: the parent doc (an Item's actor). */
+  parent?: { uuid: string } | null;
   sheet?: { render(force?: boolean): unknown } | null;
 }
 
@@ -42,7 +45,9 @@ export interface FoundryApi {
 }
 
 /** Source data (`toObject` is already a copy) plus identity; `flags.silk` always present. */
-function snapshot(doc: FoundryDoc | null | undefined): DocSnapshot | undefined {
+export function snapshot(
+  doc: Pick<FoundryDoc, 'uuid' | 'documentName' | 'toObject' | 'parent'> | null | undefined,
+): DocSnapshot | undefined {
   if (!doc) return undefined;
   const data = doc.toObject() as DocData;
   return {
@@ -50,6 +55,7 @@ function snapshot(doc: FoundryDoc | null | undefined): DocSnapshot | undefined {
     flags: { ...data.flags, silk: { ...data.flags?.silk } },
     uuid: doc.uuid,
     documentName: doc.documentName as DocumentName,
+    ...(doc.parent?.uuid ? { parent: doc.parent.uuid } : {}),
   };
 }
 
@@ -86,14 +92,26 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
       }
       return job;
     },
-    async create(name, data) {
+    async create(name, data, parent) {
       const cls = api.documentClass(name);
       const source = cls.migrateData(foundryClone(data));
+      if (parent) {
+        const created = (await must(parent).createEmbeddedDocuments(name, [source], {
+          ...SILK_WRITE,
+          keepId: true,
+        })) as { uuid: string }[] | undefined;
+        const uuid = created?.[0]?.uuid;
+        if (!uuid) throw new Error(`Silk: Foundry refused to create ${name} "${data.name}"`);
+        return uuid;
+      }
       const doc = await cls.create(source, { ...SILK_WRITE, keepId: true, keepEmbeddedIds: true });
       if (!doc) throw new Error(`Silk: Foundry refused to create ${name} "${data.name}"`);
       return doc.uuid;
     },
     get: (uuid) => snapshot(api.fromUuid(uuid)),
+    async delete(uuid) {
+      await must(uuid).delete?.({ ...SILK_WRITE });
+    },
     journal: (id) => snapshot(api.journal(id)),
     async update(uuid, data) {
       await must(uuid).update(data, { ...SILK_WRITE });
