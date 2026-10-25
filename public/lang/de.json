@@ -117,6 +117,16 @@
         "out": "Ausgehend",
         "in": "Eingehend",
         "mutual": "Gegenseitig"
+      },
+      "Sentence": {
+        "directed": "{from} {label} {to}",
+        "directedUnlabelled": "{from} ist verbunden mit {to}",
+        "mutual": "{from} und {to} {label}",
+        "mutualUnlabelled": "{from} und {to} sind verbunden",
+        "owns": "{from} besitzt {to}",
+        "presentAt": "{from} ist anwesend bei {to}",
+        "locatedIn": "{from} befindet sich in {to}",
+        "takesPlaceAt": "{from} findet in {to} statt"
       }
     },
     "Canon": {
