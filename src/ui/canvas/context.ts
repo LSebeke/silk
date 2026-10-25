@@ -2,6 +2,7 @@
 import type {
   CanvasFilter,
   CanvasState,
+  CanvasSearch,
   CreationPipeline,
   Focus,
   LayoutTween,
@@ -31,6 +32,8 @@ export interface CanvasContext {
   refreshRevealed(): Promise<void>;
   /** Client setting `renderBudgetWarning` (§10.5): warn above this many visible Nodes. */
   renderBudget: number;
+  /** Search (§10.8): the canvas moves the camera on `canvas.jumpTo`. */
+  search: Pick<CanvasSearch, 'onJump'>;
   localize(key: string): string;
   /** Localised command title (context menus, §8 Controls). */
   title(name: string): string;
@@ -42,3 +45,6 @@ export interface CanvasContext {
 
 /** Svelte context key for `CanvasContext` (cards read it). */
 export const CANVAS_CONTEXT = Symbol('silk-canvas');
+
+/** Palette drag (§10.3): `DataTransfer` type carrying the class id. */
+export const PALETTE_MIME = 'application/x-silk-class';

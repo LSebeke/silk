@@ -27,6 +27,7 @@ import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
   createCanvasFilter,
+  createCanvasSearch,
   createCanvasState,
   createCreationPipeline,
   createFocus,
@@ -37,6 +38,7 @@ import {
   focusCommands,
   joinFrameOnCreate,
   layoutCommands,
+  searchCommands,
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
 import { devCoreCommands } from './core/dev/commands';
@@ -104,6 +106,8 @@ const focus = createFocus({
   activeScene: () => activeScene(game.scenes?.active as never),
 });
 const canvasFilter = createCanvasFilter({ workingCopy, viewState, revealed, focus });
+/** Search (§10.8): shared index; jumps and new Nodes show through filters until deselected. */
+const canvasSearch = createCanvasSearch({ workingCopy, filter: canvasFilter, state: canvasState });
 /**
  * Re-read the map only while the Revealed filter is in use (GM): reading the Canon on every
  * binding change would race the bind/checkout flows. `filter.set` refreshes on activation.
@@ -116,6 +120,7 @@ const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
 afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
 /** T26: a Node created inside a Visual Group frame joins it. */
 afterCreate.push(joinFrameOnCreate(workingCopy));
+afterCreate.push((element) => canvasSearch.afterCreate(element));
 /** Untangle tween: layout commands announce old positions, the canvas animates. */
 const layoutTween = createLayoutTween();
 
@@ -340,6 +345,7 @@ const canvasContext = (): CanvasContext => ({
   focus,
   refreshRevealed,
   renderBudget: game.settings?.get(MODULE_ID, 'renderBudgetWarning') ?? 1000,
+  search: canvasSearch,
   localize,
   title,
   reveal,
@@ -372,6 +378,7 @@ for (const command of [
   }),
   ...filterCommands(canvasFilter),
   ...focusCommands(focus),
+  ...searchCommands(canvasSearch),
   ...canvasUiCommands(canvasContext),
   ...canonCommands,
   ...historyCommands(() => getSession().history),

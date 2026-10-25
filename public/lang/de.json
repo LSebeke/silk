@@ -38,7 +38,9 @@
         "ungroup": "Gruppe auflösen",
         "renameGroup": "Gruppe umbenennen",
         "untangle": "Entwirren",
-        "undo": "Entwirren rückgängig"
+        "undo": "Entwirren rückgängig",
+        "search": "Leinwand durchsuchen",
+        "jumpTo": "Zu Knoten springen"
       },
       "canon": {
         "create": "Kanon anlegen",
@@ -131,12 +133,21 @@
       "Group": "Gruppieren",
       "Ungroup": "Gruppe auflösen",
       "Untangle": "Entwirren",
-      "ConnectHint": "Ziel-Knoten anklicken oder leere Fläche für einen neuen Knoten. Esc bricht ab.",
+      "ConnectHint": "Verbinden mit: Ziel suchen oder anklicken, leere Fläche für einen neuen Knoten. Esc bricht ab.",
       "LabelPlaceholder": "Text…",
       "StatusConfirm": "{name} auf „{status}“ setzen?",
       "Yes": "Ja (y)",
       "No": "Nein (n)",
-      "StatusChip": "Status: {status}. Klicken zum Ändern (s)."
+      "StatusChip": "Status: {status}. Klicken zum Ändern (s).",
+      "Search": "Suche",
+      "SearchPlaceholder": "Knoten, Tags, Infoblöcke suchen…",
+      "SearchEmpty": "Keine Treffer",
+      "NewNode": "Neuer Knoten",
+      "NewNodeDirection": "Neuer Knoten: Richtung (↑/↓, Enter)",
+      "Palette": "Palette",
+      "PaletteHint": "Klasse auf die Leinwand oder auf einen Knoten ziehen.",
+      "Filtered": "gefiltert",
+      "FilteredTitle": "Von den Filtern verborgen; sichtbar bis zur Abwahl."
     },
     "Connection": {
       "Type": {
