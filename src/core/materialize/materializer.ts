@@ -322,7 +322,10 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
         return;
       }
       const { main } = requireDocs(id);
+      const { hood } = main.flags.silk;
       if (cover) await docs.updatePage(main.uuid, cover, { src: img || null });
+      // Hooded (§8): the new image waits in the flag until Appearance is Revealed.
+      else if (hood && main.img === hood) await docs.update(main.uuid, { 'flags.silk.img': img });
       else await docs.update(main.uuid, { img });
       await sync(id);
     },

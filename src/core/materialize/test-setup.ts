@@ -38,6 +38,8 @@ export function setup(
     confirm?: boolean;
     /** Also register the Connection commands. */
     connections?: boolean;
+    /** Extra `afterMaterialize` hooks (Reveal), run after the lifecycle's. */
+    afterMaterialize?: ((id: string) => Promise<void>)[];
   } = {},
 ) {
   const workingCopy = createWorkingCopy(createMemoryBackend(), { canWrite: () => true });
@@ -64,7 +66,10 @@ export function setup(
     visibleIds: () => opts.visible ?? [...workingCopy.records().keys()],
     selection: () => selection,
     restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
-    afterMaterialize: (id) => lifecycle.afterMaterialize(id),
+    afterMaterialize: async (id) => {
+      await lifecycle.afterMaterialize(id);
+      for (const hook of opts.afterMaterialize ?? []) await hook(id);
+    },
   });
   const revealed = new Set<string>();
   const warnings: string[] = [];
