@@ -181,6 +181,15 @@ describe('Focus View', () => {
     expect(t.visible()).toEqual(['a', 'b', 'ev']);
   });
 
+  it('shows Focus Pins and Search temporaries together (§10.8)', async () => {
+    const t = await setup();
+    await t.registry.run('focus.pin', { ids: ['x'] });
+    t.filter.showTemporarily(['d']);
+    expect(t.visible()).toEqual(['a', 'b', 'd', 'ev', 'x']);
+    t.filter.keepTemporary([]);
+    expect(t.visible()).toEqual(['a', 'b', 'ev', 'x']);
+  });
+
   it('with no Scene and no selection shows only the pins (no seeds: the canvas hints)', async () => {
     const t = await setup(null);
     await t.registry.run('focus.pin', { ids: ['d'] });

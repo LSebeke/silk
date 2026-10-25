@@ -38,7 +38,9 @@
         "ungroup": "Dissolve Visual Group",
         "renameGroup": "Rename Visual Group",
         "untangle": "Untangle",
-        "undo": "Undo Untangle"
+        "undo": "Undo Untangle",
+        "search": "Search the canvas",
+        "jumpTo": "Jump to a Node"
       },
       "canon": {
         "create": "Create Canon",
@@ -137,12 +139,21 @@
       "Group": "Group",
       "Ungroup": "Dissolve group",
       "Untangle": "Untangle",
-      "ConnectHint": "Click the target Node, or empty canvas for a new Node. Esc cancels.",
+      "ConnectHint": "Connect to: search or click the target, or empty canvas for a new Node. Esc cancels.",
       "LabelPlaceholder": "label…",
       "StatusConfirm": "Set {name} to “{status}”?",
       "Yes": "Yes (y)",
       "No": "No (n)",
-      "StatusChip": "Status: {status}. Click to change (s)."
+      "StatusChip": "Status: {status}. Click to change (s).",
+      "Search": "Search",
+      "SearchPlaceholder": "Search Nodes, Tags, Info Blocks…",
+      "SearchEmpty": "No results",
+      "NewNode": "New Node",
+      "NewNodeDirection": "New Node: direction (↑/↓, Enter)",
+      "Palette": "Palette",
+      "PaletteHint": "Drag a class onto the canvas or onto a Node.",
+      "Filtered": "filtered",
+      "FilteredTitle": "Hidden by the filters; shown until deselected."
     },
     "Connection": {
       "Type": {
