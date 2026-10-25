@@ -417,10 +417,10 @@
       delete canvasBridge.flash;
     }
   });
-  function onDragOver(event: DragEvent) {
+  function adoptDragOver(event: DragEvent) {
     if (ctx.adopt) event.preventDefault();
   }
-  function onDrop(event: DragEvent) {
+  function adoptDrop(event: DragEvent) {
     if (!ctx.adopt) return;
     let data: { type?: string; uuid?: string };
     try {
@@ -588,7 +588,8 @@
     return el?.dataset['silkNode'];
   }
   function onDragOver(event: DragEvent) {
-    if (!event.dataTransfer?.types.includes(PALETTE_MIME)) return;
+    // Foundry docs from the sidebar or a compendium: Adopt (§6).
+    if (!event.dataTransfer?.types.includes(PALETTE_MIME)) return adoptDragOver(event);
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     dropTarget(event);
@@ -600,7 +601,8 @@
   }
   function onDrop(event: DragEvent) {
     const cls = event.dataTransfer?.getData(PALETTE_MIME) as ElementClassId | undefined;
-    if (!cls || !ELEMENT_CLASSES.some((c) => c.id === cls)) return;
+    if (!cls) return adoptDrop(event);
+    if (!ELEMENT_CLASSES.some((c) => c.id === cls)) return;
     event.preventDefault();
     const target = dropTarget(event);
     dropEl?.classList.remove('silk-drop-target');
@@ -692,8 +694,6 @@
   bind:this={root}
   tabindex="0"
   onkeydown={onKeydown}
-  ondragover={onDragOver}
-  ondrop={onDrop}
   data-silk-canvas
   data-silk-lod={lod}
   data-silk-connecting={connectFrom}
