@@ -24,10 +24,10 @@ function fakeEntry(): JournalLike & { updates: [object, object][] } {
       entry.updates.push([data, options]);
       const silk = entry.flags.silk as Record<string, unknown>;
       for (const [key, value] of Object.entries(data.flags.silk)) {
-        if (key !== 'records') silk[key] = value;
+        if (key !== 'records' && key !== 'meta') silk[key] = value;
         else
           for (const [id, v] of Object.entries(value as object)) {
-            const records = silk.records as Record<string, unknown>;
+            const records = (silk[key] ??= {}) as Record<string, unknown>;
             if (id.startsWith('-=')) Reflect.deleteProperty(records, id.slice(2));
             else records[id] = v;
           }
@@ -56,6 +56,30 @@ describe('Silk Working Copy journal', () => {
     expect(reloaded.binding).toEqual(binding);
     expect(reloaded.records()).toEqual(new Map([[gareth.id, { ...gareth, data: { name: 'G' } }]]));
     expect(entry.updates.every(([, options]) => isSilkWrite(options))).toBe(true);
+  });
+
+  it('round-trips World-only meta values (merge draft) and their removal', async () => {
+    const entry = fakeEntry();
+    const wc = createWorkingCopy(
+      journalBackend(() => entry),
+      { canWrite: () => true },
+    );
+    await wc.setMeta('mergeDraft', { picks: [{ recordId: 'a', field: '/name', side: 'ours' }] });
+    const reload = () =>
+      createWorkingCopy(
+        journalBackend(() => entry),
+        { canWrite: () => false },
+      );
+    expect(reload().meta('mergeDraft')).toEqual({
+      picks: [{ recordId: 'a', field: '/name', side: 'ours' }],
+    });
+    const [changed] = entry.updates.at(-1) ?? [{}];
+    expect(remotePatch(entry, changed, SILK_WRITE, 'gm', 'player')).toEqual({
+      meta: { mergeDraft: { picks: [{ recordId: 'a', field: '/name', side: 'ours' }] } },
+    });
+
+    await wc.setMeta('mergeDraft', null);
+    expect(reload().meta('mergeDraft')).toBeUndefined();
   });
 
   it('turns another client’s update into a patch and ignores its own Silk writes', async () => {

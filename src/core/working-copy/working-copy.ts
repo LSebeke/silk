@@ -4,7 +4,7 @@
  * injected backend; the Foundry adapter stores it in a hidden JournalEntry,
  * one `flags.silk.records.<id>` per record. Only the active GM writes.
  */
-import { canonicalJson, type CanonRecord, type Snapshot } from '../canon';
+import { canonicalJson, type CanonRecord, type JsonValue, type Snapshot } from '../canon';
 
 /** Which Canon this World is bound to (for life) and what it has checked out. */
 export interface Binding {
@@ -19,11 +19,14 @@ export interface WorkingCopyPatch {
   binding?: Binding | null;
   set?: CanonRecord[];
   delete?: string[];
+  /** World-only values (merge draft, ignored ad-hoc docs), never committed. `null` removes. */
+  meta?: Record<string, JsonValue | null>;
 }
 
 export interface WorkingCopyState {
   binding: Binding | null;
   records: CanonRecord[];
+  meta?: Record<string, JsonValue>;
 }
 
 export interface WorkingCopyBackend {
@@ -36,6 +39,8 @@ export interface WorkingCopyChange {
   set: string[];
   deleted: string[];
   binding: boolean;
+  /** Meta keys set or removed. */
+  meta?: string[];
 }
 
 export interface WorkingCopy {
@@ -49,6 +54,10 @@ export interface WorkingCopy {
   /** Make the records equal `snapshot`, writing only the difference. */
   replaceAll(snapshot: Snapshot): Promise<void>;
   setBinding(binding: Binding): Promise<void>;
+  /** World-only value under `key` (spec §11.3: the merge draft lives here). */
+  meta(key: string): JsonValue | undefined;
+  /** Set (or with `null` remove) a World-only value. Active GM only. */
+  setMeta(key: string, value: JsonValue | null): Promise<void>;
   /** Fine-grained change notifications. Returns an unsubscribe function. */
   watch(listener: (change: WorkingCopyChange) => void): () => void;
   /** Svelte store contract: called now and after every change with the records. */
@@ -74,6 +83,7 @@ export function createWorkingCopy(
 ): WorkingCopy {
   let records = new Map<string, CanonRecord>();
   let binding: Binding | null = null;
+  let meta = new Map<string, JsonValue>();
   const watchers = new Set<(change: WorkingCopyChange) => void>();
   const subscribers = new Set<(records: Snapshot) => void>();
   /** Writes are serialised so the backend sees them in order. */
@@ -83,6 +93,7 @@ export function createWorkingCopy(
     const state = backend.load();
     records = new Map(state.records.map((r) => [r.id, r]));
     binding = state.binding;
+    meta = new Map(Object.entries(state.meta ?? {}));
   }
   load();
 
@@ -97,6 +108,11 @@ export function createWorkingCopy(
       change.set.push(record.id);
     }
     for (const id of patch.delete ?? []) if (records.delete(id)) change.deleted.push(id);
+    for (const [key, value] of Object.entries(patch.meta ?? {})) {
+      if (value === null) meta.delete(key);
+      else meta.set(key, value);
+      (change.meta ??= []).push(key);
+    }
     return change;
   }
 
@@ -111,7 +127,11 @@ export function createWorkingCopy(
     for (const record of patch.set ?? [])
       if (!RECORD_ID.test(record.id) || RESERVED.has(record.id))
         throw new Error(`Silk: invalid record id "${record.id}"`);
-    const empty = !patch.set?.length && !patch.delete?.length && patch.binding === undefined;
+    const empty =
+      !patch.set?.length &&
+      !patch.delete?.length &&
+      patch.binding === undefined &&
+      !Object.keys(patch.meta ?? {}).length;
     if (empty) return;
     notify(apply(patch));
     const pending = queue.then(() => backend.write(patch));
@@ -139,6 +159,8 @@ export function createWorkingCopy(
       await write(patch);
     },
     setBinding: (b) => write({ binding: b }),
+    meta: (key) => meta.get(key),
+    setMeta: (key, value) => write({ meta: { [key]: value } }),
     watch(listener) {
       watchers.add(listener);
       return () => watchers.delete(listener);

@@ -104,4 +104,26 @@ describe('working copy', () => {
       ]),
     );
   });
+
+  it('holds World-only values (merge draft) outside the records, persisted and notified', async () => {
+    const backend = createMemoryBackend();
+    const wc = createWorkingCopy(backend, { canWrite: () => true });
+    const changes: WorkingCopyChange[] = [];
+    wc.watch((c) => changes.push(c));
+
+    await wc.setMeta('mergeDraft', { picks: [] });
+
+    expect(wc.meta('mergeDraft')).toEqual({ picks: [] });
+    expect(wc.records().size).toBe(0);
+    expect(changes.at(-1)).toMatchObject({ meta: ['mergeDraft'] });
+    expect(createWorkingCopy(backend, { canWrite: () => false }).meta('mergeDraft')).toEqual({
+      picks: [],
+    });
+
+    await wc.setMeta('mergeDraft', null);
+    expect(wc.meta('mergeDraft')).toBeUndefined();
+    expect(
+      createWorkingCopy(backend, { canWrite: () => false }).meta('mergeDraft'),
+    ).toBeUndefined();
+  });
 });
