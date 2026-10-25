@@ -25,6 +25,8 @@ async function resetCanvas(page: Page) {
     const wc = game.modules?.get('silk')?.session?.().workingCopy;
     await wc?.delete([...(wc.records().keys() ?? [])]);
     await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
+    // These tests work with Ghosts (immediate Materialize is materialize.e2e).
+    await game.settings?.set('silk', 'materializeMode', 'onDemand');
   });
 }
 
@@ -75,7 +77,7 @@ test('GM creates, names, moves and selects a Ghost on the canvas; view restores'
   await expect(card).toHaveCSS('opacity', '0.55');
 
   const [created] = (await elements(gm)).filter((r) => r.data['name'] === 'Gareth');
-  expect(created?.data).toEqual({
+  expect(created?.data).toMatchObject({
     class: 'location',
     name: 'Gareth',
     position: { x: 300, y: 200 },

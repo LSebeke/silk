@@ -11,6 +11,8 @@ export interface ElementNodeData extends Record<string, unknown> {
   class: ElementClassId;
   name: string;
   ghost: boolean;
+  /** Element image (T8); the card falls back to the class icon. */
+  img?: string;
 }
 
 export type ElementNode = Node<ElementNodeData, 'element'>;
@@ -22,7 +24,8 @@ function sameNode(a: ElementNode, b: ElementNode) {
     !!a.selected === !!b.selected &&
     a.data.class === b.data.class &&
     a.data.name === b.data.name &&
-    a.data.ghost === b.data.ghost
+    a.data.ghost === b.data.ghost &&
+    a.data.img === b.data.img
   );
 }
 
@@ -46,7 +49,12 @@ export function toFlowNodes(
       type: 'element',
       position: { x: element.position.x, y: element.position.y },
       selected: selected.has(element.id),
-      data: { class: element.class, name: element.name, ghost: isGhost(element) },
+      data: {
+        class: element.class,
+        name: element.name,
+        ghost: isGhost(element),
+        ...(element.img ? { img: element.img } : {}),
+      },
     };
     const old = prev.get(element.id);
     nodes.push(old ? (sameNode(old, node) ? old : { ...old, ...node }) : node);

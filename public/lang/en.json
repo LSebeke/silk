@@ -58,7 +58,13 @@
       },
       "element": {
         "create": "Create Element",
-        "rename": "Rename Element"
+        "rename": "Rename Element",
+        "setImage": "Set image",
+        "setFields": "Set class fields",
+        "changeClass": "Change class",
+        "openSheet": "Open sheet",
+        "tag": "Add Tag",
+        "untag": "Remove Tag"
       },
       "connection": {
         "create": "Connect",
@@ -67,6 +73,15 @@
         "cycleType": "Cycle Connection type",
         "flip": "Flip Connection",
         "delete": "Delete Connection"
+      },
+      "materialize": {
+        "elements": "Materialize",
+        "visible": "Materialize visible"
+      },
+      "infoBlock": {
+        "create": "Add Info Block",
+        "edit": "Edit Info Block",
+        "delete": "Delete Info Block"
       }
     },
     "Canvas": {
@@ -142,6 +157,40 @@
       "event": "Event",
       "quest": "Quest",
       "note": "Note"
+    },
+    "InfoBlock": {
+      "Appearance": "Appearance",
+      "Personality": "Personality",
+      "Secrets": "Secrets",
+      "Description": "Description",
+      "Overview": "Overview",
+      "Setup": "Setup",
+      "Outcome": "Outcome",
+      "Hook": "Hook",
+      "Resolution": "Resolution",
+      "New": "New block"
+    },
+    "Layout": {
+      "Cover": "Cover",
+      "Connections": "Connections",
+      "PlayerNotes": "Player Notes"
+    },
+    "Folder": {
+      "person": "Persons",
+      "creature": "Creatures",
+      "playerCharacter": "Player Characters",
+      "location": "Locations",
+      "faction": "Factions",
+      "item": "Items",
+      "event": "Events",
+      "quest": "Quests",
+      "note": "Notes",
+      "companions": "Silk Companions"
+    },
+    "Materialize": {
+      "Implicit": "Materialized {name}.",
+      "VisibleTitle": "Materialize visible",
+      "VisibleConfirm": "Materialize {count} elements shown on the canvas? Player Characters are skipped."
     }
   }
 }

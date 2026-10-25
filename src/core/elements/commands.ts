@@ -2,7 +2,13 @@
 import type { Command } from '../commands/registry';
 import type { WorkingCopy } from '../working-copy';
 import { elementClass } from './classes';
-import { elementRecord, readElement, type ElementData, type Point } from './element';
+import {
+  elementRecord,
+  readElement,
+  type ElementData,
+  type Point,
+  type StoryElement,
+} from './element';
 
 export interface ElementCreateArgs {
   class: string;
@@ -33,6 +39,8 @@ export interface ElementCommandDeps {
     element: { id: string } & ElementData,
     args: ElementCreateArgs,
   ) => Promise<Partial<ElementCreateResult> | undefined>)[];
+  /** Runs after `element.rename` wrote the record. T8 writes the name through to Foundry. */
+  afterRename?: ((element: StoryElement) => Promise<void>)[];
 }
 
 export function elementCommands(deps: ElementCommandDeps): Command[] {
@@ -67,7 +75,9 @@ export function elementCommands(deps: ElementCommandDeps): Command[] {
       const wc = deps.workingCopy();
       const record = wc.get(id);
       if (!record || !readElement(record)) throw new Error(`Silk: no element "${id}"`);
-      await wc.set([{ ...record, data: { ...record.data, name: name.trim() } }]);
+      const renamed = { ...record, data: { ...record.data, name: name.trim() } };
+      await wc.set([renamed]);
+      for (const hook of deps.afterRename ?? []) await hook(readElement(renamed) as StoryElement);
     },
   };
 
