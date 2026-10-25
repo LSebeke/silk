@@ -125,7 +125,7 @@
 <div class="silk-search" data-silk-search={mode} onkeydown={onKeydown}>
   {#if direction}
     <div class="title" data-silk-connect-hint>{ctx.localize('SILK.Canvas.NewNodeDirection')}</div>
-    <div class="directions" role="radiogroup" tabindex="-1" use:focus>
+    <div class="directions" role="radiogroup" tabindex="-1" use:focus data-silk-directions>
       {#each DIRECTIONS as d (d)}
         <button
           type="button"
