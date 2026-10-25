@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "size": "node scripts/bundle-size.mjs",
     "mcp": "node tools/mcp/main.ts",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "npm run build && playwright test",
+    "test:perf": "SILK_DEV=1 vite build && SILK_PERF=1 playwright test"
   },
   "overrides": {
     "pixi.js": "7.4.3",

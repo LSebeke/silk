@@ -15,6 +15,7 @@ import {
   createViewState,
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
+import { devCoreCommands } from './core/dev/commands';
 import { campaignCommands } from './core/campaigns/commands';
 import { connectionCommands, connectOnCreate } from './core/connections';
 import { elementCommands, type ElementCommandDeps } from './core/elements';
@@ -22,6 +23,7 @@ import { historyCommands } from './core/history';
 import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
+import { devUiCommands } from './ui/dev/commands';
 import './ui/silk.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
@@ -62,6 +64,15 @@ for (const command of [
   ...campaignCommands(() => getSession().campaigns),
 ])
   registry.register(command);
+
+// Dev-only commands (spec §14): `__SILK_DEV__` is false in release builds, so they and the
+// fixture/bench code are dropped from dist.
+if (__SILK_DEV__)
+  for (const command of [
+    ...devCoreCommands({ workingCopy }),
+    ...devUiCommands({ run: (name, args) => registry.run(name, args), workingCopy, viewState }),
+  ])
+    registry.register(command);
 
 Hooks.once('init', () => {
   registerSettings((ns, key, data) => game.settings?.register(ns, key as never, data as never));
