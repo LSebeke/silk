@@ -18,10 +18,12 @@
   import { TWEEN_MS } from '../../core/canvas/tween';
   import type { RelativeDirection } from '../../core/connections';
   import {
+    ELEMENT_CLASSES,
     hasStatus,
     nextStatus,
     readElement,
     statusLabelKey,
+    type ElementClassId,
     type Point,
     type Status,
   } from '../../core/elements';
@@ -29,9 +31,11 @@
   import ConnectionEdge from './ConnectionEdge.svelte';
   import ElementCard from './ElementCard.svelte';
   import FilterBar from './FilterBar.svelte';
+  import Palette from './Palette.svelte';
+  import SearchBox from './SearchBox.svelte';
   import GroupFrame from './GroupFrame.svelte';
   import { pointKind } from './connection-points';
-  import { CANVAS_CONTEXT, type CanvasContext } from './context';
+  import { CANVAS_CONTEXT, PALETTE_MIME, type CanvasContext } from './context';
   import { toFlowEdges, type ConnectionEdge as FlowEdge } from './flow-edges';
   import {
     lodForZoom,
@@ -60,6 +64,10 @@
   let filtered = $state.raw(ctx.filter.result());
   /** `c` (§10.3): picking the target for a Connection from this Node. */
   let connectFrom = $state<string | undefined>();
+  /** Search box open (§10.8, `Ctrl+F`). */
+  let searching = $state(false);
+  /** Palette open (§10.3). */
+  let paletteOpen = $state(false);
   let root: HTMLDivElement | undefined = $state();
   let zoom = $state(saved?.zoom ?? 1);
   let moving = $state(false);
@@ -264,8 +272,8 @@
       if (answer) answerStatus(answer === 'yes');
       return;
     }
-    if (event.key === 'Escape' && connectFrom) {
-      connectFrom = undefined;
+    if (event.key === 'Escape' && (connectFrom || searching)) {
+      closeSearch();
       return;
     }
     if ($pipeline.step !== 'idle') return;
@@ -291,7 +299,12 @@
           .catch(fail);
         break;
       case 'connect':
+        searching = false;
         connectFrom = node;
+        break;
+      case 'search':
+        connectFrom = undefined;
+        searching = true;
         break;
       case 'rename': {
         const current = nodes.find((n): n is ElementNode => n.id === node && n.type === 'element');
@@ -317,18 +330,93 @@
     }
   }
 
-  function onNodeClick({ node }: { node: ElementNode | GroupNode }) {
-    if (!connectFrom) return;
-    const from = connectFrom;
+  // --- Search (§10.8), `c` connect search, palette (T25) ---
+
+  function closeSearch() {
+    searching = false;
     connectFrom = undefined;
-    if (node.id !== from) connect(from, node.id).catch(fail);
+    root?.focus();
+  }
+
+  function jumpTo(id: string) {
+    closeSearch();
+    void run('canvas.jumpTo', { id });
+  }
+
+  function connectTo(id: string) {
+    const from = connectFrom;
+    closeSearch();
+    if (from && id !== from) connect(from, id).catch(fail);
+  }
+
+  /** "New Node" (§10.3 `c`): direction chosen, the pipeline runs from its class box. */
+  function connectNew(direction: RelativeDirection) {
+    const from = connectFrom;
+    closeSearch();
+    if (!from) return;
+    const rect = root?.getBoundingClientRect();
+    pipeline.open({
+      at: besideNode(from),
+      anchor: { x: (rect?.width ?? 400) / 2 - 100, y: 80 },
+      from,
+      connection: { direction },
+    });
+  }
+
+  // Jumping moves the camera to the Node, keeping the zoom.
+  $effect(() =>
+    ctx.search.onJump((id) => {
+      const p = readElement(workingCopy.get(id))?.position;
+      if (p) void flow.setCenter(p.x + 95, p.y + 40, { zoom: flow.getZoom(), duration: 300 });
+    }),
+  );
+
+  /** Palette drag: the Node under the pointer highlights as the connect target. */
+  let dropEl: HTMLElement | undefined;
+  function dropTarget(event: DragEvent) {
+    const el = (root?.ownerDocument ?? document)
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-silk-node]');
+    if (el !== dropEl) {
+      dropEl?.classList.remove('silk-drop-target');
+      el?.classList.add('silk-drop-target');
+      dropEl = el ?? undefined;
+    }
+    return el?.dataset['silkNode'];
+  }
+  function onDragOver(event: DragEvent) {
+    if (!event.dataTransfer?.types.includes(PALETTE_MIME)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    dropTarget(event);
+  }
+  function onDragLeave(event: DragEvent) {
+    if (event.relatedTarget && root?.contains(event.relatedTarget as Node)) return;
+    dropEl?.classList.remove('silk-drop-target');
+    dropEl = undefined;
+  }
+  function onDrop(event: DragEvent) {
+    const cls = event.dataTransfer?.getData(PALETTE_MIME) as ElementClassId | undefined;
+    if (!cls || !ELEMENT_CLASSES.some((c) => c.id === cls)) return;
+    event.preventDefault();
+    const target = dropTarget(event);
+    dropEl?.classList.remove('silk-drop-target');
+    dropEl = undefined;
+    const origin = target
+      ? { at: besideNode(target), from: target }
+      : { at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }) };
+    pipeline.create(origin, cls).catch(fail);
+  }
+
+  function onNodeClick({ node }: { node: ElementNode | GroupNode }) {
+    if (connectFrom) connectTo(node.id);
   }
 
   function onPaneClick({ event }: { event: MouseEvent }) {
     if (!connectFrom) return pipeline.cancel();
     // "New Node" (§10.3 `c`): the class box at the spot, connected to the origin.
     const from = connectFrom;
-    connectFrom = undefined;
+    closeSearch();
     pipeline.open({
       at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }),
       anchor: local(event),
@@ -381,6 +469,9 @@
   data-silk-canvas
   data-silk-lod={lod}
   data-silk-connecting={connectFrom}
+  ondragover={onDragOver}
+  ondragleave={onDragLeave}
+  ondrop={onDrop}
 >
   <SvelteFlow
     bind:nodes
@@ -410,6 +501,45 @@
   </SvelteFlow>
   <ClassBox />
   <FilterBar {ctx} result={filtered} />
+  <div class="silk-canvas-tools">
+    <button
+      type="button"
+      title="{ctx.localize('SILK.Canvas.Search')} (Ctrl+F)"
+      onclick={() => {
+        connectFrom = undefined;
+        searching = !searching;
+      }}
+      data-silk-action="search"
+    >
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+    <button
+      type="button"
+      class:active={paletteOpen}
+      title={ctx.localize('SILK.Canvas.Palette')}
+      onclick={() => (paletteOpen = !paletteOpen)}
+      data-silk-action="palette"
+    >
+      <i class="fa-solid fa-palette"></i>
+    </button>
+  </div>
+  {#if paletteOpen}
+    <Palette {ctx} onjump={jumpTo} />
+  {/if}
+  {#if searching}
+    <SearchBox {ctx} mode="search" onpick={jumpTo} onclose={closeSearch} />
+  {:else if connectFrom}
+    {#key connectFrom}
+      <SearchBox
+        {ctx}
+        mode="connect"
+        exclude={connectFrom}
+        onpick={connectTo}
+        onnew={connectNew}
+        onclose={closeSearch}
+      />
+    {/key}
+  {/if}
   {#if selectedAny && !connectFrom}
     <div class="silk-selection-toolbar" data-silk-selection-toolbar>
       <button type="button" onclick={() => run('canvas.group', {})} data-silk-action="group">
@@ -446,11 +576,6 @@
       <button type="button" onclick={() => answerStatus(false)} data-silk-action="status-no">
         {ctx.localize('SILK.Canvas.No')}
       </button>
-    </div>
-  {/if}
-  {#if connectFrom}
-    <div class="silk-connect-hint" data-silk-connect-hint>
-      {ctx.localize('SILK.Canvas.ConnectHint')}
     </div>
   {/if}
 </div>
@@ -493,17 +618,29 @@
     font-size: 10px;
     opacity: 0.7;
   }
-  .silk-connect-hint {
+  .silk-canvas-tools {
     position: absolute;
     top: 8px;
-    left: 50%;
-    z-index: 20;
-    padding: 4px 10px;
-    font-size: 12px;
+    right: 8px;
+    z-index: 15;
+    display: flex;
+    gap: 4px;
+  }
+  .silk-canvas-tools button {
+    width: 28px;
+    height: 28px;
+    min-height: 0;
+    padding: 0;
     background: #fffdf8;
-    border: 1px solid #2b6cb0;
+    border: 1px solid #c9bfa8;
     border-radius: 6px;
-    transform: translateX(-50%);
+  }
+  .silk-canvas-tools button.active {
+    border-color: #2b6cb0;
+  }
+  .silk-canvas :global(.silk-drop-target) {
+    outline: 3px solid #2b6cb0;
+    outline-offset: 2px;
   }
   .silk-status-confirm {
     position: absolute;

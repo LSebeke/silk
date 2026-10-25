@@ -35,6 +35,24 @@ describe('flow model', () => {
     ]);
   });
 
+  it('marks Nodes shown despite the filters as "filtered" (§10.8)', () => {
+    const filter = {
+      visible: new Set(['el-a', 'el-g']),
+      badges: new Map(),
+      matches: (id: string) => id === 'el-a',
+    };
+    const nodes = toFlowNodes(records(alrik, gareth), [], [], undefined, filter);
+    expect(nodes.map((n) => [n.id, n.data.filtered])).toEqual([
+      ['el-a', undefined],
+      ['el-g', true],
+    ]);
+    const again = toFlowNodes(records(alrik, gareth), [], nodes, undefined, {
+      ...filter,
+      matches: () => true,
+    });
+    expect(again[1]?.data.filtered).toBeUndefined();
+  });
+
   it('renders only filter-visible Nodes, frames and edges, with "+N" badges', () => {
     const filter = { visible: new Set(['el-a']), badges: new Map([['el-a', 1]]) };
     const nodes = toFlowNodes(records(alrik, gareth, link), [], [], undefined, filter);

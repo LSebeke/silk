@@ -73,6 +73,14 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('KeyC', { ctrlKey: true }), { node: true, edge: false })).toBeUndefined();
   });
 
+  it('Ctrl+F opens Search, with or without a selection', () => {
+    expect(canvasKey(key('KeyF', { ctrlKey: true }), none)).toEqual({ kind: 'search' });
+    expect(canvasKey(key('KeyF', { ctrlKey: true }), { node: true, edge: false })).toEqual({
+      kind: 'search',
+    });
+    expect(canvasKey(key('KeyF'), none)).toBeUndefined();
+  });
+
   it('Tab / q cycle direction / type of a selected Connection; F2 edits it', () => {
     const edge = { node: false, edge: true };
     expect(canvasKey(key('Tab'), edge)).toEqual({

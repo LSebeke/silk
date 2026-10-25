@@ -55,6 +55,10 @@ export interface CanvasFilter {
   set(dimension: FilterDimension, values: readonly string[]): Promise<void>;
   clear(dimension?: FilterDimension): Promise<void>;
   expandBadge(id: string): Promise<void>;
+  /** Search (§10.8): shown despite the filters until deselected (`keepTemporary`). Client-local. */
+  showTemporarily(ids: readonly string[]): void;
+  /** Drop temporarily shown ids not in `selection`. */
+  keepTemporary(selection: readonly string[]): void;
   /** Svelte store contract: now and after every change. */
   subscribe(run: (result: FilterResult) => void): () => void;
 }
@@ -73,6 +77,7 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
   let cached: { key: string; result: FilterResult } | undefined;
   const subscribers = new Set<(result: FilterResult) => void>();
   let watching: (() => void) | undefined;
+  let temporary: readonly string[] = [];
 
   function result(): FilterResult {
     // Recomputed after a working copy change (`watch`) or when the stored filters differ
@@ -86,12 +91,12 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
     }
     const view = current();
     const hops = deps.hops?.();
-    const key = JSON.stringify([view.filters, view.expanded, hops]);
+    const key = JSON.stringify([view.filters, view.expanded, hops, temporary]);
     if (cached?.key === key && watching) return cached.result;
     const next = applyFilters(deps.workingCopy().records(), {
       filters: view.filters ?? {},
       revealed: (e) => deps.revealed.isRevealed(e),
-      include: view.expanded ?? [],
+      include: [...(view.expanded ?? []), ...temporary],
       ...(hops !== undefined ? { hops } : {}),
     });
     if (watching) cached = { key, result: next };
@@ -145,6 +150,18 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
       const extra = result().hiddenNeighbours(id);
       if (!extra.length) return;
       await save({ expanded: [...new Set([...(current().expanded ?? []), ...extra])] });
+    },
+    showTemporarily(ids) {
+      const next = [...new Set([...temporary, ...ids])];
+      if (next.length === temporary.length) return;
+      temporary = next;
+      changed();
+    },
+    keepTemporary(selection) {
+      const next = temporary.filter((id) => selection.includes(id));
+      if (next.length === temporary.length) return;
+      temporary = next;
+      changed();
     },
     subscribe(run) {
       subscribers.add(run);
