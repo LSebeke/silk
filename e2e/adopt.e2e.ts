@@ -220,11 +220,11 @@ test('a folder tree becomes nested Visual Groups', async ({ gm }) => {
   await ready(gm);
   const folderId = await gm.evaluate(async () => {
     const root = await Folder.implementation.create({ name: 'Orc camp', type: 'Actor' });
-    const sub = await Folder.implementation.create({
+    const sub = (await Folder.implementation.create({
       name: 'Orc guards',
       type: 'Actor',
       folder: root?.id,
-    } as never);
+    } as never)) as { id: string } | undefined;
     await Actor.implementation.create({
       name: 'Orc chief',
       type: 'npc',
