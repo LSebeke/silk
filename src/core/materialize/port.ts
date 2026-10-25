@@ -24,6 +24,13 @@ export interface SilkDocFlags {
   questKey?: string;
   /** On a folder: which Silk folder it is (an Element Class id or `companions`). */
   folder?: string;
+  /**
+   * Person/Creature until Appearance is Revealed (§8): `img` and the prototype token show
+   * `hood`; the real image and token texture wait here.
+   */
+  img?: string;
+  token?: string;
+  hood?: string;
 }
 
 export const OWNERSHIP_NONE = 0;
@@ -128,4 +135,14 @@ export interface SystemMapping {
   deadEffect: string;
   /** Update data setting the quest title on its page. */
   questTitleUpdate(questKey: string, title: string): Record<string, unknown>;
+  /**
+   * Update data making the quest's `visible` and its `linkedPages` (one per Info Block,
+   * `visible` = the block's Reveal) match (§4 Quest, §8). Empty when they already do.
+   */
+  questVisibility(
+    questKey: string,
+    pageSystem: unknown,
+    visible: boolean,
+    blocks: readonly { id: string; uuid: string; visible: boolean; sort: number }[],
+  ): Record<string, unknown>;
 }
