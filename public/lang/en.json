@@ -72,7 +72,8 @@
         "untag": "Remove Tag",
         "setStatus": "Set Status",
         "toggleStatus": "Toggle Status",
-        "delete": "Delete Element"
+        "delete": "Delete Element",
+        "openDetail": "Element Detail"
       },
       "connection": {
         "create": "Connect",
@@ -102,6 +103,13 @@
         "createScene": "Create Scene",
         "restoreScene": "Restore Scene from last commit",
         "viewScene": "View Scene"
+      },
+      "reveal": {
+        "element": "Reveal",
+        "appearance": "Reveal Appearance",
+        "infoBlock": "Reveal Info Block",
+        "connection": "Reveal Connection",
+        "showToPlayers": "Show to players"
       }
     },
     "Canvas": {
@@ -293,6 +301,23 @@
       "CreateOverview": "Create Overview Scene",
       "None": "No Scene",
       "Restore": "Restore from last commit"
+    },
+    "Reveal": {
+      "Reveal": "Reveal",
+      "Unreveal": "Un-reveal",
+      "RevealAppearance": "Reveal Appearance",
+      "HideAppearance": "Hide Appearance",
+      "Appearance": "Appearance (image)",
+      "NeedsAdventure": "Start an Adventure to Reveal.",
+      "TheConnection": "this Connection",
+      "Confirm": "Reveal {name} to the players?",
+      "UnrevealConfirm": "Hide {name} from the players again?"
+    },
+    "Detail": {
+      "Title": "Element Detail",
+      "InfoBlocks": "Info Blocks",
+      "Connections": "Connections",
+      "Gone": "This element no longer exists."
     }
   }
 }

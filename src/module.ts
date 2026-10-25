@@ -10,10 +10,16 @@ import { registerKeybindings } from './adapter/keybindings';
 import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { registerOwnsHooks } from './adapter/owns';
+import { foundryRevealStage, registerRevealHooks } from './adapter/reveal';
 import { foundryOwnershipRevealed } from './adapter/revealed';
 import { createSceneDocs, registerSceneBar, registerSceneHooks } from './adapter/scenes';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
-import { getSession, setBeforeCommit, startSession } from './adapter/session';
+import {
+  getSession,
+  setBeforeCommit,
+  setRevelationMapApplier,
+  startSession,
+} from './adapter/session';
 import { registerSettings } from './adapter/settings';
 import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
@@ -32,7 +38,12 @@ import {
 import { createRegistry } from './core/commands/registry';
 import { devCoreCommands } from './core/dev/commands';
 import { campaignCommands } from './core/campaigns/commands';
-import { isRevealed, revelationMapCleanup } from './core/campaigns';
+import {
+  isRevealed,
+  parseRevelationMap,
+  revelationMapCleanup,
+  serializeRevelationMap,
+} from './core/campaigns';
 import { connectionCommands, connectOnCreate } from './core/connections';
 import { elementCommands, readElement, type ElementCommandDeps } from './core/elements';
 import { createEventScenes, eventSceneCommands } from './core/event-scenes';
@@ -45,10 +56,13 @@ import {
   materializeCommands,
 } from './core/materialize';
 import { createOwns, type Owns } from './core/owns';
+import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
 import { devUiCommands } from './ui/dev/commands';
+import { detailUiCommands } from './ui/detail/commands';
+import type { DetailContext } from './ui/detail/context';
 import './ui/silk.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
@@ -120,6 +134,8 @@ const materializer = createMaterializer({
   afterMaterialize: async (id) => {
     await owns.afterMaterialize(id);
     await lifecycle.afterMaterialize(id);
+    // T16: ownership, hood and token display from the World's reveal state.
+    await reveal.afterMaterialize(id);
   },
 });
 owns = createOwns({
@@ -215,9 +231,64 @@ const connectionsPages = createConnectionsPages({
   },
   docsOf: (id) => materializer.docsOf(id),
   format: (key, data) => game.i18n?.format(key, data) ?? key,
+  // One page for GM and players: Revealed sentences only (§5, §8). The GM sees every
+  // Connection on the canvas and in the Element Detail window.
+  include: (c) => reveal.isRevealed('connection', c.id),
 });
 /** T11: Connections pages are derived state; reconcile rewrites stale ones. */
 lifecycle.contribute({ reconcile: () => connectionsPages.refresh() });
+
+/** Reveal (spec §8): World ownership, mirrored in the Campaign's Revelation Map. */
+const adventureCheckedOut = () => {
+  try {
+    const checkout = workingCopy().binding?.checkout;
+    return !!checkout && 'adventure' in checkout;
+  } catch {
+    return false; // before `ready`
+  }
+};
+const reveal = createReveal({
+  workingCopy,
+  docs: foundryDocs,
+  materializer,
+  system: dsa5Mapping,
+  campaign: {
+    current: async () =>
+      workingCopy().binding
+        ? ((await getSession().campaigns.checkedOutCampaign())?.id ?? null)
+        : null,
+    read: (id) => getSession().campaigns.readRevelationMap(id),
+    write: (id, map) => getSession().campaigns.writeRevelationMap(id, map),
+  },
+  world: {
+    get: () => parseRevelationMap((game.settings?.get(MODULE_ID, 'revealState') ?? null) as never),
+    set: async (map) =>
+      void (await game.settings?.set(
+        MODULE_ID,
+        'revealState',
+        serializeRevelationMap(map) as object,
+      )),
+  },
+  adventure: adventureCheckedOut,
+  hood: () =>
+    game.settings?.get(MODULE_ID, 'hoodedImage') ?? `modules/${MODULE_ID}/assets/hooded.svg`,
+  stage: foundryRevealStage(),
+  localize,
+  refreshPages: (ids) => connectionsPages.refresh(ids),
+});
+setRevelationMapApplier((map) => reveal.applyMap(map));
+lifecycle.contribute({ reconcile: () => reveal.reconcile() });
+const title = (name: string) => localize(registry.get(name)?.title ?? name);
+const detailContext = (): DetailContext => ({
+  run: (name, args) => registry.run(name, args),
+  available: (name) => registry.isAvailable(name),
+  title,
+  workingCopy: workingCopy(),
+  reveal,
+  localize,
+  format: (key, data) => game.i18n?.format(key, data) ?? key,
+  error: (message) => void ui.notifications?.error(message),
+});
 
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
@@ -232,6 +303,9 @@ const canvasContext = (): CanvasContext => ({
   refreshRevealed,
   renderBudget: game.settings?.get(MODULE_ID, 'renderBudgetWarning') ?? 1000,
   localize,
+  title,
+  reveal,
+  warn: (message) => void ui.notifications?.warn(message),
 });
 
 for (const command of [
@@ -263,6 +337,8 @@ for (const command of [
   ...canonCommands,
   ...historyCommands(() => getSession().history),
   ...campaignCommands(() => getSession().campaigns),
+  ...revealCommands(reveal),
+  ...detailUiCommands(detailContext),
 ])
   registry.register(command);
 
@@ -303,10 +379,22 @@ Hooks.once('ready', async () => {
       isActiveGM: () => isActiveGM(game as never),
     },
   );
+  reveal.reload();
+  registerRevealHooks(reveal, {
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isActiveGM: () => isActiveGM(game as never),
+    isGM: () => game.user?.isGM ?? false,
+    elementIdOf: (doc) => materializer.elementIdOf(doc),
+    run: (name, args) => registry.run(name, args),
+    localize,
+  });
   connectionsPages.watch();
+  if (isActiveGM(game as never)) reveal.watch();
   // Checkout changes switch the Revealed filter between ownership and a Revelation Map.
   const refreshQuietly = () => void refreshRevealed().catch(() => {});
   refreshQuietly();
+  // Every Reveal / un-reveal changes the Revealed filter (T16 → T23).
+  reveal.subscribe(refreshQuietly);
   getSession().workingCopy.watch((change) => change.binding && setTimeout(refreshQuietly, 500));
   registerConnectionsPageHooks(connectionsPages, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
