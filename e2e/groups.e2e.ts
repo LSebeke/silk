@@ -73,7 +73,7 @@ const position = async (page: Page, id: string) =>
 test('GM groups with g, renames, drops a Node in, moves and dissolves the frame', async ({
   gm,
 }) => {
-  test.setTimeout(90_000);
+  // ~25 UI steps at 2-9 s each under load: the config's 120 s, not less.
   await openWith(gm, [
     el('ga', 'Alrik', 100, 100),
     el('gb', 'Boron', 400, 150),

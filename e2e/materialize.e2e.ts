@@ -190,8 +190,10 @@ test('on demand: Ghosts until materialize.elements / materialize.visible / openS
 
   // Opening the sheet of a Ghost Materializes it (with a toast) and renders the sheet.
   const c = await create(gm, 'person', 'Shy Sheet');
-  await api(gm, 'element.openSheet', { id: c });
+  // The toast fades after a few seconds; the command resolves once the sheet rendered.
+  const opening = api(gm, 'element.openSheet', { id: c });
   await expect(gm.locator('#notifications', { hasText: 'Shy Sheet' })).toBeVisible();
+  await opening;
   const opened = await gm.evaluate(
     () =>
       [...foundry.applications.instances.values()].some(
