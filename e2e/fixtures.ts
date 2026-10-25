@@ -66,7 +66,28 @@ async function join(browser: Browser, url: string, userName: string): Promise<Pa
   if (status !== 'ok') throw new Error(`Join as ${userName} failed: ${status}`);
   await page.goto('/game');
   await page.waitForFunction(() => game.ready === true, undefined, { timeout: 60_000 });
+  await waitForSilk(page);
   return page;
+}
+
+/**
+ * `game.ready` flips before Silk's async `ready` hook has started its session; wait for
+ * that too when Silk is enabled (it isn't on the first, setup join).
+ */
+export async function waitForSilk(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      try {
+        if (game.ready !== true) return false;
+        if (!game.modules?.get('silk')?.active) return true;
+        return !!game.modules.get('silk')?.session?.();
+      } catch {
+        return false;
+      }
+    },
+    undefined,
+    { timeout: 60_000 },
+  );
 }
 
 /** First GM session: add the player and enable silk (takes effect on next load). */
@@ -104,14 +125,21 @@ export const test = base.extend<{ gm: Page; player: Page }, { world: World }>({
     },
     { scope: 'worker', timeout: 180_000 },
   ],
-  gm: async ({ browser, world }, use) => {
-    const page = await world.join(browser, GM);
-    await use(page);
-    await page.context().close();
-  },
-  player: async ({ browser, world }, use) => {
-    const page = await world.join(browser, PLAYER);
-    await use(page);
-    await page.context().close();
-  },
+  // Joins take tens of seconds under load: their own timeout, not the test's budget.
+  gm: [
+    async ({ browser, world }, use) => {
+      const page = await world.join(browser, GM);
+      await use(page);
+      await page.context().close();
+    },
+    { timeout: 120_000 },
+  ],
+  player: [
+    async ({ browser, world }, use) => {
+      const page = await world.join(browser, PLAYER);
+      await use(page);
+      await page.context().close();
+    },
+    { timeout: 120_000 },
+  ],
 });

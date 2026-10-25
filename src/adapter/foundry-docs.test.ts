@@ -98,4 +98,21 @@ describe('FoundryDocs adapter', () => {
       documentName: 'Item',
     });
   });
+
+  it('open resolves once the sheet has rendered (AppV2 render is async)', async () => {
+    const { api } = fakeApi();
+    let rendered = false;
+    const sheet = {
+      render: async () => {
+        await new Promise((r) => setTimeout(r, 5));
+        rendered = true;
+      },
+    };
+    const docs = createFoundryDocs({
+      ...api,
+      fromUuid: (uuid) => ({ ...(api.fromUuid(uuid) as FoundryDoc), sheet }),
+    });
+    await docs.open('Actor.a1');
+    expect(rendered).toBe(true);
+  });
 });
