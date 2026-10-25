@@ -1,5 +1,11 @@
 /** Everything the canvas UI talks to. Built by `module.ts`, passed into the lazy chunk. */
-import type { CanvasState, CreationPipeline, LayoutTween, ViewStateStore } from '../../core/canvas';
+import type {
+  CanvasFilter,
+  CanvasState,
+  CreationPipeline,
+  LayoutTween,
+  ViewStateStore,
+} from '../../core/canvas';
 import type { WorkingCopy } from '../../core/working-copy';
 
 export interface CanvasContext {
@@ -15,6 +21,12 @@ export interface CanvasContext {
   layoutTween: LayoutTween;
   /** Client setting `detailDrop` (§10.2), read on open. */
   detailDrop: boolean;
+  /** Canvas Filters (§10.5): what renders, "+N" badges, chip bar. */
+  filter: CanvasFilter;
+  /** Re-read the Revealed source (Revelation Map) on open. */
+  refreshRevealed(): Promise<void>;
+  /** Client setting `renderBudgetWarning` (§10.5): warn above this many visible Nodes. */
+  renderBudget: number;
   localize(key: string): string;
 }
 

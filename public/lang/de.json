@@ -91,6 +91,11 @@
         "create": "Infoblock hinzufügen",
         "edit": "Infoblock bearbeiten",
         "delete": "Infoblock löschen"
+      },
+      "filter": {
+        "set": "Canvas-Filter setzen",
+        "clear": "Canvas-Filter entfernen",
+        "expandBadge": "Verborgene Nachbarn zeigen"
       }
     },
     "Canvas": {
@@ -229,6 +234,30 @@
       "open": "offen",
       "done": "erledigt",
       "failed": "gescheitert"
+    },
+    "Filter": {
+      "Shown": "{n} von {m} angezeigt",
+      "Clear": "Filter entfernen",
+      "Add": "Filter…",
+      "Badge": "{n} verborgene Nachbarn. Klicken zum Anzeigen.",
+      "Expanded": "Nachbarn angezeigt: {n}",
+      "Budget": "{n} Knoten sichtbar (mehr als {max}). Das Canvas kann langsam werden; grenze es mit Filtern ein.",
+      "Dimension": {
+        "class": "Klasse",
+        "status": "Status",
+        "revealed": "Enthüllt",
+        "materialized": "Materialisiert",
+        "tag": "Tag",
+        "group": "Gruppe",
+        "hops": "N-hop",
+        "contents": "Inhalt"
+      },
+      "Value": {
+        "revealed": "enthüllt",
+        "hidden": "nicht enthüllt",
+        "materialized": "materialisiert",
+        "ghost": "Ghost"
+      }
     },
     "Lifecycle": {
       "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Silk nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",

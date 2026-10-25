@@ -249,3 +249,47 @@ test(
     expect(file.results).toHaveLength(3);
   },
 );
+
+/** Canvas Filters (§10.5) on the 2000 fixture: narrowing stays interactive. Reports clear. */
+test('filters at 2000: filter.set re-renders < 500 ms', { tag: '@perf' }, async ({ gm }) => {
+  test.setTimeout(300_000);
+  await ready(gm);
+  await closeCanvas(gm);
+  await api(gm, 'dev.fixture.generate', { count: 2000, seed: 1 });
+  await gm.evaluate(() =>
+    game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 0.1 } }),
+  );
+  await api(gm, 'canvas.open');
+  const times = await gm.evaluate(async () => {
+    const api = game.modules?.get('silk')?.api;
+    const root = () =>
+      foundry.applications.instances
+        .get('silk-canvas')
+        ?.element?.querySelector('[data-silk-canvas]');
+    const count = () => root()?.querySelectorAll('.svelte-flow__node-element').length ?? 0;
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+    const until = async (ok: () => boolean) => {
+      const t0 = performance.now();
+      while (!ok()) {
+        if (performance.now() - t0 > 30_000) throw new Error('canvas did not settle');
+        await frame();
+      }
+    };
+    await until(() => count() === 2000);
+    const t0 = performance.now();
+    await api?.run('filter.set', { dimension: 'class', values: ['location'] });
+    await until(() => count() < 2000 && count() > 0);
+    await frame();
+    const narrow = performance.now() - t0;
+    const t1 = performance.now();
+    await api?.run('filter.clear');
+    await until(() => count() === 2000);
+    await frame();
+    return { narrow, clear: performance.now() - t1 };
+  });
+  console.log(
+    `filters 2000: narrow ${Math.round(times.narrow)} ms, clear ${Math.round(times.clear)} ms`,
+  );
+  await closeCanvas(gm);
+  expect(times.narrow).toBeLessThan(500);
+});
