@@ -64,6 +64,10 @@ export interface MaterializerDeps {
    * the name step (`afterPipeline`) instead of running inside `element.create`.
    */
   deferImmediate?(): boolean;
+  /** T12: the Actor uuid an Item Materializes into (its owner's inventory), else world. */
+  parentOf?(id: string): string | undefined;
+  /** T12: runs after an element Materialized (owned Items move into a new actor). */
+  afterMaterialize?(id: string): Promise<void>;
 }
 
 export interface Materializer {
@@ -163,11 +167,14 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       ? await docs.ensureFolder('JournalEntry', 'companions', folderName('companions'))
       : undefined;
     const plan = planDocs(el, companion ? { main, companion } : { main }, ctx);
+    const parent = name === 'Item' ? deps.parentOf?.(id) : undefined;
+    if (parent) plan.main.folder = null;
     // Companion first: the doc's flag points at it.
     if (plan.companion) await docs.create('JournalEntry', plan.companion);
-    const uuid = await docs.create(plan.documentName, plan.main);
+    const uuid = await docs.create(plan.documentName, plan.main, parent);
     await write(id, { uuid });
     await sync(id);
+    await deps.afterMaterialize?.(id);
     return uuid;
   }
 

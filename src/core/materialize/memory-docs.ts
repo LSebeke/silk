@@ -22,6 +22,14 @@ const clone = <T>(value: T): T => structuredClone(value);
 export function applyUpdate(target: Record<string, unknown>, data: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(data)) {
     const path = key.split('.');
+    const deleted = path.at(-1)?.startsWith('-=');
+    if (deleted) {
+      // Foundry's `-=key` deletion syntax.
+      let node: Record<string, unknown> | undefined = target;
+      for (const part of path.slice(0, -1)) node = node?.[part] as typeof node;
+      if (node) Reflect.deleteProperty(node, (path.at(-1) as string).slice(2));
+      continue;
+    }
     let node = target;
     for (const part of path.slice(0, -1)) {
       if (typeof node[part] !== 'object' || node[part] === null) node[part] = {};
@@ -69,11 +77,17 @@ export function createMemoryDocs(): MemoryDocs {
       folders.push(folder);
       return folder.id;
     },
-    async create(documentName, data: DocData) {
-      const uuid = `${documentName}.${data._id}`;
+    async create(documentName, data: DocData, parent?: string) {
+      if (parent) must(parent);
+      const uuid = parent ? `${parent}.${documentName}.${data._id}` : `${documentName}.${data._id}`;
       if (docs.has(uuid)) throw new Error(`duplicate ${uuid}`);
-      docs.set(uuid, { ...clone(data), uuid, documentName });
+      docs.set(uuid, { ...clone(data), uuid, documentName, ...(parent ? { parent } : {}) });
       return uuid;
+    },
+    async delete(uuid) {
+      must(uuid);
+      for (const key of [...docs.keys()])
+        if (key === uuid || key.startsWith(`${uuid}.`)) docs.delete(key);
     },
     get: (uuid) => (docs.has(uuid) ? clone(must(uuid)) : undefined),
     journal: (id) =>
