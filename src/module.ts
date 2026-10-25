@@ -355,6 +355,24 @@ Hooks.once('init', () => {
   registerKeybindings(registry, (ns, action, data) =>
     game.keybindings?.register(ns, action, data as never),
   );
+  // Sidebar directories build their context menus on first render, before `ready`.
+  registerAdoptHooks({
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isGM: () => game.user?.isGM ?? false,
+    isActiveGM: () => isActiveGM(game as never),
+    start: (uuid) => startAdopt(uuid),
+    run: (name, args) => registry.run(name, args),
+    isStoryElement(uuid) {
+      try {
+        return !!adopt.inspect(uuid)?.existing;
+      } catch {
+        return false; // Before `ready`: no session yet.
+      }
+    },
+    folderType: (id) => game.folders?.get(id)?.type,
+    docCreated: (doc) => adopt.docCreated(doc),
+    error: (message) => void ui.notifications?.error(message),
+  });
   const module = game.modules?.get(MODULE_ID);
   if (module) {
     module.api = registry;
@@ -394,17 +412,6 @@ Hooks.once('ready', async () => {
   registerSceneHooks(eventScenes, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
-  });
-  registerAdoptHooks({
-    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
-    isGM: () => game.user?.isGM ?? false,
-    isActiveGM: () => isActiveGM(game as never),
-    start: (uuid) => startAdopt(uuid),
-    run: (name, args) => registry.run(name, args),
-    isStoryElement: (uuid) => !!adopt.inspect(uuid)?.existing,
-    folderType: (id) => game.folders?.get(id)?.type,
-    docCreated: (doc) => adopt.docCreated(doc),
-    error: (message) => void ui.notifications?.error(message),
   });
   registerSceneBar({
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
