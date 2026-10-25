@@ -30,6 +30,15 @@ export interface ElementData {
   fields?: ClassFields;
   /** GM-only Tags, never shown to players (§4). Silk-owned. */
   tags?: string[];
+  /**
+   * Status (§4, `status.ts`), absent = the class default. Silk-owned for Ghosts and Events;
+   * mirrors Foundry for a Materialized Person/Creature (`dead`) and Quest (quest `status`).
+   */
+  status?: string;
+  /** Adopted from an existing Foundry doc (T14), not created by Silk: delete can keep the doc (§6). */
+  adopted?: boolean;
+  /** Its doc vanished while Silk wasn't listening: reconcile restored it from this Commit (§6). */
+  restoredFrom?: string;
 }
 
 /** One Info Block = one text `JournalEntryPage`; `_id` is the page id once Materialized. */

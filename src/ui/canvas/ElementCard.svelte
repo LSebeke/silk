@@ -6,7 +6,8 @@
    */
   import { Handle, Position } from '@xyflow/svelte';
   import { getContext } from 'svelte';
-  import { classLabelKey, elementClass } from '../../core/elements';
+  import { classLabelKey, elementClass, statusLabelKey, statusOf } from '../../core/elements';
+  import { STATUS_PROMPT, type StatusPrompt } from './status-prompt';
   import { CONNECTION_POINTS } from './connection-points';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
   import type { ElementNodeData } from './flow-model';
@@ -17,6 +18,9 @@
   const pipeline = ctx.pipeline;
   const cls = $derived(elementClass(data.class));
   const naming = $derived($pipeline.step === 'name' && $pipeline.id === id);
+  const statusPrompt = getContext<StatusPrompt>(STATUS_PROMPT);
+  const status = $derived(statusOf(data));
+  const statusLabel = $derived(status ? ctx.localize(statusLabelKey(status)) : '');
 
   const fail = (error: unknown) => console.error(error);
 
@@ -74,6 +78,31 @@
     {:else}
       <div class="title" data-silk-node-title>{data.name}</div>
     {/if}
+    {#if status}
+      <!-- Status chip (§10.2): click asks for the next Status, like `s`. -->
+      <button
+        type="button"
+        class="nodrag nopan status status-{status}"
+        title={ctx.localize('SILK.Canvas.StatusChip').replace('{status}', statusLabel)}
+        onclick={(e) => {
+          e.stopPropagation();
+          statusPrompt.ask(id);
+        }}
+        data-silk-status={status}>{statusLabel}</button
+      >
+    {/if}
+    {#if data.restoredFrom}
+      <div
+        class="restored"
+        data-silk-restored={data.restoredFrom}
+        title={ctx
+          .localize('SILK.Lifecycle.RestoredBadge')
+          .replace('{commit}', data.restoredFrom.slice(0, 8))}
+      >
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        {data.restoredFrom.slice(0, 8)}
+      </div>
+    {/if}
   </div>
   <!-- Connection Points (§10.2): out/in/mutual on all four sides; dragging one out connects. -->
   {#each CONNECTION_POINTS as point (point.id)}
@@ -108,6 +137,10 @@
   }
   .silk-card.selected {
     outline: 2px solid #2b6cb0;
+  }
+  .restored {
+    font-size: 0.75em;
+    opacity: 0.8;
   }
   .silk-card.ghost {
     opacity: 0.55;
@@ -145,6 +178,42 @@
     font-weight: 700;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+  /* Top-right corner: a click on the card's centre still selects it. */
+  .status {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0 6px;
+    font-size: 10px;
+    line-height: 16px;
+    color: #333;
+    background: #ece4d2;
+    border: 1px solid #c9bfa8;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .status-dead,
+  .status-failed {
+    color: #fff;
+    background: #8c2f22;
+    border-color: #8c2f22;
+  }
+  .status-happened,
+  .status-done {
+    color: #fff;
+    background: #2f7d4f;
+    border-color: #2f7d4f;
+  }
+  .status-skipped {
+    color: #666;
+    text-decoration: line-through;
+  }
+  :global(.lod-title) .status {
+    display: none;
   }
   .name-input {
     width: 100%;

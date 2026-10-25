@@ -69,7 +69,10 @@
         "changeClass": "Klasse ändern",
         "openSheet": "Bogen öffnen",
         "tag": "Tag hinzufügen",
-        "untag": "Tag entfernen"
+        "untag": "Tag entfernen",
+        "setStatus": "Status setzen",
+        "toggleStatus": "Status umschalten",
+        "delete": "Element löschen"
       },
       "connection": {
         "create": "Verbinden",
@@ -81,7 +84,8 @@
       },
       "materialize": {
         "elements": "Materialisieren",
-        "visible": "Sichtbare materialisieren"
+        "visible": "Sichtbare materialisieren",
+        "unmaterialize": "Entmaterialisieren"
       },
       "infoBlock": {
         "create": "Infoblock hinzufügen",
@@ -97,7 +101,11 @@
       "Ungroup": "Gruppe auflösen",
       "Untangle": "Entwirren",
       "ConnectHint": "Ziel-Knoten anklicken oder leere Fläche für einen neuen Knoten. Esc bricht ab.",
-      "LabelPlaceholder": "Text…"
+      "LabelPlaceholder": "Text…",
+      "StatusConfirm": "{name} auf „{status}“ setzen?",
+      "Yes": "Ja (y)",
+      "No": "Nein (n)",
+      "StatusChip": "Status: {status}. Klicken zum Ändern (s)."
     },
     "Connection": {
       "Type": {
@@ -209,7 +217,34 @@
     "Materialize": {
       "Implicit": "{name} materialisiert.",
       "VisibleTitle": "Sichtbare materialisieren",
-      "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen."
+      "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen.",
+      "QuestNativeFields": "{name} steht im DSA5-Questlog. Seine eigenen Felder Zusammenfassung, Details, Ziele und SL-Notizen gehören DSA5 und werden für Spieler sichtbar, sobald das Element enthüllt wird."
+    },
+    "Status": {
+      "alive": "lebendig",
+      "dead": "tot",
+      "planned": "geplant",
+      "happened": "geschehen",
+      "skipped": "ausgelassen",
+      "open": "offen",
+      "done": "erledigt",
+      "failed": "gescheitert"
+    },
+    "Lifecycle": {
+      "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Silk nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",
+      "RestoredBadge": "Wiederhergestellt aus Commit {commit}",
+      "CompanionRestored": "Das Begleitjournal von {name} wurde aus dem letzten Commit wiederhergestellt. Nicht committete Änderungen an Infoblöcken sind verloren.",
+      "DeleteTitle": "Elemente löschen",
+      "DeleteConfirm": "{names} löschen? Ihre Verbindungen, Foundry-Dokumente und Einträge in der Enthüllungskarte werden mitgelöscht. Nur das Verwerfen nicht committeter Änderungen macht das rückgängig.",
+      "DeleteAdopted": "{count} davon wurden aus bestehenden Foundry-Dokumenten übernommen.",
+      "KeepDoc": "Foundry-Dokument behalten",
+      "DeleteEverything": "Alles löschen",
+      "Delete": "Löschen",
+      "Cancel": "Abbrechen",
+      "DontAsk": "Nicht mehr fragen",
+      "UnmaterializeTitle": "Entmaterialisieren",
+      "UnmaterializeRevealed": "{names} ist enthüllt. Die Spieler verlieren den Zugriff, bis es wieder materialisiert wird.",
+      "Unmaterialize": "Entmaterialisieren"
     }
   }
 }

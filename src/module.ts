@@ -7,9 +7,11 @@ import { dsa5Mapping } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { createFoundryDocs } from './adapter/foundry-docs';
 import { registerKeybindings } from './adapter/keybindings';
+import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
+import { registerOwnsHooks } from './adapter/owns';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
-import { getSession, startSession } from './adapter/session';
+import { getSession, setBeforeCommit, startSession } from './adapter/session';
 import { registerSettings } from './adapter/settings';
 import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
@@ -25,14 +27,18 @@ import {
 import { createRegistry } from './core/commands/registry';
 import { devCoreCommands } from './core/dev/commands';
 import { campaignCommands } from './core/campaigns/commands';
+import { isRevealed, revelationMapCleanup } from './core/campaigns';
 import { connectionCommands, connectOnCreate } from './core/connections';
 import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
 import {
   createConnectionsPages,
+  createLifecycle,
   createMaterializer,
+  lifecycleCommands,
   materializeCommands,
 } from './core/materialize';
+import { createOwns, type Owns } from './core/owns';
 import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
@@ -61,10 +67,14 @@ afterCreate.push(joinFrameOnCreate(workingCopy));
 /** Untangle tween: layout commands announce old positions, the canvas animates. */
 const layoutTween = createLayoutTween();
 
+const foundryDocs = createFoundryDocs(foundryApi());
+/** T12 owns ↔ inventory; created below, after the materializer it uses. */
+// eslint-disable-next-line prefer-const -- the materializer's deps reach it lazily
+let owns: Owns;
 /** Materialize + write-through (spec §6, §7). */
 const materializer = createMaterializer({
   workingCopy,
-  docs: createFoundryDocs(foundryApi()),
+  docs: foundryDocs,
   system: dsa5Mapping,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
   newId: () => foundry.utils.randomID(16),
@@ -80,10 +90,65 @@ const materializer = createMaterializer({
   selection: () => canvasState.get().selection,
   // The pipeline is still in the class box while `element.create` runs.
   deferImmediate: () => pipeline.get().step === 'classBox',
+  parentOf: (id) => owns.parentOf(id),
+  restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
+  afterMaterialize: async (id) => {
+    await owns.afterMaterialize(id);
+    await lifecycle.afterMaterialize(id);
+  },
 });
+owns = createOwns({
+  workingCopy,
+  docs: foundryDocs,
+  materializer,
+  mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
+  deferImmediate: () => pipeline.get().step === 'classBox',
+  newId: () => foundry.utils.randomID(16),
+  now: () => Date.now(),
+  localize,
+});
+
+const format = (key: string, data?: Record<string, string>) =>
+  (data ? game.i18n?.format(key, data) : game.i18n?.localize(key)) ?? key;
+const dialogs = lifecycleDialogs({
+  wait: (config) => foundry.applications.api.DialogV2.wait(config as never),
+  localize: format,
+  disable: (setting) => game.settings?.set(MODULE_ID, setting, false) as Promise<unknown>,
+});
+/**
+ * Unmaterialize, Foundry-side deletion, element delete, reconcile (spec §6, §7).
+ * Features follow the element lifecycle with `lifecycle.contribute(...)`.
+ */
+const lifecycle = createLifecycle({
+  workingCopy,
+  docs: foundryDocs,
+  system: dsa5Mapping,
+  materializer,
+  newId: () => foundry.utils.randomID(16),
+  localize: format,
+  warn: (message) => void ui.notifications?.warn(message),
+  async isRevealed(id) {
+    const campaigns = getSession().campaigns;
+    const campaign = workingCopy().binding ? await campaigns.checkedOutCampaign() : null;
+    return !!campaign && isRevealed(await campaigns.readRevelationMap(campaign.id), 'element', id);
+  },
+  warnRevealed: () => game.settings?.get(MODULE_ID, 'warnUnmaterializeReveal') ?? true,
+  confirmUnmaterialize: (names) => dialogs.confirmUnmaterialize(names),
+  confirmDeleteEnabled: () => game.settings?.get(MODULE_ID, 'confirmDelete') ?? true,
+  confirmDelete: (args) => dialogs.confirmDelete(args),
+  lastCommit: () => getSession().history.lastCommit(),
+});
+lifecycle.contribute(
+  revelationMapCleanup(
+    () => getSession().campaigns,
+    () => !!workingCopy().binding,
+  ),
+);
+setBeforeCommit(() => lifecycle.capture());
 afterCreate.push((element) => materializer.afterCreate(element));
 pipeline.onComplete(({ id }) => {
   materializer.afterPipeline(id).catch((error: unknown) => console.error(error));
+  owns.afterPipeline(id).catch((error: unknown) => console.error(error));
 });
 
 /** Generated Connections pages (spec §5 In journals); only the active GM writes them. */
@@ -98,6 +163,8 @@ const connectionsPages = createConnectionsPages({
   docsOf: (id) => materializer.docsOf(id),
   format: (key, data) => game.i18n?.format(key, data) ?? key,
 });
+/** T11: Connections pages are derived state; reconcile rewrites stale ones. */
+lifecycle.contribute({ reconcile: () => connectionsPages.refresh() });
 
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
@@ -119,7 +186,8 @@ for (const command of [
     afterRename: [(element) => materializer.writeName(element.id)],
   }),
   ...materializeCommands(materializer),
-  ...connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) }),
+  ...lifecycleCommands(lifecycle, () => canvasState.get().selection),
+  ...owns.wrap(connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) })),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
   ...layoutCommands({
     workingCopy,
@@ -163,13 +231,28 @@ Hooks.once('ready', async () => {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
   });
+  // A dsa5 Item move deletes the source doc: owns retargets it, no Unmaterialize (T12).
+  // Lifecycle hooks are registered before owns', so `isMove` still sees the copy.
+  registerLifecycleHooks(
+    { docDeleted: (doc) => (owns.isMove(doc) ? Promise.resolve() : lifecycle.docDeleted(doc)) },
+    {
+      on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+      isActiveGM: () => isActiveGM(game as never),
+    },
+  );
   connectionsPages.watch();
   registerConnectionsPageHooks(connectionsPages, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
   });
-  // Reconcile on load (§7): pages written while Silk was off, or by an older version.
-  if (isActiveGM(game as never)) void connectionsPages.refresh().catch(() => {});
+  registerOwnsHooks(owns, {
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isActiveGM: () => isActiveGM(game as never),
+  });
+  // Reconcile on load (§7): missed hooks are never replayed, Foundry is re-read. Missing
+  // docs first, then the contributors (Connections pages written while Silk was off, …).
+  if (isActiveGM(game as never))
+    lifecycle.reconcile().catch((error: unknown) => console.error(error));
   showFileBrowseNotice({
     isGM: game.user?.isGM ?? false,
     permissions: game.permissions as Record<string, number[] | undefined> | undefined,

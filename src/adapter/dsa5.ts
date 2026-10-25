@@ -30,6 +30,9 @@ export interface Dsa5QuestlogSystem {
   quests: Record<string, Dsa5Quest>;
 }
 
+const questStatus = (status: number): Dsa5Quest['status'] =>
+  status === 1 || status === 2 ? status : 0;
+
 const DOC_TYPES: Partial<Record<ElementClassId, string>> = {
   person: 'npc' satisfies Dsa5ActorType,
   creature: 'creature' satisfies Dsa5ActorType,
@@ -59,11 +62,20 @@ export const dsa5Mapping: SystemMapping = {
     const merchantType = (system as Dsa5ActorSystem | undefined)?.merchant?.merchantType;
     return isMerchantType(merchantType) ? { merchantType } : {};
   },
-  questPage(questKey, title) {
+  questPage(questKey, title, status = 0) {
     const system: Dsa5QuestlogSystem = {
-      quests: { [questKey]: { title, status: 0, audience: 0, visible: false } },
+      quests: { [questKey]: { title, status: questStatus(status), audience: 0, visible: false } },
     };
     return { type: 'dsaquestlog', system };
   },
+  questStatus(questKey, pageSystem) {
+    const status = (pageSystem as Dsa5QuestlogSystem | undefined)?.quests?.[questKey]?.status;
+    return typeof status === 'number' ? status : undefined;
+  },
+  questStatusUpdate: (questKey, status) => ({
+    [`system.quests.${questKey}.status`]: questStatus(status),
+  }),
+  /** First of `DSA5.statusEffects`; set via `actor.addCondition('dead')` (§7 Dead). */
+  deadEffect: 'dead',
   questTitleUpdate: (questKey, title) => ({ [`system.quests.${questKey}.title`]: title }),
 };
