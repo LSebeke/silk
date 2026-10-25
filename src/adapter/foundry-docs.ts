@@ -27,6 +27,16 @@ export interface FoundryDoc {
   /** Embedded docs: the parent doc (an Item's actor). */
   parent?: { uuid: string } | null;
   sheet?: { render(force?: boolean): unknown } | null;
+  /** Actors: ActiveEffects, and the DSA5 condition API (§7 Dead). */
+  effects?: Iterable<{ statuses: Set<string> }>;
+  addCondition?(id: string): Promise<unknown>;
+  removeCondition?(id: string): Promise<unknown>;
+  toggleStatusEffect?(id: string, options: { active: boolean }): Promise<unknown>;
+}
+
+/** DSA5 world setting listing the quest log's journals. */
+interface QuestlogSetting {
+  activated?: { uuid: string; name: string }[];
 }
 
 export interface FoundryDocumentClass {
@@ -42,6 +52,8 @@ export interface FoundryApi {
   folders(): Iterable<{ id: string | null; type: string; flags: Record<string, unknown> }>;
   /** `foundry.data.operators.ForcedReplacement.create`. */
   replace(value: object): object;
+  getSetting(namespace: string, key: string): unknown;
+  setSetting(namespace: string, key: string, value: unknown): Promise<unknown>;
 }
 
 /** Source data (`toObject` is already a copy) plus identity; `flags.silk` always present. */
@@ -58,6 +70,9 @@ export function snapshot(
     ...(doc.parent?.uuid ? { parent: doc.parent.uuid } : {}),
   };
 }
+
+/** `DSAQuestLogEntry.SETTING_NAME` (dsa5 `modules/data/journal/dsaquestlog.js`). */
+const QUESTLOG = ['dsa5', 'questlogJournals'] as const;
 
 const foundryClone = <T>(value: T): T => structuredClone(value);
 
@@ -138,6 +153,26 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
     },
     async deletePages(uuid, ids) {
       await must(uuid).deleteEmbeddedDocuments('JournalEntryPage', ids, { ...SILK_WRITE });
+    },
+    async setStatusEffect(uuid, statusId, active) {
+      const actor = must(uuid);
+      const has = [...(actor.effects ?? [])].some((e) => e.statuses.has(statusId));
+      if (has === active) return;
+      // DSA5 conditions: its `toggleStatusEffect` adds even with `active: false`.
+      const condition = active ? actor.addCondition : actor.removeCondition;
+      if (condition) await condition.call(actor, statusId);
+      else await actor.toggleStatusEffect?.(statusId, { active });
+    },
+    async registerQuestJournal(uuid, name) {
+      const setting = structuredClone(
+        (api.getSetting(QUESTLOG[0], QUESTLOG[1]) as QuestlogSetting | undefined) ?? {},
+      );
+      const activated = setting.activated ?? [];
+      if (activated.some((j) => j.uuid === uuid)) return;
+      await api.setSetting(QUESTLOG[0], QUESTLOG[1], {
+        ...setting,
+        activated: [...activated, { uuid, name }],
+      });
     },
     async open(uuid) {
       must(uuid).sheet?.render(true);

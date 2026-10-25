@@ -14,6 +14,8 @@ export interface ElementNodeData extends Record<string, unknown> {
   ghost: boolean;
   /** Element image (T8); the card falls back to the class icon. */
   img?: string;
+  /** Stored (non-default) Status (T10); the card shows `statusOf` it. */
+  status?: string;
 }
 
 export type ElementNode = Node<ElementNodeData, 'element'>;
@@ -27,7 +29,8 @@ function sameNode(a: ElementNode, b: ElementNode) {
     a.data.class === b.data.class &&
     a.data.name === b.data.name &&
     a.data.ghost === b.data.ghost &&
-    a.data.img === b.data.img
+    a.data.img === b.data.img &&
+    a.data.status === b.data.status
   );
 }
 
@@ -63,6 +66,7 @@ export function toFlowNodes(
         name: element.name,
         ghost: isGhost(element),
         ...(element.img ? { img: element.img } : {}),
+        ...(element.status ? { status: element.status } : {}),
       },
     };
     const old = prev.get(element.id);

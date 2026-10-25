@@ -17,7 +17,14 @@
   import { onDestroy, setContext, untrack } from 'svelte';
   import { TWEEN_MS } from '../../core/canvas/tween';
   import type { RelativeDirection } from '../../core/connections';
-  import type { Point } from '../../core/elements';
+  import {
+    hasStatus,
+    nextStatus,
+    readElement,
+    statusLabelKey,
+    type Point,
+    type Status,
+  } from '../../core/elements';
   import ClassBox from './ClassBox.svelte';
   import ConnectionEdge from './ConnectionEdge.svelte';
   import ElementCard from './ElementCard.svelte';
@@ -32,7 +39,8 @@
     type ElementNode,
     type GroupNode,
   } from './flow-model';
-  import { canvasKey } from './keys';
+  import { canvasKey, confirmKey } from './keys';
+  import { STATUS_PROMPT, type StatusPrompt } from './status-prompt';
 
   let props: { ctx: CanvasContext } = $props();
   /** Fixed for the window's lifetime. */
@@ -56,6 +64,25 @@
 
   const fail = (error: unknown) => console.error(error);
   const run = (name: string, args?: object) => ctx.run(name, args).catch(fail);
+
+  // Status toggle, y/n confirm with default n (§10.3 `s`, card chip).
+  let statusAsk = $state<{ id: string; name: string; status: Status } | undefined>();
+  let statusBox: HTMLDivElement | undefined = $state();
+  const statusPrompt: StatusPrompt = {
+    ask(id) {
+      const element = readElement(workingCopy.get(id));
+      if (!element || !hasStatus(element.class) || !ctx.available('element.setStatus')) return;
+      statusAsk = { id, name: element.name, status: nextStatus(element) };
+      queueMicrotask(() => statusBox?.focus());
+    },
+  };
+  setContext(STATUS_PROMPT, statusPrompt);
+  function answerStatus(yes: boolean) {
+    const ask = statusAsk;
+    statusAsk = undefined;
+    root?.focus();
+    if (yes && ask) void run('element.setStatus', { id: ask.id, status: ask.status });
+  }
 
   // Untangle tween (§10.7): from the announced old positions to the records' positions.
   let tween: { from: ReadonlyMap<string, Point>; start: number } | undefined;
@@ -219,6 +246,13 @@
   function onKeydown(event: KeyboardEvent) {
     const target = event.target as HTMLElement | null;
     if (target?.closest('input, textarea, select, [contenteditable]')) return;
+    if (statusAsk) {
+      const answer = confirmKey(event);
+      event.preventDefault();
+      event.stopPropagation();
+      if (answer) answerStatus(answer === 'yes');
+      return;
+    }
     if (event.key === 'Escape' && connectFrom) {
       connectFrom = undefined;
       return;
@@ -253,6 +287,9 @@
         if (node && current) pipeline.rename(node, current.data.name);
         break;
       }
+      case 'status':
+        if (node) statusPrompt.ask(node);
+        break;
       case 'editConnection':
         if (edge) pipeline.editConnection(edge.id);
         break;
@@ -374,6 +411,28 @@
       {/if}
     </div>
   {/if}
+  {#if statusAsk}
+    <div
+      class="silk-status-confirm"
+      role="alertdialog"
+      tabindex="-1"
+      bind:this={statusBox}
+      data-silk-status-confirm={statusAsk.id}
+    >
+      <span>
+        {ctx
+          .localize('SILK.Canvas.StatusConfirm')
+          .replace('{name}', statusAsk.name)
+          .replace('{status}', ctx.localize(statusLabelKey(statusAsk.status)))}
+      </span>
+      <button type="button" onclick={() => answerStatus(true)} data-silk-action="status-yes">
+        {ctx.localize('SILK.Canvas.Yes')}
+      </button>
+      <button type="button" onclick={() => answerStatus(false)} data-silk-action="status-no">
+        {ctx.localize('SILK.Canvas.No')}
+      </button>
+    </div>
+  {/if}
   {#if connectFrom}
     <div class="silk-connect-hint" data-silk-connect-hint>
       {ctx.localize('SILK.Canvas.ConnectHint')}
@@ -430,6 +489,30 @@
     border: 1px solid #2b6cb0;
     border-radius: 6px;
     transform: translateX(-50%);
+  }
+  .silk-status-confirm {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    z-index: 30;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    background: #fffdf8;
+    border: 1px solid #b5533c;
+    border-radius: 6px;
+    outline: none;
+    box-shadow: 0 1px 3px #0003;
+    transform: translateX(-50%);
+  }
+  .silk-status-confirm button {
+    width: auto;
+    padding: 0 8px;
+    font-size: 12px;
+    line-height: 20px;
   }
   .silk-canvas.connecting :global(.silk-card) {
     cursor: crosshair;

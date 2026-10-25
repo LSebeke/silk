@@ -4,6 +4,7 @@
  */
 import { elementClass, type ElementClassId } from '../elements/classes';
 import type { ElementData, InfoBlock, StoryElement } from '../elements/element';
+import { statusOf, statusesOf, storedStatus } from '../elements/status';
 import {
   OWNERSHIP_NONE,
   type CategoryData,
@@ -97,8 +98,15 @@ export const playerNotesCategory = (id: string, ctx: LayoutContext): CategoryDat
   sort: 0,
 });
 
-export function questPage(id: string, questKey: string, title: string, ctx: LayoutContext) {
-  const { type, system } = ctx.system.questPage(questKey, title);
+export function questPage(
+  id: string,
+  questKey: string,
+  title: string,
+  ctx: LayoutContext,
+  status?: string,
+) {
+  const index = statusesOf('quest').findIndex((s) => s === status);
+  const { type, system } = ctx.system.questPage(questKey, title, Math.max(index, 0));
   return {
     _id: id,
     name: title,
@@ -177,7 +185,7 @@ export function planDocs(
 /** Adds what a layout class needs and the journal lacks (create or class change). */
 export function missingLayout(
   journal: Pick<DocData, 'flags' | 'pages' | 'categories'>,
-  element: Pick<ElementData, 'class' | 'name' | 'img'>,
+  element: Pick<ElementData, 'class' | 'name' | 'img' | 'status'>,
   ctx: LayoutContext,
 ): { pages: PageData[]; categories: CategoryData[]; flags: DocData['flags']['silk'] } {
   const flags = journal.flags.silk;
@@ -204,7 +212,7 @@ export function missingLayout(
   }
   if (element.class === 'quest' && !has(flags.quest)) {
     const key = ctx.newId();
-    const quest = questPage(ctx.newId(), key, element.name, ctx);
+    const quest = questPage(ctx.newId(), key, element.name, ctx, statusOf(element));
     pages.push(quest);
     added.quest = quest._id;
     added.questKey = key;
@@ -253,9 +261,19 @@ export function readBack(
     out.img = main.img || undefined;
     const fields = system.fromSystem(cls, main.system);
     out.fields = Object.keys(fields).length ? fields : undefined;
+    if (cls === 'person' || cls === 'creature') {
+      const dead = (main.effects ?? []).some((e) => e.statuses?.includes(system.deadEffect));
+      out.status = storedStatus(cls, dead ? 'dead' : 'alive');
+    }
   } else if (main.flags.silk.cover) {
     const cover = main.pages?.find((p) => p._id === main.flags.silk.cover);
     out.img = cover?.src || undefined;
+  }
+  const { quest, questKey } = main.flags.silk;
+  const questData = quest && questKey && main.pages?.find((p) => p._id === quest)?.system;
+  if (cls === 'quest' && questKey && questData) {
+    const status = statusesOf('quest')[system.questStatus(questKey, questData) ?? 0];
+    out.status = storedStatus(cls, status);
   }
   const holder = blockJournal(main, companion);
   if (holder)

@@ -69,7 +69,9 @@
         "changeClass": "Change class",
         "openSheet": "Open sheet",
         "tag": "Add Tag",
-        "untag": "Remove Tag"
+        "untag": "Remove Tag",
+        "setStatus": "Set Status",
+        "toggleStatus": "Toggle Status"
       },
       "connection": {
         "create": "Connect",
@@ -97,7 +99,11 @@
       "Ungroup": "Dissolve group",
       "Untangle": "Untangle",
       "ConnectHint": "Click the target Node, or empty canvas for a new Node. Esc cancels.",
-      "LabelPlaceholder": "label…"
+      "LabelPlaceholder": "label…",
+      "StatusConfirm": "Set {name} to “{status}”?",
+      "Yes": "Yes (y)",
+      "No": "No (n)",
+      "StatusChip": "Status: {status}. Click to change (s)."
     },
     "Connection": {
       "Type": {
@@ -209,7 +215,18 @@
     "Materialize": {
       "Implicit": "Materialized {name}.",
       "VisibleTitle": "Materialize visible",
-      "VisibleConfirm": "Materialize {count} elements shown on the canvas? Player Characters are skipped."
+      "VisibleConfirm": "Materialize {count} elements shown on the canvas? Player Characters are skipped.",
+      "QuestNativeFields": "{name} is in the DSA5 quest log. Its native summary, details, objectives and GM notes stay DSA5’s and become visible to players when the element is Revealed."
+    },
+    "Status": {
+      "alive": "alive",
+      "dead": "dead",
+      "planned": "planned",
+      "happened": "happened",
+      "skipped": "skipped",
+      "open": "open",
+      "done": "done",
+      "failed": "failed"
     }
   }
 }

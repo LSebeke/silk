@@ -48,6 +48,19 @@ describe('flow model', () => {
     expect(next[0]).toMatchObject({ data: { name: 'Ulf' }, measured: { width: 190, height: 78 } });
   });
 
+  it('carries a non-default Status (the card chip shows it) and updates the Node when it changes', () => {
+    const dead = elementRecord('el-a', {
+      class: 'person',
+      name: 'Alrik',
+      position: { x: 1, y: 2 },
+      status: 'dead',
+    });
+    const first = toFlowNodes(records(alrik), [], []);
+    const next = toFlowNodes(records(dead), [], first);
+    expect(first[0]?.data.status).toBeUndefined();
+    expect(next[0]?.data.status).toBe('dead');
+  });
+
   const frame = (id: string, parent: string | null, x: number, y: number): CanonRecord => ({
     kind: 'layoutGroup',
     id,

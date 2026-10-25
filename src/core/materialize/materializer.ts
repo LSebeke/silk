@@ -14,7 +14,11 @@ import {
   elementClass,
   elementRecord,
   isGhost,
+  nextStatus,
   readElement,
+  statusesOf,
+  storedStatus,
+  type Status,
   type ClassFields,
   type ElementClassId,
   type ElementData,
@@ -94,6 +98,10 @@ export interface Materializer {
   editInfoBlock(args: { id: string; name?: string; text?: string }): Promise<void>;
   deleteInfoBlock(id: string): Promise<void>;
   tag(ids: readonly string[], tag: string, on: boolean): Promise<void>;
+  /** Status (§4): Foundry for a Materialized Person/Creature/Quest, else the record. */
+  setStatus(id: string, status: string): Promise<void>;
+  /** Next Status in the class's order. Returns it. */
+  toggleStatus(id: string): Promise<Status>;
   openSheet(id: string): Promise<void>;
   /** Foundry → record mirror for a Materialized element (Foundry edits flow back, §7). */
   sync(id: string): Promise<void>;
@@ -172,6 +180,8 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     // Companion first: the doc's flag points at it.
     if (plan.companion) await docs.create('JournalEntry', plan.companion);
     const uuid = await docs.create(plan.documentName, plan.main, parent);
+    if (el.status === 'dead') await docs.setStatusEffect(uuid, system.deadEffect, true);
+    if (el.class === 'quest') await questJournal(uuid, el.name);
     await write(id, { uuid });
     await sync(id);
     await deps.afterMaterialize?.(id);
@@ -220,6 +230,39 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const holder = blockJournal(main, companion);
     if (!holder) throw new Error(`Silk: "${id}" has no journal for Info Blocks`);
     return holder;
+  }
+
+  /**
+   * §4 Quest: the journal joins the DSA5 quest log; the native quest fields stay DSA5's
+   * and become visible on Reveal, so the GM is warned.
+   */
+  async function questJournal(uuid: string, name: string) {
+    await docs.registerQuestJournal(uuid, name);
+    deps.notify(deps.localize('SILK.Materialize.QuestNativeFields', { name }));
+  }
+
+  function quest(main: DocSnapshot) {
+    const { quest: page, questKey: key } = main.flags.silk;
+    return page && key ? { page, key } : undefined;
+  }
+
+  async function setStatus(id: string, status: string) {
+    const el = element(id);
+    const value = statusesOf(el.class).find((s) => s === status);
+    if (!value) throw new Error(`Silk: "${status}" is not a Status of ${el.class} elements`);
+    const found = el.uuid ? docsOf(id) : undefined;
+    if (found && (el.class === 'person' || el.class === 'creature')) {
+      await docs.setStatusEffect(found.main.uuid, system.deadEffect, value === 'dead');
+    } else if (found && el.class === 'quest' && quest(found.main)) {
+      const { page, key } = quest(found.main) as { page: string; key: string };
+      const index = statusesOf('quest').indexOf(value);
+      await docs.updatePage(found.main.uuid, page, system.questStatusUpdate(key, index));
+    } else {
+      // Ghost or Event: Silk holds the Status.
+      await write(id, { status: storedStatus(el.class, value) });
+      return;
+    }
+    await sync(id);
   }
 
   return {
@@ -315,8 +358,10 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
           folderName(target.id),
         );
         await docs.update(main.uuid, { folder });
+        if (target.id === 'quest') await questJournal(main.uuid, el.name);
       }
-      await write(id, { class: target.id });
+      const keep = statusesOf(target.id).some((s) => s === el.status);
+      await write(id, { class: target.id, status: keep ? el.status : undefined });
       await sync(id);
     },
 
@@ -381,6 +426,13 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       }
     },
 
+    setStatus,
+    async toggleStatus(id) {
+      const status = nextStatus(element(id));
+      await setStatus(id, status);
+      return status;
+    },
+
     async openSheet(id) {
       await ensureMaterialized(id);
       const { main, companion } = requireDocs(id);
@@ -432,6 +484,12 @@ export function materializeCommands(m: Materializer): Command[] {
     command('element.changeClass', (args: { id: string; class: string }) =>
       m.changeClass(args.id, args.class),
     ),
+    command('element.setStatus', (args: { id: string; status: string }) =>
+      m.setStatus(args.id, args.status),
+    ),
+    command('element.toggleStatus', async (args: { id: string }) => ({
+      status: await m.toggleStatus(args.id),
+    })),
     command('element.openSheet', (args: { id: string }) => m.openSheet(args.id)),
     command('element.tag', (args: { ids: string[]; tag: string }) =>
       m.tag(args.ids, args.tag, true),
