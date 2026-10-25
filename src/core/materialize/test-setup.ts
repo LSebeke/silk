@@ -32,7 +32,13 @@ export const pageNames = (doc: TestDoc) =>
   [...doc.pages].sort((a, b) => a.sort - b.sort).map((p) => p.name);
 
 export function setup(
-  opts: { mode?: MaterializeMode; visible?: string[]; confirm?: boolean } = {},
+  opts: {
+    mode?: MaterializeMode;
+    visible?: string[];
+    confirm?: boolean;
+    /** Also register the Connection commands. */
+    connections?: boolean;
+  } = {},
 ) {
   const workingCopy = createWorkingCopy(createMemoryBackend(), { canWrite: () => true });
   const docs = createMemoryDocs();
@@ -94,7 +100,7 @@ export function setup(
     lastCommit: async () => lastCommit,
   });
   for (const command of [
-    ...connectionCommands({ workingCopy: () => workingCopy, newId }),
+    ...(opts.connections ? connectionCommands({ workingCopy: () => workingCopy, newId }) : []),
     ...lifecycleCommands(lifecycle, () => selection),
     ...elementCommands({
       workingCopy: () => workingCopy,

@@ -6,6 +6,8 @@ export default defineConfig(({ mode }) => ({
   // Lib mode leaves `process.env.NODE_ENV` in dependencies (@xyflow/svelte); browsers have no `process`.
   define: {
     'process.env.NODE_ENV': JSON.stringify(mode === 'development' ? 'development' : 'production'),
+    // Dev-only commands (spec §14): `npm run dev`, or `SILK_DEV=1` for a minified perf build.
+    __SILK_DEV__: JSON.stringify(mode === 'development' || process.env['SILK_DEV'] === '1'),
   },
   build: {
     outDir: 'dist',

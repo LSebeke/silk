@@ -1,3 +1,4 @@
+export * from './connections-page';
 export * from './layout';
 export * from './materializer';
 export { createMemoryDocs, type MemoryDocs } from './memory-docs';

@@ -79,7 +79,7 @@ export function coverPage(id: string, src: string | undefined, ctx: LayoutContex
   };
 }
 
-/** Placeholder until T11 generates the Connection sentences (§5 In journals). */
+/** Empty until `createConnectionsPages` writes the sentences (§5 In journals). */
 export function connectionsPage(id: string, ctx: LayoutContext): PageData {
   return {
     _id: id,

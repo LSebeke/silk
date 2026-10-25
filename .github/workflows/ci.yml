@@ -20,6 +20,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: No dev-only commands in the build (spec §14)
+        run: "! grep -rq 'dev\\.fixture\\.generate' dist"
       - name: Measure bundle size
         run: node scripts/bundle-size.mjs measure dist > "$RUNNER_TEMP/head.json"
 

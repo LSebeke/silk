@@ -4,7 +4,7 @@ import { must, page, pageNames, setup } from './test-setup';
 
 describe('Unmaterialize (spec §6)', () => {
   it('snapshots the doc and Companion Journal, deletes them, keeps a Ghost with its Connections', async () => {
-    const t = setup({ mode: 'immediate' });
+    const t = setup({ mode: 'immediate', connections: true });
     const alrik = await t.create('person', 'Alrik');
     const inn = await t.create('location', 'Inn');
     const { id: link } = await t.registry.run<{ id: string }>('connection.create', {

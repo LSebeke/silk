@@ -2,6 +2,7 @@
  * Entry point. Wires the pure core to Foundry through the adapter and exposes the
  * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
  */
+import { registerConnectionsPageHooks } from './adapter/connections-page';
 import { dsa5Mapping } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { createFoundryDocs } from './adapter/foundry-docs';
@@ -23,12 +24,14 @@ import {
   layoutCommands,
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
+import { devCoreCommands } from './core/dev/commands';
 import { campaignCommands } from './core/campaigns/commands';
 import { isRevealed, revelationMapCleanup } from './core/campaigns';
 import { connectionCommands, connectOnCreate } from './core/connections';
 import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
 import {
+  createConnectionsPages,
   createLifecycle,
   createMaterializer,
   lifecycleCommands,
@@ -37,6 +40,7 @@ import {
 import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
+import { devUiCommands } from './ui/dev/commands';
 import './ui/silk.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
@@ -127,6 +131,21 @@ pipeline.onComplete(({ id }) => {
   materializer.afterPipeline(id).catch((error: unknown) => console.error(error));
 });
 
+/** Generated Connections pages (spec §5 In journals); only the active GM writes them. */
+const connectionsDocs = createFoundryDocs(foundryApi());
+const connectionsPages = createConnectionsPages({
+  workingCopy,
+  docs: {
+    updatePage: async (uuid, pageId, data) => {
+      if (isActiveGM(game as never)) await connectionsDocs.updatePage(uuid, pageId, data);
+    },
+  },
+  docsOf: (id) => materializer.docsOf(id),
+  format: (key, data) => game.i18n?.format(key, data) ?? key,
+});
+/** T11: Connections pages are derived state; reconcile rewrites stale ones. */
+lifecycle.contribute({ reconcile: () => connectionsPages.refresh() });
+
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
   available: (name) => registry.isAvailable(name),
@@ -164,6 +183,15 @@ for (const command of [
 ])
   registry.register(command);
 
+// Dev-only commands (spec §14): `__SILK_DEV__` is false in release builds, so they and the
+// fixture/bench code are dropped from dist.
+if (__SILK_DEV__)
+  for (const command of [
+    ...devCoreCommands({ workingCopy }),
+    ...devUiCommands({ run: (name, args) => registry.run(name, args), workingCopy, viewState }),
+  ])
+    registry.register(command);
+
 Hooks.once('init', () => {
   registerSettings((ns, key, data) => game.settings?.register(ns, key as never, data as never));
   registerKeybindings(registry, (ns, action, data) =>
@@ -187,7 +215,13 @@ Hooks.once('ready', async () => {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
   });
-  // Reconcile on load (§7): missed hooks are never replayed, Foundry is re-read.
+  connectionsPages.watch();
+  registerConnectionsPageHooks(connectionsPages, {
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isActiveGM: () => isActiveGM(game as never),
+  });
+  // Reconcile on load (§7): missed hooks are never replayed, Foundry is re-read. Missing
+  // docs first, then the contributors (Connections pages written while Silk was off, …).
   if (isActiveGM(game as never))
     lifecycle.reconcile().catch((error: unknown) => console.error(error));
   showFileBrowseNotice({

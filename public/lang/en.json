@@ -113,6 +113,16 @@
         "out": "Outgoing",
         "in": "Incoming",
         "mutual": "Mutual"
+      },
+      "Sentence": {
+        "directed": "{from} {label} {to}",
+        "directedUnlabelled": "{from} is connected to {to}",
+        "mutual": "{from} and {to} {label}",
+        "mutualUnlabelled": "{from} and {to} are connected",
+        "owns": "{from} owns {to}",
+        "presentAt": "{from} is present at {to}",
+        "locatedIn": "{from} is located in {to}",
+        "takesPlaceAt": "{from} takes place at {to}"
       }
     },
     "Canon": {

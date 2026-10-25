@@ -11,7 +11,7 @@ async function adopt(t: ReturnType<typeof setup>, id: string) {
 
 describe('element.delete (spec §6)', () => {
   it('a Silk-created element: confirm, then its Connections, docs and records go', async () => {
-    const t = setup({ mode: 'immediate' });
+    const t = setup({ mode: 'immediate', connections: true });
     t.settings.confirmDelete = true;
     const alrik = await t.create('person', 'Alrik');
     const inn = await t.create('location', 'Inn');
