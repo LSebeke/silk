@@ -21,6 +21,12 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('KeyS'), none)).toBeUndefined();
   });
 
+  it('r Reveals the selected Node or Connection (y/n confirm)', () => {
+    expect(canvasKey(key('KeyR'), { node: true, edge: false })).toEqual({ kind: 'reveal' });
+    expect(canvasKey(key('KeyR'), { node: false, edge: true })).toEqual({ kind: 'reveal' });
+    expect(canvasKey(key('KeyR'), none)).toBeUndefined();
+  });
+
   it('y/n confirm: y confirms; n, Enter and Escape decline (default n)', () => {
     expect(confirmKey(key('KeyY'))).toBe('yes');
     for (const code of ['KeyN', 'Enter', 'Escape']) expect(confirmKey(key(code))).toBe('no');

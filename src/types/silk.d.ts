@@ -17,6 +17,7 @@ declare module 'fvtt-types/configuration' {
     'silk.materializeMode': 'immediate' | 'onDemand';
     'silk.hoodedImage': string;
     'silk.playerView': object;
+    'silk.revealState': object;
     'silk.viewState': object;
     'silk.detailDrop': boolean;
     'silk.renderBudgetWarning': number;
