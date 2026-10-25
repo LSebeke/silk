@@ -11,7 +11,8 @@ export type CanvasKeyAction =
   | { kind: 'connect' }
   | { kind: 'rename' }
   | { kind: 'editConnection' }
-  | { kind: 'command'; name: 'connection.cycleDirection' | 'connection.cycleType' };
+  | { kind: 'command'; name: 'connection.cycleDirection' | 'connection.cycleType' }
+  | { kind: 'layout'; name: 'canvas.group' | 'canvas.untangle' | 'canvas.undo' };
 
 export interface KeyLike {
   code: string;
@@ -39,6 +40,8 @@ export function canvasKey(
           : undefined;
     return { kind: 'create', class: cls.id, ...(connection ? { connection } : {}) };
   }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyZ')
+    return { kind: 'layout', name: 'canvas.undo' };
   if (e.ctrlKey || e.altKey || e.metaKey) return undefined;
   if (e.code === 'F2')
     return selected.edge
@@ -48,6 +51,8 @@ export function canvasKey(
         : undefined;
   if (e.shiftKey) return undefined;
   if (e.code === 'KeyC' && selected.node) return { kind: 'connect' };
+  if (e.code === 'KeyG' && selected.node) return { kind: 'layout', name: 'canvas.group' };
+  if (e.code === 'KeyU' && selected.node) return { kind: 'layout', name: 'canvas.untangle' };
   if (e.code === 'Tab' && selected.edge)
     return { kind: 'command', name: 'connection.cycleDirection' };
   if (e.code === 'KeyQ' && selected.edge) return { kind: 'command', name: 'connection.cycleType' };

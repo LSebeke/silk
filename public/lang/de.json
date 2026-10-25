@@ -33,7 +33,12 @@
       "canvas": {
         "open": "Weltleinwand öffnen",
         "moveNodes": "Knoten verschieben",
-        "select": "Knoten auswählen"
+        "select": "Knoten auswählen",
+        "group": "Zu Gruppe zusammenfassen",
+        "ungroup": "Gruppe auflösen",
+        "renameGroup": "Gruppe umbenennen",
+        "untangle": "Entwirren",
+        "undo": "Entwirren rückgängig"
       },
       "canon": {
         "create": "Kanon anlegen",
@@ -87,6 +92,10 @@
     "Canvas": {
       "Title": "Weltleinwand",
       "ClassSearch": "Klasse…",
+      "NewGroup": "Gruppe",
+      "Group": "Gruppieren",
+      "Ungroup": "Gruppe auflösen",
+      "Untangle": "Entwirren",
       "ConnectHint": "Ziel-Knoten anklicken oder leere Fläche für einen neuen Knoten. Esc bricht ab.",
       "LabelPlaceholder": "Text…"
     },

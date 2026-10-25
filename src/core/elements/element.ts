@@ -18,6 +18,8 @@ export interface ElementData {
   position: Point;
   /** UUID of the Foundry doc once Materialized (T8). Absent = Ghost. */
   uuid?: string;
+  /** Innermost Visual Group holding the Node (T26, `canvas/groups.ts`). Layout. */
+  group?: string;
   /**
    * Image, Info Blocks and class fields. Once Materialized the Foundry doc owns them
    * (spec §7) and these mirror it (`src/core/materialize`); for a Ghost they are the truth.

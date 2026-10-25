@@ -43,6 +43,19 @@ describe('canvas keys (spec §10.3)', () => {
     });
   });
 
+  it('g groups and u untangles the selection; Ctrl+Z undoes (§10.4, §10.7)', () => {
+    const sel = { node: true, edge: false };
+    expect(canvasKey(key('KeyG'), sel)).toEqual({ kind: 'layout', name: 'canvas.group' });
+    expect(canvasKey(key('KeyU'), sel)).toEqual({ kind: 'layout', name: 'canvas.untangle' });
+    expect(canvasKey(key('KeyG'), none)).toBeUndefined();
+    expect(canvasKey(key('KeyU', { shiftKey: true }), sel)).toBeUndefined();
+    expect(canvasKey(key('KeyZ', { ctrlKey: true }), none)).toEqual({
+      kind: 'layout',
+      name: 'canvas.undo',
+    });
+    expect(canvasKey(key('KeyZ', { ctrlKey: true, shiftKey: true }), none)).toBeUndefined();
+  });
+
   it('c connects from the selected Node', () => {
     expect(canvasKey(key('KeyC'), { node: true, edge: false })).toEqual({ kind: 'connect' });
     expect(canvasKey(key('KeyC'), none)).toBeUndefined();

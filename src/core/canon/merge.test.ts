@@ -242,6 +242,17 @@ describe('3-way merge', () => {
       expect(dataOf(overridden.snapshot, 'a')).toEqual({ name: 'Gareth', position: at(5, 0) });
     });
 
+    it("merges a Node's Visual Group as layout: the incoming side wins", () => {
+      const base = snap(el('a', { name: 'Gareth', position: at(0, 0) }));
+      const ours = snap(el('a', { name: 'Gareth', position: at(0, 0), group: 'g' }));
+      const theirs = snap(el('a', { name: 'Gareth', position: at(0, 0), group: 'h' }));
+      const merge = mergeSnapshots(base, ours, theirs);
+      expect(merge.records.get('a')?.fields).toMatchObject([
+        { field: '/group', change: 'conflict', auto: 'theirs', layout: true },
+      ]);
+      expect(dataOf(resolveMerge(merge, []).snapshot, 'a')?.['group']).toBe('h');
+    });
+
     it('lets a delete win over a move-only edit without prompting', () => {
       const gareth = el('a', { name: 'Gareth', position: at(0, 0) });
       const moved = el('a', { name: 'Gareth', position: at(3, 3) });

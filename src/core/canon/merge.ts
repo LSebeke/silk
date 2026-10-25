@@ -63,11 +63,11 @@ export interface Resolution {
 export const CONNECTION_ENDPOINTS = ['from', 'to'] as const;
 
 /**
- * Layout fields per record kind, each merged as one field. Every field of a
+ * Layout fields per record kind (Node position, Node Visual Group), each merged as one field. Every field of a
  * `layoutGroup` record is layout too, merged per field.
  */
 export const LAYOUT_FIELDS: Partial<Record<RecordKind, readonly string[]>> = {
-  element: ['/position'],
+  element: ['/position', '/group'],
 };
 
 /** Visual Group field holding the parent group id (or null). */
