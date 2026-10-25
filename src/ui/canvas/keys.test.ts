@@ -87,4 +87,11 @@ describe('canvas keys (spec §10.3)', () => {
   it('F2 renames a selected Node', () => {
     expect(canvasKey(key('F2'), { node: true, edge: false })).toEqual({ kind: 'rename' });
   });
+
+  it('Delete deletes the selected Nodes (element.delete confirms)', () => {
+    const node = { node: true, edge: false };
+    expect(canvasKey(key('Delete'), node)).toEqual({ kind: 'delete' });
+    expect(canvasKey(key('Backspace'), node)).toEqual({ kind: 'delete' });
+    expect(canvasKey(key('Delete'), none)).toBeUndefined();
+  });
 });

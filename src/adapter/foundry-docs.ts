@@ -174,6 +174,9 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
         activated: [...activated, { uuid, name }],
       });
     },
+    async unflag(uuid) {
+      await must(uuid).update({ flags: { [`-=${MODULE_ID}`]: null } }, { ...SILK_WRITE });
+    },
     async open(uuid) {
       must(uuid).sheet?.render(true);
     },

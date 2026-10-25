@@ -55,6 +55,11 @@ export interface Owns {
   itemCreated(doc: DocSnapshot): Promise<void>;
   /** Foundry `deleteItem` (not Silk's own write). */
   itemDeleted(doc: DocSnapshot): Promise<void>;
+  /**
+   * The deleted doc is an Item's doc whose recent copy survives: a move, not a deletion, so
+   * T9 Foundry-side deletion must not Unmaterialize it. Ask before `itemDeleted` runs.
+   */
+  isMove(doc: { uuid: string; flags: { silk?: { id?: unknown } } }): boolean;
   /** Foundry `createActor`: embedded Items of a copied actor are copies too. */
   actorCreated(doc: DocSnapshot): Promise<void>;
 }
@@ -240,6 +245,14 @@ export function createOwns(deps: OwnsDeps): Owns {
         copies.set(id, list);
       }
       return serial(() => strip(doc.uuid));
+    },
+
+    isMove(doc) {
+      const id = silkId(doc);
+      if (!id || element(id)?.uuid !== doc.uuid) return false;
+      return (copies.get(id) ?? []).some(
+        (c) => deps.now() - c.at < MOVE_WINDOW_MS && !!docs.get(c.uuid),
+      );
     },
 
     itemDeleted(doc) {

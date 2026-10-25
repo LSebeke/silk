@@ -93,11 +93,13 @@ export function setup(opts: { mode?: MaterializeMode } = {}) {
     await owns.itemCreated(must(docs.get(uuid)));
     return uuid;
   };
-  /** Simulates a user deleting a doc in Foundry, firing deleteItem. */
+  /** Simulates a user deleting a doc in Foundry, firing deleteItem. Returns `isMove`. */
   const deleteItem = async (uuid: string) => {
     const gone = must(docs.get(uuid));
     await docs.delete(uuid);
+    const move = owns.isMove(gone);
     await owns.itemDeleted(gone);
+    return move;
   };
   return {
     registry,

@@ -71,7 +71,8 @@
         "tag": "Add Tag",
         "untag": "Remove Tag",
         "setStatus": "Set Status",
-        "toggleStatus": "Toggle Status"
+        "toggleStatus": "Toggle Status",
+        "delete": "Delete Element"
       },
       "connection": {
         "create": "Connect",
@@ -83,7 +84,8 @@
       },
       "materialize": {
         "elements": "Materialize",
-        "visible": "Materialize visible"
+        "visible": "Materialize visible",
+        "unmaterialize": "Unmaterialize"
       },
       "infoBlock": {
         "create": "Add Info Block",
@@ -227,6 +229,22 @@
       "open": "open",
       "done": "done",
       "failed": "failed"
+    },
+    "Lifecycle": {
+      "Restored": "The Foundry doc of {name} was deleted while Silk was not running. It is a Ghost again, restored from commit {commit}.",
+      "RestoredBadge": "Restored from commit {commit}",
+      "CompanionRestored": "The Companion Journal of {name} was restored from the last commit. Uncommitted Info Block edits are lost.",
+      "DeleteTitle": "Delete elements",
+      "DeleteConfirm": "Delete {names}? Their Connections, Foundry docs and Revelation Map entries are deleted too. Only discarding uncommitted changes undoes this.",
+      "DeleteAdopted": "{count} of them were adopted from existing Foundry docs.",
+      "KeepDoc": "Keep Foundry doc",
+      "DeleteEverything": "Delete everything",
+      "Delete": "Delete",
+      "Cancel": "Cancel",
+      "DontAsk": "Don't ask again",
+      "UnmaterializeTitle": "Unmaterialize",
+      "UnmaterializeRevealed": "{names} is Revealed. Players will lose access until it is Materialized again.",
+      "Unmaterialize": "Unmaterialize"
     }
   }
 }

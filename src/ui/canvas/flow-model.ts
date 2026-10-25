@@ -16,6 +16,8 @@ export interface ElementNodeData extends Record<string, unknown> {
   img?: string;
   /** Stored (non-default) Status (T10); the card shows `statusOf` it. */
   status?: string;
+  /** Reconcile restored this Ghost from that Commit (T9, spec §6). */
+  restoredFrom?: string;
 }
 
 export type ElementNode = Node<ElementNodeData, 'element'>;
@@ -30,7 +32,8 @@ function sameNode(a: ElementNode, b: ElementNode) {
     a.data.name === b.data.name &&
     a.data.ghost === b.data.ghost &&
     a.data.img === b.data.img &&
-    a.data.status === b.data.status
+    a.data.status === b.data.status &&
+    a.data.restoredFrom === b.data.restoredFrom
   );
 }
 
@@ -67,6 +70,7 @@ export function toFlowNodes(
         ghost: isGhost(element),
         ...(element.img ? { img: element.img } : {}),
         ...(element.status ? { status: element.status } : {}),
+        ...(element.restoredFrom ? { restoredFrom: element.restoredFrom } : {}),
       },
     };
     const old = prev.get(element.id);
