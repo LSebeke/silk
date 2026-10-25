@@ -30,6 +30,7 @@
   import ElementCard from './ElementCard.svelte';
   import FilterBar from './FilterBar.svelte';
   import GroupFrame from './GroupFrame.svelte';
+  import { canvasBridge } from './bridge';
   import { pointKind } from './connection-points';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
   import { toFlowEdges, type ConnectionEdge as FlowEdge } from './flow-edges';
@@ -254,6 +255,49 @@
     });
   }
 
+  // Adopt (§6): placement at the viewport centre, flash on a duplicate, drops from Foundry.
+  canvasBridge.center = viewCenter;
+  canvasBridge.flash = (id) => {
+    const card = root?.querySelector<HTMLElement>(`[data-silk-node="${CSS.escape(id)}"]`);
+    if (!card) return;
+    card.classList.remove('silk-flash');
+    void card.offsetWidth;
+    card.classList.add('silk-flash');
+    setTimeout(() => card.classList.remove('silk-flash'), 1600);
+  };
+  onDestroy(() => {
+    if (canvasBridge.center === viewCenter) {
+      delete canvasBridge.center;
+      delete canvasBridge.flash;
+    }
+  });
+  function onDragOver(event: DragEvent) {
+    if (ctx.adopt) event.preventDefault();
+  }
+  function onDrop(event: DragEvent) {
+    if (!ctx.adopt) return;
+    let data: { type?: string; uuid?: string };
+    try {
+      data = JSON.parse(event.dataTransfer?.getData('text/plain') ?? '') as typeof data;
+    } catch {
+      return;
+    }
+    if (!data.uuid) return;
+    event.preventDefault();
+    if (data.type === 'Folder') {
+      void run('adopt.folder', { folderId: data.uuid.replace(/^Folder\./, '') });
+      return;
+    }
+    const connectTo = nodeAt(event);
+    ctx
+      .adopt(data.uuid, {
+        at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+        anchor: local(event),
+        ...(connectTo ? { connectTo } : {}),
+      })
+      .catch(fail);
+  }
+
   function onKeydown(event: KeyboardEvent) {
     const target = event.target as HTMLElement | null;
     if (target?.closest('input, textarea, select, [contenteditable]')) return;
@@ -378,6 +422,8 @@
   bind:this={root}
   tabindex="0"
   onkeydown={onKeydown}
+  ondragover={onDragOver}
+  ondrop={onDrop}
   data-silk-canvas
   data-silk-lod={lod}
   data-silk-connecting={connectFrom}
@@ -528,6 +574,16 @@
     padding: 0 8px;
     font-size: 12px;
     line-height: 20px;
+  }
+  .silk-canvas :global(.silk-flash) {
+    animation: silk-flash 0.4s ease-in-out 4 alternate;
+  }
+  @keyframes silk-flash {
+    to {
+      box-shadow:
+        0 0 0 4px #f5c542,
+        0 0 16px 4px #f5c542;
+    }
   }
   .silk-canvas.connecting :global(.silk-card) {
     cursor: crosshair;

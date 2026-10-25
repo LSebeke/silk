@@ -6,6 +6,7 @@ import type {
   LayoutTween,
   ViewStateStore,
 } from '../../core/canvas';
+import type { Point } from '../../core/elements';
 import type { WorkingCopy } from '../../core/working-copy';
 
 export interface CanvasContext {
@@ -28,6 +29,8 @@ export interface CanvasContext {
   /** Client setting `renderBudgetWarning` (§10.5): warn above this many visible Nodes. */
   renderBudget: number;
   localize(key: string): string;
+  /** Adopt a dropped Foundry doc (§6 Ways in): ends in the Creation Pipeline. */
+  adopt?(uuid: string, options: { at: Point; anchor: Point; connectTo?: string }): Promise<void>;
 }
 
 /** Svelte context key for `CanvasContext` (cards read it). */
