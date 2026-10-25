@@ -26,6 +26,8 @@
     type Status,
   } from '../../core/elements';
   import ClassBox from './ClassBox.svelte';
+  import ContextMenu from './ContextMenu.svelte';
+  import { edgeMenu, nodeMenu, type MenuEntry } from './menu';
   import ConnectionEdge from './ConnectionEdge.svelte';
   import ElementCard from './ElementCard.svelte';
   import FilterBar from './FilterBar.svelte';
@@ -87,6 +89,59 @@
     root?.focus();
     if (yes && ask) void run('element.setStatus', { id: ask.id, status: ask.status });
   }
+
+  // Reveal, y/n confirm with default n (§10.3 `r`): the selected Node or Connection.
+  let revealAsk = $state<
+    { kind: 'element' | 'connection'; id: string; name: string; revealed: boolean } | undefined
+  >();
+  let revealBox: HTMLDivElement | undefined = $state();
+  function askReveal(kind: 'element' | 'connection', id: string) {
+    if (!ctx.available(`reveal.${kind}`)) {
+      ctx.warn(ctx.localize('SILK.Reveal.NeedsAdventure'));
+      return;
+    }
+    const name =
+      kind === 'element'
+        ? (readElement(workingCopy.get(id))?.name ?? id)
+        : ctx.localize('SILK.Reveal.TheConnection');
+    revealAsk = { kind, id, name, revealed: !ctx.reveal.isRevealed(kind, id) };
+    queueMicrotask(() => revealBox?.focus());
+  }
+  function answerReveal(yes: boolean) {
+    const ask = revealAsk;
+    revealAsk = undefined;
+    root?.focus();
+    if (yes && ask) void run(`reveal.${ask.kind}`, { id: ask.id, revealed: ask.revealed });
+  }
+
+  // Context menu (§8 Controls, §10.3): registry commands; for Nodes a class box beside it.
+  const MENU_WIDTH = 184;
+  let menu = $state<
+    { kind: 'node' | 'edge'; id: string; x: number; y: number; entries: MenuEntry[] } | undefined
+  >();
+  const menuDeps = () => ({
+    available: ctx.available,
+    title: ctx.title,
+    isRevealed: ctx.reveal.isRevealed,
+    selection: canvasState.get().selection,
+  });
+  function pickMenu(entry: MenuEntry) {
+    const id = menu?.id;
+    menu = undefined;
+    pipeline.cancel();
+    if (!id) return;
+    if (entry.action === 'status') statusPrompt.ask(id);
+    else if (entry.action === 'rename') {
+      const el = readElement(workingCopy.get(id));
+      if (el) pipeline.rename(id, el.name);
+    } else if (entry.action === 'editConnection') pipeline.editConnection(id);
+    else if (entry.command) void run(entry.command, entry.args);
+    root?.focus();
+  }
+  // A Node menu lives as long as its class box.
+  $effect(() => {
+    if ($pipeline.step !== 'classBox' && menu?.kind === 'node') menu = undefined;
+  });
 
   // Untangle tween (§10.7): from the announced old positions to the records' positions.
   let tween: { from: ReadonlyMap<string, Point>; start: number } | undefined;
@@ -308,6 +363,18 @@
       if (answer) answerStatus(answer === 'yes');
       return;
     }
+    if (revealAsk) {
+      const answer = confirmKey(event);
+      event.preventDefault();
+      event.stopPropagation();
+      if (answer) answerReveal(answer === 'yes');
+      return;
+    }
+    if (event.key === 'Escape' && menu) {
+      menu = undefined;
+      pipeline.cancel();
+      return;
+    }
     if (event.key === 'Escape' && connectFrom) {
       connectFrom = undefined;
       return;
@@ -345,6 +412,10 @@
       case 'status':
         if (node) statusPrompt.ask(node);
         break;
+      case 'reveal':
+        if (edge) askReveal('connection', edge.id);
+        else if (node) askReveal('element', node);
+        break;
       case 'editConnection':
         if (edge) pipeline.editConnection(edge.id);
         break;
@@ -369,6 +440,7 @@
   }
 
   function onPaneClick({ event }: { event: MouseEvent }) {
+    menu = undefined;
     if (!connectFrom) return pipeline.cancel();
     // "New Node" (§10.3 `c`): the class box at the spot, connected to the origin.
     const from = connectFrom;
@@ -380,7 +452,10 @@
     });
   }
 
-  /** Node context menu (§10.3): a class box beside the Node creates a connected Node. */
+  /**
+   * Node context menu (§8 Controls, §10.3): actions, plus a class box to the right of them
+   * that creates a connected Node.
+   */
   function onNodeContextMenu({
     event,
     node,
@@ -391,7 +466,21 @@
     // Inside a frame: create there, as on the canvas (the new Node joins the frame).
     if (node.type === 'frame') return onPaneContextMenu({ event });
     event.preventDefault();
-    pipeline.open({ at: besideNode(node.id), anchor: local(event), from: node.id });
+    const el = readElement(workingCopy.get(node.id));
+    if (!el) return;
+    const at = local(event);
+    menu = { kind: 'node', id: node.id, ...at, entries: nodeMenu(el, menuDeps()) };
+    pipeline.open({
+      at: besideNode(node.id),
+      anchor: { x: at.x + MENU_WIDTH, y: at.y },
+      from: node.id,
+    });
+  }
+
+  function onEdgeContextMenu({ event, edge }: { event: MouseEvent; edge: FlowEdge }) {
+    event.preventDefault();
+    pipeline.cancel();
+    menu = { kind: 'edge', id: edge.id, ...local(event), entries: edgeMenu(edge.id, menuDeps()) };
   }
 
   function onNodeDragStop({ nodes: dragged }: { nodes: (ElementNode | GroupNode)[] }) {
@@ -438,6 +527,7 @@
     onconnectend={onConnectEnd}
     onnodeclick={onNodeClick}
     onnodecontextmenu={onNodeContextMenu}
+    onedgecontextmenu={onEdgeContextMenu}
     initialViewport={saved}
     fitView={!saved}
     minZoom={0.05}
@@ -455,6 +545,37 @@
     <Background gap={40} />
   </SvelteFlow>
   <ClassBox />
+  {#if menu}
+    <ContextMenu
+      entries={menu.entries}
+      x={menu.x}
+      y={menu.y}
+      target={menu.id}
+      localize={ctx.localize}
+      onpick={pickMenu}
+    />
+  {/if}
+  {#if revealAsk}
+    <div
+      class="silk-status-confirm"
+      role="alertdialog"
+      tabindex="-1"
+      bind:this={revealBox}
+      data-silk-reveal-confirm={revealAsk.id}
+    >
+      <span>
+        {ctx
+          .localize(revealAsk.revealed ? 'SILK.Reveal.Confirm' : 'SILK.Reveal.UnrevealConfirm')
+          .replace('{name}', revealAsk.name)}
+      </span>
+      <button type="button" onclick={() => answerReveal(true)} data-silk-action="reveal-yes">
+        {ctx.localize('SILK.Canvas.Yes')}
+      </button>
+      <button type="button" onclick={() => answerReveal(false)} data-silk-action="reveal-no">
+        {ctx.localize('SILK.Canvas.No')}
+      </button>
+    </div>
+  {/if}
   <FilterBar {ctx} result={filtered} />
   {#if selectedAny && !connectFrom}
     <div class="silk-selection-toolbar" data-silk-selection-toolbar>

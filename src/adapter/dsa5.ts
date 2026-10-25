@@ -78,4 +78,19 @@ export const dsa5Mapping: SystemMapping = {
   /** First of `DSA5.statusEffects`; set via `actor.addCondition('dead')` (§7 Dead). */
   deadEffect: 'dead',
   questTitleUpdate: (questKey, title) => ({ [`system.quests.${questKey}.title`]: title }),
+  questVisibility(questKey, pageSystem, visible, blocks) {
+    const quest = (pageSystem as Dsa5QuestlogSystem | undefined)?.quests?.[questKey];
+    const at = `system.quests.${questKey}`;
+    const out: Record<string, unknown> = {};
+    if (quest?.visible !== visible) out[`${at}.visible`] = visible;
+    const linked = quest?.linkedPages ?? {};
+    for (const b of blocks) {
+      const have = linked[b.id];
+      if (have?.uuid !== b.uuid || have.visible !== b.visible || have.sort !== b.sort)
+        out[`${at}.linkedPages.${b.id}`] = { uuid: b.uuid, visible: b.visible, sort: b.sort };
+    }
+    for (const key of Object.keys(linked))
+      if (!blocks.some((b) => b.id === key)) out[`${at}.linkedPages.-=${key}`] = null;
+    return out;
+  },
 };

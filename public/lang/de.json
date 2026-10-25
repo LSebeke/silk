@@ -73,7 +73,8 @@
         "untag": "Tag entfernen",
         "setStatus": "Status setzen",
         "toggleStatus": "Status umschalten",
-        "delete": "Element löschen"
+        "delete": "Element löschen",
+        "openDetail": "Element-Details"
       },
       "connection": {
         "create": "Verbinden",
@@ -103,6 +104,13 @@
         "createScene": "Szene erstellen",
         "restoreScene": "Szene aus letztem Commit wiederherstellen",
         "viewScene": "Szene ansehen"
+      },
+      "reveal": {
+        "element": "Aufdecken",
+        "appearance": "Aussehen aufdecken",
+        "infoBlock": "Infoblock aufdecken",
+        "connection": "Verbindung aufdecken",
+        "showToPlayers": "Den Spielern zeigen"
       },
       "adopt": {
         "doc": "In Silk übernehmen",
@@ -299,6 +307,23 @@
       "CreateOverview": "Übersichtsszene erstellen",
       "None": "Keine Szene",
       "Restore": "Aus letztem Commit wiederherstellen"
+    },
+    "Reveal": {
+      "Reveal": "Aufdecken",
+      "Unreveal": "Verbergen",
+      "RevealAppearance": "Aussehen aufdecken",
+      "HideAppearance": "Aussehen verbergen",
+      "Appearance": "Aussehen (Bild)",
+      "NeedsAdventure": "Starte ein Abenteuer, um aufzudecken.",
+      "TheConnection": "diese Verbindung",
+      "Confirm": "{name} den Spielern aufdecken?",
+      "UnrevealConfirm": "{name} wieder vor den Spielern verbergen?"
+    },
+    "Detail": {
+      "Title": "Element-Details",
+      "InfoBlocks": "Infoblöcke",
+      "Connections": "Verbindungen",
+      "Gone": "Dieses Element existiert nicht mehr."
     },
     "Adopt": {
       "Adopt": "In Silk übernehmen",

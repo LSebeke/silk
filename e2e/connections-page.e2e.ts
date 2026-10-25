@@ -1,6 +1,7 @@
 /** Connections journal page against real Foundry + dsa5 (spec §4 Journal layout, §5 In journals). */
 /* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate over untyped Foundry docs */
 import type { Page } from '@playwright/test';
+import { ensureAdventure } from './adventure';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
@@ -18,6 +19,8 @@ async function ready(page: Page) {
     }
   });
   await page.evaluate(() => game.settings?.set('silk', 'materializeMode', 'immediate'));
+  // The page lists Revealed Connections only (§5, §8): Reveal needs an Adventure.
+  await ensureAdventure(page);
 }
 
 /** The element's Connections page content (journal, or Companion Journal for actors/items). */
@@ -49,6 +52,9 @@ test('Connections pages follow create, edit, flip and delete on both endpoints',
     to: inn,
     label: 'runs',
   });
+  // Not Revealed yet: players see no sentence.
+  await expect.poll(async () => (await connectionsPage(gm, inn))?.content).toBe('');
+  await api(gm, 'reveal.connection', { id, revealed: true });
   for (const end of [alrik, inn])
     await expect
       .poll(async () => (await connectionsPage(gm, end))?.content)
@@ -63,7 +69,12 @@ test('Connections pages follow create, edit, flip and delete on both endpoints',
 
   // Behavioural phrase, localised (EN in the test world).
   const sword = await create(gm, 'item', 'Sword');
-  await api(gm, 'connection.create', { from: alrik, to: sword, type: 'owns' });
+  const owns = await api<{ id: string }>(gm, 'connection.create', {
+    from: alrik,
+    to: sword,
+    type: 'owns',
+  });
+  await api(gm, 'reveal.connection', { id: owns.id, revealed: true });
   await expect
     .poll(async () => (await connectionsPage(gm, sword))?.content)
     .toBe('<ul><li>Alrik owns Sword</li></ul>');
@@ -73,8 +84,9 @@ test('Connections pages follow create, edit, flip and delete on both endpoints',
   await expect
     .poll(async () => (await connectionsPage(gm, alrik))?.content)
     .toBe('<ul><li>Alrik owns Sword</li></ul>');
-  // Pages stay NONE until Reveal (§8, T16).
-  expect((await connectionsPage(gm, alrik))?.ownership).toBe(0);
+  // OBSERVER from the first Revealed Connection on; NONE again without one (§8).
+  expect((await connectionsPage(gm, alrik))?.ownership).toBe(2);
+  await expect.poll(async () => (await connectionsPage(gm, inn))?.ownership).toBe(0);
 });
 
 test('a hand edit of the Connections page is regenerated', async ({ gm }) => {
@@ -82,7 +94,13 @@ test('a hand edit of the Connections page is regenerated', async ({ gm }) => {
   await ready(gm);
   const a = await create(gm, 'location', 'Gareth');
   const b = await create(gm, 'location', 'Punin');
-  await api(gm, 'connection.create', { from: a, to: b, direction: 'mutual', label: 'trade' });
+  const { id } = await api<{ id: string }>(gm, 'connection.create', {
+    from: a,
+    to: b,
+    direction: 'mutual',
+    label: 'trade',
+  });
+  await api(gm, 'reveal.connection', { id, revealed: true });
   const expected = '<ul><li>Gareth and Punin trade</li></ul>';
   await expect.poll(async () => (await connectionsPage(gm, b))?.content).toBe(expected);
   await gm.evaluate(async (elementId) => {

@@ -41,6 +41,11 @@ export const SETTINGS: Record<string, SettingData> = {
   },
   /** Internal, written by the active GM only (§9). */
   playerView: { scope: 'world', config: false, type: Object, default: {} },
+  /**
+   * Internal, GM-written (§8 Truth): the World's reveal state, the Revelation Map last
+   * applied here. Stays as the last Adventure left it under main. Player View derives from it.
+   */
+  revealState: { scope: 'world', config: false, type: Object, default: {} },
   /** Internal: pan/zoom, last view, filters, Focus Pins (§10.1). */
   viewState: { scope: 'world', config: false, type: Object, default: {} },
   detailDrop: {

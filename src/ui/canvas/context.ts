@@ -7,6 +7,7 @@ import type {
   ViewStateStore,
 } from '../../core/canvas';
 import type { Point } from '../../core/elements';
+import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
 
 export interface CanvasContext {
@@ -31,6 +32,12 @@ export interface CanvasContext {
   localize(key: string): string;
   /** Adopt a dropped Foundry doc (§6 Ways in): ends in the Creation Pipeline. */
   adopt?(uuid: string, options: { at: Point; anchor: Point; connectTo?: string }): Promise<void>;
+  /** Localised command title (context menus, §8 Controls). */
+  title(name: string): string;
+  /** The World's reveal state (eye toggles, menus; §8). Svelte-store `subscribe`. */
+  reveal: Pick<Reveal, 'subscribe' | 'isRevealed'>;
+  /** Warning toast. */
+  warn(message: string): void;
 }
 
 /** Svelte context key for `CanvasContext` (cards read it). */
