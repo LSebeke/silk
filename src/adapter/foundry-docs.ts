@@ -23,6 +23,7 @@ export interface FoundryDoc {
   createEmbeddedDocuments(name: string, data: object[], options?: object): Promise<unknown>;
   updateEmbeddedDocuments(name: string, data: object[], options?: object): Promise<unknown>;
   deleteEmbeddedDocuments(name: string, ids: string[], options?: object): Promise<unknown>;
+  delete(options?: object): Promise<unknown>;
   sheet?: { render(force?: boolean): unknown } | null;
 }
 
@@ -42,7 +43,9 @@ export interface FoundryApi {
 }
 
 /** Source data (`toObject` is already a copy) plus identity; `flags.silk` always present. */
-function snapshot(doc: FoundryDoc | null | undefined): DocSnapshot | undefined {
+export function snapshot(
+  doc: Pick<FoundryDoc, 'uuid' | 'documentName' | 'toObject'> | null | undefined,
+): DocSnapshot | undefined {
   if (!doc) return undefined;
   const data = doc.toObject() as DocData;
   return {
@@ -120,6 +123,12 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
     },
     async deletePages(uuid, ids) {
       await must(uuid).deleteEmbeddedDocuments('JournalEntryPage', ids, { ...SILK_WRITE });
+    },
+    async delete(uuid) {
+      await must(uuid).delete({ ...SILK_WRITE });
+    },
+    async unflag(uuid) {
+      await must(uuid).update({ flags: { [`-=${MODULE_ID}`]: null } }, { ...SILK_WRITE });
     },
     async open(uuid) {
       must(uuid).sheet?.render(true);

@@ -101,6 +101,14 @@ export function createMemoryDocs(): MemoryDocs {
       const doc = must(uuid);
       doc.pages = (doc.pages ?? []).filter((p) => !ids.includes(p._id));
     },
+    async delete(uuid) {
+      must(uuid);
+      docs.delete(uuid);
+    },
+    async unflag(uuid) {
+      const doc = must(uuid);
+      doc.flags = { ...doc.flags, silk: {} };
+    },
     async open(uuid) {
       must(uuid);
       opened.push(uuid);

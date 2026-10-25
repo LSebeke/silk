@@ -87,6 +87,10 @@ export interface FoundryDocs {
   createCategories(uuid: string, categories: CategoryData[]): Promise<void>;
   updatePage(uuid: string, pageId: string, data: Record<string, unknown>): Promise<void>;
   deletePages(uuid: string, pageIds: string[]): Promise<void>;
+  /** Deletes the doc (Silk write: Silk's hooks skip it). */
+  delete(uuid: string): Promise<void>;
+  /** Removes `flags.silk` from the doc (element delete, Keep Foundry doc, §6). */
+  unflag(uuid: string): Promise<void>;
   /** Opens the doc's sheet. */
   open(uuid: string): Promise<void>;
 }

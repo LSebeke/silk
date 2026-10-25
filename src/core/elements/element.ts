@@ -30,6 +30,10 @@ export interface ElementData {
   fields?: ClassFields;
   /** GM-only Tags, never shown to players (§4). Silk-owned. */
   tags?: string[];
+  /** Adopted from an existing Foundry doc (T14), not created by Silk: delete can keep the doc (§6). */
+  adopted?: boolean;
+  /** Its doc vanished while Silk wasn't listening: reconcile restored it from this Commit (§6). */
+  restoredFrom?: string;
 }
 
 /** One Info Block = one text `JournalEntryPage`; `_id` is the page id once Materialized. */

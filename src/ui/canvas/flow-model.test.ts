@@ -35,6 +35,21 @@ describe('flow model', () => {
     ]);
   });
 
+  it('a Ghost restored by reconcile carries the Commit it came from', () => {
+    const restored = elementRecord('el-r', {
+      class: 'person',
+      name: 'R',
+      position: { x: 0, y: 0 },
+      restoredFrom: 'abcdef0123',
+    });
+    expect(toFlowNodes(records(restored), [], [])[0]?.data).toEqual({
+      class: 'person',
+      name: 'R',
+      ghost: true,
+      restoredFrom: 'abcdef0123',
+    });
+  });
+
   it('reuses unchanged Node objects so Svelte Flow keeps their measurements', () => {
     const first = toFlowNodes(records(alrik, gareth), [], []);
     const measured = first.map((n) => ({ ...n, measured: { width: 190, height: 78 } }));

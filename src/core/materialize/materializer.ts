@@ -34,6 +34,7 @@ import {
   missingLayout,
   planDocs,
   readBack,
+  type DocPlan,
   type LayoutContext,
 } from './layout';
 import type { DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
@@ -64,6 +65,13 @@ export interface MaterializerDeps {
    * the name step (`afterPipeline`) instead of running inside `element.create`.
    */
   deferImmediate?(): boolean;
+  /** Create data from an Unmaterialize snapshot, if the element has one (T9 `lifecycle.ts`). */
+  restorePlan?(
+    element: StoryElement,
+    folders: { main: string; companion?: string },
+  ): DocPlan | undefined;
+  /** After a Materialize created the docs (T9: contributors restore ownership, Event Scene). */
+  afterMaterialize?(id: string): Promise<void>;
 }
 
 export interface Materializer {
@@ -162,12 +170,14 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const companion = hasCompanion(el.class)
       ? await docs.ensureFolder('JournalEntry', 'companions', folderName('companions'))
       : undefined;
-    const plan = planDocs(el, companion ? { main, companion } : { main }, ctx);
+    const folders = companion ? { main, companion } : { main };
+    const plan = deps.restorePlan?.(el, folders) ?? planDocs(el, folders, ctx);
     // Companion first: the doc's flag points at it.
     if (plan.companion) await docs.create('JournalEntry', plan.companion);
     const uuid = await docs.create(plan.documentName, plan.main);
     await write(id, { uuid });
     await sync(id);
+    await deps.afterMaterialize?.(id);
     return uuid;
   }
 

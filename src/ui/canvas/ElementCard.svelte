@@ -74,6 +74,18 @@
     {:else}
       <div class="title" data-silk-node-title>{data.name}</div>
     {/if}
+    {#if data.restoredFrom}
+      <div
+        class="restored"
+        data-silk-restored={data.restoredFrom}
+        title={ctx
+          .localize('SILK.Lifecycle.RestoredBadge')
+          .replace('{commit}', data.restoredFrom.slice(0, 8))}
+      >
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        {data.restoredFrom.slice(0, 8)}
+      </div>
+    {/if}
   </div>
   <!-- Connection Points (§10.2): out/in/mutual on all four sides; dragging one out connects. -->
   {#each CONNECTION_POINTS as point (point.id)}
@@ -108,6 +120,10 @@
   }
   .silk-card.selected {
     outline: 2px solid #2b6cb0;
+  }
+  .restored {
+    font-size: 0.75em;
+    opacity: 0.8;
   }
   .silk-card.ghost {
     opacity: 0.55;
