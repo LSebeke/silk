@@ -3,7 +3,8 @@
  * Connections between them, centred on the selection's centroid. dagre loads on first use
  * so it stays out of the entry bundle.
  */
-import { CONNECTION_ENDPOINTS, type Snapshot } from '../canon';
+import type { Snapshot } from '../canon';
+import { readConnection } from '../connections/connection';
 import type { Point } from '../elements/element';
 import { NODE_SIZE } from './groups';
 
@@ -18,14 +19,11 @@ export async function untangleLayout(
   graph.setDefaultEdgeLabel(() => ({}));
   const selected = new Set(ids);
   for (const id of ids) graph.setNode(id, { ...NODE_SIZE });
-  const [fromKey, toKey] = CONNECTION_ENDPOINTS;
   for (const record of records.values()) {
-    if (record.kind !== 'connection') continue;
-    const from = record.data[fromKey];
-    const to = record.data[toKey];
-    if (typeof from !== 'string' || typeof to !== 'string') continue;
-    if (from === to || !selected.has(from) || !selected.has(to)) continue;
-    graph.setEdge(from, to, {}, record.id);
+    const c = readConnection(record);
+    // A mutual Connection's from/to is just an order; it still ranks left to right.
+    if (!c || c.from === c.to || !selected.has(c.from) || !selected.has(c.to)) continue;
+    graph.setEdge(c.from, c.to, {}, c.id);
   }
   layout(graph);
 

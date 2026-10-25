@@ -13,4 +13,24 @@ export const canonCommands: Command[] = [
       await (existing ?? new CanonWindow()).render({ force: true });
     },
   },
+  // Portability (spec §11.6). Lazy chunk: zip support stays out of the entry bundle.
+  {
+    name: 'canon.exportBackup',
+    title: 'SILK.Commands.canon.exportBackup',
+    available: (ctx) => ctx.isGM,
+    run: async () => (await import('./portability')).runExportBackup(),
+  },
+  {
+    name: 'canon.exportShare',
+    title: 'SILK.Commands.canon.exportShare',
+    available: (ctx) => ctx.isGM,
+    run: async (args: { commit: string }) => (await import('./portability')).runExportShare(args),
+  },
+  {
+    name: 'canon.import',
+    title: 'SILK.Commands.canon.import',
+    available: (ctx) => ctx.isGM,
+    run: async (args: { file: Blob | ArrayBuffer | Uint8Array; asCopy?: boolean }) =>
+      (await import('./portability')).runImport(args),
+  },
 ];

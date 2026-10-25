@@ -19,6 +19,7 @@ import {
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
 import { campaignCommands } from './core/campaigns/commands';
+import { connectionCommands, connectOnCreate } from './core/connections';
 import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
 import { canonCommands } from './ui/canon/commands';
@@ -42,6 +43,7 @@ const viewState = createViewState({
 });
 /** `element.create` hooks: T7 (Connection to `from`) and T8 (immediate Materialize) push here. */
 const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
+afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
 /** T26: a Node created inside a Visual Group frame joins it. */
 afterCreate.push(joinFrameOnCreate(workingCopy));
 /** Untangle tween: layout commands announce old positions, the canvas animates. */
@@ -61,6 +63,7 @@ const canvasContext = (): CanvasContext => ({
 
 for (const command of [
   ...elementCommands({ workingCopy, newId: () => foundry.utils.randomID(16), afterCreate }),
+  ...connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) }),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
   ...layoutCommands({
     workingCopy,

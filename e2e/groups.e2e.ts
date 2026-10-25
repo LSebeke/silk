@@ -23,7 +23,7 @@ async function openWith(page: Page, records: CanonRecord[]) {
       return false;
     }
   });
-  await page.evaluate(async (rs) => {
+  await page.evaluate(async (json: string) => {
     // dsa5 popups, dialogs and Foundry's welcome tour swallow pointer input.
     for (const app of [...foundry.applications.instances.values()])
       if (app.element?.classList.contains('dsa5')) await app.close();
@@ -34,9 +34,9 @@ async function openWith(page: Page, records: CanonRecord[]) {
     await foundry.applications.instances.get('silk-canvas')?.close();
     const wc = game.modules?.get('silk')?.session?.().workingCopy;
     await wc?.delete([...(wc.records().keys() ?? [])]);
-    await wc?.set(rs);
+    await wc?.set(JSON.parse(json));
     await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
-  }, records);
+  }, JSON.stringify(records));
   await api(page, 'canvas.open');
   await expect(page.locator('[data-silk-canvas]')).toBeVisible();
 }
@@ -49,7 +49,7 @@ const el = (id: string, name: string, x: number, y: number): CanonRecord => ({
 const link = (id: string, from: string, to: string): CanonRecord => ({
   kind: 'connection',
   id,
-  data: { from, to },
+  data: { from, to, type: 'free', direction: 'directed', label: '' },
 });
 
 async function boxOf(locator: Locator) {

@@ -28,7 +28,7 @@ const group = (id: string, data: JsonObject): CanonRecord => ({ kind: 'layoutGro
 const link = (id: string, from: string, to: string): CanonRecord => ({
   kind: 'connection',
   id,
-  data: { from, to },
+  data: { from, to, type: 'free', direction: 'directed', label: '' },
 });
 const frame = (id: string, parent: string | null, x: number, y: number, w: number, h: number) =>
   group(id, { label: id, parent, position: { x, y }, size: { width: w, height: h } });
