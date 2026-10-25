@@ -63,7 +63,13 @@
       },
       "element": {
         "create": "Element erstellen",
-        "rename": "Element umbenennen"
+        "rename": "Element umbenennen",
+        "setImage": "Bild setzen",
+        "setFields": "Klassenfelder setzen",
+        "changeClass": "Klasse ändern",
+        "openSheet": "Bogen öffnen",
+        "tag": "Tag hinzufügen",
+        "untag": "Tag entfernen"
       },
       "connection": {
         "create": "Verbinden",
@@ -72,6 +78,15 @@
         "cycleType": "Verbindungsart wechseln",
         "flip": "Verbindung umkehren",
         "delete": "Verbindung löschen"
+      },
+      "materialize": {
+        "elements": "Materialisieren",
+        "visible": "Sichtbare materialisieren"
+      },
+      "infoBlock": {
+        "create": "Infoblock hinzufügen",
+        "edit": "Infoblock bearbeiten",
+        "delete": "Infoblock löschen"
       }
     },
     "Canvas": {
@@ -151,6 +166,40 @@
       "event": "Ereignis",
       "quest": "Quest",
       "note": "Notiz"
+    },
+    "InfoBlock": {
+      "Appearance": "Aussehen",
+      "Personality": "Persönlichkeit",
+      "Secrets": "Geheimnisse",
+      "Description": "Beschreibung",
+      "Overview": "Überblick",
+      "Setup": "Ausgangslage",
+      "Outcome": "Ausgang",
+      "Hook": "Aufhänger",
+      "Resolution": "Auflösung",
+      "New": "Neuer Block"
+    },
+    "Layout": {
+      "Cover": "Titelbild",
+      "Connections": "Verbindungen",
+      "PlayerNotes": "Spielernotizen"
+    },
+    "Folder": {
+      "person": "Personen",
+      "creature": "Kreaturen",
+      "playerCharacter": "Spielercharaktere",
+      "location": "Orte",
+      "faction": "Fraktionen",
+      "item": "Gegenstände",
+      "event": "Ereignisse",
+      "quest": "Quests",
+      "note": "Notizen",
+      "companions": "Silk-Begleitjournale"
+    },
+    "Materialize": {
+      "Implicit": "{name} materialisiert.",
+      "VisibleTitle": "Sichtbare materialisieren",
+      "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen."
     }
   }
 }

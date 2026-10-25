@@ -53,7 +53,13 @@
   data-silk-ghost={data.ghost ? '' : undefined}
 >
   <div class="block-title">{data.name}</div>
-  <img class="portrait" src={cls?.icon} alt="" draggable="false" />
+  <img
+    class="portrait"
+    class:icon={!data.img}
+    src={data.img ?? cls?.icon}
+    alt=""
+    draggable="false"
+  />
   <div class="body">
     <div class="cls">{ctx.localize(classLabelKey(data.class))}</div>
     {#if naming}
@@ -111,9 +117,12 @@
     flex: none;
     width: 48px;
     height: 48px;
-    padding: 4px;
     border: 0;
     border-radius: 4px;
+    object-fit: cover;
+  }
+  .portrait.icon {
+    padding: 4px;
     background: var(--silk-class);
   }
   .body {

@@ -20,6 +20,29 @@ export interface ElementData {
   uuid?: string;
   /** Innermost Visual Group holding the Node (T26, `canvas/groups.ts`). Layout. */
   group?: string;
+  /**
+   * Image, Info Blocks and class fields. Once Materialized the Foundry doc owns them
+   * (spec §7) and these mirror it (`src/core/materialize`); for a Ghost they are the truth.
+   */
+  img?: string;
+  infoBlocks?: InfoBlock[];
+  /** Class fields (§4): only those carrying a mechanic, e.g. Person `merchantType`. */
+  fields?: ClassFields;
+  /** GM-only Tags, never shown to players (§4). Silk-owned. */
+  tags?: string[];
+}
+
+/** One Info Block = one text `JournalEntryPage`; `_id` is the page id once Materialized. */
+export interface InfoBlock {
+  _id: string;
+  name: string;
+  /** HTML. */
+  text: string;
+}
+
+export interface ClassFields {
+  /** Person: mirrors DSA5 `system.merchant.merchantType`. */
+  merchantType?: string;
 }
 
 export interface StoryElement extends ElementData {
