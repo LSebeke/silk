@@ -267,6 +267,18 @@ describe('Truth: World ownership mirrored in the Revelation Map', () => {
     expect(t.level(page(t.doc(b), t.doc(b).flags.silk.cover))).toBe(NONE);
   });
 
+  it('reconcile under main: the World state follows ownership, no Campaign map is written', async () => {
+    const t = setup();
+    const a = await materialized(t, 'location', 'A');
+    await t.run('reveal.element', { id: a });
+    t.setCampaign(null);
+    t.maps.clear();
+    t.doc(a).ownership = { default: NONE };
+    await t.lifecycle.reconcile();
+    expect(t.world().elements).toEqual([]);
+    expect(t.maps.size).toBe(0);
+  });
+
   it('reconcile keeps map entries of Ghosts (Revealed again when Materialized)', async () => {
     const t = setup();
     const ghost = await t.create('location', 'Ghost');

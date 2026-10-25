@@ -314,18 +314,13 @@ export function createReveal(deps: RevealDeps): Reveal {
     },
     reconcile: () =>
       serial(async () => {
-        const map = fromOwnership(state);
+        // Ghosts keep their map entries; Materialized elements follow ownership. Under main
+        // the World state is the base (no Campaign map to write).
         const campaign = deps.adventure() ? await deps.campaign.current() : null;
-        if (campaign) {
-          const stored = await deps.campaign.read(campaign);
-          // Ghosts keep their map entries; Materialized elements follow ownership.
-          const merged = fromOwnership(stored);
-          if (JSON.stringify(merged) !== JSON.stringify(stored))
-            await deps.campaign.write(campaign, merged);
-          await setWorld(merged);
-          await applyAll(merged);
-          return;
-        }
+        const stored = campaign ? await deps.campaign.read(campaign) : state;
+        const map = fromOwnership(stored);
+        if (campaign && JSON.stringify(map) !== JSON.stringify(stored))
+          await deps.campaign.write(campaign, map);
         await setWorld(map);
         await applyAll(map);
       }),
