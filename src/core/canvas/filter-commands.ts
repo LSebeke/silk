@@ -14,6 +14,7 @@ import {
   type FilterDimension,
   type FilterResult,
 } from './filters';
+import { FOCUS_SEEDS, type Focus } from './focus';
 import type { ViewState, ViewStateStore } from './view-state';
 
 /** Revealed dimension (§8): the Campaign's Revelation Map under an Adventure, else ownership. */
@@ -65,8 +66,10 @@ export interface CanvasFilterDeps {
   workingCopy(): WorkingCopy;
   viewState: ViewStateStore;
   revealed: RevealedSource;
-  /** N of the N-hop dimension (Focus View, T24). */
+  /** N of the N-hop dimension; default `focus.hops()`. */
   hops?(): number;
+  /** Focus View (§10.6): live seeds for `FOCUS_SEEDS`, Focus Pins always shown. */
+  focus?: Pick<Focus, 'seeds' | 'hops' | 'pins' | 'subscribe'>;
 }
 
 export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
@@ -85,13 +88,18 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
       }
     }
     const view = current();
-    const hops = deps.hops?.();
-    const key = JSON.stringify([view.filters, view.expanded, hops]);
+    const hops = deps.hops?.() ?? deps.focus?.hops();
+    let filters = view.filters ?? {};
+    // Focus View: `FOCUS_SEEDS` stays in (matches no element) so no seeds = nothing matches.
+    if (deps.focus && filters.hops?.includes(FOCUS_SEEDS))
+      filters = { ...filters, hops: [...filters.hops, ...deps.focus.seeds()] };
+    const include = [...(view.expanded ?? []), ...(deps.focus?.pins() ?? [])];
+    const key = JSON.stringify([filters, include, hops]);
     if (cached?.key === key && watching) return cached.result;
     const next = applyFilters(deps.workingCopy().records(), {
-      filters: view.filters ?? {},
+      filters,
       revealed: (e) => deps.revealed.isRevealed(e),
-      include: view.expanded ?? [],
+      include,
       ...(hops !== undefined ? { hops } : {}),
     });
     if (watching) cached = { key, result: next };
@@ -105,6 +113,12 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
     for (const s of subscribers) s(r);
   }
   deps.revealed.subscribe(changed);
+  // "+N" extras clear on a Scene change (§10.6).
+  deps.focus?.subscribe((reason) =>
+    reason === 'scene' && current().expanded?.length
+      ? void save({ expanded: [] }).catch((error: unknown) => console.error(error))
+      : changed(),
+  );
 
   /** Unsaved filter changes: the canvas follows at once, not after the setting round trip. */
   let pending: FilterView | undefined;

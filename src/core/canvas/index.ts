@@ -7,3 +7,4 @@ export * from './layout-commands';
 export * from './tween';
 export * from './filters';
 export * from './filter-commands';
+export * from './focus';

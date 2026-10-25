@@ -21,6 +21,11 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('KeyS'), none)).toBeUndefined();
   });
 
+  it('p pins/unpins the selected Nodes (Focus Pin)', () => {
+    expect(canvasKey(key('KeyP'), { node: true, edge: false })).toEqual({ kind: 'pin' });
+    expect(canvasKey(key('KeyP'), none)).toBeUndefined();
+  });
+
   it('r Reveals the selected Node or Connection (y/n confirm)', () => {
     expect(canvasKey(key('KeyR'), { node: true, edge: false })).toEqual({ kind: 'reveal' });
     expect(canvasKey(key('KeyR'), { node: false, edge: true })).toEqual({ kind: 'reveal' });

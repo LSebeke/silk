@@ -20,12 +20,16 @@ export interface ElementNodeData extends Record<string, unknown> {
   restoredFrom?: string;
   /** Neighbours hidden by Canvas Filters ("+N" badge, §10.5). */
   hidden?: number;
+  /** Focus Pin (§10.6). */
+  pinned?: boolean;
 }
 
 /** What Canvas Filters let through (`FilterResult`). */
 export interface NodeFilter {
   visible: ReadonlySet<string>;
   badges: ReadonlyMap<string, number>;
+  /** Focus Pins (§10.6). */
+  pinned?: ReadonlySet<string>;
 }
 
 export type ElementNode = Node<ElementNodeData, 'element'>;
@@ -42,7 +46,8 @@ function sameNode(a: ElementNode, b: ElementNode) {
     a.data.img === b.data.img &&
     a.data.status === b.data.status &&
     a.data.restoredFrom === b.data.restoredFrom &&
-    a.data.hidden === b.data.hidden
+    a.data.hidden === b.data.hidden &&
+    a.data.pinned === b.data.pinned
   );
 }
 
@@ -83,6 +88,7 @@ export function toFlowNodes(
         ...(element.status ? { status: element.status } : {}),
         ...(element.restoredFrom ? { restoredFrom: element.restoredFrom } : {}),
         ...(hidden ? { hidden } : {}),
+        ...(filter?.pinned?.has(element.id) ? { pinned: true } : {}),
       },
     };
     const old = prev.get(element.id);
