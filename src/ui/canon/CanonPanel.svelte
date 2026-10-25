@@ -3,10 +3,12 @@
 
   let {
     overview,
+    merging = false,
     run,
     t,
   }: {
     overview: CanonOverview;
+    merging?: boolean;
     run: (name: string, args?: object) => Promise<void>;
     t: (key: string) => string;
   } = $props();
@@ -111,6 +113,12 @@
           </button>
         </form>
         {#if overview.dirty}<p class="hint">{t('SILK.Canon.StartNeedsClean')}</p>{/if}
+      {:else if overview.checkout?.kind === 'adventure'}
+        <div class="row">
+          <button type="button" onclick={() => run('adventure.end')} data-silk-adventure-end>
+            {merging ? t('SILK.Merge.Resume') : t('SILK.Commands.adventure.end')}
+          </button>
+        </div>
       {/if}
       <ul data-silk-adventures>
         {#each overview.adventures as adventure (adventure.id)}

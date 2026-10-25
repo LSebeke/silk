@@ -3,6 +3,7 @@ import type { DeepPartial } from 'fvtt-types/utils';
 import { getSession } from '../../adapter/session';
 import { MODULE_ID } from '../../constants';
 import type { CanonOverview } from '../../core/campaigns';
+import { MERGE_DRAFT } from '../../core/merge';
 import { SvelteApplication } from '../SvelteApplication.svelte';
 import CanonPanel from './CanonPanel.svelte';
 
@@ -10,6 +11,8 @@ type RenderOptions = foundry.applications.api.ApplicationV2.RenderOptions;
 
 export interface CanonPanelProps extends Record<string, unknown> {
   overview: CanonOverview;
+  /** A merge draft is open (End Adventure started): offer to resume it. */
+  merging: boolean;
   /** Runs a command, reports errors, refreshes the window. */
   run(name: string, args?: object): Promise<void>;
   t(key: string): string;
@@ -37,7 +40,7 @@ export class CanonWindow extends SvelteApplication<CanonPanelProps> {
   protected override async _renderHTML(): Promise<CanonPanelProps> {
     this.#overview = await getSession().campaigns.overview();
     this.#unwatch ??= getSession().workingCopy.watch((change) => {
-      if (change.binding) void this.render();
+      if (change.binding || change.meta?.includes(MERGE_DRAFT)) void this.render();
     });
     return this.getProps();
   }
@@ -45,6 +48,7 @@ export class CanonWindow extends SvelteApplication<CanonPanelProps> {
   protected getProps(): CanonPanelProps {
     return {
       overview: this.#overview,
+      merging: getSession().workingCopy.meta(MERGE_DRAFT) !== undefined,
       run: async (name, args) => {
         try {
           const api = game.modules?.get(MODULE_ID)?.api;

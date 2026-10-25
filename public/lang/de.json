@@ -60,7 +60,8 @@
         "reopen": "Wieder öffnen"
       },
       "adventure": {
-        "start": "Abenteuer starten"
+        "start": "Abenteuer starten",
+        "end": "Abenteuer beenden"
       },
       "element": {
         "create": "Element erstellen",
@@ -111,6 +112,12 @@
         "infoBlock": "Infoblock aufdecken",
         "connection": "Verbindung aufdecken",
         "showToPlayers": "Den Spielern zeigen"
+      },
+      "merge": {
+        "nextConflict": "Nächster Konflikt",
+        "pick": "Diesen Wert übernehmen",
+        "confirm": "In den Kanon übernehmen",
+        "cancel": "Zusammenführen abbrechen"
       },
       "adopt": {
         "doc": "In Silk übernehmen",
@@ -324,6 +331,45 @@
       "InfoBlocks": "Infoblöcke",
       "Connections": "Verbindungen",
       "Gone": "Dieses Element existiert nicht mehr."
+    },
+    "Merge": {
+      "Title": "Zusammenführen",
+      "Heading": "Abenteuer zusammenführen",
+      "Into": "in den Kanon",
+      "Base": "Basis (Abenteuerbeginn)",
+      "CanonNow": "Kanon jetzt",
+      "Adventure": "Abenteuer",
+      "Result": "Ergebnis",
+      "Field": "Feld",
+      "ResultHint": "Der zusammengeführte Kanon, wie er aussehen wird.",
+      "ShowCanonOnly": "Nur-Kanon-Änderungen zeigen",
+      "Received": "Seit Abenteuerbeginn in den Kanon übernommen",
+      "NoneReceived": "Seit Abenteuerbeginn wurde nichts in den Kanon übernommen.",
+      "ConflictsLeft": "Noch {n} Konflikt(e)",
+      "Footer": "Auto-Commit „Before merge“ erledigt. Abbrechen lässt das Abenteuer ausgecheckt.",
+      "ConfirmTitle": "In den Kanon übernehmen",
+      "ConfirmBody": "Das Abenteuer in den Kanon übernehmen und main auschecken? Das lässt sich nicht rückgängig machen.",
+      "WriteCombined": "Kombinierten Text schreiben",
+      "UseText": "Diesen Text verwenden",
+      "AutoMerged": "Automatisch zusammengeführt",
+      "ClickNode": "Klicke auf einen Knoten oder eine Verbindung, um die Änderungen zu sehen.",
+      "NoChanges": "Keine Änderungen.",
+      "Keep": "Behalten (mit Änderungen)",
+      "Delete": "Löschen",
+      "None": "— keins",
+      "Whole": "Element",
+      "Layout": "Layout-Änderungen, eingehende Seite gewinnt",
+      "Resume": "Zusammenführen fortsetzen",
+      "Open": "Konflikt",
+      "Resolved": "gelöst",
+      "Badge": {
+        "conflict": "Konflikte",
+        "added": "Neu",
+        "deleted": "Gelöscht",
+        "changed": "Geändert",
+        "layout": "Verschoben",
+        "canonOnly": "Nur Kanon"
+      }
     },
     "Adopt": {
       "Adopt": "In Silk übernehmen",

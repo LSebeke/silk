@@ -58,11 +58,13 @@ import { createEventScenes, eventSceneCommands } from './core/event-scenes';
 import { historyCommands } from './core/history';
 import {
   createConnectionsPages,
+  createDocRewriter,
   createLifecycle,
   createMaterializer,
   lifecycleCommands,
   materializeCommands,
 } from './core/materialize';
+import { createMerges, mergeCommands, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
@@ -70,6 +72,7 @@ import { canvasBridge } from './ui/canvas/bridge';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
 import { devUiCommands } from './ui/dev/commands';
+import { createMergeUi } from './ui/merge/ui';
 import { detailUiCommands } from './ui/detail/commands';
 import type { DetailContext } from './ui/detail/context';
 import './ui/silk.css';
@@ -248,6 +251,30 @@ const connectionsPages = createConnectionsPages({
 /** T11: Connections pages are derived state; reconcile rewrites stale ones. */
 lifecycle.contribute({ reconcile: () => connectionsPages.refresh() });
 
+/** End Adventure / merge (spec §11.3, §11.4): one session per World session. */
+const docRewriter = createDocRewriter({ workingCopy, docs: foundryDocs, materializer, lifecycle });
+let merges: { session: object; merges: Merges } | undefined;
+function getMerges(): Merges {
+  const session = getSession();
+  if (merges?.session !== session)
+    merges = {
+      session,
+      merges: createMerges({
+        history: session.history,
+        workingCopy: session.workingCopy,
+        campaigns: session.campaigns,
+        author: () => game.user?.name ?? 'GM',
+        applyResult: (result) => docRewriter.apply(result),
+      }),
+    };
+  return merges.merges;
+}
+const mergeUi = createMergeUi({
+  view: () => getMerges().view(),
+  workingCopy,
+  run: (name, args) => registry.run(name, args),
+  t: format,
+});
 /** Reveal (spec §8): World ownership, mirrored in the Campaign's Revelation Map. */
 const adventureCheckedOut = () => {
   try {
@@ -418,6 +445,7 @@ for (const command of [
   ...canonCommands,
   ...historyCommands(() => getSession().history),
   ...campaignCommands(() => getSession().campaigns),
+  ...mergeCommands(getMerges, mergeUi),
   ...revealCommands(reveal),
   ...detailUiCommands(detailContext),
   ...adoptCommands(adopt),

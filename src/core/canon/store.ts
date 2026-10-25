@@ -57,6 +57,10 @@ export interface AdventureRef {
   /** The main commit the Adventure branched from. */
   base: string;
   head: string;
+  /** Set when the Adventure ended: its merge Commit on main (spec §11.3). */
+  merged?: string;
+  /** ISO 8601, when it ended. */
+  ended?: string;
 }
 
 export interface CanonStore {
@@ -187,6 +191,18 @@ function storeFor(files: CanonFiles, stored: Manifest, options: FormatOptions): 
     }
   }
 
+  /** Blobs are immutable (content-addressed): read each once. Merges read 3 similar snapshots. */
+  const blobs = new Map<string, Promise<CanonRecord>>();
+  function readBlob(hash: string): Promise<CanonRecord> {
+    let blob = blobs.get(hash);
+    if (!blob) {
+      blob = readJson<CanonRecord>(files, objectPath(hash)).then((b) => migrate('blob', b));
+      blob.catch(() => blobs.delete(hash));
+      blobs.set(hash, blob);
+    }
+    return blob;
+  }
+
   const store: CanonStore = {
     get manifest() {
       return manifest;
@@ -238,12 +254,12 @@ function storeFor(files: CanonFiles, stored: Manifest, options: FormatOptions): 
 
     async readSnapshot(commitHash) {
       const commit = await store.readCommit(commitHash);
-      const snapshot = new Map<string, CanonRecord>();
-      for (const [id, hash] of Object.entries(commit.tree)) {
-        const blob = migrate<CanonRecord>('blob', await readJson(files, objectPath(hash)));
-        snapshot.set(id, { kind: blob.kind, id: blob.id, data: blob.data });
-      }
-      return snapshot;
+      const entries = await Promise.all(
+        Object.entries(commit.tree).map(async ([id, hash]) => [id, await readBlob(hash)] as const),
+      );
+      return new Map(
+        entries.map(([id, blob]) => [id, { kind: blob.kind, id: blob.id, data: blob.data }]),
+      );
     },
 
     async getMain() {

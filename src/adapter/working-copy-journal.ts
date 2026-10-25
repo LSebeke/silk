@@ -3,7 +3,13 @@
  * "Silk (internal)" folder. One `flags.silk.records.<id>` per record, so updates are
  * diffs. Values are JSON strings so Foundry's update merge replaces them whole.
  */
-import { canonicalJson, type CanonRecord, type RecordKind, type JsonObject } from '../core/canon';
+import {
+  canonicalJson,
+  type CanonRecord,
+  type JsonObject,
+  type JsonValue,
+  type RecordKind,
+} from '../core/canon';
 import type {
   Binding,
   WorkingCopyBackend,
@@ -33,6 +39,8 @@ interface SilkFlags {
   workingCopy?: boolean;
   binding?: string | null;
   records?: Record<string, unknown>;
+  /** World-only values (merge draft …), JSON strings like records. */
+  meta?: Record<string, unknown>;
 }
 
 export interface JournalLike {
@@ -70,6 +78,12 @@ function patchFromFlags(silk: SilkFlags): WorkingCopyPatch {
   }
   if (set.length) patch.set = set;
   if (del.length) patch.delete = del;
+  const meta: Record<string, JsonValue | null> = {};
+  for (const [key, value] of Object.entries(silk.meta ?? {})) {
+    if (key.startsWith('-=')) meta[key.slice(2)] = null;
+    else meta[key] = typeof value === 'string' ? (JSON.parse(value) as JsonValue) : null;
+  }
+  if (Object.keys(meta).length) patch.meta = meta;
   return patch;
 }
 
@@ -79,7 +93,14 @@ export function journalBackend(entry: () => JournalLike | undefined): WorkingCop
       const silk = entry()?.flags.silk;
       if (!silk) return { binding: null, records: [] };
       const patch = patchFromFlags(silk);
-      return { binding: patch.binding ?? null, records: patch.set ?? [] };
+      const meta = Object.entries(patch.meta ?? {}).filter(
+        (entry): entry is [string, JsonValue] => entry[1] !== null,
+      );
+      return {
+        binding: patch.binding ?? null,
+        records: patch.set ?? [],
+        meta: Object.fromEntries(meta),
+      };
     },
     async write(patch) {
       const doc = entry();
@@ -91,6 +112,11 @@ export function journalBackend(entry: () => JournalLike | undefined): WorkingCop
       for (const r of patch.set ?? []) records[r.id] = encodeRecord(r);
       for (const id of patch.delete ?? []) records[`-=${id}`] = null;
       if (Object.keys(records).length) silk.records = records;
+      const meta: Record<string, string | null> = {};
+      for (const [key, value] of Object.entries(patch.meta ?? {}))
+        if (value === null) meta[`-=${key}`] = null;
+        else meta[key] = canonicalJson(value);
+      if (Object.keys(meta).length) silk.meta = meta;
       await doc.update({ flags: { silk } }, { ...SILK_WRITE });
     },
   };

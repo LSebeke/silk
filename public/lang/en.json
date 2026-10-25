@@ -60,7 +60,8 @@
         "reopen": "Reopen"
       },
       "adventure": {
-        "start": "Start Adventure"
+        "start": "Start Adventure",
+        "end": "End Adventure"
       },
       "element": {
         "create": "Create Element",
@@ -111,6 +112,12 @@
         "infoBlock": "Reveal Info Block",
         "connection": "Reveal Connection",
         "showToPlayers": "Show to players"
+      },
+      "merge": {
+        "nextConflict": "Next conflict",
+        "pick": "Take this value",
+        "confirm": "Merge into Canon",
+        "cancel": "Cancel merge"
       },
       "adopt": {
         "doc": "Adopt into Silk",
@@ -324,6 +331,45 @@
       "InfoBlocks": "Info Blocks",
       "Connections": "Connections",
       "Gone": "This element no longer exists."
+    },
+    "Merge": {
+      "Title": "Merge",
+      "Heading": "Merge Adventure",
+      "Into": "into the Canon",
+      "Base": "Base (Adventure start)",
+      "CanonNow": "Canon now",
+      "Adventure": "Adventure",
+      "Result": "Result",
+      "Field": "Field",
+      "ResultHint": "The merged Canon, as it will look.",
+      "ShowCanonOnly": "Show Canon-only changes",
+      "Received": "Merged into the Canon since the Adventure started",
+      "NoneReceived": "Nothing merged into the Canon since the Adventure started.",
+      "ConflictsLeft": "{n} conflict(s) left",
+      "Footer": "Auto-commit \"Before merge\" done. Cancel keeps the Adventure checked out.",
+      "ConfirmTitle": "Merge into the Canon",
+      "ConfirmBody": "Merge the Adventure into the Canon and check out main? There is no undo.",
+      "WriteCombined": "Write combined text",
+      "UseText": "Use this text",
+      "AutoMerged": "Auto-merged",
+      "ClickNode": "Click a Node or Connection to see its changes.",
+      "NoChanges": "No changes.",
+      "Keep": "Keep (with edits)",
+      "Delete": "Delete",
+      "None": "— none",
+      "Whole": "Element",
+      "Layout": "layout changes, incoming wins",
+      "Resume": "Resume merge",
+      "Open": "conflict",
+      "Resolved": "resolved",
+      "Badge": {
+        "conflict": "Conflicts",
+        "added": "Added",
+        "deleted": "Deleted",
+        "changed": "Changed",
+        "layout": "Moved",
+        "canonOnly": "Canon only"
+      }
     },
     "Adopt": {
       "Adopt": "Adopt into Silk",
