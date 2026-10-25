@@ -12,6 +12,7 @@
  */
 import type { Command } from '../commands/registry';
 import {
+  emptyRevelationMap,
   isRevealed,
   setRevealed,
   type RevealKind,
@@ -83,7 +84,8 @@ export interface Reveal {
 
 export function createReveal(deps: RevealDeps): Reveal {
   const listeners = new Set<(state: RevelationMap) => void>();
-  let state = deps.world.get();
+  /** Loaded by `reload()` once settings exist (module load is before Foundry `init`). */
+  let state: RevelationMap = emptyRevelationMap();
   /** Reveal writes run one at a time. */
   let queue: Promise<unknown> = Promise.resolve();
   const serial = <T>(job: () => Promise<T>): Promise<T> => {
@@ -352,4 +354,3 @@ export function revealCommands(reveal: Reveal): Command[] {
     },
   ];
 }
-

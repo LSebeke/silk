@@ -95,7 +95,10 @@ describe('reveal.infoBlock', () => {
       .quests[questKey];
     expect(q?.['visible']).toBe(true);
     const linked = q?.['linkedPages'] as Record<string, { uuid: string; visible: boolean }>;
-    expect(linked[hook]).toMatchObject({ uuid: `${doc.uuid}.JournalEntryPage.${hook}`, visible: true });
+    expect(linked[hook]).toMatchObject({
+      uuid: `${doc.uuid}.JournalEntryPage.${hook}`,
+      visible: true,
+    });
     expect(linked[resolution]?.visible).toBe(false);
   });
 });

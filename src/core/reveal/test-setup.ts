@@ -40,6 +40,7 @@ export function setup(opts: { adventure?: boolean } = {}) {
     localize: (key) => key.split('.').pop() ?? key,
     refreshPages: async (ids) => void pageRefreshes.push([...ids]),
   });
+  reveal.reload();
   hooks.push((id) => reveal.afterMaterialize(id));
   t.lifecycle.contribute({ reconcile: () => reveal.reconcile() });
   for (const command of revealCommands(reveal)) t.registry.register(command);

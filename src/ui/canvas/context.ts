@@ -1,5 +1,6 @@
 /** Everything the canvas UI talks to. Built by `module.ts`, passed into the lazy chunk. */
 import type { CanvasState, CreationPipeline, LayoutTween, ViewStateStore } from '../../core/canvas';
+import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
 
 export interface CanvasContext {
@@ -16,6 +17,12 @@ export interface CanvasContext {
   /** Client setting `detailDrop` (§10.2), read on open. */
   detailDrop: boolean;
   localize(key: string): string;
+  /** Localised command title (context menus, §8 Controls). */
+  title(name: string): string;
+  /** The World's reveal state (eye toggles, menus; §8). Svelte-store `subscribe`. */
+  reveal: Pick<Reveal, 'subscribe' | 'isRevealed'>;
+  /** Warning toast. */
+  warn(message: string): void;
 }
 
 /** Svelte context key for `CanvasContext` (cards read it). */

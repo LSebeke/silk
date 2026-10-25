@@ -83,7 +83,12 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
   const pageLevel = (doc: DocSnapshot, pageId: string | undefined, want: number) => {
     const p = pageId ? doc.pages?.find((x) => x._id === pageId) : undefined;
     if (p && level(p) !== want)
-      writes.push({ op: 'page', uuid: doc.uuid, pageId: p._id, data: { ownership: { default: want } } });
+      writes.push({
+        op: 'page',
+        uuid: doc.uuid,
+        pageId: p._id,
+        data: { ownership: { default: want } },
+      });
   };
   const on = (b: boolean, lvl: number = OWNERSHIP.OBSERVER) => (b ? lvl : OWNERSHIP.NONE);
 
@@ -105,7 +110,8 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
           sort: b.sort,
         })),
       );
-      if (Object.keys(data).length) writes.push({ op: 'page', uuid: main.uuid, pageId: quest as string, data });
+      if (Object.keys(data).length)
+        writes.push({ op: 'page', uuid: main.uuid, pageId: quest as string, data });
     }
   } else {
     docLevel(main, on(revealed, OWNERSHIP.LIMITED));
@@ -161,6 +167,10 @@ function appearanceWrites(input: OwnershipInput, revealed: boolean): RevealWrite
   if (Object.keys(data).length) writes.push({ op: 'update', uuid: main.uuid, data });
   // Placed tokens follow on every apply (the adapter skips unchanged ones).
   const texture = showReal ? realToken : hood;
-  writes.push({ op: 'tokens', uuid: main.uuid, data: { 'texture.src': texture, displayName: display } });
+  writes.push({
+    op: 'tokens',
+    uuid: main.uuid,
+    data: { 'texture.src': texture, displayName: display },
+  });
   return writes;
 }

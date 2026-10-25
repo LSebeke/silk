@@ -72,7 +72,8 @@
         "untag": "Tag entfernen",
         "setStatus": "Status setzen",
         "toggleStatus": "Status umschalten",
-        "delete": "Element löschen"
+        "delete": "Element löschen",
+        "openDetail": "Element-Details"
       },
       "connection": {
         "create": "Verbinden",
@@ -91,6 +92,13 @@
         "create": "Infoblock hinzufügen",
         "edit": "Infoblock bearbeiten",
         "delete": "Infoblock löschen"
+      },
+      "reveal": {
+        "element": "Aufdecken",
+        "appearance": "Aussehen aufdecken",
+        "infoBlock": "Infoblock aufdecken",
+        "connection": "Verbindung aufdecken",
+        "showToPlayers": "Den Spielern zeigen"
       }
     },
     "Canvas": {
@@ -245,6 +253,23 @@
       "UnmaterializeTitle": "Entmaterialisieren",
       "UnmaterializeRevealed": "{names} ist enthüllt. Die Spieler verlieren den Zugriff, bis es wieder materialisiert wird.",
       "Unmaterialize": "Entmaterialisieren"
+    },
+    "Reveal": {
+      "Reveal": "Aufdecken",
+      "Unreveal": "Verbergen",
+      "RevealAppearance": "Aussehen aufdecken",
+      "HideAppearance": "Aussehen verbergen",
+      "Appearance": "Aussehen (Bild)",
+      "NeedsAdventure": "Starte ein Abenteuer, um aufzudecken.",
+      "TheConnection": "diese Verbindung",
+      "Confirm": "{name} den Spielern aufdecken?",
+      "UnrevealConfirm": "{name} wieder vor den Spielern verbergen?"
+    },
+    "Detail": {
+      "Title": "Element-Details",
+      "InfoBlocks": "Infoblöcke",
+      "Connections": "Verbindungen",
+      "Gone": "Dieses Element existiert nicht mehr."
     }
   }
 }

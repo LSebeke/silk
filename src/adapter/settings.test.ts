@@ -38,8 +38,9 @@ describe('settings (spec §13)', () => {
       warnUnmaterializeReveal: { scope: 'client', default: true },
       windowState: { scope: 'client' },
       fileBrowseNoticeShown: { scope: 'world', default: false },
+      revealState: { scope: 'world' },
     });
-    expect(s.size).toBe(10);
+    expect(s.size).toBe(11);
   });
 
   it('hides internal settings from the config dialog', () => {
@@ -48,6 +49,7 @@ describe('settings (spec §13)', () => {
     expect(hidden.sort()).toEqual([
       'fileBrowseNoticeShown',
       'playerView',
+      'revealState',
       'viewState',
       'windowState',
     ]);

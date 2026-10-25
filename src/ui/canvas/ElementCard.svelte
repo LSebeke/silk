@@ -21,6 +21,14 @@
   const statusPrompt = getContext<StatusPrompt>(STATUS_PROMPT);
   const status = $derived(statusOf(data));
   const statusLabel = $derived(status ? ctx.localize(statusLabelKey(status)) : '');
+  // Eye toggle (§8 Controls): the World's reveal state.
+  const reveal = ctx.reveal;
+  const revealed = $derived($reveal.elements.includes(id));
+  function toggleReveal(event: MouseEvent) {
+    event.stopPropagation();
+    if (!ctx.available('reveal.element')) return;
+    ctx.run('reveal.element', { id, revealed: !revealed }).catch(fail);
+  }
 
   const fail = (error: unknown) => console.error(error);
 
@@ -46,6 +54,8 @@
   };
 </script>
 
+<!-- Double-click opens Element Detail (§8); keyboard users have the context menu. -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="silk-card"
   class:selected
@@ -55,6 +65,8 @@
   data-silk-node={id}
   data-silk-class={data.class}
   data-silk-ghost={data.ghost ? '' : undefined}
+  data-silk-revealed={revealed ? '' : undefined}
+  ondblclick={() => ctx.run('element.openDetail', { id }).catch(fail)}
 >
   <div class="block-title">{data.name}</div>
   <img
@@ -78,6 +90,22 @@
     {:else}
       <div class="title" data-silk-node-title>{data.name}</div>
     {/if}
+    <button
+      type="button"
+      class="nodrag nopan eye"
+      class:on={revealed}
+      title={ctx.localize(
+        ctx.available('reveal.element')
+          ? revealed
+            ? 'SILK.Reveal.Unreveal'
+            : 'SILK.Reveal.Reveal'
+          : 'SILK.Reveal.NeedsAdventure',
+      )}
+      onclick={toggleReveal}
+      ondblclick={(e) => e.stopPropagation()}
+      data-silk-eye={revealed ? 'on' : 'off'}
+      ><i class="fa-solid {revealed ? 'fa-eye' : 'fa-eye-slash'}"></i></button
+    >
     {#if status}
       <!-- Status chip (§10.2): click asks for the next Status, like `s`. -->
       <button
@@ -180,10 +208,31 @@
     text-overflow: ellipsis;
   }
   /* Top-right corner: a click on the card's centre still selects it. */
+  .eye {
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    width: 20px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    font-size: 10px;
+    line-height: 16px;
+    color: #999;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  .eye.on {
+    color: #2b6cb0;
+  }
+  :global(.lod-title) .eye {
+    display: none;
+  }
   .status {
     position: absolute;
     top: 4px;
-    right: 6px;
+    right: 26px;
     width: auto;
     height: auto;
     margin: 0;

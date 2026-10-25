@@ -72,7 +72,8 @@
         "untag": "Remove Tag",
         "setStatus": "Set Status",
         "toggleStatus": "Toggle Status",
-        "delete": "Delete Element"
+        "delete": "Delete Element",
+        "openDetail": "Element Detail"
       },
       "connection": {
         "create": "Connect",
@@ -91,6 +92,13 @@
         "create": "Add Info Block",
         "edit": "Edit Info Block",
         "delete": "Delete Info Block"
+      },
+      "reveal": {
+        "element": "Reveal",
+        "appearance": "Reveal Appearance",
+        "infoBlock": "Reveal Info Block",
+        "connection": "Reveal Connection",
+        "showToPlayers": "Show to players"
       }
     },
     "Canvas": {
@@ -245,6 +253,23 @@
       "UnmaterializeTitle": "Unmaterialize",
       "UnmaterializeRevealed": "{names} is Revealed. Players will lose access until it is Materialized again.",
       "Unmaterialize": "Unmaterialize"
+    },
+    "Reveal": {
+      "Reveal": "Reveal",
+      "Unreveal": "Un-reveal",
+      "RevealAppearance": "Reveal Appearance",
+      "HideAppearance": "Hide Appearance",
+      "Appearance": "Appearance (image)",
+      "NeedsAdventure": "Start an Adventure to Reveal.",
+      "TheConnection": "this Connection",
+      "Confirm": "Reveal {name} to the players?",
+      "UnrevealConfirm": "Hide {name} from the players again?"
+    },
+    "Detail": {
+      "Title": "Element Detail",
+      "InfoBlocks": "Info Blocks",
+      "Connections": "Connections",
+      "Gone": "This element no longer exists."
     }
   }
 }
