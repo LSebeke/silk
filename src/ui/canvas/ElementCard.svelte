@@ -163,8 +163,11 @@
     white-space: nowrap;
     text-overflow: ellipsis;
   }
+  /* Top-right corner: a click on the card's centre still selects it. */
   .status {
-    align-self: flex-start;
+    position: absolute;
+    top: 4px;
+    right: 6px;
     width: auto;
     height: auto;
     margin: 0;
