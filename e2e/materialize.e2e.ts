@@ -247,7 +247,8 @@ test('write-through to Foundry, and Foundry edits flow back', async ({ gm, playe
     pages: 5,
   });
   expect(new Set(state.extraOwnership)).toEqual(new Set([0]));
-  expect(Object.keys(state.flags).sort()).toEqual(['companion', 'id']);
+  // Plus the hood (§8): hooded path and the real image/token waiting for Appearance.
+  expect(Object.keys(state.flags).sort()).toEqual(['companion', 'hood', 'id', 'img', 'token']);
   expect((await element(gm, id))['tags']).toEqual(['market']);
 
   // Foundry → Silk: edits in Foundry's own UI/API flow back into the element.

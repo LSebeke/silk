@@ -18,6 +18,7 @@ import {
   type RevealKind,
   type RevelationMap,
 } from '../campaigns';
+import { readConnection } from '../connections/connection';
 import { connectionsIn } from '../connections/rules';
 import { readElement, type StoryElement } from '../elements';
 import { blockJournal, infoBlockPages } from '../materialize/layout';
@@ -80,6 +81,13 @@ export interface Reveal {
   repair(id: string): Promise<void>;
   /** Reconcile on load (lifecycle contributor). */
   reconcile(): Promise<void>;
+  /**
+   * Follows Working Copy changes (active GM): a Connection created, moved or deleted
+   * re-applies its ends (Connections page level); a deleted one leaves the maps.
+   */
+  watch(): () => void;
+  /** Resolves when queued Reveal writes are done. */
+  idle(): Promise<void>;
 }
 
 export function createReveal(deps: RevealDeps): Reveal {
@@ -324,6 +332,39 @@ export function createReveal(deps: RevealDeps): Reveal {
         await setWorld(map);
         await applyAll(map);
       }),
+    idle: () => queue.then(() => {}),
+    watch() {
+      const wc = deps.workingCopy();
+      const ends = new Map(connectionsIn(wc.records()).map((c) => [c.id, [c.from, c.to]]));
+      return wc.watch((change) => {
+        const touched = new Set<string>();
+        const gone: string[] = [];
+        for (const id of [...change.set, ...change.deleted]) {
+          const before = ends.get(id);
+          const c = readConnection(wc.get(id));
+          if (!before && !c) continue;
+          for (const e of [...(before ?? []), ...(c ? [c.from, c.to] : [])]) touched.add(e);
+          if (c) ends.set(id, [c.from, c.to]);
+          else {
+            ends.delete(id);
+            if (isRevealed(state, 'connection', id)) gone.push(id);
+          }
+        }
+        if (!touched.size) return;
+        // Deleted Connections drop out of the maps (§11.5); their ends' pages may close.
+        void serial(async () => {
+          if (gone.length) {
+            const drop = (m: RevelationMap) =>
+              gone.reduce((acc, id) => setRevealed(acc, 'connection', id, false), m);
+            const campaign = deps.adventure() ? await deps.campaign.current() : null;
+            if (campaign)
+              await deps.campaign.write(campaign, drop(await deps.campaign.read(campaign)));
+            await setWorld(drop(state));
+          }
+          await applyTo([...touched], state);
+        }).catch((error: unknown) => console.error(error));
+      });
+    },
   };
 }
 

@@ -161,6 +161,22 @@ describe('un-reveal', () => {
     expect(t.map()).toEqual({ ...emptyRevelationMap(), elements: [a], playerNotes: ['note1'] });
   });
 
+  it('deleting a Revealed Connection drops it from the map and closes the pages', async () => {
+    const t = setup();
+    t.reveal.watch();
+    const a = await materialized(t, 'location', 'A');
+    const b = await materialized(t, 'location', 'B');
+    const ab = await t.connect(a, b);
+    await t.run('reveal.connection', { id: ab });
+    await t.registry.run('connection.delete', { ids: [ab] });
+    await t.reveal.idle();
+    expect(t.map().connections).toEqual([]);
+    expect(t.world().connections).toEqual([]);
+    expect(t.level(page(t.doc(a), t.doc(a).flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(b), t.doc(b).flags.silk.connections))).toBe(NONE);
+    expect(t.level(t.doc(a))).toBe(OBSERVER);
+  });
+
   it('a Connection alone: its endpoints stay Revealed', async () => {
     const t = setup();
     const a = await materialized(t, 'location', 'A');

@@ -389,6 +389,7 @@ Hooks.once('ready', async () => {
     localize,
   });
   connectionsPages.watch();
+  if (isActiveGM(game as never)) reveal.watch();
   // Checkout changes switch the Revealed filter between ownership and a Revelation Map.
   const refreshQuietly = () => void refreshRevealed().catch(() => {});
   refreshQuietly();
