@@ -2,6 +2,7 @@
  * Entry point. Wires the pure core to Foundry through the adapter and exposes the
  * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
  */
+import { registerConnectionsPageHooks } from './adapter/connections-page';
 import { dsa5Mapping } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { createFoundryDocs } from './adapter/foundry-docs';
@@ -26,7 +27,11 @@ import { campaignCommands } from './core/campaigns/commands';
 import { connectionCommands, connectOnCreate } from './core/connections';
 import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
-import { createMaterializer, materializeCommands } from './core/materialize';
+import {
+  createConnectionsPages,
+  createMaterializer,
+  materializeCommands,
+} from './core/materialize';
 import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
@@ -77,6 +82,19 @@ const materializer = createMaterializer({
 afterCreate.push((element) => materializer.afterCreate(element));
 pipeline.onComplete(({ id }) => {
   materializer.afterPipeline(id).catch((error: unknown) => console.error(error));
+});
+
+/** Generated Connections pages (spec §5 In journals); only the active GM writes them. */
+const connectionsDocs = createFoundryDocs(foundryApi());
+const connectionsPages = createConnectionsPages({
+  workingCopy,
+  docs: {
+    updatePage: async (uuid, pageId, data) => {
+      if (isActiveGM(game as never)) await connectionsDocs.updatePage(uuid, pageId, data);
+    },
+  },
+  docsOf: (id) => materializer.docsOf(id),
+  format: (key, data) => game.i18n?.format(key, data) ?? key,
 });
 
 const canvasContext = (): CanvasContext => ({
@@ -134,6 +152,13 @@ Hooks.once('ready', async () => {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
   });
+  connectionsPages.watch();
+  registerConnectionsPageHooks(connectionsPages, {
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isActiveGM: () => isActiveGM(game as never),
+  });
+  // Reconcile on load (§7): pages written while Silk was off, or by an older version.
+  if (isActiveGM(game as never)) void connectionsPages.refresh().catch(() => {});
   showFileBrowseNotice({
     isGM: game.user?.isGM ?? false,
     permissions: game.permissions as Record<string, number[] | undefined> | undefined,
