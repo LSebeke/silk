@@ -97,6 +97,11 @@
         "clear": "Clear Canvas Filters",
         "expandBadge": "Show hidden neighbours"
       },
+      "focus": {
+        "setHops": "Set Focus View distance",
+        "pin": "Focus Pin",
+        "unpin": "Remove Focus Pin"
+      },
       "event": {
         "activateScene": "Activate Event Scene",
         "createScene": "Create Scene",
@@ -241,6 +246,14 @@
       "open": "open",
       "done": "done",
       "failed": "failed"
+    },
+    "Focus": {
+      "Seeds": "Focus (Scene + selection)",
+      "Toggle": "Focus View",
+      "Hops": "Hops",
+      "Pin": "Focus Pin (p)",
+      "Unpin": "Remove Focus Pin (p)",
+      "Hint": "No active Scene and nothing selected: only Focus Pins show. Activate a Scene or select a Node."
     },
     "Filter": {
       "Shown": "{n} of {m} shown",

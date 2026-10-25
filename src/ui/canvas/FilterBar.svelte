@@ -4,7 +4,12 @@
    * "N of M shown", one-click clear, a dimension/value picker, and the render budget warning.
    * Every action runs a `filter.*` command.
    */
-  import { activeFilters, FILTER_DIMENSIONS, type FilterDimension } from '../../core/canvas';
+  import {
+    activeFilters,
+    FILTER_DIMENSIONS,
+    FOCUS_SEEDS,
+    type FilterDimension,
+  } from '../../core/canvas';
   import type { FilterResult } from '../../core/canvas/filters';
   import type { CanvasContext } from './context';
   import { filterOptions, valueLabel, type ChipLabel } from './filter-chips';
@@ -35,6 +40,23 @@
     return ctx.filter.expanded().length;
   });
 
+  // Focus View (§10.6): the `hops` dimension holding the live seeds; N set here.
+  const focusOn = $derived.by(() => {
+    void result;
+    return !!ctx.filter.filters().hops?.includes(FOCUS_SEEDS);
+  });
+  const hops = $derived.by(() => {
+    void result;
+    return ctx.focus.hops();
+  });
+  function toggleFocus() {
+    const values = ctx.filter.filters().hops ?? [];
+    void run('filter.set', {
+      dimension: 'hops',
+      values: focusOn ? values.filter((v) => v !== FOCUS_SEEDS) : [...values, FOCUS_SEEDS],
+    });
+  }
+
   let dimension = $state<FilterDimension | ''>('');
   const options = $derived.by(() => {
     void result;
@@ -59,6 +81,31 @@
 </script>
 
 <div class="silk-filter-bar nodrag nopan" data-silk-filter-bar>
+  <button
+    type="button"
+    class="focus"
+    class:on={focusOn}
+    aria-pressed={focusOn}
+    onclick={toggleFocus}
+    data-silk-action="focus-toggle"
+  >
+    <i class="fa-solid fa-bullseye"></i>
+    {ctx.localize('SILK.Focus.Toggle')}
+  </button>
+  {#if focusOn}
+    <label class="hops">
+      {ctx.localize('SILK.Focus.Hops')}
+      <select
+        value={String(hops)}
+        onchange={(e) => run('focus.setHops', { n: Number(e.currentTarget.value) })}
+        data-silk-focus-hops
+      >
+        {#each [0, 1, 2, 3, 4, 5] as n (n)}
+          <option value={String(n)}>{n}</option>
+        {/each}
+      </select>
+    </label>
+  {/if}
   {#each chips as chip (chip.dimension + '\u0000' + chip.value)}
     <span class="chip" data-silk-filter-chip={chip.dimension} data-silk-filter-value={chip.value}>
       <b>{ctx.localize(`SILK.Filter.Dimension.${chip.dimension}`)}:</b>
@@ -152,6 +199,16 @@
     padding: 0 4px;
     border: 0;
     background: none;
+  }
+  .silk-filter-bar > button.focus.on {
+    color: #fff;
+    background: #2b6cb0;
+  }
+  .hops {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+    white-space: nowrap;
   }
   select {
     width: auto;

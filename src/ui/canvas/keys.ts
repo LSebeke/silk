@@ -11,6 +11,7 @@ export type CanvasKeyAction =
   | { kind: 'connect' }
   | { kind: 'rename' }
   | { kind: 'status' }
+  | { kind: 'pin' }
   | { kind: 'editConnection' }
   | { kind: 'delete' }
   | { kind: 'command'; name: 'connection.cycleDirection' | 'connection.cycleType' }
@@ -54,6 +55,7 @@ export function canvasKey(
   if (e.shiftKey) return undefined;
   if (e.code === 'KeyC' && selected.node) return { kind: 'connect' };
   if (e.code === 'KeyS' && selected.node) return { kind: 'status' };
+  if (e.code === 'KeyP' && selected.node) return { kind: 'pin' };
   if ((e.code === 'Delete' || e.code === 'Backspace') && selected.node) return { kind: 'delete' };
   if (e.code === 'KeyG' && selected.node) return { kind: 'layout', name: 'canvas.group' };
   if (e.code === 'KeyU' && selected.node) return { kind: 'layout', name: 'canvas.untangle' };

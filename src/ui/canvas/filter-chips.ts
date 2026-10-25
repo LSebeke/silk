@@ -5,6 +5,7 @@
 import type { Snapshot } from '../../core/canon';
 import { readGroup } from '../../core/canvas/groups';
 import type { FilterDimension } from '../../core/canvas/filters';
+import { FOCUS_SEEDS } from '../../core/canvas/focus';
 import {
   ELEMENT_CLASSES,
   STATUSES,
@@ -42,16 +43,17 @@ export function valueLabel(
       return { key: `SILK.Filter.Value.${value}` };
     case 'tag':
       return { text: value };
-    case 'group':
     case 'hops':
+      return value === FOCUS_SEEDS ? { key: 'SILK.Focus.Seeds' } : nameOf(records, value);
+    case 'group':
     case 'contents':
       return nameOf(records, value);
   }
 }
 
 /**
- * Values to pick for a dimension. N-hop and "show contents" take the selected Nodes
- * (Locations only for contents).
+ * Values to pick for a dimension. N-hop offers Focus View's seeds, and with "show contents"
+ * takes the selected Nodes (Locations only for contents).
  */
 export function filterOptions(
   records: Snapshot,
@@ -77,7 +79,8 @@ export function filterOptions(
     case 'group':
       return opts([...records.values()].flatMap((r) => (readGroup(r) ? [r.id] : [])));
     case 'hops':
-      return opts(selection.filter((id) => readElement(records.get(id))));
+      // Focus View's live seeds (§10.6) first, then the selected Nodes as fixed seeds.
+      return opts([FOCUS_SEEDS, ...selection.filter((id) => readElement(records.get(id)))]);
     case 'contents':
       return opts(selection.filter((id) => readElement(records.get(id))?.class === 'location'));
   }

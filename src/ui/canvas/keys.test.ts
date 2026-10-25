@@ -21,6 +21,11 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('KeyS'), none)).toBeUndefined();
   });
 
+  it('p pins/unpins the selected Nodes (Focus Pin)', () => {
+    expect(canvasKey(key('KeyP'), { node: true, edge: false })).toEqual({ kind: 'pin' });
+    expect(canvasKey(key('KeyP'), none)).toBeUndefined();
+  });
+
   it('y/n confirm: y confirms; n, Enter and Escape decline (default n)', () => {
     expect(confirmKey(key('KeyY'))).toBe('yes');
     for (const code of ['KeyN', 'Enter', 'Escape']) expect(confirmKey(key(code))).toBe('no');

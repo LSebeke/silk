@@ -2,7 +2,7 @@
   /**
    * Story Element card (spec §10.2). The zoom level comes from `.lod-*` on the canvas root,
    * so zooming changes classes once, not per card. Ghosts render faint.
-   * Later tickets add: Connection Points (T7), Status chip, eye toggle, Focus Pin button.
+   * Later tickets add: eye toggle.
    */
   import { Handle, Position } from '@xyflow/svelte';
   import { getContext } from 'svelte';
@@ -104,6 +104,19 @@
       </div>
     {/if}
   </div>
+  <!-- Focus Pin (§10.2, §10.6): always shown in Focus View; like `p`. -->
+  <button
+    type="button"
+    class="nodrag nopan pin"
+    class:pinned={data.pinned}
+    title={ctx.localize(data.pinned ? 'SILK.Focus.Unpin' : 'SILK.Focus.Pin')}
+    aria-pressed={!!data.pinned}
+    onclick={(e) => {
+      e.stopPropagation();
+      ctx.run(data.pinned ? 'focus.unpin' : 'focus.pin', { ids: [id] }).catch(fail);
+    }}
+    data-silk-pin={data.pinned ? 'pinned' : ''}><i class="fa-solid fa-thumbtack"></i></button
+  >
   {#if data.hidden}
     <!-- "+N" (§10.5): Connections to filtered-out Nodes; click shows them. -->
     <button
@@ -162,6 +175,34 @@
     background: #555;
     border: 1px solid #fff;
     border-radius: 8px;
+  }
+  /* Bottom-left, under the portrait. */
+  .pin {
+    position: absolute;
+    bottom: 2px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 10px;
+    line-height: 16px;
+    color: #999;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    opacity: 0.5;
+  }
+  .pin:hover {
+    opacity: 1;
+  }
+  .pin.pinned {
+    color: #b5533c;
+    opacity: 1;
+  }
+  :global(.lod-title) .pin:not(.pinned) {
+    display: none;
   }
   .silk-card.selected {
     outline: 2px solid #2b6cb0;
