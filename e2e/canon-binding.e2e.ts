@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { Session } from '../src/adapter/session';
 import type { CommandRegistry } from '../src/core/commands/registry';
-import { expect, test } from './fixtures';
+import { expect, test, waitForSilk } from './fixtures';
 
 /** Runs `fn` in the page with Silk's api and session. */
 function silk<A, R>(
@@ -28,8 +28,9 @@ const state = (page: Page) =>
     ids: [...session.workingCopy.records().keys()].sort(),
   }));
 
+// Socket delivery to the player takes seconds under load: use the configured timeout.
 const waitForIds = (page: Page, ids: string[]) =>
-  expect.poll(async () => (await state(page)).ids, { timeout: 10_000 }).toEqual(ids);
+  expect.poll(async () => (await state(page)).ids).toEqual(ids);
 
 test('bind a Canon, sync the working copy to players, commit and discard', async ({
   gm,
@@ -84,7 +85,7 @@ test('bind a Canon, sync the working copy to players, commit and discard', async
 
   // Survives a reload.
   await gm.reload();
-  await gm.waitForFunction(() => game.ready === true);
+  await waitForSilk(gm);
   expect(await state(gm)).toEqual({
     binding: { canonId, checkout: { main: true }, head },
     ids: ['el-a', 'el-b'],
