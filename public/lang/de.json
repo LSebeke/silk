@@ -69,7 +69,9 @@
         "changeClass": "Klasse ändern",
         "openSheet": "Bogen öffnen",
         "tag": "Tag hinzufügen",
-        "untag": "Tag entfernen"
+        "untag": "Tag entfernen",
+        "setStatus": "Status setzen",
+        "toggleStatus": "Status umschalten"
       },
       "connection": {
         "create": "Verbinden",
@@ -97,7 +99,11 @@
       "Ungroup": "Gruppe auflösen",
       "Untangle": "Entwirren",
       "ConnectHint": "Ziel-Knoten anklicken oder leere Fläche für einen neuen Knoten. Esc bricht ab.",
-      "LabelPlaceholder": "Text…"
+      "LabelPlaceholder": "Text…",
+      "StatusConfirm": "{name} auf „{status}“ setzen?",
+      "Yes": "Ja (y)",
+      "No": "Nein (n)",
+      "StatusChip": "Status: {status}. Klicken zum Ändern (s)."
     },
     "Connection": {
       "Type": {
@@ -199,7 +205,18 @@
     "Materialize": {
       "Implicit": "{name} materialisiert.",
       "VisibleTitle": "Sichtbare materialisieren",
-      "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen."
+      "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen.",
+      "QuestNativeFields": "{name} steht im DSA5-Questlog. Seine eigenen Felder Zusammenfassung, Details, Ziele und SL-Notizen gehören DSA5 und werden für Spieler sichtbar, sobald das Element enthüllt wird."
+    },
+    "Status": {
+      "alive": "lebendig",
+      "dead": "tot",
+      "planned": "geplant",
+      "happened": "geschehen",
+      "skipped": "ausgelassen",
+      "open": "offen",
+      "done": "erledigt",
+      "failed": "gescheitert"
     }
   }
 }

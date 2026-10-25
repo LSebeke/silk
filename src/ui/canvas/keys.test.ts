@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canvasKey } from './keys';
+import { canvasKey, confirmKey } from './keys';
 
 const key = (
   code: string,
@@ -16,6 +16,17 @@ const key = (
 const none = { node: false, edge: false };
 
 describe('canvas keys (spec §10.3)', () => {
+  it('s toggles the selected Node’s Status', () => {
+    expect(canvasKey(key('KeyS'), { node: true, edge: false })).toEqual({ kind: 'status' });
+    expect(canvasKey(key('KeyS'), none)).toBeUndefined();
+  });
+
+  it('y/n confirm: y confirms; n, Enter and Escape decline (default n)', () => {
+    expect(confirmKey(key('KeyY'))).toBe('yes');
+    for (const code of ['KeyN', 'Enter', 'Escape']) expect(confirmKey(key(code))).toBe('no');
+    expect(confirmKey(key('KeyX'))).toBeUndefined();
+  });
+
   it('1–9 create a Node of class #n; Player Characters (3) are never created', () => {
     expect(canvasKey(key('Digit1'), none)).toEqual({ kind: 'create', class: 'person' });
     expect(canvasKey(key('Digit9'), none)).toEqual({ kind: 'create', class: 'note' });

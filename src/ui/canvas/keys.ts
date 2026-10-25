@@ -10,6 +10,7 @@ export type CanvasKeyAction =
   | { kind: 'create'; class: ElementClassId; connection?: CreateFromConnection }
   | { kind: 'connect' }
   | { kind: 'rename' }
+  | { kind: 'status' }
   | { kind: 'editConnection' }
   | { kind: 'command'; name: 'connection.cycleDirection' | 'connection.cycleType' }
   | { kind: 'layout'; name: 'canvas.group' | 'canvas.untangle' | 'canvas.undo' };
@@ -51,10 +52,18 @@ export function canvasKey(
         : undefined;
   if (e.shiftKey) return undefined;
   if (e.code === 'KeyC' && selected.node) return { kind: 'connect' };
+  if (e.code === 'KeyS' && selected.node) return { kind: 'status' };
   if (e.code === 'KeyG' && selected.node) return { kind: 'layout', name: 'canvas.group' };
   if (e.code === 'KeyU' && selected.node) return { kind: 'layout', name: 'canvas.untangle' };
   if (e.code === 'Tab' && selected.edge)
     return { kind: 'command', name: 'connection.cycleDirection' };
   if (e.code === 'KeyQ' && selected.edge) return { kind: 'command', name: 'connection.cycleType' };
+  return undefined;
+}
+
+/** y/n confirm prompt (§10.3 `s`, `r`): only y confirms; the default is n. */
+export function confirmKey(e: Pick<KeyLike, 'code'>): 'yes' | 'no' | undefined {
+  if (e.code === 'KeyY') return 'yes';
+  if (e.code === 'KeyN' || e.code === 'Enter' || e.code === 'Escape') return 'no';
   return undefined;
 }

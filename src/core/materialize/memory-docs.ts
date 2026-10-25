@@ -14,6 +14,8 @@ export interface MemoryDocs extends FoundryDocs {
   readonly docs: Map<string, DocSnapshot>;
   readonly folders: { id: string; type: DocumentName; key: FolderKey; name: string }[];
   readonly opened: string[];
+  /** DSA5 `questlogJournals` stand-in. */
+  readonly questJournals: { uuid: string; name: string }[];
 }
 
 const clone = <T>(value: T): T => structuredClone(value);
@@ -45,6 +47,7 @@ export function createMemoryDocs(): MemoryDocs {
   const docs = new Map<string, DocSnapshot>();
   const folders: MemoryDocs['folders'] = [];
   const opened: string[] = [];
+  const questJournals: MemoryDocs['questJournals'] = [];
   let n = 0;
 
   function must(uuid: string) {
@@ -62,6 +65,7 @@ export function createMemoryDocs(): MemoryDocs {
     docs,
     folders,
     opened,
+    questJournals,
     async ensureFolder(type, key, name) {
       const found = folders.find((f) => f.type === type && f.key === key);
       if (found) return found.id;
@@ -100,6 +104,17 @@ export function createMemoryDocs(): MemoryDocs {
     async deletePages(uuid, ids) {
       const doc = must(uuid);
       doc.pages = (doc.pages ?? []).filter((p) => !ids.includes(p._id));
+    },
+    async setStatusEffect(uuid, statusId, active) {
+      const doc = must(uuid);
+      const effects = doc.effects ?? [];
+      const has = effects.some((e) => e.statuses?.includes(statusId));
+      if (active && !has) doc.effects = [...effects, { statuses: [statusId] }];
+      if (!active && has) doc.effects = effects.filter((e) => !e.statuses?.includes(statusId));
+    },
+    async registerQuestJournal(uuid, name) {
+      must(uuid);
+      if (!questJournals.some((q) => q.uuid === uuid)) questJournals.push({ uuid, name });
     },
     async open(uuid) {
       must(uuid);

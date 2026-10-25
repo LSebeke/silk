@@ -61,6 +61,8 @@ export interface DocData {
   flags: { silk: SilkDocFlags };
   pages?: PageData[];
   categories?: CategoryData[];
+  /** Actor ActiveEffects (read-only here): their status ids carry the Dead condition (§7). */
+  effects?: { statuses?: string[] }[];
 }
 
 export interface DocSnapshot extends DocData {
@@ -87,6 +89,10 @@ export interface FoundryDocs {
   createCategories(uuid: string, categories: CategoryData[]): Promise<void>;
   updatePage(uuid: string, pageId: string, data: Record<string, unknown>): Promise<void>;
   deletePages(uuid: string, pageIds: string[]): Promise<void>;
+  /** Adds or removes an Actor status effect (condition), e.g. DSA5 `dead`. No-op if already so. */
+  setStatusEffect(uuid: string, statusId: string, active: boolean): Promise<void>;
+  /** Registers a quest journal in the Game System's quest log (DSA5 `questlogJournals`). */
+  registerQuestJournal(uuid: string, name: string): Promise<void>;
   /** Opens the doc's sheet. */
   open(uuid: string): Promise<void>;
 }
@@ -101,8 +107,14 @@ export interface SystemMapping {
   systemUpdate(cls: ElementClassId, fields: Record<string, unknown>): Record<string, unknown>;
   /** The doc's system data → class fields (only those the class has). */
   fromSystem(cls: ElementClassId, system: unknown): Record<string, unknown>;
-  /** The one-quest `dsaquestlog` page (§4 Quest). */
-  questPage(questKey: string, title: string): { type: string; system: object };
+  /** The one-quest `dsaquestlog` page (§4 Quest). `status`: 0 open / 1 done / 2 failed. */
+  questPage(questKey: string, title: string, status?: number): { type: string; system: object };
+  /** The quest's status (0/1/2) in its page's system data. */
+  questStatus(questKey: string, pageSystem: unknown): number | undefined;
+  /** Update data setting the quest status on its page. */
+  questStatusUpdate(questKey: string, status: number): Record<string, unknown>;
+  /** The Actor status effect id meaning dead (§7 Dead). */
+  deadEffect: string;
   /** Update data setting the quest title on its page. */
   questTitleUpdate(questKey: string, title: string): Record<string, unknown>;
 }

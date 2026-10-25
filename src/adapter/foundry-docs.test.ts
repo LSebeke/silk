@@ -4,6 +4,7 @@ import { createFoundryDocs, type FoundryApi, type FoundryDoc } from './foundry-d
 function fakeApi() {
   const calls: { op: string; args: unknown[] }[] = [];
   const folders: { id: string; type: string; flags: Record<string, unknown> }[] = [];
+  const settings = new Map<string, unknown>();
   const doc = (uuid: string, data: object): FoundryDoc => ({
     id: uuid.slice(uuid.indexOf('.') + 1),
     uuid,
@@ -38,8 +39,12 @@ function fakeApi() {
     journal: () => null,
     folders: () => folders,
     replace: (value) => ({ replaced: value }),
+    getSetting: (ns, key) => settings.get(`${ns}.${key}`),
+    async setSetting(ns, key, value) {
+      settings.set(`${ns}.${key}`, structuredClone(value));
+    },
   };
-  return { api, calls, folders };
+  return { api, calls, folders, settings };
 }
 
 describe('FoundryDocs adapter', () => {
@@ -97,5 +102,44 @@ describe('FoundryDocs adapter', () => {
       uuid: 'Item.x',
       documentName: 'Item',
     });
+  });
+
+  it('registers a quest journal in DSA5 questlogJournals once, keeping other entries', async () => {
+    const { api, settings } = fakeApi();
+    settings.set('dsa5.questlogJournals', { activated: [{ uuid: 'JournalEntry.o', name: 'O' }] });
+    const docs = createFoundryDocs(api);
+    await docs.registerQuestJournal('JournalEntry.q', 'Q');
+    await docs.registerQuestJournal('JournalEntry.q', 'Q');
+    expect(settings.get('dsa5.questlogJournals')).toEqual({
+      activated: [
+        { uuid: 'JournalEntry.o', name: 'O' },
+        { uuid: 'JournalEntry.q', name: 'Q' },
+      ],
+    });
+  });
+
+  it('sets a status effect through DSA5 add/removeCondition, only when it changes', async () => {
+    const { api } = fakeApi();
+    const ops: string[] = [];
+    const effects: { statuses: Set<string> }[] = [];
+    api.fromUuid = (uuid) =>
+      ({
+        uuid,
+        effects,
+        addCondition: async (id: string) => {
+          ops.push(`add ${id}`);
+          effects.push({ statuses: new Set([id]) });
+        },
+        removeCondition: async (id: string) => {
+          ops.push(`remove ${id}`);
+          effects.length = 0;
+        },
+      }) as unknown as FoundryDoc;
+    const docs = createFoundryDocs(api);
+    await docs.setStatusEffect('Actor.a', 'dead', true);
+    await docs.setStatusEffect('Actor.a', 'dead', true);
+    await docs.setStatusEffect('Actor.a', 'dead', false);
+    await docs.setStatusEffect('Actor.a', 'dead', false);
+    expect(ops).toEqual(['add dead', 'remove dead']);
   });
 });

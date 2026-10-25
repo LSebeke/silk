@@ -38,4 +38,13 @@ describe('Foundry edits flow back (spec §7)', () => {
     other.fire('updateActor', actor, {}, {}, 'user');
     expect(other.synced).toEqual([]);
   });
+
+  it('syncs an actor whose effects change (Dead), linked actors only (§7)', () => {
+    const { fire, synced } = setup();
+    fire('createActiveEffect', { parent: actor }, {}, 'user');
+    fire('updateActiveEffect', { parent: actor }, {}, {}, 'user');
+    fire('deleteActiveEffect', { parent: actor }, {}, 'user');
+    fire('createActiveEffect', { parent: { ...actor, isToken: true } }, {}, 'user');
+    expect(synced).toEqual(['el1', 'el1', 'el1']);
+  });
 });

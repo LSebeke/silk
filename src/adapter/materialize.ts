@@ -17,7 +17,16 @@ export function foundryApi(): FoundryApi {
     journal: (id) => game.journal?.get(id) as unknown as FoundryDoc | undefined,
     folders: () => (game.folders ?? []) as never,
     replace: (value) => foundry.data.operators.ForcedReplacement.create(value) as object,
+    getSetting: (ns, key) => (game.settings as unknown as Settings | undefined)?.get(ns, key),
+    setSetting: async (ns, key, value) =>
+      (game.settings as unknown as Settings | undefined)?.set(ns, key, value),
   };
+}
+
+/** Untyped settings access: other packages' settings (DSA5) aren't in fvtt-types' config. */
+interface Settings {
+  get(namespace: string, key: string): unknown;
+  set(namespace: string, key: string, value: unknown): Promise<unknown>;
 }
 
 type Doc = { flags?: unknown; parent?: Doc | null; isToken?: boolean };
@@ -50,7 +59,8 @@ export function registerMaterializeHooks(
     deps.on(`create${name}`, (doc, options) => handle(doc, options, false));
     deps.on(`update${name}`, (doc, _changed, options) => handle(doc, options, false));
   }
-  for (const name of ['JournalEntryPage', 'JournalEntryCategory']) {
+  // ActiveEffect: the dsa5 `dead` condition (§7 Dead) is an effect on the actor.
+  for (const name of ['JournalEntryPage', 'JournalEntryCategory', 'ActiveEffect']) {
     deps.on(`create${name}`, (doc, options) => handle(doc, options, true));
     deps.on(`update${name}`, (doc, _changed, options) => handle(doc, options, true));
     deps.on(`delete${name}`, (doc, options) => handle(doc, options, true));
