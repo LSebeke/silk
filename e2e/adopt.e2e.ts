@@ -103,7 +103,8 @@ test('inventory item: also adopts its actor, adds owns, writes only link flags',
   );
   expect(docs).toEqual({
     folder: 'My NPCs',
-    actorFlags: ['companion', 'id'],
+    // Link flags; an unrevealed actor is also hooded by Reveal (§8 Appearance).
+    actorFlags: expect.arrayContaining(['companion', 'id']),
     itemId: result.id,
     companion: 1, // the Connections page only: no default Info Blocks
   });
