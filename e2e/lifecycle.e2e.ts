@@ -46,7 +46,7 @@ const docs = (page: Page, id: string) =>
       uuid: (data?.['uuid'] as string | undefined) ?? null,
       actor: actor && {
         name: actor.name,
-        items: [...actor.items].map((i: any) => i.name),
+        items: [...actor.items].filter((i: any) => i.type === 'equipment').map((i: any) => i.name),
         wounds: actor.system.status.wounds.value,
       },
       companion: companion && {
@@ -78,7 +78,10 @@ test('Unmaterialize snapshots the dsa5 actor; Materialize restores it', async ({
   );
   expect(gone).toEqual({ actor: false, companion: false });
   const sheet = await record(gm, `${id}-sheet`);
-  expect(sheet?.['doc']?.items?.map((i: any) => i.name)).toEqual(['Langschwert']);
+  // dsa5 seeds new actors with compendium skills/money; compare equipment only.
+  expect(
+    sheet?.['doc']?.items?.filter((i: any) => i.type === 'equipment').map((i: any) => i.name),
+  ).toEqual(['Langschwert']);
 
   await api(gm, 'element.rename', { id, name: 'Alrik the Bold' });
   await api(gm, 'materialize.elements', { ids: [id] });
