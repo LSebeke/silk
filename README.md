@@ -34,9 +34,12 @@ npm run typecheck  # svelte-check, strict TS
 npm run lint       # eslint + prettier --check   (npm run format to fix)
 npm run build
 npm run test:e2e   # build + Playwright against headless Foundry (local only)
+npm run test:perf  # dev build + @perf Playwright tests and fast-pan bench (local only)
 ```
 
 **E2E** (`e2e/`, spec §14): each worker starts headless Foundry on a free port with a throwaway data dir (license copied, `dsa5` and `dist/` symlinked), creates and launches world `silk-test-<run>`, enables Silk, adds user `Player`, and deletes everything afterwards. It never sees `silk-dev`. Tests are `*.e2e.ts` and use the `gm` / `player` page fixtures from `e2e/fixtures.ts`. Env overrides: `FOUNDRY_MAIN`, `FOUNDRY_USER_DATA`. One-time: `npx playwright install chromium`.
+
+**Perf** (spec §14): `@perf` tests in `e2e/perf.e2e.ts` are skipped by `test:e2e` and run by `test:perf`, which builds with the dev-only commands `dev.fixture.generate { count, seed }` (seeded Canon in the working copy) and `dev.bench.fastPan { count, epf, ms }`. Dev commands exist only when `__SILK_DEV__` is true (`npm run dev` or `SILK_DEV=1`); release builds drop them (CI checks). Results format and release gate: [bench/README.md](bench/README.md).
 
 **Dev loop** (no HMR): symlink `dist/` into Foundry once, run `npm run dev`, press F5 after each rebuild.
 
