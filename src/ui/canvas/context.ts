@@ -3,6 +3,7 @@ import type {
   CanvasFilter,
   CanvasState,
   CreationPipeline,
+  Focus,
   LayoutTween,
   ViewStateStore,
 } from '../../core/canvas';
@@ -24,6 +25,8 @@ export interface CanvasContext {
   detailDrop: boolean;
   /** Canvas Filters (§10.5): what renders, "+N" badges, chip bar. */
   filter: CanvasFilter;
+  /** Focus View (§10.6): seeds, hops, Focus Pins, why the focus changed. */
+  focus: Focus;
   /** Re-read the Revealed source (Revelation Map) on open. */
   refreshRevealed(): Promise<void>;
   /** Client setting `renderBudgetWarning` (§10.5): warn above this many visible Nodes. */

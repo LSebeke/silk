@@ -15,6 +15,7 @@
     type Viewport,
   } from '@xyflow/svelte';
   import { onDestroy, setContext, untrack } from 'svelte';
+  import { cameraMove, FOCUS_SEEDS, type CameraReason } from '../../core/canvas/focus';
   import { TWEEN_MS } from '../../core/canvas/tween';
   import type { RelativeDirection } from '../../core/connections';
   import {
@@ -174,7 +175,7 @@
         selection,
         prev.filter((n): n is ElementNode => n.type === 'element'),
         tween && tweenAt,
-        filter,
+        { ...filter, pinned: new Set(ctx.focus.pins()) },
       ),
     ];
   }
@@ -190,6 +191,11 @@
     const offFilter = ctx.filter.subscribe(() => {
       refresh();
       refreshEdges();
+      scheduleFollow();
+    });
+    const offFocus = ctx.focus.subscribe((reason) => {
+      if (reason === 'scene') followReason = 'scene';
+      scheduleFollow();
     });
     const offState = canvasState.subscribe(refresh);
     const offTween = ctx.layoutTween.subscribe((from) => {
@@ -206,11 +212,88 @@
     });
     return () => {
       offFilter();
+      offFocus();
       offState();
       offTween();
       tween = undefined;
     };
   });
+
+  // Focus View camera (§10.6): Nodes stay put, only the camera moves (~450 ms).
+  const focusOn = () => !!ctx.filter.filters().hops?.includes(FOCUS_SEEDS);
+  let wasFocusOn = focusOn();
+  let shown: ReadonlySet<string> = new Set(ctx.filter.result().visible);
+  let followReason: CameraReason = 'local';
+  let followQueued = false;
+  /** Shift down: the camera holds, skipped moves are dropped. */
+  let shift = false;
+  function scheduleFollow() {
+    if (followQueued) return;
+    followQueued = true;
+    queueMicrotask(follow);
+  }
+  function follow() {
+    followQueued = false;
+    const visible = ctx.filter.result().visible;
+    const added = [...visible].filter((id) => !shown.has(id));
+    shown = new Set(visible);
+    const on = focusOn();
+    const reason: CameraReason = on && !wasFocusOn ? 'scene' : followReason;
+    followReason = 'local';
+    wasFocusOn = on;
+    if (!on || !root) return;
+    const rect = root.getBoundingClientRect();
+    const move = cameraMove({
+      reason,
+      shift,
+      visible: [...visible],
+      added,
+      selection: canvasState.get().selection,
+      viewport: flow.getViewport(),
+      size: { width: rect.width, height: rect.height },
+      rect(id) {
+        const node = flow.getInternalNode(id);
+        const at = node?.internals.positionAbsolute ?? readElement(workingCopy.get(id))?.position;
+        if (!at) return undefined;
+        return {
+          x: at.x,
+          y: at.y,
+          width: node?.measured.width ?? 190,
+          height: node?.measured.height ?? 80,
+        };
+      },
+    });
+    if (move)
+      void flow.fitView({
+        nodes: move.ids.map((id) => ({ id })),
+        duration: TWEEN_MS,
+        padding: 0.2,
+        maxZoom: move.maxZoom ?? 1,
+      });
+  }
+  $effect(() => {
+    const win = root?.ownerDocument.defaultView;
+    if (!win) return;
+    const onShift = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') shift = event.type === 'keydown';
+    };
+    const onBlur = () => (shift = false);
+    win.addEventListener('keydown', onShift, true);
+    win.addEventListener('keyup', onShift, true);
+    win.addEventListener('blur', onBlur);
+    return () => {
+      win.removeEventListener('keydown', onShift, true);
+      win.removeEventListener('keyup', onShift, true);
+      win.removeEventListener('blur', onBlur);
+    };
+  });
+
+  /** `p` (§10.3): pin the selected Nodes, or unpin them when all are pinned. */
+  function togglePins(ids: readonly string[]) {
+    const pins = new Set(ctx.focus.pins());
+    const all = ids.every((id) => pins.has(id));
+    void run(all ? 'focus.unpin' : 'focus.pin', { ids });
+  }
 
   // Detail drop while moving (§10.2): blank blocks until 150 ms after the viewport stops.
   let moveEnd: ReturnType<typeof setTimeout> | undefined;
@@ -368,6 +451,11 @@
       case 'status':
         if (node) statusPrompt.ask(node);
         break;
+      case 'pin': {
+        const ids = canvasState.get().selection.filter((id) => readElement(workingCopy.get(id)));
+        if (ids.length) togglePins(ids);
+        break;
+      }
       case 'reveal':
         if (edge) askReveal('connection', edge.id);
         else if (node) askReveal('element', node);
@@ -450,6 +538,11 @@
 
   const selectedElements = $derived(nodes.filter((n) => n.selected && n.type === 'element').length);
   const selectedAny = $derived(nodes.some((n) => n.selected));
+  /** Focus View with no seeds (§10.6): only pins show, plus a hint. */
+  const focusHint = $derived.by(() => {
+    void filtered;
+    return focusOn() && ctx.focus.seeds().length === 0;
+  });
 
   function onSelectionChange({ nodes: selected }: { nodes: (ElementNode | GroupNode)[] }) {
     const ids = selected.map((n) => n.id);
@@ -569,6 +662,11 @@
       </button>
     </div>
   {/if}
+  {#if focusHint}
+    <div class="silk-focus-hint" role="status" data-silk-focus-hint>
+      {ctx.localize('SILK.Focus.Hint')}
+    </div>
+  {/if}
   {#if connectFrom}
     <div class="silk-connect-hint" data-silk-connect-hint>
       {ctx.localize('SILK.Canvas.ConnectHint')}
@@ -623,6 +721,19 @@
     font-size: 12px;
     background: #fffdf8;
     border: 1px solid #2b6cb0;
+    border-radius: 6px;
+    transform: translateX(-50%);
+  }
+  .silk-focus-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    z-index: 10;
+    max-width: 60%;
+    padding: 4px 10px;
+    font-size: 12px;
+    background: #fffdf8;
+    border: 1px solid #c9bfa8;
     border-radius: 6px;
     transform: translateX(-50%);
   }

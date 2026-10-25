@@ -48,6 +48,19 @@ describe('flow model', () => {
     expect(toGroupNodes(records(frame), [], [], new Set())).toEqual([]);
   });
 
+  it('marks Focus Pins', () => {
+    const filter = {
+      visible: new Set(['el-a', 'el-g']),
+      badges: new Map(),
+      pinned: new Set(['el-g']),
+    };
+    const nodes = toFlowNodes(records(alrik, gareth), [], [], undefined, filter);
+    expect(nodes.map((n) => [n.id, n.data.pinned])).toEqual([
+      ['el-a', undefined],
+      ['el-g', true],
+    ]);
+  });
+
   it('a Ghost restored by reconcile carries the Commit it came from', () => {
     const restored = elementRecord('el-r', {
       class: 'person',
