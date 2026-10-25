@@ -32,7 +32,7 @@
   });
   const expanded = $derived.by(() => {
     void result;
-    return ctx.viewState.get().expanded?.length ?? 0;
+    return ctx.filter.expanded().length;
   });
 
   let dimension = $state<FilterDimension | ''>('');

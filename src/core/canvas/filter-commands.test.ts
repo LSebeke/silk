@@ -74,6 +74,7 @@ describe('filter commands', () => {
     await t.registry.run('filter.expandBadge', { id: 'a' });
     expect([...t.filter.visibleIds()].sort()).toEqual(['a', 'b']);
     expect(t.filter.result().badges.size).toBe(0);
+    expect(t.filter.expanded()).toEqual(['b']);
   });
 
   it('notifies subscribers on filter and working copy changes', async () => {

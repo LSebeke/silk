@@ -50,12 +50,16 @@ export interface CanvasFilter {
   /** Rendered element ids. */
   visibleIds(): string[];
   filters(): CanvasFilters;
+  /** Ids shown via "+N" badges. */
+  expanded(): readonly string[];
   set(dimension: FilterDimension, values: readonly string[]): Promise<void>;
   clear(dimension?: FilterDimension): Promise<void>;
   expandBadge(id: string): Promise<void>;
   /** Svelte store contract: now and after every change. */
   subscribe(run: (result: FilterResult) => void): () => void;
 }
+
+type FilterView = Pick<ViewState, 'filters' | 'expanded'>;
 
 export interface CanvasFilterDeps {
   workingCopy(): WorkingCopy;
@@ -80,7 +84,7 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
         // Session not ready: compute without caching.
       }
     }
-    const view = deps.viewState.get();
+    const view = current();
     const hops = deps.hops?.();
     const key = JSON.stringify([view.filters, view.expanded, hops]);
     if (cached?.key === key && watching) return cached.result;
@@ -102,16 +106,29 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
   }
   deps.revealed.subscribe(changed);
 
-  async function save(patch: Pick<ViewState, 'filters' | 'expanded'>) {
-    await deps.viewState.update(patch);
+  /** Unsaved filter changes: the canvas follows at once, not after the setting round trip. */
+  let pending: FilterView | undefined;
+  let saving = 0;
+  const current = (): FilterView => {
+    const { filters, expanded } = deps.viewState.get();
+    return { filters, expanded, ...pending };
+  };
+  async function save(patch: FilterView) {
+    pending = { ...pending, ...patch };
+    saving++;
     changed();
+    try {
+      await deps.viewState.update(patch);
+    } finally {
+      if (--saving === 0) pending = undefined;
+    }
   }
-  const current = () => deps.viewState.get();
 
   return {
     result,
     visibleIds: () => [...result().visible],
     filters: () => current().filters ?? {},
+    expanded: () => current().expanded ?? [],
     async set(dimension, values) {
       if (!isFilterDimension(dimension))
         throw new Error(`Silk: unknown filter dimension "${String(dimension)}"`);
