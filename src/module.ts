@@ -62,6 +62,8 @@ const viewState = createViewState({
 /** Canvas Filters (§10.5); Revealed reads the Campaign's map under an Adventure, else ownership. */
 const revealed = createRevealedSource({
   revelationMap: async () => {
+    const checkout = workingCopy().binding?.checkout;
+    if (!checkout || !('adventure' in checkout)) return null;
     const campaigns = getSession().campaigns;
     const campaign = await campaigns.checkedOutCampaign();
     return campaign ? campaigns.readRevelationMap(campaign.id) : null;
@@ -69,6 +71,13 @@ const revealed = createRevealedSource({
   ownership: (element) => foundryOwnershipRevealed(element.uuid),
 });
 const canvasFilter = createCanvasFilter({ workingCopy, viewState, revealed });
+/**
+ * Re-read the map only while the Revealed filter is in use (GM): reading the Canon on every
+ * binding change would race the bind/checkout flows. `filter.set` refreshes on activation.
+ */
+const refreshRevealed = async () => {
+  if (game.user?.isGM && canvasFilter.filters().revealed?.length) await revealed.refresh();
+};
 /** `element.create` hooks: T7 (Connection to `from`) and T8 (immediate Materialize) push here. */
 const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
 afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
@@ -142,7 +151,7 @@ const canvasContext = (): CanvasContext => ({
   layoutTween,
   detailDrop: game.settings?.get(MODULE_ID, 'detailDrop') ?? true,
   filter: canvasFilter,
-  refreshRevealed: () => revealed.refresh(),
+  refreshRevealed,
   renderBudget: game.settings?.get(MODULE_ID, 'renderBudgetWarning') ?? 1000,
   localize,
 });
@@ -202,9 +211,9 @@ Hooks.once('ready', async () => {
   });
   connectionsPages.watch();
   // Checkout changes switch the Revealed filter between ownership and a Revelation Map.
-  const refreshRevealed = () => void revealed.refresh().catch(() => {});
-  refreshRevealed();
-  getSession().workingCopy.watch((change) => change.binding && refreshRevealed());
+  const refreshQuietly = () => void refreshRevealed().catch(() => {});
+  refreshQuietly();
+  getSession().workingCopy.watch((change) => change.binding && setTimeout(refreshQuietly, 500));
   registerConnectionsPageHooks(connectionsPages, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
