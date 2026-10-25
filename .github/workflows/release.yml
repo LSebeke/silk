@@ -19,6 +19,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: No dev-only commands in the build (spec §14)
+        run: "! grep -rq 'dev\\.fixture\\.generate' dist"
       - name: Stamp version and download URL into module.json
         env:
           TAG: ${{ github.ref_name }}

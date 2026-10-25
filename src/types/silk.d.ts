@@ -2,6 +2,11 @@
 import type { Session } from '../adapter/session';
 import type { CommandRegistry } from '../core/commands/registry';
 
+declare global {
+  /** True in dev builds only (vite.config.ts): registers the `dev.*` commands. */
+  const __SILK_DEV__: boolean;
+}
+
 declare module 'fvtt-types/configuration' {
   interface ModuleConfig {
     silk: { api: CommandRegistry; session: () => Session };
