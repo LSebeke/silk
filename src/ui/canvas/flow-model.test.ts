@@ -35,6 +35,19 @@ describe('flow model', () => {
     ]);
   });
 
+  it('renders only filter-visible Nodes, frames and edges, with "+N" badges', () => {
+    const filter = { visible: new Set(['el-a']), badges: new Map([['el-a', 1]]) };
+    const nodes = toFlowNodes(records(alrik, gareth, link), [], [], undefined, filter);
+    expect(nodes.map((n) => [n.id, n.data.hidden])).toEqual([['el-a', 1]]);
+    expect(toFlowEdges(records(alrik, gareth, link), [], filter.visible)).toEqual([]);
+    const frame: CanonRecord = {
+      kind: 'layoutGroup',
+      id: 'g-x',
+      data: { label: 'X', parent: null, position: { x: 0, y: 0 }, size: { width: 1, height: 1 } },
+    };
+    expect(toGroupNodes(records(frame), [], [], new Set())).toEqual([]);
+  });
+
   it('a Ghost restored by reconcile carries the Commit it came from', () => {
     const restored = elementRecord('el-r', {
       class: 'person',

@@ -30,6 +30,7 @@
   import { edgeMenu, nodeMenu, type MenuEntry } from './menu';
   import ConnectionEdge from './ConnectionEdge.svelte';
   import ElementCard from './ElementCard.svelte';
+  import FilterBar from './FilterBar.svelte';
   import GroupFrame from './GroupFrame.svelte';
   import { pointKind } from './connection-points';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
@@ -57,6 +58,8 @@
 
   let nodes = $state.raw<(ElementNode | GroupNode)[]>([]);
   let edges = $state.raw<FlowEdge[]>([]);
+  /** Canvas Filters (§10.5): only these render. */
+  let filtered = $state.raw(ctx.filter.result());
   /** `c` (§10.3): picking the target for a Connection from this Node. */
   let connectFrom = $state<string | undefined>();
   let root: HTMLDivElement | undefined = $state();
@@ -152,27 +155,42 @@
     return { x: from.x + (x - from.x) * k, y: from.y + (y - from.y) * k };
   }
 
-  // Working copy + selection → Nodes (Visual Group frames first: parents before children).
+  // Working copy + selection + filters → Nodes (frames first: parents before children).
   function refresh() {
     const records = workingCopy.records();
     const selection = canvasState.get().selection;
+    const filter = ctx.filter.result();
+    filtered = filter;
     const prev = untrack(() => nodes);
     nodes = [
       ...toGroupNodes(
         records,
         selection,
         prev.filter((n): n is GroupNode => n.type === 'frame'),
+        filter.frames,
       ),
       ...toFlowNodes(
         records,
         selection,
         prev.filter((n): n is ElementNode => n.type === 'element'),
         tween && tweenAt,
+        filter,
       ),
     ];
   }
+  function refreshEdges() {
+    edges = toFlowEdges(
+      workingCopy.records(),
+      untrack(() => edges),
+      ctx.filter.result().visible,
+    );
+  }
   $effect(() => {
-    const offRecords = workingCopy.subscribe(refresh);
+    // Working copy and filter changes (commands, Revealed source) both arrive here.
+    const offFilter = ctx.filter.subscribe(() => {
+      refresh();
+      refreshEdges();
+    });
     const offState = canvasState.subscribe(refresh);
     const offTween = ctx.layoutTween.subscribe((from) => {
       const win = root?.ownerDocument.defaultView ?? window;
@@ -186,16 +204,9 @@
       };
       tweenFrame = win.requestAnimationFrame(step);
     });
-    const offEdges = workingCopy.subscribe((records) => {
-      edges = toFlowEdges(
-        records,
-        untrack(() => edges),
-      );
-    });
     return () => {
-      offRecords();
+      offFilter();
       offState();
-      offEdges();
       offTween();
       tween = undefined;
     };
@@ -519,6 +530,7 @@
       </button>
     </div>
   {/if}
+  <FilterBar {ctx} result={filtered} />
   {#if selectedAny && !connectFrom}
     <div class="silk-selection-toolbar" data-silk-selection-toolbar>
       <button type="button" onclick={() => run('canvas.group', {})} data-silk-action="group">

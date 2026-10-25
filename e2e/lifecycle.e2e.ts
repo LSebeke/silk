@@ -1,7 +1,7 @@
 /** Unmaterialize, Foundry-side deletion, element delete, reconcile on real dsa5 (spec §6, §7). */
 /* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate over untyped dsa5/Foundry docs */
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, test, waitForSilk } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
   page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
@@ -166,6 +166,7 @@ test('reconcile on load restores a doc deleted behind Silk’s back from the las
   expect((await record(gm, id))?.['uuid']).toBe(uuid);
 
   await gm.reload();
+  await waitForSilk(gm);
   await ready(gm);
   await expect.poll(async () => (await record(gm, id))?.['restoredFrom'] ?? null).toBe(hash);
   expect((await record(gm, id))?.['uuid']).toBeUndefined();

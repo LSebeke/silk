@@ -83,6 +83,8 @@ export interface LifecycleContributor {
   unmaterialize?(el: StoryElement): Promise<void>;
   /** After the element was Materialized again from its snapshot. */
   rematerialized?(el: StoryElement): Promise<void>;
+  /** After every Materialize (fresh or from the snapshot), after `rematerialized`. */
+  materialized?(el: StoryElement): Promise<void>;
   /** `element.delete`, before Silk deletes the element's docs and records. */
   deleted?(info: DeletedElement): Promise<void>;
   /** A doc that is not an element's doc or Companion was deleted in Foundry. True = handled. */
@@ -351,6 +353,7 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
       if (!el) return;
       if (el.restoredFrom) await writeElement(el, { restoredFrom: undefined });
       if (restoring.delete(id)) await each('rematerialized', read(id) ?? el);
+      await each('materialized', read(id) ?? el);
     },
 
     async unmaterialize(ids) {

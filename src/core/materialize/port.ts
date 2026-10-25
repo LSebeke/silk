@@ -22,6 +22,8 @@ export interface SilkDocFlags {
   /** Quest: the `dsaquestlog` page and the quest's key in it. */
   quest?: string;
   questKey?: string;
+  /** Event / Location journal: its Event Scene's (Overview Scene's) id (T13). */
+  scene?: string;
   /** On a folder: which Silk folder it is (an Element Class id or `companions`). */
   folder?: string;
   /**

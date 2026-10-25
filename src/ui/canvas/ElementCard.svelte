@@ -132,6 +132,19 @@
       </div>
     {/if}
   </div>
+  {#if data.hidden}
+    <!-- "+N" (§10.5): Connections to filtered-out Nodes; click shows them. -->
+    <button
+      type="button"
+      class="nodrag nopan hidden-badge"
+      title={ctx.localize('SILK.Filter.Badge').replace('{n}', String(data.hidden))}
+      onclick={(e) => {
+        e.stopPropagation();
+        ctx.run('filter.expandBadge', { id }).catch(fail);
+      }}
+      data-silk-badge={data.hidden}>+{data.hidden}</button
+    >
+  {/if}
   <!-- Connection Points (§10.2): out/in/mutual on all four sides; dragging one out connects. -->
   {#each CONNECTION_POINTS as point (point.id)}
     <Handle
@@ -162,6 +175,21 @@
     border-left: 6px solid var(--silk-class);
     border-radius: 6px;
     box-shadow: 0 1px 2px #0002;
+  }
+  .hidden-badge {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+    z-index: 2;
+    width: auto;
+    min-height: 0;
+    padding: 0 5px;
+    font-size: 10px;
+    line-height: 16px;
+    color: #fff;
+    background: #555;
+    border: 1px solid #fff;
+    border-radius: 8px;
   }
   .silk-card.selected {
     outline: 2px solid #2b6cb0;

@@ -5,3 +5,5 @@ export * from './view-state';
 export * from './groups';
 export * from './layout-commands';
 export * from './tween';
+export * from './filters';
+export * from './filter-commands';

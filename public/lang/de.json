@@ -93,6 +93,17 @@
         "edit": "Infoblock bearbeiten",
         "delete": "Infoblock löschen"
       },
+      "filter": {
+        "set": "Canvas-Filter setzen",
+        "clear": "Canvas-Filter entfernen",
+        "expandBadge": "Verborgene Nachbarn zeigen"
+      },
+      "event": {
+        "activateScene": "Ereignis-Szene aktivieren",
+        "createScene": "Szene erstellen",
+        "restoreScene": "Szene aus letztem Commit wiederherstellen",
+        "viewScene": "Szene ansehen"
+      },
       "reveal": {
         "element": "Aufdecken",
         "appearance": "Aussehen aufdecken",
@@ -220,7 +231,8 @@
       "event": "Ereignisse",
       "quest": "Quests",
       "note": "Notizen",
-      "companions": "Silk-Begleitjournale"
+      "companions": "Silk-Begleitjournale",
+      "scene": "Silk-Szenen"
     },
     "Materialize": {
       "Implicit": "{name} materialisiert.",
@@ -238,6 +250,30 @@
       "done": "erledigt",
       "failed": "gescheitert"
     },
+    "Filter": {
+      "Shown": "{n} von {m} angezeigt",
+      "Clear": "Filter entfernen",
+      "Add": "Filter…",
+      "Badge": "{n} verborgene Nachbarn. Klicken zum Anzeigen.",
+      "Expanded": "Nachbarn angezeigt: {n}",
+      "Budget": "{n} Knoten sichtbar (mehr als {max}). Das Canvas kann langsam werden; grenze es mit Filtern ein.",
+      "Dimension": {
+        "class": "Klasse",
+        "status": "Status",
+        "revealed": "Enthüllt",
+        "materialized": "Materialisiert",
+        "tag": "Tag",
+        "group": "Gruppe",
+        "hops": "N-hop",
+        "contents": "Inhalt"
+      },
+      "Value": {
+        "revealed": "enthüllt",
+        "hidden": "nicht enthüllt",
+        "materialized": "materialisiert",
+        "ghost": "Ghost"
+      }
+    },
     "Lifecycle": {
       "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Silk nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",
       "RestoredBadge": "Wiederhergestellt aus Commit {commit}",
@@ -253,6 +289,18 @@
       "UnmaterializeTitle": "Entmaterialisieren",
       "UnmaterializeRevealed": "{names} ist enthüllt. Die Spieler verlieren den Zugriff, bis es wieder materialisiert wird.",
       "Unmaterialize": "Entmaterialisieren"
+    },
+    "EventScene": {
+      "Box": "Anwesend",
+      "Happened": "{name} ist geschehen (Ereignis-Szene aktiviert). Zum Rückgängigmachen den Status zurücksetzen.",
+      "Deleted": "Die Szene von {name} wurde gelöscht. Ihr Journal bietet Szene erstellen und Aus letztem Commit wiederherstellen.",
+      "NoScene": "Dieses Element hat keine Szene.",
+      "NothingToRestore": "Der letzte Commit enthält keine Szene von {name}.",
+      "Activate": "Aktivieren",
+      "Create": "Szene erstellen",
+      "CreateOverview": "Übersichtsszene erstellen",
+      "None": "Keine Szene",
+      "Restore": "Aus letztem Commit wiederherstellen"
     },
     "Reveal": {
       "Reveal": "Aufdecken",

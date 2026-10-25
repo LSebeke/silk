@@ -41,11 +41,14 @@ function sameEdge(a: ConnectionEdge, b: ConnectionEdge) {
 export function toFlowEdges(
   records: Snapshot,
   previous: readonly ConnectionEdge[],
+  /** Canvas Filters: only edges between rendered Nodes. Default all. */
+  visible?: ReadonlySet<string>,
 ): ConnectionEdge[] {
   const prev = new Map(previous.map((e) => [e.id, e]));
   const connections = [...records.values()].flatMap((r) => {
     const c = readConnection(r);
-    return c && readElement(records.get(c.from)) && readElement(records.get(c.to)) ? [c] : [];
+    if (!c || (visible && !(visible.has(c.from) && visible.has(c.to)))) return [];
+    return readElement(records.get(c.from)) && readElement(records.get(c.to)) ? [c] : [];
   });
   const pairKey = (c: Connection) => (c.from < c.to ? `${c.from}|${c.to}` : `${c.to}|${c.from}`);
   const pairs = new Map<string, string[]>();

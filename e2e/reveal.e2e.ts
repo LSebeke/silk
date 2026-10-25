@@ -5,6 +5,7 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate over untyped Foundry docs */
 import type { Page } from '@playwright/test';
+import { ensureAdventure as startAdventure } from './adventure';
 import { expect, test } from './fixtures';
 
 /** Player sync is slow under load (e2e.md): never poll it below 20 s. */
@@ -28,15 +29,7 @@ async function waitForSilk(page: Page) {
 
 /** Bound Canon with an Adventure checked out (an earlier test may have started one). */
 async function ensureAdventure(page: Page) {
-  await page.evaluate(async () => {
-    const mod = game.modules?.get('silk') as any;
-    const session = mod.session();
-    if (!session.workingCopy.binding) await mod.api.run('canon.create', { name: 'T16' });
-    if ('adventure' in session.workingCopy.binding.checkout) return;
-    await mod.api.run('history.commit', { label: 'T16 start' });
-    const campaign = await mod.api.run('campaign.create', { name: 'Reveal' });
-    await mod.api.run('adventure.start', { name: 'Reveal 1', campaignId: campaign.id });
-  });
+  await startAdventure(page);
   await page.evaluate(async () => {
     await game.settings?.set('silk', 'materializeMode', 'immediate');
     await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });

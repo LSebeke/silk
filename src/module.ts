@@ -11,6 +11,8 @@ import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { registerOwnsHooks } from './adapter/owns';
 import { foundryRevealStage, registerRevealHooks } from './adapter/reveal';
+import { foundryOwnershipRevealed } from './adapter/revealed';
+import { createSceneDocs, registerSceneBar, registerSceneHooks } from './adapter/scenes';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
 import {
   getSession,
@@ -23,10 +25,13 @@ import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
+  createCanvasFilter,
   createCanvasState,
   createCreationPipeline,
   createLayoutTween,
+  createRevealedSource,
   createViewState,
+  filterCommands,
   joinFrameOnCreate,
   layoutCommands,
 } from './core/canvas';
@@ -40,7 +45,8 @@ import {
   serializeRevelationMap,
 } from './core/campaigns';
 import { connectionCommands, connectOnCreate } from './core/connections';
-import { elementCommands, type ElementCommandDeps } from './core/elements';
+import { elementCommands, readElement, type ElementCommandDeps } from './core/elements';
+import { createEventScenes, eventSceneCommands } from './core/event-scenes';
 import { historyCommands } from './core/history';
 import {
   createConnectionsPages,
@@ -73,6 +79,25 @@ const viewState = createViewState({
   load: () => game.settings?.get(MODULE_ID, 'viewState'),
   save: async (value) => void (await game.settings?.set(MODULE_ID, 'viewState', value)),
 });
+/** Canvas Filters (§10.5); Revealed reads the Campaign's map under an Adventure, else ownership. */
+const revealed = createRevealedSource({
+  revelationMap: async () => {
+    const checkout = workingCopy().binding?.checkout;
+    if (!checkout || !('adventure' in checkout)) return null;
+    const campaigns = getSession().campaigns;
+    const campaign = await campaigns.checkedOutCampaign();
+    return campaign ? campaigns.readRevelationMap(campaign.id) : null;
+  },
+  ownership: (element) => foundryOwnershipRevealed(element.uuid),
+});
+const canvasFilter = createCanvasFilter({ workingCopy, viewState, revealed });
+/**
+ * Re-read the map only while the Revealed filter is in use (GM): reading the Canon on every
+ * binding change would race the bind/checkout flows. `filter.set` refreshes on activation.
+ */
+const refreshRevealed = async () => {
+  if (game.user?.isGM && canvasFilter.filters().revealed?.length) await revealed.refresh();
+};
 /** `element.create` hooks: T7 (Connection to `from`) and T8 (immediate Materialize) push here. */
 const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
 afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
@@ -99,8 +124,8 @@ const materializer = createMaterializer({
       window: { title: localize('SILK.Materialize.VisibleTitle') },
       content: `<p>${game.i18n?.format('SILK.Materialize.VisibleConfirm', { count: String(count) })}</p>`,
     })),
-  // Canvas Filters / Focus View (T23/T24) narrow this to the rendered Nodes.
-  visibleIds: () => [...workingCopy().records().keys()],
+  // The rendered Nodes: Canvas Filters / Focus View (§10.5, §10.6).
+  visibleIds: () => canvasFilter.visibleIds(),
   selection: () => canvasState.get().selection,
   // The pipeline is still in the class box while `element.create` runs.
   deferImmediate: () => pipeline.get().step === 'classBox',
@@ -165,6 +190,34 @@ afterCreate.push((element) => materializer.afterCreate(element));
 pipeline.onComplete(({ id }) => {
   materializer.afterPipeline(id).catch((error: unknown) => console.error(error));
   owns.afterPipeline(id).catch((error: unknown) => console.error(error));
+});
+
+/** T13 Event Scenes: Scene per Event, present at ↔ tokens, Happened on activation. */
+const eventScenes = createEventScenes({
+  workingCopy,
+  docs: foundryDocs,
+  scenes: createSceneDocs({
+    scenes: () => (game.scenes ?? []) as never,
+    get: (id) => game.scenes?.get(id) as never,
+    sceneClass: () => CONFIG.Scene.documentClass as never,
+    async tokenData(actorId, data, scene) {
+      const actor = game.actors?.get(actorId);
+      const token = await actor?.getTokenDocument(data as never, { parent: scene as never });
+      return token?.toObject();
+    },
+    ensureFolder: (name) => foundryDocs.ensureFolder('Scene' as never, 'event', name),
+  }),
+  materializer,
+  mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
+  deferImmediate: () => pipeline.get().step === 'classBox',
+  newId: () => foundry.utils.randomID(16),
+  localize: format,
+  notify: (message) => void ui.notifications?.info(message),
+  lastCommit: () => getSession().history.lastCommit(),
+});
+lifecycle.contribute(eventScenes.contributor);
+pipeline.onComplete(({ id }) => {
+  eventScenes.afterPipeline(id).catch((error: unknown) => console.error(error));
 });
 
 /** Generated Connections pages (spec §5 In journals); only the active GM writes them. */
@@ -246,6 +299,9 @@ const canvasContext = (): CanvasContext => ({
   viewState,
   layoutTween,
   detailDrop: game.settings?.get(MODULE_ID, 'detailDrop') ?? true,
+  filter: canvasFilter,
+  refreshRevealed,
+  renderBudget: game.settings?.get(MODULE_ID, 'renderBudgetWarning') ?? 1000,
   localize,
   title,
   reveal,
@@ -257,11 +313,17 @@ for (const command of [
     workingCopy,
     newId: () => foundry.utils.randomID(16),
     afterCreate,
-    afterRename: [(element) => materializer.writeName(element.id)],
+    afterRename: [
+      (element) => materializer.writeName(element.id),
+      (element) => eventScenes.renamed(element.id),
+    ],
   }),
   ...materializeCommands(materializer),
   ...lifecycleCommands(lifecycle, () => canvasState.get().selection),
-  ...owns.wrap(connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) })),
+  ...eventScenes.wrap(
+    owns.wrap(connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) })),
+  ),
+  ...eventSceneCommands(eventScenes),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
   ...layoutCommands({
     workingCopy,
@@ -270,6 +332,7 @@ for (const command of [
     groupLabel: () => localize('SILK.Canvas.NewGroup'),
     tween: (from) => layoutTween.start(from),
   }),
+  ...filterCommands(canvasFilter),
   ...canvasUiCommands(canvasContext),
   ...canonCommands,
   ...historyCommands(() => getSession().history),
@@ -326,6 +389,12 @@ Hooks.once('ready', async () => {
     localize,
   });
   connectionsPages.watch();
+  // Checkout changes switch the Revealed filter between ownership and a Revelation Map.
+  const refreshQuietly = () => void refreshRevealed().catch(() => {});
+  refreshQuietly();
+  // Every Reveal / un-reveal changes the Revealed filter (T16 → T23).
+  reveal.subscribe(refreshQuietly);
+  getSession().workingCopy.watch((change) => change.binding && setTimeout(refreshQuietly, 500));
   registerConnectionsPageHooks(connectionsPages, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
@@ -333,6 +402,24 @@ Hooks.once('ready', async () => {
   registerOwnsHooks(owns, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
+  });
+  registerSceneHooks(eventScenes, {
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isActiveGM: () => isActiveGM(game as never),
+  });
+  registerSceneBar({
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isGM: () => game.user?.isGM ?? false,
+    state(journal) {
+      const id = materializer.elementIdOf(journal);
+      const el = id ? readElement(workingCopy().get(id)) : undefined;
+      if (!el?.uuid || (el.class !== 'event' && el.class !== 'location')) return undefined;
+      const scene = eventScenes.sceneOf(el.id)?.name;
+      return { elementId: el.id, cls: el.class, ...(scene ? { scene } : {}) };
+    },
+    run: (name, args) => registry.run(name, args),
+    localize,
+    error: (message) => void ui.notifications?.error(message),
   });
   // Reconcile on load (§7): missed hooks are never replayed, Foundry is re-read. Missing
   // docs first, then the contributors (Connections pages written while Silk was off, …).
