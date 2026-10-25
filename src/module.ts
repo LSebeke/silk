@@ -33,16 +33,19 @@ import { elementCommands, type ElementCommandDeps } from './core/elements';
 import { historyCommands } from './core/history';
 import {
   createConnectionsPages,
+  createDocRewriter,
   createLifecycle,
   createMaterializer,
   lifecycleCommands,
   materializeCommands,
 } from './core/materialize';
+import { createMerges, mergeCommands, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { canonCommands } from './ui/canon/commands';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
 import { devUiCommands } from './ui/dev/commands';
+import { createMergeUi } from './ui/merge/ui';
 import './ui/silk.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
@@ -166,6 +169,31 @@ const connectionsPages = createConnectionsPages({
 /** T11: Connections pages are derived state; reconcile rewrites stale ones. */
 lifecycle.contribute({ reconcile: () => connectionsPages.refresh() });
 
+/** End Adventure / merge (spec §11.3, §11.4): one session per World session. */
+const docRewriter = createDocRewriter({ workingCopy, docs: foundryDocs, materializer, lifecycle });
+let merges: { session: object; merges: Merges } | undefined;
+function getMerges(): Merges {
+  const session = getSession();
+  if (merges?.session !== session)
+    merges = {
+      session,
+      merges: createMerges({
+        history: session.history,
+        workingCopy: session.workingCopy,
+        campaigns: session.campaigns,
+        author: () => game.user?.name ?? 'GM',
+        applyResult: (result) => docRewriter.apply(result),
+      }),
+    };
+  return merges.merges;
+}
+const mergeUi = createMergeUi({
+  view: () => getMerges().view(),
+  workingCopy,
+  run: (name, args) => registry.run(name, args),
+  t: format,
+});
+
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
   available: (name) => registry.isAvailable(name),
@@ -200,6 +228,7 @@ for (const command of [
   ...canonCommands,
   ...historyCommands(() => getSession().history),
   ...campaignCommands(() => getSession().campaigns),
+  ...mergeCommands(getMerges, mergeUi),
 ])
   registry.register(command);
 
