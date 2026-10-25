@@ -86,6 +86,11 @@ export interface Reveal {
    * re-applies its ends (Connections page level); a deleted one leaves the maps.
    */
   watch(): () => void;
+  /**
+   * Player Note `id` was converted to an Info Block (§9): where it was Revealed (the given
+   * Campaigns, the checked-out one, the World state) it stays Revealed as a block.
+   */
+  convertNote(id: string, campaigns: readonly string[]): Promise<void>;
   /** Resolves when queued Reveal writes are done. */
   idle(): Promise<void>;
 }
@@ -118,6 +123,13 @@ export function createReveal(deps: RevealDeps): Reveal {
         for (const r of recs.values()) {
           const el = readElement(r);
           if (el?.infoBlocks?.some((b) => b._id === id)) return el.id;
+        }
+        return undefined;
+      },
+      elementOfNote(id) {
+        for (const r of recs.values()) {
+          const el = readElement(r);
+          if (el?.playerNotes?.some((n) => n._id === id)) return el.id;
         }
         return undefined;
       },
@@ -190,6 +202,7 @@ export function createReveal(deps: RevealDeps): Reveal {
   function elementsOf(kind: RevealTarget, id: string, g: RevealGraph): string[] {
     if (kind === 'connection') return [...(g.endsOf(id) ?? [])];
     if (kind === 'infoBlock') return [g.elementOfBlock(id) ?? []].flat();
+    if (kind === 'playerNote') return [g.elementOfNote(id) ?? []].flat();
     return [id];
   }
 
@@ -332,6 +345,22 @@ export function createReveal(deps: RevealDeps): Reveal {
         await setWorld(map);
         await applyAll(map);
       }),
+    convertNote: (id, campaigns) =>
+      serial(async () => {
+        const swap = (m: RevelationMap) =>
+          isRevealed(m, 'playerNote', id)
+            ? setRevealed(setRevealed(m, 'playerNote', id, false), 'infoBlock', id, true)
+            : m;
+        const current = deps.adventure() ? await deps.campaign.current() : null;
+        for (const c of new Set([...campaigns, ...(current ? [current] : [])])) {
+          const map = await deps.campaign.read(c);
+          const next = swap(map);
+          if (next !== map) await deps.campaign.write(c, next);
+        }
+        await setWorld(swap(state));
+        const owner = graph().elementOfBlock(id);
+        if (owner) await applyTo([owner], state);
+      }),
     idle: () => queue.then(() => {}),
     watch() {
       const wc = deps.workingCopy();
@@ -382,6 +411,7 @@ export function revealCommands(reveal: Reveal): Command[] {
     target('appearance'),
     target('infoBlock'),
     target('connection'),
+    target('playerNote'),
     {
       name: 'reveal.showToPlayers',
       title: 'SILK.Commands.reveal.showToPlayers',

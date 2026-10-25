@@ -23,10 +23,10 @@ export const OWNERSHIP = { NONE: 0, LIMITED: 1, OBSERVER: 2, OWNER: 3 } as const
 /** `CONST.TOKEN_DISPLAY_MODES`. */
 export const DISPLAY = { HOVER: 30, OWNER: 40 } as const;
 /**
- * Player Note pages of a Revealed element (T18 decides the final level; notes are
- * party-editable). Hidden (NONE) while the element is not Revealed.
+ * Player Note pages of a Revealed element: OWNER, so any player edits or deletes any note
+ * (§9). Hidden (NONE) while the element or the note is not Revealed.
  */
-export const PLAYER_NOTE_LEVEL = OWNERSHIP.OBSERVER;
+export const PLAYER_NOTE_LEVEL = OWNERSHIP.OWNER;
 
 export type RevealWrite =
   | { op: 'update'; uuid: string; data: Record<string, unknown> }

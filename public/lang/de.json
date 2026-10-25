@@ -110,13 +110,20 @@
         "appearance": "Aussehen aufdecken",
         "infoBlock": "Infoblock aufdecken",
         "connection": "Verbindung aufdecken",
-        "showToPlayers": "Den Spielern zeigen"
+        "showToPlayers": "Den Spielern zeigen",
+        "playerNote": "Spielernotiz aufdecken"
       },
       "merge": {
         "nextConflict": "Nächster Konflikt",
         "pick": "Diesen Wert übernehmen",
         "confirm": "In den Kanon übernehmen",
         "cancel": "Zusammenführen abbrechen"
+      },
+      "playerNote": {
+        "create": "Spielernotiz hinzufügen",
+        "edit": "Spielernotiz bearbeiten",
+        "delete": "Spielernotiz löschen",
+        "convert": "In SL-Infoblock umwandeln"
       }
     },
     "Canvas": {
@@ -364,6 +371,12 @@
         "layout": "Verschoben",
         "canonOnly": "Nur Kanon"
       }
+    },
+    "PlayerNote": {
+      "Name": "Spielernotiz",
+      "Add": "Spielernotiz hinzufügen",
+      "Prompt": "Deine Notiz (alle Spieler können sie lesen und bearbeiten):",
+      "Save": "Notiz speichern"
     }
   }
 }

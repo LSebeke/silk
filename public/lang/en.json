@@ -110,13 +110,20 @@
         "appearance": "Reveal Appearance",
         "infoBlock": "Reveal Info Block",
         "connection": "Reveal Connection",
-        "showToPlayers": "Show to players"
+        "showToPlayers": "Show to players",
+        "playerNote": "Reveal Player Note"
       },
       "merge": {
         "nextConflict": "Next conflict",
         "pick": "Take this value",
         "confirm": "Merge into Canon",
         "cancel": "Cancel merge"
+      },
+      "playerNote": {
+        "create": "Add Player Note",
+        "edit": "Edit Player Note",
+        "delete": "Delete Player Note",
+        "convert": "Convert to GM Info Block"
       }
     },
     "Canvas": {
@@ -364,6 +371,12 @@
         "layout": "Moved",
         "canonOnly": "Canon only"
       }
+    },
+    "PlayerNote": {
+      "Name": "Player Note",
+      "Add": "Add Player Note",
+      "Prompt": "Your note (all players can read and edit it):",
+      "Save": "Save note"
     }
   }
 }

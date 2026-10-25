@@ -33,6 +33,8 @@ export interface SilkDocFlags {
   img?: string;
   token?: string;
   hood?: string;
+  /** On a Player Note page: its authoring Campaign (§9). */
+  campaign?: string;
 }
 
 export const OWNERSHIP_NONE = 0;

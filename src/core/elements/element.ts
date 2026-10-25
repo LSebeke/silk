@@ -26,6 +26,11 @@ export interface ElementData {
    */
   img?: string;
   infoBlocks?: InfoBlock[];
+  /**
+   * Player Notes (§9): pages in the "Player Notes" category, mirrored like Info Blocks and
+   * versioned/merged the same way.
+   */
+  playerNotes?: PlayerNote[];
   /** Class fields (§4): only those carrying a mechanic, e.g. Person `merchantType`. */
   fields?: ClassFields;
   /** GM-only Tags, never shown to players (§4). Silk-owned. */
@@ -47,6 +52,11 @@ export interface InfoBlock {
   name: string;
   /** HTML. */
   text: string;
+}
+
+/** A party note (§9): page id once Materialized; `campaign` = the authoring Campaign. */
+export interface PlayerNote extends InfoBlock {
+  campaign?: string;
 }
 
 export interface ClassFields {

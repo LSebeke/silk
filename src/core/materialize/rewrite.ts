@@ -9,7 +9,16 @@
 import { canonicalJson, type CanonRecord, type Snapshot } from '../canon';
 import { hasStatus, readElement, statusOf, type StoryElement } from '../elements';
 import type { WorkingCopy } from '../working-copy';
-import { CONNECTIONS_SORT, SORT_STEP, blockJournal, blockPage, infoBlockPages } from './layout';
+import {
+  CONNECTIONS_SORT,
+  SORT_STEP,
+  blockJournal,
+  blockPage,
+  infoBlockPages,
+  notePage,
+  playerNotePages,
+  playerNotesCategory,
+} from './layout';
 import { readSheet, sheetId, type Lifecycle } from './lifecycle';
 import type { Materializer } from './materializer';
 import type { FoundryDocs } from './port';
@@ -19,6 +28,9 @@ export interface DocRewriterDeps {
   docs: FoundryDocs;
   materializer: Materializer;
   lifecycle: Lifecycle;
+  /** For a "Player Notes" category a journal lacks (a Note's first note). */
+  newId?(): string;
+  localize?(key: string): string;
 }
 
 export interface DocRewriter {
@@ -53,6 +65,46 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
     }
   }
 
+  /** Player Notes (§9): the result's notes, in the "Player Notes" category. */
+  async function writeNotes(el: StoryElement) {
+    const found = materializer.docsOf(el.id);
+    const holder = found && blockJournal(found.main, found.companion);
+    if (!holder) return;
+    const notes = el.playerNotes ?? [];
+    const pages = playerNotePages(holder);
+    const wanted = new Set(notes.map((n) => n._id));
+    const gone = pages.filter((p) => !wanted.has(p._id)).map((p) => p._id);
+    if (gone.length) await docs.deletePages(holder.uuid, gone);
+    if (!notes.length) return;
+    let category = holder.flags.silk.playerNotes;
+    if (!category || !holder.categories?.some((c) => c._id === category)) {
+      if (!deps.newId || !deps.localize) return;
+      const created = playerNotesCategory(deps.newId(), { localize: deps.localize });
+      await docs.createCategories(holder.uuid, [created]);
+      await docs.update(holder.uuid, { 'flags.silk.playerNotes': created._id });
+      category = created._id;
+    }
+    let last = pages.at(-1)?.sort ?? 0;
+    for (const note of notes) {
+      const current = pages.find((p) => p._id === note._id);
+      if (!current) {
+        last += SORT_STEP;
+        await docs.createPages(holder.uuid, [notePage(note, category, last)]);
+      } else if (
+        current.name !== note.name ||
+        (current.text?.content ?? '') !== note.text ||
+        current.flags?.silk?.campaign !== note.campaign
+      )
+        await docs.updatePage(holder.uuid, note._id, {
+          name: note.name,
+          'text.content': note.text,
+          ...(note.campaign
+            ? { 'flags.silk.campaign': note.campaign }
+            : { 'flags.silk.-=campaign': null }),
+        });
+    }
+  }
+
   async function rewrite(el: StoryElement, sheetChanged: boolean, result: Snapshot) {
     const found = materializer.docsOf(el.id);
     if (!found) return;
@@ -64,6 +116,7 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
     await materializer.setImage(el.id, el.img ?? '');
     if (el.fields) await materializer.setFields(el.id, el.fields);
     await writeBlocks(el);
+    await writeNotes(el);
     const status = statusOf(el);
     if (status && hasStatus(el.class)) await materializer.setStatus(el.id, status);
     await materializer.sync(el.id);
