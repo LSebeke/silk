@@ -4,6 +4,7 @@
  * by the adapter; unknown stored fields are kept on save.
  */
 import { canonicalJson } from '../canon';
+import { FILTER_DIMENSIONS, type CanvasFilters } from './filters';
 
 export interface Viewport {
   x: number;
@@ -13,9 +14,16 @@ export interface Viewport {
 
 export interface ViewState {
   viewport?: Viewport;
+  /** Active Canvas Filters (§10.5). */
+  filters?: CanvasFilters;
+  /** Nodes shown via a "+N" badge (§10.5); cleared from the chip bar. */
+  expanded?: string[];
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+const strings = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((x) => typeof x === 'string');
 
 /** The well-formed fields of a stored value. */
 export function readViewState(stored: unknown): ViewState {
@@ -24,6 +32,14 @@ export function readViewState(stored: unknown): ViewState {
   const vp = raw['viewport'] as Partial<Viewport> | undefined;
   if (vp && finite(vp.x) && finite(vp.y) && finite(vp.zoom) && vp.zoom > 0)
     out.viewport = { x: vp.x, y: vp.y, zoom: vp.zoom };
+  const filters = raw['filters'];
+  if (filters && typeof filters === 'object') {
+    const f = filters as Record<string, unknown>;
+    out.filters = Object.fromEntries(
+      FILTER_DIMENSIONS.flatMap((d) => (strings(f[d]) ? [[d, f[d]]] : [])),
+    ) as CanvasFilters;
+  }
+  if (strings(raw['expanded'])) out.expanded = raw['expanded'];
   return out;
 }
 

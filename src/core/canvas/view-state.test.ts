@@ -11,6 +11,16 @@ describe('view state', () => {
     expect(readViewState({ viewport: { x: 1, y: 2, zoom: 0 } })).toEqual({});
   });
 
+  it('reads well-formed Canvas Filters and expanded badges', () => {
+    expect(
+      readViewState({
+        filters: { class: ['person'], tag: 'x', campaign: ['c'], hops: [1] },
+        expanded: ['a'],
+      }),
+    ).toEqual({ filters: { class: ['person'] }, expanded: ['a'] });
+    expect(readViewState({ expanded: [1] })).toEqual({});
+  });
+
   it('update merges into the stored value and saves it, keeping unknown later fields', async () => {
     const saved: unknown[] = [];
     let stored: unknown = { viewport: { x: 0, y: 0, zoom: 1 }, pins: ['el-a'] };

@@ -1,6 +1,6 @@
 /**
  * Working copy → Svelte Flow Nodes. Pure; the canvas recomputes on every working copy or
- * selection change. Canvas Filters / Focus View (T23/T24) filter `records` before this;
+ * selection change. Canvas Filters / Focus View (`core/canvas/filters.ts`) pass `filter`;
  * Visual Groups (T26) add `group` Nodes; Connections (T7) add a `toFlowEdges`.
  */
 import type { Node } from '@xyflow/svelte';
@@ -16,6 +16,14 @@ export interface ElementNodeData extends Record<string, unknown> {
   img?: string;
   /** Stored (non-default) Status (T10); the card shows `statusOf` it. */
   status?: string;
+  /** Neighbours hidden by Canvas Filters ("+N" badge, §10.5). */
+  hidden?: number;
+}
+
+/** What Canvas Filters let through (`FilterResult`). */
+export interface NodeFilter {
+  visible: ReadonlySet<string>;
+  badges: ReadonlyMap<string, number>;
 }
 
 export type ElementNode = Node<ElementNodeData, 'element'>;
@@ -30,7 +38,8 @@ function sameNode(a: ElementNode, b: ElementNode) {
     a.data.name === b.data.name &&
     a.data.ghost === b.data.ghost &&
     a.data.img === b.data.img &&
-    a.data.status === b.data.status
+    a.data.status === b.data.status &&
+    a.data.hidden === b.data.hidden
   );
 }
 
@@ -44,13 +53,15 @@ export function toFlowNodes(
   previous: readonly ElementNode[],
   /** Absolute position override (Untangle tween), else the record's. */
   at?: (id: string) => Point | undefined,
+  filter?: NodeFilter,
 ): ElementNode[] {
   const prev = new Map(previous.map((n) => [n.id, n]));
   const selected = new Set(selection);
   const nodes: ElementNode[] = [];
   for (const record of records.values()) {
     const element = readElement(record);
-    if (!element) continue;
+    if (!element || (filter && !filter.visible.has(element.id))) continue;
+    const hidden = filter?.badges.get(element.id);
     // In a Visual Group: a child Node, positioned relative to the frame.
     const parent = containerOf(records, element.id);
     const origin = readGroup(parent ? records.get(parent) : undefined)?.position ?? { x: 0, y: 0 };
@@ -67,6 +78,7 @@ export function toFlowNodes(
         ghost: isGhost(element),
         ...(element.img ? { img: element.img } : {}),
         ...(element.status ? { status: element.status } : {}),
+        ...(hidden ? { hidden } : {}),
       },
     };
     const old = prev.get(element.id);
@@ -92,10 +104,14 @@ export function toGroupNodes(
   records: Snapshot,
   selection: readonly string[],
   previous: readonly GroupNode[],
+  /** Frames Canvas Filters keep (`FilterResult.frames`); default all. */
+  frames?: ReadonlySet<string>,
 ): GroupNode[] {
   const prev = new Map(previous.map((n) => [n.id, n]));
   const selected = new Set(selection);
-  const groups = [...records.values()].flatMap((r) => readGroup(r) ?? []);
+  const groups = [...records.values()].flatMap((r) =>
+    !frames || frames.has(r.id) ? (readGroup(r) ?? []) : [],
+  );
   const depth = new Map(groups.map((g) => [g.id, ancestorsOf(records, g.id).length]));
   groups.sort((a, b) => (depth.get(a.id) ?? 0) - (depth.get(b.id) ?? 0));
   return groups.map((group) => {

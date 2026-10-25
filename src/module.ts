@@ -9,6 +9,7 @@ import { createFoundryDocs } from './adapter/foundry-docs';
 import { registerKeybindings } from './adapter/keybindings';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { registerOwnsHooks } from './adapter/owns';
+import { foundryOwnershipRevealed } from './adapter/revealed';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
 import { getSession, startSession } from './adapter/session';
 import { registerSettings } from './adapter/settings';
@@ -16,10 +17,13 @@ import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
+  createCanvasFilter,
   createCanvasState,
   createCreationPipeline,
   createLayoutTween,
+  createRevealedSource,
   createViewState,
+  filterCommands,
   joinFrameOnCreate,
   layoutCommands,
 } from './core/canvas';
@@ -55,6 +59,16 @@ const viewState = createViewState({
   load: () => game.settings?.get(MODULE_ID, 'viewState'),
   save: async (value) => void (await game.settings?.set(MODULE_ID, 'viewState', value)),
 });
+/** Canvas Filters (§10.5); Revealed reads the Campaign's map under an Adventure, else ownership. */
+const revealed = createRevealedSource({
+  revelationMap: async () => {
+    const campaigns = getSession().campaigns;
+    const campaign = await campaigns.checkedOutCampaign();
+    return campaign ? campaigns.readRevelationMap(campaign.id) : null;
+  },
+  ownership: (element) => foundryOwnershipRevealed(element.uuid),
+});
+const canvasFilter = createCanvasFilter({ workingCopy, viewState, revealed });
 /** `element.create` hooks: T7 (Connection to `from`) and T8 (immediate Materialize) push here. */
 const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
 afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
@@ -81,8 +95,8 @@ const materializer = createMaterializer({
       window: { title: localize('SILK.Materialize.VisibleTitle') },
       content: `<p>${game.i18n?.format('SILK.Materialize.VisibleConfirm', { count: String(count) })}</p>`,
     })),
-  // Canvas Filters / Focus View (T23/T24) narrow this to the rendered Nodes.
-  visibleIds: () => [...workingCopy().records().keys()],
+  // The rendered Nodes: Canvas Filters / Focus View (§10.5, §10.6).
+  visibleIds: () => canvasFilter.visibleIds(),
   selection: () => canvasState.get().selection,
   // The pipeline is still in the class box while `element.create` runs.
   deferImmediate: () => pipeline.get().step === 'classBox',
@@ -127,6 +141,9 @@ const canvasContext = (): CanvasContext => ({
   viewState,
   layoutTween,
   detailDrop: game.settings?.get(MODULE_ID, 'detailDrop') ?? true,
+  filter: canvasFilter,
+  refreshRevealed: () => revealed.refresh(),
+  renderBudget: game.settings?.get(MODULE_ID, 'renderBudgetWarning') ?? 1000,
   localize,
 });
 
@@ -147,6 +164,7 @@ for (const command of [
     groupLabel: () => localize('SILK.Canvas.NewGroup'),
     tween: (from) => layoutTween.start(from),
   }),
+  ...filterCommands(canvasFilter),
   ...canvasUiCommands(canvasContext),
   ...canonCommands,
   ...historyCommands(() => getSession().history),
@@ -183,6 +201,10 @@ Hooks.once('ready', async () => {
     isActiveGM: () => isActiveGM(game as never),
   });
   connectionsPages.watch();
+  // Checkout changes switch the Revealed filter between ownership and a Revelation Map.
+  const refreshRevealed = () => void revealed.refresh().catch(() => {});
+  refreshRevealed();
+  getSession().workingCopy.watch((change) => change.binding && refreshRevealed());
   registerConnectionsPageHooks(connectionsPages, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
