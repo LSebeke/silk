@@ -76,6 +76,8 @@ export const SETTINGS: Record<string, SettingData> = {
     type: Boolean,
     default: true,
   },
+  /** Internal: Player Canvas pan/zoom, per client (§9). */
+  playerViewState: { scope: 'client', config: false, type: Object, default: {} },
   /** Internal: window position and detached state per window (§2). */
   windowState: { scope: 'client', config: false, type: Object, default: {} },
   /** Internal: a GM has seen the one-time FILES_BROWSE notice (§12). */

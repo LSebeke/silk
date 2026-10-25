@@ -34,6 +34,7 @@ import {
   filterCommands,
   joinFrameOnCreate,
   layoutCommands,
+  readViewState,
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
 import { devCoreCommands } from './core/dev/commands';
@@ -66,6 +67,10 @@ import { devUiCommands } from './ui/dev/commands';
 import { createMergeUi } from './ui/merge/ui';
 import { detailUiCommands } from './ui/detail/commands';
 import type { DetailContext } from './ui/detail/context';
+import { playerCanvasCommands } from './ui/player-canvas/commands';
+import type { PlayerCanvasContext } from './ui/player-canvas/context';
+import { createPlayerViewPublisher, parsePlayerView } from './core/player-view';
+import { openPlayerDoc, resolvePlayerNode, type PlayerDoc } from './adapter/player-docs';
 import './ui/silk.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
@@ -304,6 +309,54 @@ const reveal = createReveal({
   refreshPages: (ids) => connectionsPages.refresh(ids),
 });
 setRevelationMapApplier((map) => reveal.applyMap(map));
+
+/**
+ * Player View + Player Canvas (spec §9). The active GM publishes the world setting; players
+ * read only it and the Foundry docs they can see, never the Working Copy or Canon.
+ */
+const playerView = () => parsePlayerView(game.settings?.get(MODULE_ID, 'playerView'));
+const playerViewPublisher = createPlayerViewPublisher({
+  workingCopy,
+  reveal,
+  // Frozen under the main Checkout (§8).
+  frozen: () => !adventureCheckedOut(),
+  current: () => game.settings?.get(MODULE_ID, 'playerView'),
+  write: async (view) => void (await game.settings?.set(MODULE_ID, 'playerView', view as object)),
+});
+const playerDoc = (uuid: string) => fromUuidSync(uuid) as unknown as PlayerDoc | null;
+const playerCanvasWatchers = new Set<() => void>();
+let playerCanvasTimer: ReturnType<typeof setTimeout> | undefined;
+/** Player View or a doc changed: refresh open Player Canvases (coalesced). */
+const playerCanvasChanged = () => {
+  if (!playerCanvasWatchers.size) return;
+  clearTimeout(playerCanvasTimer);
+  playerCanvasTimer = setTimeout(() => {
+    for (const fn of playerCanvasWatchers) fn();
+  }, 50);
+};
+const playerCanvasContext = (): PlayerCanvasContext => ({
+  run: (name, args) => registry.run(name, args),
+  view: playerView,
+  watch(fn) {
+    playerCanvasWatchers.add(fn);
+    return () => void playerCanvasWatchers.delete(fn);
+  },
+  resolve: (node) => resolvePlayerNode(node, playerDoc, game.user),
+  viewport: {
+    get: () =>
+      readViewState({ viewport: game.settings?.get(MODULE_ID, 'playerViewState') }).viewport,
+    save: async (viewport) =>
+      void (await game.settings?.set(MODULE_ID, 'playerViewState', viewport)),
+  },
+  localize,
+});
+const playerCanvasEntry = {
+  isGM: () => game.user?.isGM ?? false,
+  async open() {
+    const { openPlayerCanvasWindow } = await import('./ui/player-canvas/PlayerCanvasWindow');
+    await openPlayerCanvasWindow(playerCanvasContext());
+  },
+};
 lifecycle.contribute({ reconcile: () => reveal.reconcile() });
 const title = (name: string) => localize(registry.get(name)?.title ?? name);
 const detailContext = (): DetailContext => ({
@@ -360,7 +413,16 @@ for (const command of [
     tween: (from) => layoutTween.start(from),
   }),
   ...filterCommands(canvasFilter),
-  ...canvasUiCommands(canvasContext),
+  ...canvasUiCommands(canvasContext, playerCanvasEntry),
+  ...playerCanvasCommands({
+    view: playerView,
+    openDoc: (node) =>
+      openPlayerDoc(node, {
+        get: playerDoc,
+        journal: (id) => game.journal?.get(id) as unknown as PlayerDoc | undefined,
+        user: game.user,
+      }),
+  }),
   ...canonCommands,
   ...historyCommands(() => getSession().history),
   ...campaignCommands(() => getSession().campaigns),
@@ -423,6 +485,18 @@ Hooks.once('ready', async () => {
   refreshQuietly();
   // Every Reveal / un-reveal changes the Revealed filter (T16 → T23).
   reveal.subscribe(refreshQuietly);
+  // T17: the active GM keeps the Player View current; Player Canvases follow it and the docs.
+  if (isActiveGM(game as never)) playerViewPublisher.start();
+  for (const hook of ['createSetting', 'updateSetting'])
+    Hooks.on(
+      hook as never,
+      ((setting: { key?: string }) => {
+        if (setting.key === `${MODULE_ID}.playerView`) playerCanvasChanged();
+      }) as never,
+    );
+  for (const doc of ['Actor', 'Item', 'JournalEntry', 'JournalEntryPage'])
+    for (const op of ['create', 'update', 'delete'])
+      Hooks.on(`${op}${doc}` as never, playerCanvasChanged as never);
   getSession().workingCopy.watch((change) => change.binding && setTimeout(refreshQuietly, 500));
   registerConnectionsPageHooks(connectionsPages, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
@@ -467,7 +541,6 @@ Hooks.once('ready', async () => {
 
 Hooks.on('getSceneControlButtons', (controls) => {
   addSilkSceneControl(controls as unknown as SceneControls, {
-    isGM: game.user?.isGM ?? false,
     run: (name) => registry.run(name),
   });
 });

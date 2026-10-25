@@ -117,6 +117,9 @@
         "pick": "Take this value",
         "confirm": "Merge into Canon",
         "cancel": "Cancel merge"
+      },
+      "playerCanvas": {
+        "openDoc": "Open the doc"
       }
     },
     "Canvas": {
@@ -364,6 +367,10 @@
         "layout": "Moved",
         "canonOnly": "Canon only"
       }
+    },
+    "PlayerCanvas": {
+      "Title": "Player Canvas",
+      "Empty": "Nothing has been revealed yet."
     }
   }
 }

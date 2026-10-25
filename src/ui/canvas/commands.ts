@@ -2,13 +2,23 @@
 import type { Command } from '../../core/commands/registry';
 import type { CanvasContext } from './context';
 
-export function canvasUiCommands(getContext: () => CanvasContext): Command[] {
+/** Players get the Player Canvas from the same command (§9 Entry), never the GM context. */
+export interface PlayerCanvasEntry {
+  isGM(): boolean;
+  open(): Promise<void>;
+}
+
+export function canvasUiCommands(
+  getContext: () => CanvasContext,
+  player?: PlayerCanvasEntry,
+): Command[] {
   return [
     {
       name: 'canvas.open',
       title: 'SILK.Commands.canvas.open',
-      available: (ctx) => ctx.isGM,
+      available: (ctx) => ctx.isGM || !!player,
       async run() {
+        if (player && !player.isGM()) return player.open();
         // Reveal/checkout may have changed the Revelation Map behind the Revealed filter.
         void getContext()
           .refreshRevealed()

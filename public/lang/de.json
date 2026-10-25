@@ -117,6 +117,9 @@
         "pick": "Diesen Wert übernehmen",
         "confirm": "In den Kanon übernehmen",
         "cancel": "Zusammenführen abbrechen"
+      },
+      "playerCanvas": {
+        "openDoc": "Dokument öffnen"
       }
     },
     "Canvas": {
@@ -364,6 +367,10 @@
         "layout": "Verschoben",
         "canonOnly": "Nur Kanon"
       }
+    },
+    "PlayerCanvas": {
+      "Title": "Spieler-Leinwand",
+      "Empty": "Noch nichts enthüllt."
     }
   }
 }
