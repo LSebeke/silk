@@ -5,6 +5,7 @@
 import { registerConnectionsPageHooks } from './adapter/connections-page';
 import { dsa5Mapping } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
+import { activeScene, registerFocusHooks } from './adapter/focus';
 import { createFoundryDocs } from './adapter/foundry-docs';
 import { registerKeybindings } from './adapter/keybindings';
 import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
@@ -27,14 +28,18 @@ import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
   createCanvasFilter,
+  createCanvasSearch,
   createCanvasState,
   createCreationPipeline,
+  createFocus,
   createLayoutTween,
   createRevealedSource,
   createViewState,
   filterCommands,
+  focusCommands,
   joinFrameOnCreate,
   layoutCommands,
+  searchCommands,
 } from './core/canvas';
 import { createRegistry } from './core/commands/registry';
 import { devCoreCommands } from './core/dev/commands';
@@ -95,7 +100,16 @@ const revealed = createRevealedSource({
   },
   ownership: (element) => foundryOwnershipRevealed(element.uuid),
 });
-const canvasFilter = createCanvasFilter({ workingCopy, viewState, revealed });
+/** Focus View (§10.6): seeds from the active Scene + selection, Focus Pins. */
+const focus = createFocus({
+  workingCopy,
+  viewState,
+  state: canvasState,
+  activeScene: () => activeScene(game.scenes?.active as never),
+});
+const canvasFilter = createCanvasFilter({ workingCopy, viewState, revealed, focus });
+/** Search (§10.8): shared index; jumps and new Nodes show through filters until deselected. */
+const canvasSearch = createCanvasSearch({ workingCopy, filter: canvasFilter, state: canvasState });
 /**
  * Re-read the map only while the Revealed filter is in use (GM): reading the Canon on every
  * binding change would race the bind/checkout flows. `filter.set` refreshes on activation.
@@ -108,6 +122,7 @@ const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
 afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
 /** T26: a Node created inside a Visual Group frame joins it. */
 afterCreate.push(joinFrameOnCreate(workingCopy));
+afterCreate.push((element) => canvasSearch.afterCreate(element));
 /** Untangle tween: layout commands announce old positions, the canvas animates. */
 const layoutTween = createLayoutTween();
 
@@ -358,8 +373,10 @@ const canvasContext = (): CanvasContext => ({
   layoutTween,
   detailDrop: game.settings?.get(MODULE_ID, 'detailDrop') ?? true,
   filter: canvasFilter,
+  focus,
   refreshRevealed,
   renderBudget: game.settings?.get(MODULE_ID, 'renderBudgetWarning') ?? 1000,
+  search: canvasSearch,
   localize,
   title,
   reveal,
@@ -391,6 +408,8 @@ for (const command of [
     tween: (from) => layoutTween.start(from),
   }),
   ...filterCommands(canvasFilter),
+  ...focusCommands(focus),
+  ...searchCommands(canvasSearch),
   ...canvasUiCommands(canvasContext),
   ...canonCommands,
   ...historyCommands(() => getSession().history),
@@ -497,6 +516,7 @@ Hooks.once('ready', async () => {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
   });
+  registerFocusHooks(focus, { on: (hook, fn) => void Hooks.on(hook as never, fn as never) });
   registerSceneBar({
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isGM: () => game.user?.isGM ?? false,

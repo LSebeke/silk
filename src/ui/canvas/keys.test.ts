@@ -21,6 +21,11 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('KeyS'), none)).toBeUndefined();
   });
 
+  it('p pins/unpins the selected Nodes (Focus Pin)', () => {
+    expect(canvasKey(key('KeyP'), { node: true, edge: false })).toEqual({ kind: 'pin' });
+    expect(canvasKey(key('KeyP'), none)).toBeUndefined();
+  });
+
   it('r Reveals the selected Node or Connection (y/n confirm)', () => {
     expect(canvasKey(key('KeyR'), { node: true, edge: false })).toEqual({ kind: 'reveal' });
     expect(canvasKey(key('KeyR'), { node: false, edge: true })).toEqual({ kind: 'reveal' });
@@ -77,6 +82,14 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('KeyC'), { node: true, edge: false })).toEqual({ kind: 'connect' });
     expect(canvasKey(key('KeyC'), none)).toBeUndefined();
     expect(canvasKey(key('KeyC', { ctrlKey: true }), { node: true, edge: false })).toBeUndefined();
+  });
+
+  it('Ctrl+F opens Search, with or without a selection', () => {
+    expect(canvasKey(key('KeyF', { ctrlKey: true }), none)).toEqual({ kind: 'search' });
+    expect(canvasKey(key('KeyF', { ctrlKey: true }), { node: true, edge: false })).toEqual({
+      kind: 'search',
+    });
+    expect(canvasKey(key('KeyF'), none)).toBeUndefined();
   });
 
   it('Tab / q cycle direction / type of a selected Connection; F2 edits it', () => {

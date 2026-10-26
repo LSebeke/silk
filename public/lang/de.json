@@ -38,7 +38,9 @@
         "ungroup": "Gruppe auflösen",
         "renameGroup": "Gruppe umbenennen",
         "untangle": "Entwirren",
-        "undo": "Entwirren rückgängig"
+        "undo": "Entwirren rückgängig",
+        "search": "Leinwand durchsuchen",
+        "jumpTo": "Zu Knoten springen"
       },
       "canon": {
         "create": "Kanon anlegen",
@@ -99,6 +101,11 @@
         "clear": "Canvas-Filter entfernen",
         "expandBadge": "Verborgene Nachbarn zeigen"
       },
+      "focus": {
+        "setHops": "Focus-View-Abstand setzen",
+        "pin": "Focus Pin setzen",
+        "unpin": "Focus Pin entfernen"
+      },
       "event": {
         "activateScene": "Ereignis-Szene aktivieren",
         "createScene": "Szene erstellen",
@@ -133,12 +140,21 @@
       "Group": "Gruppieren",
       "Ungroup": "Gruppe auflösen",
       "Untangle": "Entwirren",
-      "ConnectHint": "Ziel-Knoten anklicken oder leere Fläche für einen neuen Knoten. Esc bricht ab.",
+      "ConnectHint": "Verbinden mit: Ziel suchen oder anklicken, leere Fläche für einen neuen Knoten. Esc bricht ab.",
       "LabelPlaceholder": "Text…",
       "StatusConfirm": "{name} auf „{status}“ setzen?",
       "Yes": "Ja (y)",
       "No": "Nein (n)",
-      "StatusChip": "Status: {status}. Klicken zum Ändern (s)."
+      "StatusChip": "Status: {status}. Klicken zum Ändern (s).",
+      "Search": "Suche",
+      "SearchPlaceholder": "Knoten, Tags, Infoblöcke suchen…",
+      "SearchEmpty": "Keine Treffer",
+      "NewNode": "Neuer Knoten",
+      "NewNodeDirection": "Neuer Knoten: Richtung (↑/↓, Enter)",
+      "Palette": "Palette",
+      "PaletteHint": "Klasse auf die Leinwand oder auf einen Knoten ziehen.",
+      "Filtered": "gefiltert",
+      "FilteredTitle": "Von den Filtern verborgen; sichtbar bis zur Abwahl."
     },
     "Connection": {
       "Type": {
@@ -263,6 +279,14 @@
       "open": "offen",
       "done": "erledigt",
       "failed": "gescheitert"
+    },
+    "Focus": {
+      "Seeds": "Focus (Szene + Auswahl)",
+      "Toggle": "Focus View",
+      "Hops": "Schritte",
+      "Pin": "Focus Pin (p)",
+      "Unpin": "Focus Pin entfernen (p)",
+      "Hint": "Keine aktive Szene und nichts ausgewählt: nur Focus Pins werden gezeigt. Aktiviere eine Szene oder wähle einen Node."
     },
     "Filter": {
       "Shown": "{n} von {m} angezeigt",
