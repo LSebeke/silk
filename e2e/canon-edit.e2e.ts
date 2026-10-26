@@ -116,6 +116,16 @@ test('clean load after main moved: fast-forward rewrites the Materialized docs',
   await reload(gm);
 
   await expect.poll(() => head(gm), { timeout: 60_000 }).toBe(moved);
+  // The binding moves first, then the docs are rewritten.
+  const ulfDoc = () =>
+    silk(
+      gm,
+      ({ session }, ulf) =>
+        (fromUuidSync(session.workingCopy.get(ulf)?.data.uuid as string) as { name?: string })
+          ?.name,
+      ids.ulf,
+    );
+  await expect.poll(ulfDoc, { timeout: 60_000 }).toBe('Ulf the Bold');
   const state = await silk(
     gm,
     ({ session }, ulf) => {
@@ -152,6 +162,8 @@ test('dirty load after main moved: merge "Canon (incoming)" / "This World", conf
     'data-silk-merge-kind',
     'canonEdit',
   );
+  // Both cards sit at (0, 0); Ulf's covers Gareth's.
+  await win.locator(`[data-silk-merge-node="${ids.gareth}"]`).dispatchEvent('click');
   await expect(win.locator('th.canon')).toHaveText('Canon (incoming)');
   await expect(win.locator('th.adv')).toHaveText('This World');
   expect(await head(gm)).not.toBe(moved);
@@ -231,6 +243,10 @@ test('Abandon: typed confirmation in the Canon window resets to main, deleting A
   await confirm.click();
 
   await expect(gm.locator('[data-silk-checkout]')).toContainText('main', { timeout: 60_000 });
+  // The binding moves first, then the docs are rewritten.
+  await expect
+    .poll(() => silk(gm, (_, uuid) => !!fromUuidSync(uuid), doomed.uuid), { timeout: 60_000 })
+    .toBe(false);
   const after = await silk(
     gm,
     async ({ session }, { doomed, ulf }) => {
