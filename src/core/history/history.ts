@@ -13,6 +13,14 @@ import {
 } from '../canon';
 import type { WorkingCopy } from '../working-copy';
 
+/** A Commit under main found main moved by another World: sync (fast-forward or merge) first. */
+export class MainMovedError extends Error {
+  constructor() {
+    super('Silk: main moved on in another World; update this World first (merge)');
+    this.name = 'MainMovedError';
+  }
+}
+
 export interface HistoryDeps {
   files: CanonFiles;
   workingCopy: WorkingCopy;
@@ -31,6 +39,11 @@ export interface History {
   bind(args: { canonId: string }): Promise<void>;
   /** `history.commit`: returns the new head (or the old one when clean). */
   commit(args: { label?: string }): Promise<string>;
+  /**
+   * Capture World State and write the working copy as a Commit on the head that moves no ref
+   * (Canon edit mode: this World's side of a merge with a main that moved, spec §11.3).
+   */
+  snapshotCommit(args: { label: string }): Promise<string>;
   /** `history.discard`: reset the working copy to the last Commit. */
   discard(): Promise<void>;
   /** Working copy differs from the last Commit. */
@@ -118,10 +131,11 @@ export function createHistory(deps: HistoryDeps): History {
       await deps.beforeCommit?.();
       const binding = requireBinding();
       if (binding.head && !(await isDirty())) return binding.head;
+      const canon = await requireCanon();
+      if ('main' in binding.checkout && (await canon.getMain()) !== binding.head)
+        throw new MainMovedError();
       const snapshot = new Map(workingCopy.records());
-      const hash = await (
-        await requireCanon()
-      ).commit({
+      const hash = await canon.commit({
         snapshot,
         parents: binding.head ? [binding.head] : [],
         label: label ?? '',
@@ -134,6 +148,19 @@ export function createHistory(deps: HistoryDeps): History {
       headCache = { head: hash, snapshot };
       await workingCopy.setBinding({ ...binding, head: hash });
       return hash;
+    },
+
+    async snapshotCommit({ label }) {
+      requireBinding();
+      await deps.beforeCommit?.();
+      const binding = requireBinding();
+      return (await requireCanon()).commit({
+        snapshot: new Map(workingCopy.records()),
+        parents: binding.head ? [binding.head] : [],
+        label,
+        author: deps.author(),
+        ref: null,
+      });
     },
 
     async discard() {

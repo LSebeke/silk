@@ -59,7 +59,7 @@ import {
   lifecycleCommands,
   materializeCommands,
 } from './core/materialize';
-import { createMerges, mergeCommands, type Merges } from './core/merge';
+import { createMerges, mergeCommands, routeMainMoved, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
@@ -374,7 +374,8 @@ for (const command of [
   ...focusCommands(focus),
   ...canvasUiCommands(canvasContext),
   ...canonCommands,
-  ...historyCommands(() => getSession().history),
+  // Canon edit mode: a Commit that finds main moved opens the merge (§11.3).
+  ...historyCommands(() => getSession().history).map((c) => routeMainMoved(c, getMerges, mergeUi)),
   ...campaignCommands(() => getSession().campaigns),
   ...mergeCommands(getMerges, mergeUi),
   ...revealCommands(reveal),
@@ -465,8 +466,19 @@ Hooks.once('ready', async () => {
   });
   // Reconcile on load (§7): missed hooks are never replayed, Foundry is re-read. Missing
   // docs first, then the contributors (Connections pages written while Silk was off, …).
+  // Canon edit mode (§11.3): main moved in another World → fast-forward (which reconciles) or
+  // the merge window.
   if (isActiveGM(game as never))
-    lifecycle.reconcile().catch((error: unknown) => console.error(error));
+    void (async () => {
+      const sync = await getMerges()
+        .syncMain()
+        .catch((error: unknown) => (console.error(error), 'current' as const));
+      if (sync === 'fastForward') ui.notifications?.info(localize('SILK.Canon.Synced'));
+      else {
+        if (sync === 'merge') await mergeUi.open();
+        await lifecycle.reconcile();
+      }
+    })().catch((error: unknown) => console.error(error));
   showFileBrowseNotice({
     isGM: game.user?.isGM ?? false,
     permissions: game.permissions as Record<string, number[] | undefined> | undefined,

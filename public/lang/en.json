@@ -60,7 +60,8 @@
       },
       "adventure": {
         "start": "Start Adventure",
-        "end": "End Adventure"
+        "end": "End Adventure",
+        "abandon": "Abandon Adventure"
       },
       "element": {
         "create": "Create Element",
@@ -200,7 +201,11 @@
         "Imported": "Imported Canon \"{name}\" ({id}).",
         "ImportedMissing": "Files missing from the import: {files}",
         "Cancelled": "Import cancelled. Nothing was written."
-      }
+      },
+      "Abandon": "Abandon…",
+      "AbandonPrompt": "Abandoning drops everything this Adventure changed and resets the World to main. Docs of elements not on main are deleted. This cannot be undone. Type the Adventure name to confirm:",
+      "AbandonConfirm": "Abandon for good",
+      "Synced": "Main moved in another World; this World was updated."
     },
     "Notice": {
       "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
@@ -376,7 +381,12 @@
         "changed": "Changed",
         "layout": "Moved",
         "canonOnly": "Canon only"
-      }
+      },
+      "CanonIncoming": "Canon (incoming)",
+      "ThisWorld": "This World",
+      "CanonEditHeading": "Main moved in another World. Merge it with this World's uncommitted changes:",
+      "CanonEditFooter": "Cancel keeps this World's changes uncommitted; Commits stay blocked until the merge is done.",
+      "CanonEditConfirmBody": "Commit the merged result to main and rewrite this World? There is no undo."
     }
   }
 }

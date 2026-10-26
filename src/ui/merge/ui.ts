@@ -30,10 +30,12 @@ export function createMergeUi(deps: MergeDeps): MergeUi {
       await current()?.close();
     },
     async confirmNoUndo() {
+      const canonEdit = (await deps.view())?.draft.kind === 'canonEdit';
+      const body = canonEdit ? 'SILK.Merge.CanonEditConfirmBody' : 'SILK.Merge.ConfirmBody';
       return !!(await foundry.applications.api.DialogV2.confirm({
         id: 'silk-merge-confirm',
         window: { title: deps.t('SILK.Merge.ConfirmTitle') },
-        content: `<p>${deps.t('SILK.Merge.ConfirmBody')}</p>`,
+        content: `<p>${deps.t(body)}</p>`,
       }));
     },
     async focus(ref) {

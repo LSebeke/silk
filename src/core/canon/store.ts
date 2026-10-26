@@ -45,8 +45,8 @@ export interface CommitArgs {
   author: string;
   /** ISO 8601; defaults to now. */
   date?: string;
-  /** Which ref moves to the new commit. */
-  ref: { main: true } | { adventure: string };
+  /** Which ref moves to the new commit; `null` moves none (a Commit only a merge refers to). */
+  ref: { main: true } | { adventure: string } | null;
 }
 
 /** `refs/adventures/<id>.json` (spec §11.1). */
@@ -61,6 +61,8 @@ export interface AdventureRef {
   merged?: string;
   /** ISO 8601, when it ended. */
   ended?: string;
+  /** ISO 8601, when it was abandoned (spec §11.3): never merged, its Commits are orphans. */
+  abandoned?: string;
 }
 
 export interface CanonStore {
@@ -213,8 +215,8 @@ function storeFor(files: CanonFiles, stored: Manifest, options: FormatOptions): 
 
     async commit(args) {
       const adventure =
-        'adventure' in args.ref ? await store.getAdventure(args.ref.adventure) : null;
-      if ('adventure' in args.ref && !adventure)
+        args.ref && 'adventure' in args.ref ? await store.getAdventure(args.ref.adventure) : null;
+      if (args.ref && 'adventure' in args.ref && !adventure)
         throw new Error(`Silk: no Adventure "${args.ref.adventure}" in this Canon`);
       // Blobs already referenced by a parent are on disk; upload only the rest.
       const known = new Set<string>();
@@ -244,7 +246,7 @@ function storeFor(files: CanonFiles, stored: Manifest, options: FormatOptions): 
       await files.write(commitPath(hash), text);
       // Refs last: a crash before this point leaves only orphans.
       if (adventure) await store.writeAdventure({ ...adventure, head: hash });
-      else await files.write(`${root}/refs/main.json`, canonicalJson({ head: hash }));
+      else if (args.ref) await files.write(`${root}/refs/main.json`, canonicalJson({ head: hash }));
       return hash;
     },
 

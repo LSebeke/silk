@@ -13,6 +13,7 @@
  *   `FieldView` grouping/labels (T20 sheets, Event Scenes, attribution chips).
  */
 import {
+  canonicalJson,
   mergeSnapshots,
   resolveMerge,
   valueAt,
@@ -40,10 +41,15 @@ export interface FieldRef {
 }
 
 export interface MergeDraft {
-  /** T21 adds `'canonEdit'`, T22 `'join'`. */
-  kind: 'adventure';
+  /**
+   * `'adventure'`: End Adventure. `'canonEdit'`: Canon edit mode, main moved in another World
+   * while this World had uncommitted changes (spec §11.3): base = this World's head, ours =
+   * main now ("Canon (incoming)"), theirs = this World's working copy as an unreferenced
+   * Commit ("This World"); `adventureId` is `''`. T22 adds `'join'`.
+   */
+  kind: 'adventure' | 'canonEdit';
   adventureId: string;
-  /** Commit hashes: Adventure start, main now, Adventure head. */
+  /** Commit hashes: Adventure start, main now, Adventure head. `base` `''` = empty. */
   base: string;
   ours: string;
   theirs: string;
@@ -125,7 +131,18 @@ export interface MergesDeps {
   applyResult(result: Snapshot): Promise<void>;
 }
 
+/** Outcome of the Canon edit mode load sync. */
+export type SyncResult = 'current' | 'fastForward' | 'merge';
+
 export interface Merges {
+  /**
+   * On load under main (spec §11.3): main moved in another World → clean: fast-forward (the
+   * World is rewritten to main); dirty: open (or resume) a `'canonEdit'` merge. Under an
+   * Adventure, or main unchanged: `'current'`.
+   */
+  syncMain(): Promise<SyncResult>;
+  /** `adventure.abandon`: `confirm` must be the Adventure's name. Resets to main's head. */
+  abandon(args: { confirm: string }): Promise<void>;
   /** `adventure.end`: Commit, then start (or resume) the merge into main. */
   endAdventure(): Promise<MergeView>;
   /** The open merge, or `null`. */
@@ -153,6 +170,15 @@ export function isTextField(kind: RecordKind, field: string): boolean {
   if (kind === 'connection') return field === '/label';
   if (kind === 'element') return /^\/infoBlocks\/[^/]+\/(name|text)$/.test(field);
   return false;
+}
+
+function sameRecords(a: Snapshot, b: Snapshot): boolean {
+  if (a.size !== b.size) return false;
+  for (const [id, record] of a) {
+    const other = b.get(id);
+    if (!other || canonicalJson(other) !== canonicalJson(record)) return false;
+  }
+  return true;
 }
 
 const UNBOUND = 'Silk: this World is not bound to a Canon yet';
@@ -183,6 +209,7 @@ export function createMerges(deps: MergesDeps): Merges {
     workingCopy.setMeta(MERGE_DRAFT, d as unknown as JsonValue | null);
 
   async function snapshot(canon: CanonStore, hash: string) {
+    if (!hash) return new Map() as Snapshot;
     let s = snapshots.get(hash);
     if (!s) {
       s = await canon.readSnapshot(hash);
@@ -200,8 +227,13 @@ export function createMerges(deps: MergesDeps): Merges {
     );
     const merge = mergeSnapshots(base as Snapshot, ours as Snapshot, theirs as Snapshot);
     // World-local fields take this World's side, silently.
+    // Canon edit mode: this World is `theirs`, the incoming side is `ours` (layout: it wins).
+    const world = 'theirs';
+    const incoming = d.kind === 'canonEdit' ? 'ours' : 'theirs';
     for (const r of merge.records.values())
-      for (const f of r.fields) if (isWorldLocal(r.kind, f.field)) f.auto = 'theirs';
+      for (const f of r.fields)
+        if (isWorldLocal(r.kind, f.field)) f.auto = world;
+        else if (f.layout && f.change === 'conflict') f.auto = incoming;
     cached = { key, merge };
     return merge;
   }
@@ -301,14 +333,17 @@ export function createMerges(deps: MergesDeps): Merges {
         display,
       });
     }
-    const adventure = await adventureOf(d);
+    const canonEdit = d.kind === 'canonEdit';
+    const adventure = canonEdit ? null : await adventureOf(d);
     return {
       draft: d,
-      title: { adventure: adventure.name, campaign: await campaignName(adventure.campaignId) },
+      title: adventure
+        ? { adventure: adventure.name, campaign: await campaignName(adventure.campaignId) }
+        : { adventure: (await requireCanon()).manifest.name, campaign: '' },
       columns: {
         base: 'SILK.Merge.Base',
-        ours: 'SILK.Merge.CanonNow',
-        theirs: 'SILK.Merge.Adventure',
+        ours: canonEdit ? 'SILK.Merge.CanonIncoming' : 'SILK.Merge.CanonNow',
+        theirs: canonEdit ? 'SILK.Merge.ThisWorld' : 'SILK.Merge.Adventure',
       },
       records,
       counts,
@@ -348,6 +383,59 @@ export function createMerges(deps: MergesDeps): Merges {
       return buildView(next);
     },
 
+    async syncMain() {
+      const binding = workingCopy.binding;
+      if (!binding || !('main' in binding.checkout)) return 'current';
+      const canon = await requireCanon();
+      const main = await canon.getMain();
+      const head = binding.head ?? '';
+      if (!main || main === head) {
+        if (draft()?.kind === 'canonEdit') await saveDraft(null);
+        return 'current';
+      }
+      if (!(await history.isDirty())) {
+        const result = await snapshot(canon, main);
+        await workingCopy.setBinding({ ...binding, head: main });
+        await deps.applyResult(result);
+        if (draft()) await saveDraft(null);
+        return 'fastForward';
+      }
+      const previous = draft();
+      const resumed = previous?.kind === 'canonEdit' ? previous : null;
+      if (
+        resumed?.ours === main &&
+        resumed.base === head &&
+        sameRecords(workingCopy.records(), await snapshot(canon, resumed.theirs))
+      )
+        return 'merge';
+      const theirs = await history.snapshotCommit({ label: 'This World' });
+      await saveDraft({
+        kind: 'canonEdit',
+        adventureId: '',
+        base: head,
+        ours: main,
+        theirs,
+        picks: resumed?.picks ?? [],
+        ...(resumed?.cursor && { cursor: resumed.cursor }),
+      });
+      return 'merge';
+    },
+
+    async abandon({ confirm }) {
+      const adventure = await checkedOutAdventure();
+      if (confirm !== adventure.name)
+        throw new Error(`Silk: type the Adventure name "${adventure.name}" to abandon it`);
+      const canon = await requireCanon();
+      const main = await canon.getMain();
+      if (!main) throw new Error('Silk: main has no Commit');
+      const binding = workingCopy.binding;
+      if (!binding) throw new Error(UNBOUND);
+      await canon.writeAdventure({ ...adventure, abandoned: now() });
+      await saveDraft(null);
+      await workingCopy.setBinding({ ...binding, checkout: { main: true }, head: main });
+      await deps.applyResult(await snapshot(canon, main));
+    },
+
     async view() {
       const d = draft();
       return d ? buildView(d) : null;
@@ -385,16 +473,18 @@ export function createMerges(deps: MergesDeps): Merges {
         throw new Error('Silk: main moved on since this merge started; end the Adventure again');
       const binding = workingCopy.binding;
       if (!binding) throw new Error(UNBOUND);
-      const adventure = await adventureOf(d);
-      const campaign = await campaignName(adventure.campaignId);
+      const adventure = d.kind === 'canonEdit' ? null : await adventureOf(d);
+      const label = adventure
+        ? `Merge ${adventure.name} (${await campaignName(adventure.campaignId)})`
+        : 'Merge this World';
       const commit = await canon.commit({
         snapshot,
         parents: [d.ours, d.theirs],
-        label: `Merge ${adventure.name} (${campaign})`,
+        label,
         author: deps.author(),
         ref: { main: true },
       });
-      await canon.writeAdventure({ ...adventure, merged: commit, ended: now() });
+      if (adventure) await canon.writeAdventure({ ...adventure, merged: commit, ended: now() });
       await workingCopy.setBinding({ ...binding, checkout: { main: true }, head: commit });
       await deps.applyResult(snapshot);
       await saveDraft(null);
