@@ -118,7 +118,8 @@
         "appearance": "Reveal Appearance",
         "infoBlock": "Reveal Info Block",
         "connection": "Reveal Connection",
-        "showToPlayers": "Show to players"
+        "showToPlayers": "Show to players",
+        "playerNote": "Reveal Player Note"
       },
       "merge": {
         "nextConflict": "Next conflict",
@@ -130,6 +131,12 @@
         "doc": "Adopt into Silk",
         "folder": "Adopt folder into Silk",
         "ignore": "Ignore for Silk"
+      },
+      "playerNote": {
+        "create": "Add Player Note",
+        "edit": "Edit Player Note",
+        "delete": "Delete Player Note",
+        "convert": "Convert to GM Info Block"
       }
     },
     "Canvas": {
@@ -417,6 +424,12 @@
       "AdHocTitle": "New docs this session",
       "AdHocIntro": "Created since the last commit and not in Silk yet. Ignored docs never show up again.",
       "EndPlaySessionLabel": "End of play session"
+    },
+    "PlayerNote": {
+      "Name": "Player Note",
+      "Add": "Add Player Note",
+      "Prompt": "Your note (all players can read and edit it):",
+      "Save": "Save note"
     }
   }
 }

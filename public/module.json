@@ -23,5 +23,6 @@
     { "lang": "en", "name": "English", "path": "lang/en.json" },
     { "lang": "de", "name": "Deutsch", "path": "lang/de.json" }
   ],
-  "persistentStorage": true
+  "persistentStorage": true,
+  "socket": true
 }

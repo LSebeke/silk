@@ -7,12 +7,15 @@
  */
 import { isRevealed, setRevealed, type RevealKind, type RevelationMap } from '../campaigns';
 
-export type RevealTarget = Exclude<RevealKind, 'playerNote'>;
+/** Everything a GM can Reveal; `playerNote` mostly for notes of other Campaigns (§9). */
+export type RevealTarget = RevealKind;
 
 /** What the rules need to know about the Story graph. */
 export interface RevealGraph {
   /** The element holding Info Block `id`. */
   elementOfBlock(id: string): string | undefined;
+  /** The element holding Player Note `id`. */
+  elementOfNote(id: string): string | undefined;
   /** A Connection's endpoints. */
   endsOf(id: string): readonly [string, string] | undefined;
   blocksOf(elementId: string): readonly string[];
@@ -57,6 +60,12 @@ export function applyReveal(
       if (el && revealed) set('element', el, true);
       break;
     }
+    case 'playerNote': {
+      const el = graph.elementOfNote(id);
+      set('playerNote', id, revealed);
+      if (el && revealed) set('element', el, true);
+      break;
+    }
     case 'connection':
       set('connection', id, revealed);
       if (revealed) for (const end of graph.endsOf(id) ?? []) set('element', end, true);
@@ -77,7 +86,7 @@ export function touchedElements(
     ['appearance', (id) => [id]],
     ['infoBlock', (id) => [graph.elementOfBlock(id) ?? []].flat()],
     ['connection', (id) => graph.endsOf(id) ?? []],
-    ['playerNote', () => []],
+    ['playerNote', (id) => [graph.elementOfNote(id) ?? []].flat()],
   ];
   const field = {
     element: 'elements',

@@ -17,6 +17,7 @@ import { registerKeybindings } from './adapter/keybindings';
 import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { registerOwnsHooks } from './adapter/owns';
+import { createSocketRelay, registerPlayerNoteHooks, textToHtml } from './adapter/player-notes';
 import { foundryRevealStage, registerRevealHooks } from './adapter/reveal';
 import { foundryOwnershipRevealed } from './adapter/revealed';
 import { createSceneDocs, registerSceneBar, registerSceneHooks } from './adapter/scenes';
@@ -71,6 +72,7 @@ import {
 } from './core/materialize';
 import { createMerges, mergeCommands, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
+import { createPlayerNotes, playerNoteCommands } from './core/player-notes';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasBridge } from './ui/canvas/bridge';
@@ -267,7 +269,14 @@ const connectionsPages = createConnectionsPages({
 lifecycle.contribute({ reconcile: () => connectionsPages.refresh() });
 
 /** End Adventure / merge (spec §11.3, §11.4): one session per World session. */
-const docRewriter = createDocRewriter({ workingCopy, docs: foundryDocs, materializer, lifecycle });
+const docRewriter = createDocRewriter({
+  workingCopy,
+  docs: foundryDocs,
+  materializer,
+  lifecycle,
+  newId: () => foundry.utils.randomID(16),
+  localize,
+});
 let merges: { session: object; merges: Merges } | undefined;
 function getMerges(): Merges {
   const session = getSession();
@@ -329,6 +338,28 @@ const reveal = createReveal({
   refreshPages: (ids) => connectionsPages.refresh(ids),
 });
 setRevelationMapApplier((map) => reveal.applyMap(map));
+/** Player Notes (spec §9): players' writes go over the socket to the active GM. */
+const playerNotes = createPlayerNotes({
+  workingCopy,
+  docs: foundryDocs,
+  materializer,
+  reveal,
+  campaign: async () =>
+    adventureCheckedOut()
+      ? ((await getSession().campaigns.checkedOutCampaign())?.id ?? null)
+      : null,
+  newId: () => foundry.utils.randomID(16),
+  localize,
+});
+const socketRelay = createSocketRelay({
+  socket: {
+    on: (channel, fn) => void game.socket?.on(channel, fn),
+    emit: (channel, data) => void game.socket?.emit(channel, data),
+  },
+  userId: () => game.user?.id ?? '',
+  isActiveGM: () => isActiveGM(game as never),
+  run: (name, args) => registry.run(name, args),
+});
 lifecycle.contribute({ reconcile: () => reveal.reconcile() });
 const title = (name: string) => localize(registry.get(name)?.title ?? name);
 const detailContext = (): DetailContext => ({
@@ -466,6 +497,11 @@ for (const command of [
   ...campaignCommands(() => getSession().campaigns),
   ...mergeCommands(getMerges, mergeUi),
   ...revealCommands(reveal),
+  ...playerNoteCommands(playerNotes, {
+    isGM: () => game.user?.isGM ?? false,
+    gmOnline: () => !!game.users?.activeGM,
+    relay: (name, args) => socketRelay.relay(name, args),
+  }),
   ...detailUiCommands(detailContext),
   ...adoptCommands(adopt),
 ])
@@ -534,6 +570,31 @@ Hooks.once('ready', async () => {
     elementIdOf: (doc) => materializer.elementIdOf(doc),
     run: (name, args) => registry.run(name, args),
     localize,
+  });
+  socketRelay.listen();
+  registerPlayerNoteHooks({
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    elementIdOf: (doc) => materializer.elementIdOf(doc),
+    isRevealed: (id) => reveal.isRevealed('element', id),
+    available: () => registry.isAvailable('playerNote.create'),
+    prompt: async () => {
+      const text: unknown = await foundry.applications.api.DialogV2.prompt({
+        window: { title: localize('SILK.PlayerNote.Add') },
+        content: `<label>${localize('SILK.PlayerNote.Prompt')}<textarea name="text" rows="6" data-silk-player-note-text></textarea></label>`,
+        ok: {
+          label: localize('SILK.PlayerNote.Save'),
+          callback: (
+            _event: unknown,
+            button: { form: { elements: { text: { value: string } } } },
+          ) => button.form.elements.text.value,
+        },
+        rejectClose: false,
+      } as never);
+      return typeof text === 'string' && text.trim() ? textToHtml(text) : null;
+    },
+    run: (name, args) => registry.run(name, args),
+    localize,
+    error: (message) => void ui.notifications?.error(message),
   });
   connectionsPages.watch();
   if (isActiveGM(game as never)) reveal.watch();

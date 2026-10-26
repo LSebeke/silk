@@ -118,7 +118,8 @@
         "appearance": "Aussehen aufdecken",
         "infoBlock": "Infoblock aufdecken",
         "connection": "Verbindung aufdecken",
-        "showToPlayers": "Den Spielern zeigen"
+        "showToPlayers": "Den Spielern zeigen",
+        "playerNote": "Spielernotiz aufdecken"
       },
       "merge": {
         "nextConflict": "Nächster Konflikt",
@@ -130,6 +131,12 @@
         "doc": "In Silk übernehmen",
         "folder": "Ordner in Silk übernehmen",
         "ignore": "Für Silk ignorieren"
+      },
+      "playerNote": {
+        "create": "Spielernotiz hinzufügen",
+        "edit": "Spielernotiz bearbeiten",
+        "delete": "Spielernotiz löschen",
+        "convert": "In SL-Infoblock umwandeln"
       }
     },
     "Canvas": {
@@ -417,6 +424,12 @@
       "AdHocTitle": "Neue Dokumente dieser Sitzung",
       "AdHocIntro": "Seit dem letzten Commit erstellt und noch nicht in Silk. Ignorierte Dokumente erscheinen nie wieder.",
       "EndPlaySessionLabel": "Ende der Spielsitzung"
+    },
+    "PlayerNote": {
+      "Name": "Spielernotiz",
+      "Add": "Spielernotiz hinzufügen",
+      "Prompt": "Deine Notiz (alle Spieler können sie lesen und bearbeiten):",
+      "Save": "Notiz speichern"
     }
   }
 }
