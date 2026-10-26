@@ -291,7 +291,9 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
   await win.locator('[data-silk-merge-canon-only]').check({ timeout: 30_000 });
 
   // Event Scene: minimap, one token row (conflict), a walls count row.
-  await win.locator(`[data-silk-merge-node="${ids.brawl}"]`).click();
+  // ⏎ (the world is shared with the test above: Brawl's Node may sit under Gareth's).
+  await win.focus();
+  await gm.keyboard.press('Enter');
   const drawer = win.locator(`[data-silk-merge-drawer="${ids.brawl}"]`);
   await expect(drawer.locator('[data-silk-merge-minimap]')).toBeVisible({ timeout: 30_000 });
   const tokenRow = drawer.locator(`[data-silk-merge-field="/scene/tokens/${ids.token}"]`);
