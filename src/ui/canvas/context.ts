@@ -8,6 +8,7 @@ import type {
   LayoutTween,
   ViewStateStore,
 } from '../../core/canvas';
+import type { Point } from '../../core/elements';
 import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
 
@@ -35,6 +36,8 @@ export interface CanvasContext {
   /** Search (§10.8): the canvas moves the camera on `canvas.jumpTo`. */
   search: Pick<CanvasSearch, 'onJump'>;
   localize(key: string): string;
+  /** Adopt a dropped Foundry doc (§6 Ways in): ends in the Creation Pipeline. */
+  adopt?(uuid: string, options: { at: Point; anchor: Point; connectTo?: string }): Promise<void>;
   /** Localised command title (context menus, §8 Controls). */
   title(name: string): string;
   /** The World's reveal state (eye toggles, menus; §8). Svelte-store `subscribe`. */

@@ -2,6 +2,12 @@
  * Entry point. Wires the pure core to Foundry through the adapter and exposes the
  * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
  */
+import {
+  adoptDialogs,
+  createAdoptStarter,
+  foundryAdopt,
+  registerAdoptHooks,
+} from './adapter/adopt';
 import { registerConnectionsPageHooks } from './adapter/connections-page';
 import { dsa5Mapping } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
@@ -40,11 +46,13 @@ import {
   layoutCommands,
   searchCommands,
 } from './core/canvas';
+import { adoptCommands, createAdopt } from './core/adopt';
 import { createRegistry } from './core/commands/registry';
 import { devCoreCommands } from './core/dev/commands';
 import { campaignCommands } from './core/campaigns/commands';
 import {
   isRevealed,
+  setRevealed,
   parseRevelationMap,
   revelationMapCleanup,
   serializeRevelationMap,
@@ -65,6 +73,7 @@ import { createMerges, mergeCommands, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
+import { canvasBridge } from './ui/canvas/bridge';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
 import { devUiCommands } from './ui/dev/commands';
@@ -211,20 +220,21 @@ pipeline.onComplete(({ id }) => {
 });
 
 /** T13 Event Scenes: Scene per Event, present at ↔ tokens, Happened on activation. */
+const eventScenesDocs = createSceneDocs({
+  scenes: () => (game.scenes ?? []) as never,
+  get: (id) => game.scenes?.get(id) as never,
+  sceneClass: () => CONFIG.Scene.documentClass as never,
+  async tokenData(actorId, data, scene) {
+    const actor = game.actors?.get(actorId);
+    const token = await actor?.getTokenDocument(data as never, { parent: scene as never });
+    return token?.toObject();
+  },
+  ensureFolder: (name) => foundryDocs.ensureFolder('Scene' as never, 'event', name),
+});
 const eventScenes = createEventScenes({
   workingCopy,
   docs: foundryDocs,
-  scenes: createSceneDocs({
-    scenes: () => (game.scenes ?? []) as never,
-    get: (id) => game.scenes?.get(id) as never,
-    sceneClass: () => CONFIG.Scene.documentClass as never,
-    async tokenData(actorId, data, scene) {
-      const actor = game.actors?.get(actorId);
-      const token = await actor?.getTokenDocument(data as never, { parent: scene as never });
-      return token?.toObject();
-    },
-    ensureFolder: (name) => foundryDocs.ensureFolder('Scene' as never, 'event', name),
-  }),
+  scenes: eventScenesDocs,
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
   deferImmediate: () => pipeline.get().step === 'classBox',
@@ -332,6 +342,73 @@ const detailContext = (): DetailContext => ({
   error: (message) => void ui.notifications?.error(message),
 });
 
+/** T14 Adopt: existing Foundry docs become Story Elements (spec §6 Adopt). */
+const adoptPrompts = adoptDialogs({
+  wait: (config) => foundry.applications.api.DialogV2.wait(config as never),
+  localize: format,
+});
+const adoptFoundryApi = foundryAdopt();
+const adopt = createAdopt({
+  workingCopy,
+  docs: foundryDocs,
+  scenes: eventScenesDocs,
+  system: dsa5Mapping,
+  newId: () => foundry.utils.randomID(16),
+  localize: format,
+  materializer,
+  foundry: adoptFoundryApi,
+  run: (name, args) => registry.run(name, args),
+  afterAdopt: async (id) => {
+    await owns.afterMaterialize(id);
+    await lifecycle.afterMaterialize(id);
+  },
+  // §6/§8: a doc players can already see counts as Revealed. Under main there is no map:
+  // the Revealed filter reads ownership, which Adopt leaves unchanged.
+  async markRevealed({ elements, infoBlocks }) {
+    const campaigns = getSession().campaigns;
+    const campaign = workingCopy().binding ? await campaigns.checkedOutCampaign() : null;
+    if (!campaign) return;
+    let map = await campaigns.readRevelationMap(campaign.id);
+    for (const id of elements) map = setRevealed(map, 'element', id, true);
+    for (const id of infoBlocks) map = setRevealed(map, 'infoBlock', id, true);
+    await campaigns.writeRevelationMap(campaign.id, map);
+    // The World mirror (T16 `revealState`) too; ownership already matches, nothing to apply.
+    let world = parseRevelationMap((game.settings?.get(MODULE_ID, 'revealState') ?? null) as never);
+    for (const id of elements) world = setRevealed(world, 'element', id, true);
+    for (const id of infoBlocks) world = setRevealed(world, 'infoBlock', id, true);
+    await game.settings?.set(MODULE_ID, 'revealState', serializeRevelationMap(world) as object);
+    reveal.reload();
+    await refreshRevealed();
+  },
+  viewCenter: () => canvasBridge.center?.() ?? { x: 0, y: 0 },
+  select: async (ids) => void (await registry.run('canvas.select', { ids })),
+  flash: (id) => canvasBridge.flash?.(id),
+  chooseUseFor: (args) => adoptPrompts.chooseUseFor(args),
+  confirmFolder: (rows) => adoptPrompts.confirmFolder(rows),
+  commit: (label) => getSession().history.commit(label ? { label } : {}),
+  async lastCommitTime() {
+    const head = workingCopy().binding?.head;
+    const canon = head ? await getSession().history.canon() : null;
+    return head && canon ? Date.parse((await canon.readCommit(head)).date) : null;
+  },
+  showAdHoc: (rows) =>
+    adoptPrompts.showAdHoc(rows, {
+      adopt: (uuid) => startAdopt(uuid),
+      ignore: (uuid) => registry.run('adopt.ignore', { uuid }),
+    }),
+});
+lifecycle.contribute(adopt.contributor);
+const startAdopt = createAdoptStarter({
+  inspect: (uuid) => adopt.inspect(uuid),
+  importFromCompendium: (uuid) => adoptFoundryApi.importFromCompendium(uuid),
+  run: (name, args) => registry.run(name, args),
+  pipeline,
+  center: () => canvasBridge.center?.() ?? { x: 0, y: 0 },
+  askAlsoActor: (name) => adoptPrompts.askAlsoActor(name),
+  error: (message) => void ui.notifications?.error(message),
+  localize: format,
+});
+
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
   available: (name) => registry.isAvailable(name),
@@ -350,6 +427,10 @@ const canvasContext = (): CanvasContext => ({
   title,
   reveal,
   warn: (message) => void ui.notifications?.warn(message),
+  adopt: (uuid, options) =>
+    startAdopt(uuid, options).catch((error: unknown) => {
+      ui.notifications?.error(error instanceof Error ? error.message : String(error));
+    }),
 });
 
 for (const command of [
@@ -386,6 +467,7 @@ for (const command of [
   ...mergeCommands(getMerges, mergeUi),
   ...revealCommands(reveal),
   ...detailUiCommands(detailContext),
+  ...adoptCommands(adopt),
 ])
   registry.register(command);
 
@@ -403,6 +485,24 @@ Hooks.once('init', () => {
   registerKeybindings(registry, (ns, action, data) =>
     game.keybindings?.register(ns, action, data as never),
   );
+  // Sidebar directories build their context menus on first render, before `ready`.
+  registerAdoptHooks({
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isGM: () => game.user?.isGM ?? false,
+    isActiveGM: () => isActiveGM(game as never),
+    start: (uuid) => startAdopt(uuid),
+    run: (name, args) => registry.run(name, args),
+    isStoryElement(uuid) {
+      try {
+        return !!adopt.inspect(uuid)?.existing;
+      } catch {
+        return false; // Before `ready`: no session yet.
+      }
+    },
+    folderType: (id) => game.folders?.get(id)?.type,
+    docCreated: (doc) => adopt.docCreated(doc),
+    error: (message) => void ui.notifications?.error(message),
+  });
   const module = game.modules?.get(MODULE_ID);
   if (module) {
     module.api = registry;

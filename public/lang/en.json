@@ -52,7 +52,8 @@
       },
       "history": {
         "commit": "Commit",
-        "discard": "Discard uncommitted changes"
+        "discard": "Discard uncommitted changes",
+        "endPlaySession": "End Play Session"
       },
       "campaign": {
         "create": "Create Campaign",
@@ -124,6 +125,11 @@
         "pick": "Take this value",
         "confirm": "Merge into Canon",
         "cancel": "Cancel merge"
+      },
+      "adopt": {
+        "doc": "Adopt into Silk",
+        "folder": "Adopt folder into Silk",
+        "ignore": "Ignore for Silk"
       }
     },
     "Canvas": {
@@ -388,6 +394,29 @@
         "layout": "Moved",
         "canonOnly": "Canon only"
       }
+    },
+    "Adopt": {
+      "Adopt": "Adopt into Silk",
+      "AdoptFolder": "Adopt folder into Silk",
+      "Refused": "{name} can't be adopted: Silk adopts Actors (character, npc, creature), Items, Journals and Scenes.",
+      "WrongClass": "{name} can't become a {class}.",
+      "Missing": "No Foundry doc \"{uuid}\".",
+      "NoFolder": "That folder no longer exists.",
+      "DuplicateTitle": "Compendium entry already in the Canon",
+      "DuplicateSource": "{doc} comes from the same compendium entry as {element}.",
+      "UseFor": "Use this doc for {element}",
+      "CreateNew": "Create new",
+      "FolderTitle": "Adopt folder",
+      "FolderConfirm": "Adopt these {count} docs?",
+      "AlsoActor": "Also adopt {actor}?",
+      "Yes": "Yes",
+      "No": "No",
+      "Cancel": "Cancel",
+      "Ignore": "Ignore",
+      "Close": "Close",
+      "AdHocTitle": "New docs this session",
+      "AdHocIntro": "Created since the last commit and not in Silk yet. Ignored docs never show up again.",
+      "EndPlaySessionLabel": "End of play session"
     }
   }
 }

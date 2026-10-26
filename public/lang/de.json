@@ -52,7 +52,8 @@
       },
       "history": {
         "commit": "Commit",
-        "discard": "Ungespeicherte Änderungen verwerfen"
+        "discard": "Ungespeicherte Änderungen verwerfen",
+        "endPlaySession": "Spielsitzung beenden"
       },
       "campaign": {
         "create": "Kampagne anlegen",
@@ -124,6 +125,11 @@
         "pick": "Diesen Wert übernehmen",
         "confirm": "In den Kanon übernehmen",
         "cancel": "Zusammenführen abbrechen"
+      },
+      "adopt": {
+        "doc": "In Silk übernehmen",
+        "folder": "Ordner in Silk übernehmen",
+        "ignore": "Für Silk ignorieren"
       }
     },
     "Canvas": {
@@ -388,6 +394,29 @@
         "layout": "Verschoben",
         "canonOnly": "Nur Kanon"
       }
+    },
+    "Adopt": {
+      "Adopt": "In Silk übernehmen",
+      "AdoptFolder": "Ordner in Silk übernehmen",
+      "Refused": "{name} kann nicht übernommen werden: Silk übernimmt Akteure (Held, NSC, Kreatur), Gegenstände, Journale und Szenen.",
+      "WrongClass": "{name} kann kein {class} werden.",
+      "Missing": "Kein Foundry-Dokument „{uuid}“.",
+      "NoFolder": "Dieser Ordner existiert nicht mehr.",
+      "DuplicateTitle": "Kompendiumeintrag schon im Canon",
+      "DuplicateSource": "{doc} stammt aus demselben Kompendiumeintrag wie {element}.",
+      "UseFor": "Dieses Dokument für {element} verwenden",
+      "CreateNew": "Neu anlegen",
+      "FolderTitle": "Ordner übernehmen",
+      "FolderConfirm": "Diese {count} Dokumente übernehmen?",
+      "AlsoActor": "Auch {actor} übernehmen?",
+      "Yes": "Ja",
+      "No": "Nein",
+      "Cancel": "Abbrechen",
+      "Ignore": "Ignorieren",
+      "Close": "Schließen",
+      "AdHocTitle": "Neue Dokumente dieser Sitzung",
+      "AdHocIntro": "Seit dem letzten Commit erstellt und noch nicht in Silk. Ignorierte Dokumente erscheinen nie wieder.",
+      "EndPlaySessionLabel": "Ende der Spielsitzung"
     }
   }
 }
