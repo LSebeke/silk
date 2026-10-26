@@ -19,6 +19,7 @@ export function revelationMapCleanup(
       const gone = new Set([
         element.id,
         ...(element.infoBlocks ?? []).map((b) => b._id),
+        ...(element.playerNotes ?? []).map((n) => n._id),
         ...connections,
       ]);
       const current = (await c.checkedOutCampaign())?.id;

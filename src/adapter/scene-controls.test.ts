@@ -6,10 +6,10 @@ const controls = (): SceneControls => ({
 });
 
 describe('Silk scene-control button', () => {
-  it('adds a GM-only button to the notes controls that opens the World Canvas', () => {
+  it('adds a button to the notes controls that opens the World Canvas', () => {
     const runs: string[] = [];
     const c = controls();
-    addSilkSceneControl(c, { isGM: true, run: async (name) => void runs.push(name) });
+    addSilkSceneControl(c, { run: async (name) => void runs.push(name) });
 
     const tool = c.notes?.tools?.['silk'];
     expect(tool).toMatchObject({ name: 'silk', button: true, visible: true, order: 1 });
@@ -17,9 +17,13 @@ describe('Silk scene-control button', () => {
     expect(runs).toEqual(['canvas.open']);
   });
 
-  it('is hidden from players', () => {
+  it('is the same button for players: it runs canvas.open, which routes to the Player Canvas (§9)', () => {
+    const runs: string[] = [];
     const c = controls();
-    addSilkSceneControl(c, { isGM: false, run: async () => undefined });
-    expect(c.notes?.tools?.['silk']?.visible).toBe(false);
+    addSilkSceneControl(c, { run: async (name) => void runs.push(name) });
+    const tool = c.notes?.tools?.['silk'];
+    expect(tool?.visible).toBe(true);
+    tool?.onChange?.(new Event('click'), true);
+    expect(runs).toEqual(['canvas.open']);
   });
 });

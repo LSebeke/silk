@@ -33,6 +33,31 @@ function rig() {
 }
 
 describe('rewriting the World to a merge result (spec §11.3)', () => {
+  it('writes Player Notes like Info Blocks (§9: merged into the Canon)', async () => {
+    const t = rig();
+    const wolf = await t.create('creature', 'Wolf');
+    const note = { _id: 'note00000000001', name: 'Player Note', text: '<p>a</p>', campaign: 'c1' };
+    await t.rewriter.apply(
+      resultOf(t.workingCopy.records(), { [wolf]: withData({ playerNotes: [note] }) }),
+    );
+    const companion = t.companion(wolf);
+    expect(page(companion, note._id).category).toBe(companion.flags.silk.playerNotes);
+    expect(t.element(wolf).playerNotes).toEqual([note]);
+
+    await t.rewriter.apply(
+      resultOf(t.workingCopy.records(), {
+        [wolf]: withData({ playerNotes: [{ ...note, text: '<p>b</p>' }] }),
+      }),
+    );
+    expect(page(t.companion(wolf), note._id).text?.content).toBe('<p>b</p>');
+
+    await t.rewriter.apply(
+      resultOf(t.workingCopy.records(), { [wolf]: withData({ playerNotes: undefined }) }),
+    );
+    expect(t.companion(wolf).pages.some((p) => p._id === note._id)).toBe(false);
+    expect(t.element(wolf).playerNotes).toBeUndefined();
+  });
+
   it('writes name, image and Info Blocks of a Materialized element to its docs', async () => {
     const t = rig();
     const wolf = await t.create('creature', 'Wolf');

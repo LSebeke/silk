@@ -3,7 +3,7 @@
  * `planDocs` (element → create data) and `readBack` (docs → element fields). Pure.
  */
 import { elementClass, type ElementClassId } from '../elements/classes';
-import type { ElementData, InfoBlock, StoryElement } from '../elements/element';
+import type { ElementData, InfoBlock, PlayerNote, StoryElement } from '../elements/element';
 import { statusOf, statusesOf, storedStatus } from '../elements/status';
 import {
   OWNERSHIP_NONE,
@@ -92,7 +92,10 @@ export function connectionsPage(id: string, ctx: LayoutContext): PageData {
   };
 }
 
-export const playerNotesCategory = (id: string, ctx: LayoutContext): CategoryData => ({
+export const playerNotesCategory = (
+  id: string,
+  ctx: Pick<LayoutContext, 'localize'>,
+): CategoryData => ({
   _id: id,
   name: ctx.localize('SILK.Layout.PlayerNotes'),
   sort: 0,
@@ -164,7 +167,7 @@ export function planDocs(
         flags: {
           silk: { companionOf: element.id, connections: connections._id, playerNotes: notes._id },
         },
-        pages: [...blockPages, connections],
+        pages: [...blockPages, connections, ...notePagesOf(element, notes._id)],
         categories: [notes],
       },
     };
@@ -179,8 +182,21 @@ export function planDocs(
     pages: blockPages,
   };
   if (hasJournalLayout(cls)) addJournalLayout(main, element, ctx);
+  if (element.playerNotes?.length) {
+    // A Note has no layout: its category comes with its first note.
+    let category = main.flags.silk.playerNotes;
+    if (!category) {
+      const notes = playerNotesCategory(ctx.newId(), ctx);
+      main.categories = [...(main.categories ?? []), notes];
+      main.flags.silk.playerNotes = category = notes._id;
+    }
+    main.pages = [...(main.pages ?? []), ...notePagesOf(element, category)];
+  }
   return { documentName: name, main };
 }
+
+const notePagesOf = (element: StoryElement, category: string) =>
+  (element.playerNotes ?? []).map((n, i) => notePage(n, category, (i + 1) * SORT_STEP));
 
 /** Adds what a layout class needs and the journal lacks (create or class change). */
 export function missingLayout(
@@ -241,6 +257,27 @@ export function infoBlockPages(journal: DocSnapshot): PageData[] {
     .sort((a, b) => a.sort - b.sort);
 }
 
+/** Player Note pages (§9): pages in the journal's "Player Notes" category, in sort order. */
+export function playerNotePages(journal: DocSnapshot): PageData[] {
+  const category = journal.flags.silk.playerNotes;
+  if (!category) return [];
+  return (journal.pages ?? [])
+    .filter((p) => p.category === category)
+    .sort((a, b) => a.sort - b.sort);
+}
+
+/** A Player Note page: party-editable once Revealed (ownership comes from the map, §8). */
+export const notePage = (note: PlayerNote, category: string, sort: number): PageData => ({
+  _id: note._id,
+  name: note.name,
+  type: 'text',
+  sort,
+  category,
+  ownership: { ...NONE },
+  text: { content: note.text },
+  flags: { silk: note.campaign ? { campaign: note.campaign } : {} },
+});
+
 /** The journal holding the element's Info Blocks: itself, or its Companion Journal. */
 export const blockJournal = (main: DocSnapshot, companion: DocSnapshot | undefined) =>
   main.documentName === 'JournalEntry' ? main : companion;
@@ -278,11 +315,22 @@ export function readBack(
     out.status = storedStatus(cls, status);
   }
   const holder = blockJournal(main, companion);
-  if (holder)
+  if (holder) {
     out.infoBlocks = infoBlockPages(holder).map((p) => ({
       _id: p._id,
       name: p.name,
       text: p.text?.content ?? '',
     }));
+    const notes = playerNotePages(holder).map((p) => {
+      const campaign = p.flags?.silk?.campaign;
+      return {
+        _id: p._id,
+        name: p.name,
+        text: p.text?.content ?? '',
+        ...(campaign ? { campaign } : {}),
+      };
+    });
+    out.playerNotes = notes.length ? notes : undefined;
+  }
   return out;
 }
