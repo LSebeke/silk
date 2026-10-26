@@ -1,6 +1,7 @@
 /** End Adventure and merge commands (spec §15, "Adventures / merge"). */
 import type { Command } from '../commands/registry';
 import type { Pick } from '../canon';
+import { MainMovedError } from '../history';
 import type { FieldRef, Merges } from './merges';
 
 /** What the commands need from the merge window (UI: lazy chunk + DialogV2). */
@@ -25,6 +26,16 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
       async run() {
         await getMerges().endAdventure();
         await ui.open();
+      },
+    },
+    {
+      // Typed confirmation (the Canon window asks for the Adventure name): irreversible.
+      name: 'adventure.abandon',
+      title: 'SILK.Commands.adventure.abandon',
+      available: gm,
+      async run(args: { confirm: string }) {
+        await getMerges().abandon(args);
+        await ui.close();
       },
     },
     {
@@ -65,4 +76,23 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
       },
     },
   ];
+}
+
+/**
+ * A Commit under main that finds main moved by another World (`MainMovedError`) opens the
+ * Canon edit mode merge (spec §11.3) instead, then rethrows so the GM sees why.
+ */
+export function routeMainMoved(command: Command, getMerges: () => Merges, ui: MergeUi): Command {
+  return {
+    ...command,
+    async run(args) {
+      try {
+        return await command.run(args);
+      } catch (error) {
+        if (error instanceof MainMovedError && (await getMerges().syncMain()) === 'merge')
+          await ui.open();
+        throw error;
+      }
+    },
+  };
 }

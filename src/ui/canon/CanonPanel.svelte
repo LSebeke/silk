@@ -18,6 +18,8 @@
   let campaignId = $state('');
   let newCampaign = $state('');
   let renaming = $state<{ id: string; name: string } | null>(null);
+  /** Abandon: typed confirmation (spec §11.3). `null` = not asking. */
+  let abandonTyped = $state<string | null>(null);
 
   const openCampaigns = $derived(overview.campaigns.filter((c) => !c.closed));
   const onMain = $derived(overview.checkout?.kind === 'main');
@@ -118,7 +120,35 @@
           <button type="button" onclick={() => run('adventure.end')} data-silk-adventure-end>
             {merging ? t('SILK.Merge.Resume') : t('SILK.Commands.adventure.end')}
           </button>
+          <button
+            type="button"
+            onclick={() => (abandonTyped = abandonTyped === null ? '' : null)}
+            data-silk-adventure-abandon
+          >
+            {t('SILK.Canon.Abandon')}
+          </button>
         </div>
+        {#if abandonTyped !== null}
+          {@const name = overview.checkout.name}
+          <form
+            class="abandon"
+            data-silk-abandon-dialog
+            onsubmit={async (e) => {
+              e.preventDefault();
+              if (abandonTyped !== name) return;
+              await run('adventure.abandon', { confirm: abandonTyped });
+              abandonTyped = null;
+            }}
+          >
+            <p>{t('SILK.Canon.AbandonPrompt')} <strong>{name}</strong></p>
+            <div class="row">
+              <input bind:value={abandonTyped} placeholder={name} data-silk-abandon-input />
+              <button type="submit" disabled={abandonTyped !== name} data-silk-abandon-confirm>
+                {t('SILK.Canon.AbandonConfirm')}
+              </button>
+            </div>
+          </form>
+        {/if}
       {/if}
       <ul data-silk-adventures>
         {#each overview.adventures as adventure (adventure.id)}
@@ -301,6 +331,14 @@
   .muted,
   .hint {
     opacity: 0.7;
+  }
+  .abandon {
+    border: 1px solid var(--color-level-error, #c33);
+    border-radius: 4px;
+    padding: 0.5rem;
+  }
+  .abandon p {
+    margin: 0 0 0.5rem;
   }
   .badge {
     font-size: 0.8em;

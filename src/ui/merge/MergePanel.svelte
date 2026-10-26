@@ -132,11 +132,16 @@
     <p class="empty">{t('SILK.Merge.NoChanges')}</p>
   {:else}
     <header class="bar">
-      <div class="title" data-silk-merge-title>
-        {t('SILK.Merge.Heading')}
-        <strong class="adv">{view.title.adventure}</strong>
-        <span class="muted">({view.title.campaign})</span>
-        {t('SILK.Merge.Into')}
+      <div class="title" data-silk-merge-title data-silk-merge-kind={view.draft.kind}>
+        {#if view.draft.kind === 'canonEdit'}
+          {t('SILK.Merge.CanonEditHeading')}
+          <strong class="adv">{view.title.adventure}</strong>
+        {:else}
+          {t('SILK.Merge.Heading')}
+          <strong class="adv">{view.title.adventure}</strong>
+          <span class="muted">({view.title.campaign})</span>
+          {t('SILK.Merge.Into')}
+        {/if}
       </div>
       <div class="chips">
         {#each badges as b (b)}
@@ -261,7 +266,11 @@
     </div>
 
     <footer class="bar">
-      <span class="muted">{t('SILK.Merge.Footer')}</span>
+      <span class="muted"
+        >{t(
+          view.draft.kind === 'canonEdit' ? 'SILK.Merge.CanonEditFooter' : 'SILK.Merge.Footer',
+        )}</span
+      >
       <span class="grow"></span>
       <button type="button" onclick={() => run('merge.cancel')} data-silk-merge-cancel>
         {t('SILK.Commands.merge.cancel')}
