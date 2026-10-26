@@ -23,6 +23,7 @@ declare module 'fvtt-types/configuration' {
     'silk.renderBudgetWarning': number;
     'silk.confirmDelete': boolean;
     'silk.warnUnmaterializeReveal': boolean;
+    'silk.playerViewState': object;
     'silk.windowState': object;
     'silk.fileBrowseNoticeShown': boolean;
   }

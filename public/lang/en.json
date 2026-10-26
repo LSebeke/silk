@@ -137,6 +137,9 @@
         "edit": "Edit Player Note",
         "delete": "Delete Player Note",
         "convert": "Convert to GM Info Block"
+      },
+      "playerCanvas": {
+        "openDoc": "Open the doc"
       }
     },
     "Canvas": {
@@ -430,6 +433,10 @@
       "Add": "Add Player Note",
       "Prompt": "Your note (all players can read and edit it):",
       "Save": "Save note"
+    },
+    "PlayerCanvas": {
+      "Title": "Player Canvas",
+      "Empty": "Nothing has been revealed yet."
     }
   }
 }

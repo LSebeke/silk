@@ -137,6 +137,9 @@
         "edit": "Spielernotiz bearbeiten",
         "delete": "Spielernotiz löschen",
         "convert": "In SL-Infoblock umwandeln"
+      },
+      "playerCanvas": {
+        "openDoc": "Dokument öffnen"
       }
     },
     "Canvas": {
@@ -430,6 +433,10 @@
       "Add": "Spielernotiz hinzufügen",
       "Prompt": "Deine Notiz (alle Spieler können sie lesen und bearbeiten):",
       "Save": "Notiz speichern"
+    },
+    "PlayerCanvas": {
+      "Title": "Spieler-Leinwand",
+      "Empty": "Noch nichts enthüllt."
     }
   }
 }
