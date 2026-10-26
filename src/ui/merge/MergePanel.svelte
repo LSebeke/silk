@@ -7,6 +7,7 @@
   import {
     SvelteFlow,
     Background,
+    useNodesInitialized,
     useSvelteFlow,
     type EdgeTypes,
     type NodeTypes,
@@ -59,6 +60,18 @@
   ];
   const countOf = (b: Exclude<Badge, 'same'>) =>
     view ? view.counts[b === 'conflict' ? 'conflicts' : b] : 0;
+
+  // `fitView` runs on mount, before Foundry has sized the window (pane 0×0 → min zoom):
+  // fit once the pane has a size and the Nodes are measured.
+  const initialized = useNodesInitialized();
+  let paneWidth = $state(0);
+  let paneHeight = $state(0);
+  let fitted = false;
+  $effect(() => {
+    if (fitted || !paneWidth || !paneHeight || !initialized.current) return;
+    fitted = true;
+    void flow.fitView();
+  });
 
   // ⏎ Next conflict: pan the canvas to the focused Node.
   let lastFocus: string | undefined;
@@ -160,7 +173,7 @@
     </div>
 
     <div class="body">
-      <div class="canvas">
+      <div class="canvas" bind:clientWidth={paneWidth} bind:clientHeight={paneHeight}>
         <SvelteFlow
           {nodes}
           {edges}
@@ -360,6 +373,8 @@
     flex-shrink: 0;
   }
   .bar {
+    /* Foundry/system styles position a window's header/footer absolutely. */
+    position: static;
     display: flex;
     align-items: center;
     gap: 0.5rem;
