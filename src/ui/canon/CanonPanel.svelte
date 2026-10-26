@@ -163,6 +163,9 @@
 
     <section>
       <h3>{t('SILK.Canon.History')}</h3>
+      <button type="button" onclick={() => run('history.endPlaySession')} data-silk-end-session>
+        {t('SILK.Commands.history.endPlaySession')}
+      </button>
       <ol data-silk-history>
         {#each overview.log as commit (commit.hash)}
           <li data-silk-commit={commit.hash}>

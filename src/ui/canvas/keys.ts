@@ -9,6 +9,7 @@ import { ELEMENT_CLASSES, type ElementClassId } from '../../core/elements';
 export type CanvasKeyAction =
   | { kind: 'create'; class: ElementClassId; connection?: CreateFromConnection }
   | { kind: 'connect' }
+  | { kind: 'search' }
   | { kind: 'rename' }
   | { kind: 'status' }
   | { kind: 'pin' }
@@ -46,6 +47,9 @@ export function canvasKey(
   }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyZ')
     return { kind: 'layout', name: 'canvas.undo' };
+  // Search (§10.8): only while the canvas has focus, so not a Foundry keybinding.
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyF')
+    return { kind: 'search' };
   if (e.ctrlKey || e.altKey || e.metaKey) return undefined;
   if (e.code === 'F2')
     return selected.edge

@@ -19,6 +19,16 @@ export interface PipelineOrigin {
   anchor?: Point;
   from?: string;
   connection?: ElementCreateArgs['connection'];
+  /** Adopt (§6): the class box offers `classes` (first = pre-selected) and runs `adopt.doc`. */
+  adopt?: PipelineAdopt;
+}
+
+export interface PipelineAdopt {
+  uuid: string;
+  classes: ElementClassId[];
+  /** Dropped onto this Node. */
+  connectTo?: string;
+  alsoAdoptActor?: boolean;
 }
 
 export type PipelineStep =
@@ -72,10 +82,12 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
 
   function options() {
     const query = step.step === 'classBox' ? step.query.trim().toLowerCase() : '';
-    return ELEMENT_CLASSES.filter(
-      (c) =>
-        c.creatable &&
-        (!query || String(c.digit) === query || deps.label(c.id).toLowerCase().includes(query)),
+    const adopt = step.step === 'classBox' ? step.adopt : undefined;
+    const pool = adopt
+      ? adopt.classes.flatMap((id) => ELEMENT_CLASSES.find((c) => c.id === id) ?? [])
+      : ELEMENT_CLASSES.filter((c) => c.creatable);
+    return pool.filter(
+      (c) => !query || String(c.digit) === query || deps.label(c.id).toLowerCase().includes(query),
     );
   }
 
@@ -84,12 +96,32 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     return createAt(step, id);
   }
 
-  async function createAt({ at, from, connection }: PipelineOrigin, id: ElementClassId) {
+  async function createAt({ at, from, connection, adopt }: PipelineOrigin, id: ElementClassId) {
+    if (adopt) return adoptAs(at, adopt, id);
     defaultName = deps.label(id);
     const args: ElementCreateArgs = { class: id, name: defaultName, at };
     if (from) args.from = from;
     if (connection) args.connection = connection;
     const result = (await deps.run('element.create', args)) as ElementCreateResult;
+    connectionId = result.connectionId;
+    renaming = false;
+    set({ step: 'name', id: result.id });
+    return result.id;
+  }
+
+  /** Adopt: `adopt.doc`, then the name step pre-filled with the doc's name. */
+  async function adoptAs(at: Point, adopt: PipelineAdopt, id: ElementClassId) {
+    set({ step: 'idle' });
+    const { uuid, connectTo, alsoAdoptActor } = adopt;
+    const result = (await deps.run('adopt.doc', {
+      uuid,
+      class: id,
+      at,
+      ...(connectTo ? { connectTo } : {}),
+      ...(alsoAdoptActor !== undefined ? { alsoAdoptActor } : {}),
+    })) as { id: string; name: string; existing?: boolean; connectionId?: string } | null;
+    if (!result || result.existing) return result?.id ?? '';
+    defaultName = result.name;
     connectionId = result.connectionId;
     renaming = false;
     set({ step: 'name', id: result.id });

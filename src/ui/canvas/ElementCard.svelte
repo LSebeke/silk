@@ -145,6 +145,16 @@
     }}
     data-silk-pin={data.pinned ? 'pinned' : ''}><i class="fa-solid fa-thumbtack"></i></button
   >
+  {#if data.filtered}
+    <!-- Shown despite the filters (Search jump, new Node) until deselected (§10.8). -->
+    <div
+      class="filtered-marker"
+      title={ctx.localize('SILK.Canvas.FilteredTitle')}
+      data-silk-filtered
+    >
+      {ctx.localize('SILK.Canvas.Filtered')}
+    </div>
+  {/if}
   {#if data.hidden}
     <!-- "+N" (§10.5): Connections to filtered-out Nodes; click shows them. -->
     <button
@@ -174,6 +184,17 @@
 </div>
 
 <style>
+  .filtered-marker {
+    position: absolute;
+    top: -9px;
+    left: 8px;
+    padding: 0 5px;
+    font-size: 10px;
+    line-height: 16px;
+    color: #fff;
+    background: #6b6b6b;
+    border-radius: 8px;
+  }
   .silk-card {
     position: relative;
     display: flex;

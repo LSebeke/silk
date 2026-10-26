@@ -38,7 +38,9 @@
         "ungroup": "Dissolve Visual Group",
         "renameGroup": "Rename Visual Group",
         "untangle": "Untangle",
-        "undo": "Undo Untangle"
+        "undo": "Undo Untangle",
+        "search": "Search the canvas",
+        "jumpTo": "Jump to a Node"
       },
       "canon": {
         "create": "Create Canon",
@@ -50,7 +52,8 @@
       },
       "history": {
         "commit": "Commit",
-        "discard": "Discard uncommitted changes"
+        "discard": "Discard uncommitted changes",
+        "endPlaySession": "End Play Session"
       },
       "campaign": {
         "create": "Create Campaign",
@@ -116,13 +119,28 @@
         "appearance": "Reveal Appearance",
         "infoBlock": "Reveal Info Block",
         "connection": "Reveal Connection",
-        "showToPlayers": "Show to players"
+        "showToPlayers": "Show to players",
+        "playerNote": "Reveal Player Note"
       },
       "merge": {
         "nextConflict": "Next conflict",
         "pick": "Take this value",
         "confirm": "Merge into Canon",
         "cancel": "Cancel merge"
+      },
+      "adopt": {
+        "doc": "Adopt into Silk",
+        "folder": "Adopt folder into Silk",
+        "ignore": "Ignore for Silk"
+      },
+      "playerNote": {
+        "create": "Add Player Note",
+        "edit": "Edit Player Note",
+        "delete": "Delete Player Note",
+        "convert": "Convert to GM Info Block"
+      },
+      "playerCanvas": {
+        "openDoc": "Open the doc"
       }
     },
     "Canvas": {
@@ -132,12 +150,21 @@
       "Group": "Group",
       "Ungroup": "Dissolve group",
       "Untangle": "Untangle",
-      "ConnectHint": "Click the target Node, or empty canvas for a new Node. Esc cancels.",
+      "ConnectHint": "Connect to: search or click the target, or empty canvas for a new Node. Esc cancels.",
       "LabelPlaceholder": "label…",
       "StatusConfirm": "Set {name} to “{status}”?",
       "Yes": "Yes (y)",
       "No": "No (n)",
-      "StatusChip": "Status: {status}. Click to change (s)."
+      "StatusChip": "Status: {status}. Click to change (s).",
+      "Search": "Search",
+      "SearchPlaceholder": "Search Nodes, Tags, Info Blocks…",
+      "SearchEmpty": "No results",
+      "NewNode": "New Node",
+      "NewNodeDirection": "New Node: direction (↑/↓, Enter)",
+      "Palette": "Palette",
+      "PaletteHint": "Drag a class onto the canvas or onto a Node.",
+      "Filtered": "filtered",
+      "FilteredTitle": "Hidden by the filters; shown until deselected."
     },
     "Connection": {
       "Type": {
@@ -387,6 +414,39 @@
       "CanonEditHeading": "Main moved in another World. Merge it with this World's uncommitted changes:",
       "CanonEditFooter": "Cancel keeps this World's changes uncommitted; Commits stay blocked until the merge is done.",
       "CanonEditConfirmBody": "Commit the merged result to main and rewrite this World? There is no undo."
+    },
+    "Adopt": {
+      "Adopt": "Adopt into Silk",
+      "AdoptFolder": "Adopt folder into Silk",
+      "Refused": "{name} can't be adopted: Silk adopts Actors (character, npc, creature), Items, Journals and Scenes.",
+      "WrongClass": "{name} can't become a {class}.",
+      "Missing": "No Foundry doc \"{uuid}\".",
+      "NoFolder": "That folder no longer exists.",
+      "DuplicateTitle": "Compendium entry already in the Canon",
+      "DuplicateSource": "{doc} comes from the same compendium entry as {element}.",
+      "UseFor": "Use this doc for {element}",
+      "CreateNew": "Create new",
+      "FolderTitle": "Adopt folder",
+      "FolderConfirm": "Adopt these {count} docs?",
+      "AlsoActor": "Also adopt {actor}?",
+      "Yes": "Yes",
+      "No": "No",
+      "Cancel": "Cancel",
+      "Ignore": "Ignore",
+      "Close": "Close",
+      "AdHocTitle": "New docs this session",
+      "AdHocIntro": "Created since the last commit and not in Silk yet. Ignored docs never show up again.",
+      "EndPlaySessionLabel": "End of play session"
+    },
+    "PlayerNote": {
+      "Name": "Player Note",
+      "Add": "Add Player Note",
+      "Prompt": "Your note (all players can read and edit it):",
+      "Save": "Save note"
+    },
+    "PlayerCanvas": {
+      "Title": "Player Canvas",
+      "Empty": "Nothing has been revealed yet."
     }
   }
 }

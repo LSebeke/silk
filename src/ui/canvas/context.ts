@@ -2,11 +2,13 @@
 import type {
   CanvasFilter,
   CanvasState,
+  CanvasSearch,
   CreationPipeline,
   Focus,
   LayoutTween,
   ViewStateStore,
 } from '../../core/canvas';
+import type { Point } from '../../core/elements';
 import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
 
@@ -31,7 +33,11 @@ export interface CanvasContext {
   refreshRevealed(): Promise<void>;
   /** Client setting `renderBudgetWarning` (§10.5): warn above this many visible Nodes. */
   renderBudget: number;
+  /** Search (§10.8): the canvas moves the camera on `canvas.jumpTo`. */
+  search: Pick<CanvasSearch, 'onJump'>;
   localize(key: string): string;
+  /** Adopt a dropped Foundry doc (§6 Ways in): ends in the Creation Pipeline. */
+  adopt?(uuid: string, options: { at: Point; anchor: Point; connectTo?: string }): Promise<void>;
   /** Localised command title (context menus, §8 Controls). */
   title(name: string): string;
   /** The World's reveal state (eye toggles, menus; §8). Svelte-store `subscribe`. */
@@ -42,3 +48,6 @@ export interface CanvasContext {
 
 /** Svelte context key for `CanvasContext` (cards read it). */
 export const CANVAS_CONTEXT = Symbol('silk-canvas');
+
+/** Palette drag (§10.3): `DataTransfer` type carrying the class id. */
+export const PALETTE_MIME = 'application/x-silk-class';

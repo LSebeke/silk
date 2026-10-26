@@ -2,6 +2,12 @@
  * Entry point. Wires the pure core to Foundry through the adapter and exposes the
  * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
  */
+import {
+  adoptDialogs,
+  createAdoptStarter,
+  foundryAdopt,
+  registerAdoptHooks,
+} from './adapter/adopt';
 import { registerConnectionsPageHooks } from './adapter/connections-page';
 import { dsa5Mapping } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
@@ -11,6 +17,7 @@ import { registerKeybindings } from './adapter/keybindings';
 import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { registerOwnsHooks } from './adapter/owns';
+import { createSocketRelay, registerPlayerNoteHooks, textToHtml } from './adapter/player-notes';
 import { foundryRevealStage, registerRevealHooks } from './adapter/reveal';
 import { foundryOwnershipRevealed } from './adapter/revealed';
 import { createSceneDocs, registerSceneBar, registerSceneHooks } from './adapter/scenes';
@@ -27,6 +34,7 @@ import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
   createCanvasFilter,
+  createCanvasSearch,
   createCanvasState,
   createCreationPipeline,
   createFocus,
@@ -37,12 +45,16 @@ import {
   focusCommands,
   joinFrameOnCreate,
   layoutCommands,
+  readViewState,
+  searchCommands,
 } from './core/canvas';
+import { adoptCommands, createAdopt } from './core/adopt';
 import { createRegistry } from './core/commands/registry';
 import { devCoreCommands } from './core/dev/commands';
 import { campaignCommands } from './core/campaigns/commands';
 import {
   isRevealed,
+  setRevealed,
   parseRevelationMap,
   revelationMapCleanup,
   serializeRevelationMap,
@@ -61,14 +73,20 @@ import {
 } from './core/materialize';
 import { createMerges, mergeCommands, routeMainMoved, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
+import { createPlayerNotes, playerNoteCommands } from './core/player-notes';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
+import { canvasBridge } from './ui/canvas/bridge';
 import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
 import { devUiCommands } from './ui/dev/commands';
 import { createMergeUi } from './ui/merge/ui';
 import { detailUiCommands } from './ui/detail/commands';
 import type { DetailContext } from './ui/detail/context';
+import { playerCanvasCommands } from './ui/player-canvas/commands';
+import type { PlayerCanvasContext } from './ui/player-canvas/context';
+import { createPlayerViewPublisher, parsePlayerView } from './core/player-view';
+import { openPlayerDoc, resolvePlayerNode, type PlayerDoc } from './adapter/player-docs';
 import './ui/silk.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
@@ -104,6 +122,8 @@ const focus = createFocus({
   activeScene: () => activeScene(game.scenes?.active as never),
 });
 const canvasFilter = createCanvasFilter({ workingCopy, viewState, revealed, focus });
+/** Search (§10.8): shared index; jumps and new Nodes show through filters until deselected. */
+const canvasSearch = createCanvasSearch({ workingCopy, filter: canvasFilter, state: canvasState });
 /**
  * Re-read the map only while the Revealed filter is in use (GM): reading the Canon on every
  * binding change would race the bind/checkout flows. `filter.set` refreshes on activation.
@@ -116,6 +136,7 @@ const afterCreate: NonNullable<ElementCommandDeps['afterCreate']> = [];
 afterCreate.push(connectOnCreate({ workingCopy, run: (name, args) => registry.run(name, args) }));
 /** T26: a Node created inside a Visual Group frame joins it. */
 afterCreate.push(joinFrameOnCreate(workingCopy));
+afterCreate.push((element) => canvasSearch.afterCreate(element));
 /** Untangle tween: layout commands announce old positions, the canvas animates. */
 const layoutTween = createLayoutTween();
 
@@ -206,20 +227,21 @@ pipeline.onComplete(({ id }) => {
 });
 
 /** T13 Event Scenes: Scene per Event, present at ↔ tokens, Happened on activation. */
+const eventScenesDocs = createSceneDocs({
+  scenes: () => (game.scenes ?? []) as never,
+  get: (id) => game.scenes?.get(id) as never,
+  sceneClass: () => CONFIG.Scene.documentClass as never,
+  async tokenData(actorId, data, scene) {
+    const actor = game.actors?.get(actorId);
+    const token = await actor?.getTokenDocument(data as never, { parent: scene as never });
+    return token?.toObject();
+  },
+  ensureFolder: (name) => foundryDocs.ensureFolder('Scene' as never, 'event', name),
+});
 const eventScenes = createEventScenes({
   workingCopy,
   docs: foundryDocs,
-  scenes: createSceneDocs({
-    scenes: () => (game.scenes ?? []) as never,
-    get: (id) => game.scenes?.get(id) as never,
-    sceneClass: () => CONFIG.Scene.documentClass as never,
-    async tokenData(actorId, data, scene) {
-      const actor = game.actors?.get(actorId);
-      const token = await actor?.getTokenDocument(data as never, { parent: scene as never });
-      return token?.toObject();
-    },
-    ensureFolder: (name) => foundryDocs.ensureFolder('Scene' as never, 'event', name),
-  }),
+  scenes: eventScenesDocs,
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
   deferImmediate: () => pipeline.get().step === 'classBox',
@@ -252,7 +274,14 @@ const connectionsPages = createConnectionsPages({
 lifecycle.contribute({ reconcile: () => connectionsPages.refresh() });
 
 /** End Adventure / merge (spec §11.3, §11.4): one session per World session. */
-const docRewriter = createDocRewriter({ workingCopy, docs: foundryDocs, materializer, lifecycle });
+const docRewriter = createDocRewriter({
+  workingCopy,
+  docs: foundryDocs,
+  materializer,
+  lifecycle,
+  newId: () => foundry.utils.randomID(16),
+  localize,
+});
 let merges: { session: object; merges: Merges } | undefined;
 function getMerges(): Merges {
   const session = getSession();
@@ -314,6 +343,76 @@ const reveal = createReveal({
   refreshPages: (ids) => connectionsPages.refresh(ids),
 });
 setRevelationMapApplier((map) => reveal.applyMap(map));
+/** Player Notes (spec §9): players' writes go over the socket to the active GM. */
+const playerNotes = createPlayerNotes({
+  workingCopy,
+  docs: foundryDocs,
+  materializer,
+  reveal,
+  campaign: async () =>
+    adventureCheckedOut()
+      ? ((await getSession().campaigns.checkedOutCampaign())?.id ?? null)
+      : null,
+  newId: () => foundry.utils.randomID(16),
+  localize,
+});
+const socketRelay = createSocketRelay({
+  socket: {
+    on: (channel, fn) => void game.socket?.on(channel, fn),
+    emit: (channel, data) => void game.socket?.emit(channel, data),
+  },
+  userId: () => game.user?.id ?? '',
+  isActiveGM: () => isActiveGM(game as never),
+  run: (name, args) => registry.run(name, args),
+});
+
+/**
+ * Player View + Player Canvas (spec §9). The active GM publishes the world setting; players
+ * read only it and the Foundry docs they can see, never the Working Copy or Canon.
+ */
+const playerView = () => parsePlayerView(game.settings?.get(MODULE_ID, 'playerView'));
+const playerViewPublisher = createPlayerViewPublisher({
+  workingCopy,
+  reveal,
+  // Frozen under the main Checkout (§8).
+  frozen: () => !adventureCheckedOut(),
+  current: () => game.settings?.get(MODULE_ID, 'playerView'),
+  write: async (view) => void (await game.settings?.set(MODULE_ID, 'playerView', view as object)),
+});
+const playerDoc = (uuid: string) => fromUuidSync(uuid) as unknown as PlayerDoc | null;
+const playerCanvasWatchers = new Set<() => void>();
+let playerCanvasTimer: ReturnType<typeof setTimeout> | undefined;
+/** Player View or a doc changed: refresh open Player Canvases (coalesced). */
+const playerCanvasChanged = () => {
+  if (!playerCanvasWatchers.size) return;
+  clearTimeout(playerCanvasTimer);
+  playerCanvasTimer = setTimeout(() => {
+    for (const fn of playerCanvasWatchers) fn();
+  }, 50);
+};
+const playerCanvasContext = (): PlayerCanvasContext => ({
+  run: (name, args) => registry.run(name, args),
+  view: playerView,
+  watch(fn) {
+    playerCanvasWatchers.add(fn);
+    return () => void playerCanvasWatchers.delete(fn);
+  },
+  resolve: (node) => resolvePlayerNode(node, playerDoc, game.user),
+  viewport: {
+    get: () =>
+      readViewState({ viewport: game.settings?.get(MODULE_ID, 'playerViewState') }).viewport,
+    save: async (viewport) =>
+      void (await game.settings?.set(MODULE_ID, 'playerViewState', viewport)),
+  },
+  localize,
+});
+const playerCanvasEntry = {
+  isGM: () => game.user?.isGM ?? false,
+  async open() {
+    const { openPlayerCanvasWindow } = await import('./ui/player-canvas/PlayerCanvasWindow');
+    await openPlayerCanvasWindow(playerCanvasContext());
+  },
+};
 lifecycle.contribute({ reconcile: () => reveal.reconcile() });
 const title = (name: string) => localize(registry.get(name)?.title ?? name);
 const detailContext = (): DetailContext => ({
@@ -325,6 +424,73 @@ const detailContext = (): DetailContext => ({
   localize,
   format: (key, data) => game.i18n?.format(key, data) ?? key,
   error: (message) => void ui.notifications?.error(message),
+});
+
+/** T14 Adopt: existing Foundry docs become Story Elements (spec §6 Adopt). */
+const adoptPrompts = adoptDialogs({
+  wait: (config) => foundry.applications.api.DialogV2.wait(config as never),
+  localize: format,
+});
+const adoptFoundryApi = foundryAdopt();
+const adopt = createAdopt({
+  workingCopy,
+  docs: foundryDocs,
+  scenes: eventScenesDocs,
+  system: dsa5Mapping,
+  newId: () => foundry.utils.randomID(16),
+  localize: format,
+  materializer,
+  foundry: adoptFoundryApi,
+  run: (name, args) => registry.run(name, args),
+  afterAdopt: async (id) => {
+    await owns.afterMaterialize(id);
+    await lifecycle.afterMaterialize(id);
+  },
+  // §6/§8: a doc players can already see counts as Revealed. Under main there is no map:
+  // the Revealed filter reads ownership, which Adopt leaves unchanged.
+  async markRevealed({ elements, infoBlocks }) {
+    const campaigns = getSession().campaigns;
+    const campaign = workingCopy().binding ? await campaigns.checkedOutCampaign() : null;
+    if (!campaign) return;
+    let map = await campaigns.readRevelationMap(campaign.id);
+    for (const id of elements) map = setRevealed(map, 'element', id, true);
+    for (const id of infoBlocks) map = setRevealed(map, 'infoBlock', id, true);
+    await campaigns.writeRevelationMap(campaign.id, map);
+    // The World mirror (T16 `revealState`) too; ownership already matches, nothing to apply.
+    let world = parseRevelationMap((game.settings?.get(MODULE_ID, 'revealState') ?? null) as never);
+    for (const id of elements) world = setRevealed(world, 'element', id, true);
+    for (const id of infoBlocks) world = setRevealed(world, 'infoBlock', id, true);
+    await game.settings?.set(MODULE_ID, 'revealState', serializeRevelationMap(world) as object);
+    reveal.reload();
+    await refreshRevealed();
+  },
+  viewCenter: () => canvasBridge.center?.() ?? { x: 0, y: 0 },
+  select: async (ids) => void (await registry.run('canvas.select', { ids })),
+  flash: (id) => canvasBridge.flash?.(id),
+  chooseUseFor: (args) => adoptPrompts.chooseUseFor(args),
+  confirmFolder: (rows) => adoptPrompts.confirmFolder(rows),
+  commit: (label) => getSession().history.commit(label ? { label } : {}),
+  async lastCommitTime() {
+    const head = workingCopy().binding?.head;
+    const canon = head ? await getSession().history.canon() : null;
+    return head && canon ? Date.parse((await canon.readCommit(head)).date) : null;
+  },
+  showAdHoc: (rows) =>
+    adoptPrompts.showAdHoc(rows, {
+      adopt: (uuid) => startAdopt(uuid),
+      ignore: (uuid) => registry.run('adopt.ignore', { uuid }),
+    }),
+});
+lifecycle.contribute(adopt.contributor);
+const startAdopt = createAdoptStarter({
+  inspect: (uuid) => adopt.inspect(uuid),
+  importFromCompendium: (uuid) => adoptFoundryApi.importFromCompendium(uuid),
+  run: (name, args) => registry.run(name, args),
+  pipeline,
+  center: () => canvasBridge.center?.() ?? { x: 0, y: 0 },
+  askAlsoActor: (name) => adoptPrompts.askAlsoActor(name),
+  error: (message) => void ui.notifications?.error(message),
+  localize: format,
 });
 
 const canvasContext = (): CanvasContext => ({
@@ -340,10 +506,15 @@ const canvasContext = (): CanvasContext => ({
   focus,
   refreshRevealed,
   renderBudget: game.settings?.get(MODULE_ID, 'renderBudgetWarning') ?? 1000,
+  search: canvasSearch,
   localize,
   title,
   reveal,
   warn: (message) => void ui.notifications?.warn(message),
+  adopt: (uuid, options) =>
+    startAdopt(uuid, options).catch((error: unknown) => {
+      ui.notifications?.error(error instanceof Error ? error.message : String(error));
+    }),
 });
 
 for (const command of [
@@ -372,14 +543,30 @@ for (const command of [
   }),
   ...filterCommands(canvasFilter),
   ...focusCommands(focus),
-  ...canvasUiCommands(canvasContext),
+  ...searchCommands(canvasSearch),
+  ...canvasUiCommands(canvasContext, playerCanvasEntry),
+  ...playerCanvasCommands({
+    view: playerView,
+    openDoc: (node) =>
+      openPlayerDoc(node, {
+        get: playerDoc,
+        journal: (id) => game.journal?.get(id) as unknown as PlayerDoc | undefined,
+        user: game.user,
+      }),
+  }),
   ...canonCommands,
   // Canon edit mode: a Commit that finds main moved opens the merge (§11.3).
   ...historyCommands(() => getSession().history).map((c) => routeMainMoved(c, getMerges, mergeUi)),
   ...campaignCommands(() => getSession().campaigns),
   ...mergeCommands(getMerges, mergeUi),
   ...revealCommands(reveal),
+  ...playerNoteCommands(playerNotes, {
+    isGM: () => game.user?.isGM ?? false,
+    gmOnline: () => !!game.users?.activeGM,
+    relay: (name, args) => socketRelay.relay(name, args),
+  }),
   ...detailUiCommands(detailContext),
+  ...adoptCommands(adopt),
 ])
   registry.register(command);
 
@@ -397,6 +584,24 @@ Hooks.once('init', () => {
   registerKeybindings(registry, (ns, action, data) =>
     game.keybindings?.register(ns, action, data as never),
   );
+  // Sidebar directories build their context menus on first render, before `ready`.
+  registerAdoptHooks({
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    isGM: () => game.user?.isGM ?? false,
+    isActiveGM: () => isActiveGM(game as never),
+    start: (uuid) => startAdopt(uuid),
+    run: (name, args) => registry.run(name, args),
+    isStoryElement(uuid) {
+      try {
+        return !!adopt.inspect(uuid)?.existing;
+      } catch {
+        return false; // Before `ready`: no session yet.
+      }
+    },
+    folderType: (id) => game.folders?.get(id)?.type,
+    docCreated: (doc) => adopt.docCreated(doc),
+    error: (message) => void ui.notifications?.error(message),
+  });
   const module = game.modules?.get(MODULE_ID);
   if (module) {
     module.api = registry;
@@ -429,6 +634,31 @@ Hooks.once('ready', async () => {
     run: (name, args) => registry.run(name, args),
     localize,
   });
+  socketRelay.listen();
+  registerPlayerNoteHooks({
+    on: (hook, fn) => void Hooks.on(hook as never, fn as never),
+    elementIdOf: (doc) => materializer.elementIdOf(doc),
+    isRevealed: (id) => reveal.isRevealed('element', id),
+    available: () => registry.isAvailable('playerNote.create'),
+    prompt: async () => {
+      const text: unknown = await foundry.applications.api.DialogV2.prompt({
+        window: { title: localize('SILK.PlayerNote.Add') },
+        content: `<label>${localize('SILK.PlayerNote.Prompt')}<textarea name="text" rows="6" data-silk-player-note-text></textarea></label>`,
+        ok: {
+          label: localize('SILK.PlayerNote.Save'),
+          callback: (
+            _event: unknown,
+            button: { form: { elements: { text: { value: string } } } },
+          ) => button.form.elements.text.value,
+        },
+        rejectClose: false,
+      } as never);
+      return typeof text === 'string' && text.trim() ? textToHtml(text) : null;
+    },
+    run: (name, args) => registry.run(name, args),
+    localize,
+    error: (message) => void ui.notifications?.error(message),
+  });
   connectionsPages.watch();
   if (isActiveGM(game as never)) reveal.watch();
   // Checkout changes switch the Revealed filter between ownership and a Revelation Map.
@@ -436,6 +666,18 @@ Hooks.once('ready', async () => {
   refreshQuietly();
   // Every Reveal / un-reveal changes the Revealed filter (T16 → T23).
   reveal.subscribe(refreshQuietly);
+  // T17: the active GM keeps the Player View current; Player Canvases follow it and the docs.
+  if (isActiveGM(game as never)) playerViewPublisher.start();
+  for (const hook of ['createSetting', 'updateSetting'])
+    Hooks.on(
+      hook as never,
+      ((setting: { key?: string }) => {
+        if (setting.key === `${MODULE_ID}.playerView`) playerCanvasChanged();
+      }) as never,
+    );
+  for (const doc of ['Actor', 'Item', 'JournalEntry', 'JournalEntryPage'])
+    for (const op of ['create', 'update', 'delete'])
+      Hooks.on(`${op}${doc}` as never, playerCanvasChanged as never);
   getSession().workingCopy.watch((change) => change.binding && setTimeout(refreshQuietly, 500));
   registerConnectionsPageHooks(connectionsPages, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
@@ -492,7 +734,6 @@ Hooks.once('ready', async () => {
 
 Hooks.on('getSceneControlButtons', (controls) => {
   addSilkSceneControl(controls as unknown as SceneControls, {
-    isGM: game.user?.isGM ?? false,
     run: (name) => registry.run(name),
   });
 });
