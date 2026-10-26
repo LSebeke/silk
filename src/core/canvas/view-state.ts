@@ -18,6 +18,10 @@ export interface ViewState {
   filters?: CanvasFilters;
   /** Nodes shown via a "+N" badge (§10.5); cleared from the chip bar. */
   expanded?: string[];
+  /** Focus Pins (§10.6). */
+  pins?: string[];
+  /** N of Focus View's N-hop filter (§10.6). */
+  hops?: number;
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -40,6 +44,9 @@ export function readViewState(stored: unknown): ViewState {
     ) as CanvasFilters;
   }
   if (strings(raw['expanded'])) out.expanded = raw['expanded'];
+  if (strings(raw['pins'])) out.pins = raw['pins'];
+  const hops = raw['hops'];
+  if (finite(hops) && Number.isInteger(hops) && hops >= 0) out.hops = hops;
   return out;
 }
 

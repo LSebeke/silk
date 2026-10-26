@@ -20,12 +20,20 @@ export interface ElementNodeData extends Record<string, unknown> {
   restoredFrom?: string;
   /** Neighbours hidden by Canvas Filters ("+N" badge, §10.5). */
   hidden?: number;
+  /** Focus Pin (§10.6). */
+  pinned?: boolean;
+  /** Shown despite the filters (Search jump, new Node, "+N"): "filtered" marker (§10.8). */
+  filtered?: boolean;
 }
 
 /** What Canvas Filters let through (`FilterResult`). */
 export interface NodeFilter {
   visible: ReadonlySet<string>;
   badges: ReadonlyMap<string, number>;
+  /** Focus Pins (§10.6). */
+  pinned?: ReadonlySet<string>;
+  /** Passes the filters; visible but not matching = "filtered" marker. */
+  matches?(id: string): boolean;
 }
 
 export type ElementNode = Node<ElementNodeData, 'element'>;
@@ -42,7 +50,9 @@ function sameNode(a: ElementNode, b: ElementNode) {
     a.data.img === b.data.img &&
     a.data.status === b.data.status &&
     a.data.restoredFrom === b.data.restoredFrom &&
-    a.data.hidden === b.data.hidden
+    a.data.hidden === b.data.hidden &&
+    a.data.pinned === b.data.pinned &&
+    a.data.filtered === b.data.filtered
   );
 }
 
@@ -65,6 +75,9 @@ export function toFlowNodes(
     const element = readElement(record);
     if (!element || (filter && !filter.visible.has(element.id))) continue;
     const hidden = filter?.badges.get(element.id);
+    const pinned = filter?.pinned?.has(element.id) ?? false;
+    // Focus Pins are shown by intent, not despite the filters: no "filtered" marker.
+    const marked = filter?.matches && !pinned ? !filter.matches(element.id) : false;
     // In a Visual Group: a child Node, positioned relative to the frame.
     const parent = containerOf(records, element.id);
     const origin = readGroup(parent ? records.get(parent) : undefined)?.position ?? { x: 0, y: 0 };
@@ -83,6 +96,8 @@ export function toFlowNodes(
         ...(element.status ? { status: element.status } : {}),
         ...(element.restoredFrom ? { restoredFrom: element.restoredFrom } : {}),
         ...(hidden ? { hidden } : {}),
+        ...(pinned ? { pinned: true } : {}),
+        ...(marked ? { filtered: true } : {}),
       },
     };
     const old = prev.get(element.id);

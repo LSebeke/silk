@@ -15,13 +15,16 @@
     type Viewport,
   } from '@xyflow/svelte';
   import { onDestroy, setContext, untrack } from 'svelte';
+  import { cameraMove, FOCUS_SEEDS, type CameraReason } from '../../core/canvas/focus';
   import { TWEEN_MS } from '../../core/canvas/tween';
   import type { RelativeDirection } from '../../core/connections';
   import {
+    ELEMENT_CLASSES,
     hasStatus,
     nextStatus,
     readElement,
     statusLabelKey,
+    type ElementClassId,
     type Point,
     type Status,
   } from '../../core/elements';
@@ -31,9 +34,11 @@
   import ConnectionEdge from './ConnectionEdge.svelte';
   import ElementCard from './ElementCard.svelte';
   import FilterBar from './FilterBar.svelte';
+  import Palette from './Palette.svelte';
+  import SearchBox from './SearchBox.svelte';
   import GroupFrame from './GroupFrame.svelte';
   import { pointKind } from './connection-points';
-  import { CANVAS_CONTEXT, type CanvasContext } from './context';
+  import { CANVAS_CONTEXT, PALETTE_MIME, type CanvasContext } from './context';
   import { toFlowEdges, type ConnectionEdge as FlowEdge } from './flow-edges';
   import {
     lodForZoom,
@@ -62,6 +67,10 @@
   let filtered = $state.raw(ctx.filter.result());
   /** `c` (§10.3): picking the target for a Connection from this Node. */
   let connectFrom = $state<string | undefined>();
+  /** Search box open (§10.8, `Ctrl+F`). */
+  let searching = $state(false);
+  /** Palette open (§10.3). */
+  let paletteOpen = $state(false);
   let root: HTMLDivElement | undefined = $state();
   let zoom = $state(saved?.zoom ?? 1);
   let moving = $state(false);
@@ -174,7 +183,7 @@
         selection,
         prev.filter((n): n is ElementNode => n.type === 'element'),
         tween && tweenAt,
-        filter,
+        { ...filter, pinned: new Set(ctx.focus.pins()) },
       ),
     ];
   }
@@ -190,6 +199,11 @@
     const offFilter = ctx.filter.subscribe(() => {
       refresh();
       refreshEdges();
+      scheduleFollow();
+    });
+    const offFocus = ctx.focus.subscribe((reason) => {
+      if (reason === 'scene') followReason = 'scene';
+      scheduleFollow();
     });
     const offState = canvasState.subscribe(refresh);
     const offTween = ctx.layoutTween.subscribe((from) => {
@@ -206,11 +220,88 @@
     });
     return () => {
       offFilter();
+      offFocus();
       offState();
       offTween();
       tween = undefined;
     };
   });
+
+  // Focus View camera (§10.6): Nodes stay put, only the camera moves (~450 ms).
+  const focusOn = () => !!ctx.filter.filters().hops?.includes(FOCUS_SEEDS);
+  let wasFocusOn = focusOn();
+  let shown: ReadonlySet<string> = new Set(ctx.filter.result().visible);
+  let followReason: CameraReason = 'local';
+  let followQueued = false;
+  /** Shift down: the camera holds, skipped moves are dropped. */
+  let shift = false;
+  function scheduleFollow() {
+    if (followQueued) return;
+    followQueued = true;
+    queueMicrotask(follow);
+  }
+  function follow() {
+    followQueued = false;
+    const visible = ctx.filter.result().visible;
+    const added = [...visible].filter((id) => !shown.has(id));
+    shown = new Set(visible);
+    const on = focusOn();
+    const reason: CameraReason = on && !wasFocusOn ? 'scene' : followReason;
+    followReason = 'local';
+    wasFocusOn = on;
+    if (!on || !root) return;
+    const rect = root.getBoundingClientRect();
+    const move = cameraMove({
+      reason,
+      shift,
+      visible: [...visible],
+      added,
+      selection: canvasState.get().selection,
+      viewport: flow.getViewport(),
+      size: { width: rect.width, height: rect.height },
+      rect(id) {
+        const node = flow.getInternalNode(id);
+        const at = node?.internals.positionAbsolute ?? readElement(workingCopy.get(id))?.position;
+        if (!at) return undefined;
+        return {
+          x: at.x,
+          y: at.y,
+          width: node?.measured.width ?? 190,
+          height: node?.measured.height ?? 80,
+        };
+      },
+    });
+    if (move)
+      void flow.fitView({
+        nodes: move.ids.map((id) => ({ id })),
+        duration: TWEEN_MS,
+        padding: 0.2,
+        maxZoom: move.maxZoom ?? 1,
+      });
+  }
+  $effect(() => {
+    const win = root?.ownerDocument.defaultView;
+    if (!win) return;
+    const onShift = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') shift = event.type === 'keydown';
+    };
+    const onBlur = () => (shift = false);
+    win.addEventListener('keydown', onShift, true);
+    win.addEventListener('keyup', onShift, true);
+    win.addEventListener('blur', onBlur);
+    return () => {
+      win.removeEventListener('keydown', onShift, true);
+      win.removeEventListener('keyup', onShift, true);
+      win.removeEventListener('blur', onBlur);
+    };
+  });
+
+  /** `p` (§10.3): pin the selected Nodes, or unpin them when all are pinned. */
+  function togglePins(ids: readonly string[]) {
+    const pins = new Set(ctx.focus.pins());
+    const all = ids.every((id) => pins.has(id));
+    void run(all ? 'focus.unpin' : 'focus.pin', { ids });
+  }
 
   // Detail drop while moving (§10.2): blank blocks until 150 ms after the viewport stops.
   let moveEnd: ReturnType<typeof setTimeout> | undefined;
@@ -331,8 +422,8 @@
       pipeline.cancel();
       return;
     }
-    if (event.key === 'Escape' && connectFrom) {
-      connectFrom = undefined;
+    if (event.key === 'Escape' && (connectFrom || searching)) {
+      closeSearch();
       return;
     }
     if ($pipeline.step !== 'idle') return;
@@ -358,7 +449,12 @@
           .catch(fail);
         break;
       case 'connect':
+        searching = false;
         connectFrom = node;
+        break;
+      case 'search':
+        connectFrom = undefined;
+        searching = true;
         break;
       case 'rename': {
         const current = nodes.find((n): n is ElementNode => n.id === node && n.type === 'element');
@@ -368,6 +464,11 @@
       case 'status':
         if (node) statusPrompt.ask(node);
         break;
+      case 'pin': {
+        const ids = canvasState.get().selection.filter((id) => readElement(workingCopy.get(id)));
+        if (ids.length) togglePins(ids);
+        break;
+      }
       case 'reveal':
         if (edge) askReveal('connection', edge.id);
         else if (node) askReveal('element', node);
@@ -388,11 +489,86 @@
     }
   }
 
-  function onNodeClick({ node }: { node: ElementNode | GroupNode }) {
-    if (!connectFrom) return;
-    const from = connectFrom;
+  // --- Search (§10.8), `c` connect search, palette (T25) ---
+
+  function closeSearch() {
+    searching = false;
     connectFrom = undefined;
-    if (node.id !== from) connect(from, node.id).catch(fail);
+    root?.focus();
+  }
+
+  function jumpTo(id: string) {
+    closeSearch();
+    void run('canvas.jumpTo', { id });
+  }
+
+  function connectTo(id: string) {
+    const from = connectFrom;
+    closeSearch();
+    if (from && id !== from) connect(from, id).catch(fail);
+  }
+
+  /** "New Node" (§10.3 `c`): direction chosen, the pipeline runs from its class box. */
+  function connectNew(direction: RelativeDirection) {
+    const from = connectFrom;
+    closeSearch();
+    if (!from) return;
+    const rect = root?.getBoundingClientRect();
+    pipeline.open({
+      at: besideNode(from),
+      anchor: { x: (rect?.width ?? 400) / 2 - 100, y: 80 },
+      from,
+      connection: { direction },
+    });
+  }
+
+  // Jumping moves the camera to the Node, keeping the zoom.
+  $effect(() =>
+    ctx.search.onJump((id) => {
+      const p = readElement(workingCopy.get(id))?.position;
+      if (p) void flow.setCenter(p.x + 95, p.y + 40, { zoom: flow.getZoom(), duration: 300 });
+    }),
+  );
+
+  /** Palette drag: the Node under the pointer highlights as the connect target. */
+  let dropEl: HTMLElement | undefined;
+  function dropTarget(event: DragEvent) {
+    const el = (root?.ownerDocument ?? document)
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-silk-node]');
+    if (el !== dropEl) {
+      dropEl?.classList.remove('silk-drop-target');
+      el?.classList.add('silk-drop-target');
+      dropEl = el ?? undefined;
+    }
+    return el?.dataset['silkNode'];
+  }
+  function onDragOver(event: DragEvent) {
+    if (!event.dataTransfer?.types.includes(PALETTE_MIME)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    dropTarget(event);
+  }
+  function onDragLeave(event: DragEvent) {
+    if (event.relatedTarget && root?.contains(event.relatedTarget as Node)) return;
+    dropEl?.classList.remove('silk-drop-target');
+    dropEl = undefined;
+  }
+  function onDrop(event: DragEvent) {
+    const cls = event.dataTransfer?.getData(PALETTE_MIME) as ElementClassId | undefined;
+    if (!cls || !ELEMENT_CLASSES.some((c) => c.id === cls)) return;
+    event.preventDefault();
+    const target = dropTarget(event);
+    dropEl?.classList.remove('silk-drop-target');
+    dropEl = undefined;
+    const origin = target
+      ? { at: besideNode(target), from: target }
+      : { at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }) };
+    pipeline.create(origin, cls).catch(fail);
+  }
+
+  function onNodeClick({ node }: { node: ElementNode | GroupNode }) {
+    if (connectFrom) connectTo(node.id);
   }
 
   function onPaneClick({ event }: { event: MouseEvent }) {
@@ -400,7 +576,7 @@
     if (!connectFrom) return pipeline.cancel();
     // "New Node" (§10.3 `c`): the class box at the spot, connected to the origin.
     const from = connectFrom;
-    connectFrom = undefined;
+    closeSearch();
     pipeline.open({
       at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }),
       anchor: local(event),
@@ -450,6 +626,11 @@
 
   const selectedElements = $derived(nodes.filter((n) => n.selected && n.type === 'element').length);
   const selectedAny = $derived(nodes.some((n) => n.selected));
+  /** Focus View with no seeds (§10.6): only pins show, plus a hint. */
+  const focusHint = $derived.by(() => {
+    void filtered;
+    return focusOn() && ctx.focus.seeds().length === 0;
+  });
 
   function onSelectionChange({ nodes: selected }: { nodes: (ElementNode | GroupNode)[] }) {
     const ids = selected.map((n) => n.id);
@@ -470,6 +651,9 @@
   data-silk-canvas
   data-silk-lod={lod}
   data-silk-connecting={connectFrom}
+  ondragover={onDragOver}
+  ondragleave={onDragLeave}
+  ondrop={onDrop}
 >
   <SvelteFlow
     bind:nodes
@@ -531,6 +715,45 @@
     </div>
   {/if}
   <FilterBar {ctx} result={filtered} />
+  <div class="silk-canvas-tools">
+    <button
+      type="button"
+      title="{ctx.localize('SILK.Canvas.Search')} (Ctrl+F)"
+      onclick={() => {
+        connectFrom = undefined;
+        searching = !searching;
+      }}
+      data-silk-action="search"
+    >
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+    <button
+      type="button"
+      class:active={paletteOpen}
+      title={ctx.localize('SILK.Canvas.Palette')}
+      onclick={() => (paletteOpen = !paletteOpen)}
+      data-silk-action="palette"
+    >
+      <i class="fa-solid fa-palette"></i>
+    </button>
+  </div>
+  {#if paletteOpen}
+    <Palette {ctx} onjump={jumpTo} />
+  {/if}
+  {#if searching}
+    <SearchBox {ctx} mode="search" onpick={jumpTo} onclose={closeSearch} />
+  {:else if connectFrom}
+    {#key connectFrom}
+      <SearchBox
+        {ctx}
+        mode="connect"
+        exclude={connectFrom}
+        onpick={connectTo}
+        onnew={connectNew}
+        onclose={closeSearch}
+      />
+    {/key}
+  {/if}
   {#if selectedAny && !connectFrom}
     <div class="silk-selection-toolbar" data-silk-selection-toolbar>
       <button type="button" onclick={() => run('canvas.group', {})} data-silk-action="group">
@@ -569,9 +792,9 @@
       </button>
     </div>
   {/if}
-  {#if connectFrom}
-    <div class="silk-connect-hint" data-silk-connect-hint>
-      {ctx.localize('SILK.Canvas.ConnectHint')}
+  {#if focusHint}
+    <div class="silk-focus-hint" role="status" data-silk-focus-hint>
+      {ctx.localize('SILK.Focus.Hint')}
     </div>
   {/if}
 </div>
@@ -614,15 +837,40 @@
     font-size: 10px;
     opacity: 0.7;
   }
-  .silk-connect-hint {
+  .silk-canvas-tools {
     position: absolute;
     top: 8px;
+    right: 8px;
+    z-index: 15;
+    display: flex;
+    gap: 4px;
+  }
+  .silk-canvas-tools button {
+    width: 28px;
+    height: 28px;
+    min-height: 0;
+    padding: 0;
+    background: #fffdf8;
+    border: 1px solid #c9bfa8;
+    border-radius: 6px;
+  }
+  .silk-canvas-tools button.active {
+    border-color: #2b6cb0;
+  }
+  .silk-canvas :global(.silk-drop-target) {
+    outline: 3px solid #2b6cb0;
+    outline-offset: 2px;
+  }
+  .silk-focus-hint {
+    position: absolute;
+    bottom: 12px;
     left: 50%;
-    z-index: 20;
+    z-index: 10;
+    max-width: 60%;
     padding: 4px 10px;
     font-size: 12px;
     background: #fffdf8;
-    border: 1px solid #2b6cb0;
+    border: 1px solid #c9bfa8;
     border-radius: 6px;
     transform: translateX(-50%);
   }

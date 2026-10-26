@@ -9,8 +9,10 @@ import { ELEMENT_CLASSES, type ElementClassId } from '../../core/elements';
 export type CanvasKeyAction =
   | { kind: 'create'; class: ElementClassId; connection?: CreateFromConnection }
   | { kind: 'connect' }
+  | { kind: 'search' }
   | { kind: 'rename' }
   | { kind: 'status' }
+  | { kind: 'pin' }
   | { kind: 'reveal' }
   | { kind: 'editConnection' }
   | { kind: 'delete' }
@@ -45,6 +47,9 @@ export function canvasKey(
   }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyZ')
     return { kind: 'layout', name: 'canvas.undo' };
+  // Search (§10.8): only while the canvas has focus, so not a Foundry keybinding.
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyF')
+    return { kind: 'search' };
   if (e.ctrlKey || e.altKey || e.metaKey) return undefined;
   if (e.code === 'F2')
     return selected.edge
@@ -55,6 +60,7 @@ export function canvasKey(
   if (e.shiftKey) return undefined;
   if (e.code === 'KeyC' && selected.node) return { kind: 'connect' };
   if (e.code === 'KeyS' && selected.node) return { kind: 'status' };
+  if (e.code === 'KeyP' && selected.node) return { kind: 'pin' };
   if (e.code === 'KeyR' && (selected.node || selected.edge)) return { kind: 'reveal' };
   if ((e.code === 'Delete' || e.code === 'Backspace') && selected.node) return { kind: 'delete' };
   if (e.code === 'KeyG' && selected.node) return { kind: 'layout', name: 'canvas.group' };

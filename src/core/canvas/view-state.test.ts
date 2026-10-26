@@ -21,6 +21,12 @@ describe('view state', () => {
     expect(readViewState({ expanded: [1] })).toEqual({});
   });
 
+  it('reads well-formed Focus Pins and hops', () => {
+    expect(readViewState({ pins: ['a'], hops: 3 })).toEqual({ pins: ['a'], hops: 3 });
+    expect(readViewState({ pins: 'a', hops: 1.5 })).toEqual({});
+    expect(readViewState({ hops: -1 })).toEqual({});
+  });
+
   it('update merges into the stored value and saves it, keeping unknown later fields', async () => {
     const saved: unknown[] = [];
     let stored: unknown = { viewport: { x: 0, y: 0, zoom: 1 }, pins: ['el-a'] };
