@@ -9,7 +9,7 @@ import {
   registerAdoptHooks,
 } from './adapter/adopt';
 import { registerConnectionsPageHooks } from './adapter/connections-page';
-import { dsa5Mapping } from './adapter/dsa5';
+import { dsa5Mapping, dsa5Sections } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { activeScene, registerFocusHooks } from './adapter/focus';
 import { createFoundryDocs } from './adapter/foundry-docs';
@@ -237,6 +237,14 @@ const eventScenesDocs = createSceneDocs({
     return token?.toObject();
   },
   ensureFolder: (name) => foundryDocs.ensureFolder('Scene' as never, 'event', name),
+  embeddedName: (collection) =>
+    Object.entries(
+      (
+        CONFIG.Scene.documentClass as unknown as {
+          metadata: { embedded: Record<string, string> };
+        }
+      ).metadata.embedded,
+    ).find(([, key]) => key === collection)?.[0],
 });
 const eventScenes = createEventScenes({
   workingCopy,
@@ -279,6 +287,7 @@ const docRewriter = createDocRewriter({
   docs: foundryDocs,
   materializer,
   lifecycle,
+  scenes: eventScenes,
   newId: () => foundry.utils.randomID(16),
   localize,
 });
@@ -294,6 +303,7 @@ function getMerges(): Merges {
         campaigns: session.campaigns,
         author: () => game.user?.name ?? 'GM',
         applyResult: (result) => docRewriter.apply(result),
+        sections: dsa5Sections,
       }),
     };
   return merges.merges;

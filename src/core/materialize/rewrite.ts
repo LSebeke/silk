@@ -21,13 +21,15 @@ import {
 } from './layout';
 import { readSheet, sheetId, type Lifecycle } from './lifecycle';
 import type { Materializer } from './materializer';
-import type { FoundryDocs } from './port';
+import type { DocData, FoundryDocs } from './port';
 
 export interface DocRewriterDeps {
   workingCopy(): WorkingCopy;
   docs: FoundryDocs;
   materializer: Materializer;
   lifecycle: Lifecycle;
+  /** Event Scenes follow their records (T13 `EventScenes.rewrite`). */
+  scenes?: { rewrite(before: Snapshot, result: Snapshot): Promise<void> };
   /** For a "Player Notes" category a journal lacks (a Note's first note). */
   newId?(): string;
   localize?(key: string): string;
@@ -36,6 +38,9 @@ export interface DocRewriterDeps {
 export interface DocRewriter {
   apply(result: Snapshot): Promise<void>;
 }
+
+/** Embedded Item keys an update leaves alone: identity, subtype (changeType), effects. */
+const ITEM_KEEP = new Set(['_id', 'type', 'effects']);
 
 const same = (a: CanonRecord | undefined, b: CanonRecord | undefined) =>
   (a ? canonicalJson(a) : '') === (b ? canonicalJson(b) : '');
@@ -62,6 +67,30 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
           name: block.name,
           'text.content': block.text,
         });
+    }
+  }
+
+  /** Embedded Items by id (spec §11.4): the World had `before`'s, the result has `after`'s. */
+  async function writeItems(actor: string, before: DocData['items'], after: DocData['items']) {
+    if (!after) return;
+    const had = new Map((before ?? []).map((i) => [i._id, i]));
+    const wanted = new Set(after.map((i) => i._id));
+    for (const item of had.values())
+      if (!wanted.has(item._id) && docs.get(`${actor}.Item.${item._id}`))
+        await docs.delete(`${actor}.Item.${item._id}`);
+    for (const item of after) {
+      const uuid = `${actor}.Item.${item._id}`;
+      const previous = had.get(item._id);
+      if (!docs.get(uuid)) await docs.create('Item', item, actor);
+      else if (!previous || canonicalJson(previous) !== canonicalJson(item)) {
+        const { type } = item;
+        if (type && previous && type !== previous.type)
+          await docs.changeType(uuid, type, item.system ?? {});
+        const data = Object.fromEntries(
+          Object.entries(item).filter(([key]) => !ITEM_KEEP.has(key)),
+        );
+        await docs.update(uuid, data);
+      }
     }
   }
 
@@ -105,13 +134,17 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
     }
   }
 
-  async function rewrite(el: StoryElement, sheetChanged: boolean, result: Snapshot) {
+  async function rewrite(el: StoryElement, before: Snapshot, result: Snapshot) {
     const found = materializer.docsOf(el.id);
     if (!found) return;
-    const sheet = readSheet(result.get(sheetId(el.id)));
-    // Full doc data first (T20 refines: embedded Items, sections); class fields on top.
+    const id = sheetId(el.id);
+    const sheetChanged = !same(before.get(id), result.get(id));
+    const sheet = readSheet(result.get(id));
+    // Full doc data first; class fields on top.
     if (sheetChanged && sheet?.doc.system && sheet.doc.type === found.main.type)
       await docs.update(found.main.uuid, { system: sheet.doc.system });
+    if (sheetChanged && sheet?.documentName === 'Actor')
+      await writeItems(found.main.uuid, readSheet(before.get(id))?.doc.items, sheet.doc.items);
     await materializer.writeName(el.id);
     await materializer.setImage(el.id, el.img ?? '');
     if (el.fields) await materializer.setFields(el.id, el.fields);
@@ -146,8 +179,10 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
         if (!el?.uuid) continue;
         const sheetChanged = !same(before.get(sheetId(el.id)), result.get(sheetId(el.id)));
         if (!sheetChanged && same(before.get(el.id), record)) continue;
-        await rewrite(el, sheetChanged, result);
+        await rewrite(el, before, result);
       }
+
+      await deps.scenes?.rewrite(before, result);
 
       // Docs missing in this World (Materialized elsewhere) → Ghosts; contributors follow.
       await deps.lifecycle.reconcile();

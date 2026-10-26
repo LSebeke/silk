@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { CanonRecord } from '../../core/canon';
-import type { FieldView, MergeView, RecordView } from '../../core/merge';
+import type { FieldView, MergeRow, MergeView, RecordView } from '../../core/merge';
 import {
+  chosen,
   combinedText,
+  drawerRecords,
+  formatRowValue,
+  nodeOf,
+  sectionsOf,
   fieldLabel,
   formatValue,
   toMergeEdges,
@@ -38,6 +43,7 @@ const rec = (r: Partial<RecordView> & { display: CanonRecord }): RecordView => (
   badge: 'same',
   open: 0,
   fields: [],
+  rows: [],
   result: r.display,
   ...r,
 });
@@ -63,6 +69,19 @@ describe('merge canvas model', () => {
       ],
     );
     expect(elements(toMergeNodes(v, { showCanonOnly: true })).at(-1)?.data.badge).toBe('canonOnly');
+  });
+
+  it('a Node carries the conflicts of its sheet and Event Scene', () => {
+    const sheet: CanonRecord = { kind: 'sheet', id: 'a-sheet', data: { element: 'a' } };
+    const v = view([
+      rec({ display: el('a', 'Gareth'), badge: 'same' }),
+      rec({ display: sheet, owner: 'a', badge: 'conflict', open: 2 }),
+    ]);
+    const [node] = elements(toMergeNodes(v, { showCanonOnly: false }));
+    expect(node?.data).toMatchObject({ badge: 'conflict', open: 2 });
+    expect(nodeOf(v, 'a-sheet')).toBe('a');
+    expect(nodeOf(v, 'a')).toBe('a');
+    expect(drawerRecords(v, 'a-sheet').map((r) => r.id)).toEqual(['a', 'a-sheet']);
   });
 
   it('outlines the Canon position of a moved Node', () => {
@@ -113,5 +132,47 @@ describe('merge canvas model', () => {
     expect(formatValue(undefined)).toBeUndefined();
     expect(combinedText(field({ ours: 'A', theirs: 'B' }))).toBe('A\nB');
     expect(combinedText(field({ ours: 'A', theirs: undefined }))).toBe('A');
+  });
+
+  const row = (r: Partial<MergeRow>): MergeRow => ({
+    recordId: 'r',
+    field: '/name',
+    kind: 'field',
+    section: 'S.a',
+    label: 'name',
+    fields: [],
+    open: false,
+    conflict: false,
+    layout: false,
+    canonOnly: false,
+    text: false,
+    ...r,
+  });
+
+  it('groups rows into sections in order of appearance', () => {
+    const rows = [
+      row({ field: '/a', section: 'S.a' }),
+      row({ field: '/b', section: 'S.b' }),
+      row({ field: '/c', section: 'S.a' }),
+    ];
+    expect(sectionsOf(rows).map((s) => [s.section, s.rows.map((r) => r.field)])).toEqual([
+      ['S.a', ['/a', '/c']],
+      ['S.b', ['/b']],
+    ]);
+  });
+
+  it('formats token and count rows; a row is chosen when all its fields took one side', () => {
+    expect(formatRowValue(row({ kind: 'token' }), { x: 10, y: 20, hidden: true })).toBe(
+      '(10, 20) hidden',
+    );
+    expect(formatRowValue(row({ kind: 'token' }), { x: 10, y: 20, hidden: false })).toBe(
+      '(10, 20)',
+    );
+    expect(formatRowValue(row({ kind: 'count' }), 3)).toBe('3');
+    const x = field({ field: '/t/x', auto: 'ours' });
+    const y = field({ field: '/t/y', pick: { recordId: 'r', field: '/t/y', side: 'ours' } });
+    expect(chosen(row({ fields: [x, y] }))).toBe('ours');
+    expect(chosen(row({ fields: [x, field({ field: '/t/z', auto: 'theirs' })] }))).toBeNull();
+    expect(chosen(row({ fields: [field({ open: true, auto: null })] }))).toBeNull();
   });
 });

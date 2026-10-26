@@ -63,4 +63,15 @@ export interface SceneDocs {
   /** Tokens from the actors' prototype tokens. */
   createTokens(sceneId: string, tokens: NewToken[]): Promise<void>;
   deleteTokens(sceneId: string, ids: string[]): Promise<void>;
+  /**
+   * Makes an embedded collection (`tokens`, `walls`, `lights`, …) match: creates (with the
+   * given `_id`s), updates, deletes, as Silk's write (merge result, spec §11.4).
+   */
+  syncEmbedded(sceneId: string, collection: string, ops: EmbeddedOps): Promise<void>;
+}
+
+export interface EmbeddedOps {
+  create: { _id: string; [key: string]: unknown }[];
+  update: { _id: string; [key: string]: unknown }[];
+  delete: string[];
 }

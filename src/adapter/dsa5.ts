@@ -5,6 +5,7 @@
  */
 import type { SystemMapping } from '../core/materialize/port';
 import type { ElementClassId } from '../core/elements';
+import type { SheetSections } from '../core/merge/rows';
 
 export type Dsa5ActorType = 'character' | 'npc' | 'creature' | 'group' | 'vehicle';
 
@@ -92,5 +93,55 @@ export const dsa5Mapping: SystemMapping = {
     for (const key of Object.keys(linked))
       if (!blocks.some((b) => b.id === key)) out[`${at}.linkedPages.-=${key}`] = null;
     return out;
+  },
+};
+
+const SECTION = 'SILK.Merge.Section';
+/** Actor `system` top-level keys → the DSA5 sheet part they show on (dsa5 8.1 data models). */
+const ACTOR_SECTIONS: Record<string, string> = {
+  characteristics: 'characteristics',
+  status: 'status',
+  details: 'details',
+  description: 'details',
+  behaviour: 'details',
+  specialRules: 'details',
+  creatureClass: 'details',
+  merchant: 'merchant',
+};
+/** Item types → sheet tab. */
+const ITEM_SECTIONS: Record<string, string> = {
+  skill: 'skills',
+  combatskill: 'combatSkills',
+  spell: 'magic',
+  ritual: 'magic',
+  ceremony: 'magic',
+  liturgy: 'magic',
+  blessing: 'magic',
+  magictrick: 'magic',
+  advantage: 'abilities',
+  disadvantage: 'abilities',
+  specialability: 'abilities',
+  trait: 'abilities',
+  equipment: 'inventory',
+  armor: 'inventory',
+  meleeweapon: 'inventory',
+  rangeweapon: 'inventory',
+  ammunition: 'inventory',
+  consumable: 'inventory',
+  money: 'inventory',
+  poison: 'inventory',
+  plant: 'inventory',
+  book: 'inventory',
+};
+
+/** DSA5 sheet sections for the merge drawer (spec §2 adapter-owned labels, §11.4). */
+export const dsa5Sections: SheetSections = {
+  system(_doc, path) {
+    const section = ACTOR_SECTIONS[path[0] ?? ''];
+    return section ? `${SECTION}.dsa5.${section}` : `${SECTION}.system`;
+  },
+  item(type) {
+    const section = ITEM_SECTIONS[type ?? ''];
+    return section ? `${SECTION}.dsa5.${section}` : `${SECTION}.items`;
   },
 };

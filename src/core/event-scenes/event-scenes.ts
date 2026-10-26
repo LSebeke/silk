@@ -25,7 +25,7 @@ import type {
   Materializer,
 } from '../materialize';
 import type { WorkingCopy } from '../working-copy';
-import type { SceneData, SceneDocs, SceneSnapshot } from './port';
+import type { EmbeddedOps, SceneData, SceneDocs, SceneSnapshot } from './port';
 import {
   DEFAULT_PRESET,
   isPreset,
@@ -71,6 +71,12 @@ export interface EventScenes {
   createScene(id: string, preset?: string): Promise<void>;
   restoreScene(id: string): Promise<void>;
   viewScene(id: string): Promise<void>;
+  /**
+   * Merge result (spec §11.3, §11.4; `createDocRewriter` dep): this World's Scenes follow
+   * their `eventScene` records (fields; tokens, walls, lights etc. by id). Scenes of elements
+   * the result dropped are deleted. Runs after the working copy took the result.
+   */
+  rewrite(before: Snapshot, result: Snapshot): Promise<void>;
 }
 
 /** `eventScene` record data: the Scene as Unmaterialize / Commit captured it. */
@@ -84,12 +90,33 @@ export const eventSceneId = (elementId: string) => `${elementId}-scene`;
 const SCENE_CLASSES = new Set(['event', 'location']);
 const PRESENT = new Set(['person', 'creature']);
 
+/** Scene keys that are not versioned (§11.2). */
+const UNVERSIONED = new Set(['ownership', 'folder', 'sort', 'active', 'thumb', 'navOrder']);
+
 /** Source data as versioned: no ownership, folder, sort, activation, thumbnail (§11.2). */
 function versioned(scene: SceneSnapshot | SceneData): SceneData {
-  const skip = new Set(['ownership', 'folder', 'sort', 'active', 'thumb', 'navOrder']);
   return Object.fromEntries(
-    Object.entries(structuredClone(scene)).filter(([key]) => !skip.has(key)),
+    Object.entries(structuredClone(scene)).filter(([key]) => !UNVERSIONED.has(key)),
   ) as SceneData;
+}
+
+type Embedded = EmbeddedOps['create'][number];
+const isEmbedded = (v: unknown): v is Embedded[] =>
+  Array.isArray(v) &&
+  v.every((x) => typeof x === 'object' && x !== null && typeof (x as Embedded)._id === 'string');
+
+/** What makes `live`'s collection match `wanted`, by `_id`. */
+function embeddedOps(live: Embedded[], wanted: Embedded[]): EmbeddedOps {
+  const have = new Map(live.map((x) => [x._id, x]));
+  const ids = new Set(wanted.map((x) => x._id));
+  return {
+    create: wanted.filter((x) => !have.has(x._id)),
+    update: wanted.filter((x) => {
+      const current = have.get(x._id);
+      return current && canonicalJson(current) !== canonicalJson(x);
+    }),
+    delete: live.filter((x) => !ids.has(x._id)).map((x) => x._id),
+  };
 }
 
 export function createEventScenes(deps: EventScenesDeps): EventScenes {
@@ -430,8 +457,41 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
     },
   };
 
+  /** Makes the live Scene match `wanted` (versioned keys only). */
+  async function syncScene(live: SceneSnapshot, wanted: SceneData) {
+    const update: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(wanted)) {
+      if (key === '_id' || UNVERSIONED.has(key)) continue;
+      const current = (live as Record<string, unknown>)[key];
+      if (isEmbedded(value) && (current === undefined || isEmbedded(current))) {
+        const ops = embeddedOps(current ?? [], value);
+        if (ops.create.length || ops.update.length || ops.delete.length)
+          await scenes.syncEmbedded(live._id, key, ops);
+      } else if (canonicalJson(current ?? null) !== canonicalJson(value)) update[key] = value;
+    }
+    if (Object.keys(update).length) await scenes.update(live._id, update);
+  }
+
+  async function rewrite(before: Snapshot, result: Snapshot) {
+    for (const live of scenes.scenes()) {
+      const owner = live.flags.silk?.sceneOf;
+      if (owner && before.has(owner) && !result.has(owner)) await scenes.delete(live._id);
+    }
+    for (const record of result.values()) {
+      const data = readSnapshot(record);
+      const el = readElement(result.get(data?.element ?? ''));
+      if (!data || !el?.uuid || !docs.get(el.uuid)) continue;
+      const previous = before.get(record.id);
+      if (previous && canonicalJson(previous) === canonicalJson(record)) continue;
+      const live = sceneOf(el.id);
+      if (live) await syncScene(live, data.scene);
+      else await once(el.id, () => createFrom(el, { ...data.scene, name: el.name }));
+    }
+  }
+
   return {
     contributor,
+    rewrite,
     wrap: (commands) => commands.map(wrapOne),
     sceneOf: (id) => sceneOf(id),
 
