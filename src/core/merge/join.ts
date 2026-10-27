@@ -62,22 +62,18 @@ function itemsOf(record: CanonRecord): Item[] {
   return [
     { field: '/revealed', kind: 'element', id: record.id, label: name },
     { field: '/appearance', kind: 'appearance', id: record.id, label: name },
-    ...entries(record.data.infoBlocks).map(
-      (b): Item => ({
-        field: `/infoBlocks/${b._id}`,
-        kind: 'infoBlock',
-        id: b._id,
-        label: str(b.name, b._id),
-      }),
-    ),
-    ...entries(record.data.playerNotes).map(
-      (n): Item => ({
-        field: `/playerNotes/${n._id}`,
-        kind: 'playerNote',
-        id: n._id,
-        label: str(n.name, str(n.text, n._id).slice(0, 60)),
-      }),
-    ),
+    ...entries(record.data.infoBlocks).map((b): Item => ({
+      field: `/infoBlocks/${b._id}`,
+      kind: 'infoBlock',
+      id: b._id,
+      label: str(b.name, b._id),
+    })),
+    ...entries(record.data.playerNotes).map((n): Item => ({
+      field: `/playerNotes/${n._id}`,
+      kind: 'playerNote',
+      id: n._id,
+      label: str(n.name, str(n.text, n._id).slice(0, 60)),
+    })),
   ];
 }
 

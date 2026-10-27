@@ -44,7 +44,9 @@
   let showCanonOnly = $state(false);
   /** Join Campaigns (§11.5): Target / Source / Result, no base column, no conflicts. */
   const join = $derived(view?.draft.kind === 'join');
-  const sides = $derived<Side[]>(view?.columns.base ? ['base', 'ours', 'theirs'] : ['ours', 'theirs']);
+  const sides = $derived<Side[]>(
+    view?.columns.base ? ['base', 'ours', 'theirs'] : ['ours', 'theirs'],
+  );
   const shown = (value: string | undefined) => (join && value === 'true' ? '✓' : value);
   let editing = $state<{ recordId: string; field: string; text: string } | null>(null);
 
@@ -136,12 +138,15 @@
     <p class="empty">{t('SILK.Merge.NoChanges')}</p>
   {:else}
     <header class="bar">
-      <div class="title" data-silk-merge-title>
+      <div class="title" data-silk-merge-title data-silk-merge-kind={view.draft.kind}>
         {#if join}
           {t('SILK.Merge.JoinHeading')}
           <strong class="adv">{view.title.adventure}</strong>
           {t('SILK.Merge.JoinInto')}
           <strong class="canon">{view.title.campaign}</strong>
+        {:else if view.draft.kind === 'canonEdit'}
+          {t('SILK.Merge.CanonEditHeading')}
+          <strong class="adv">{view.title.adventure}</strong>
         {:else}
           {t('SILK.Merge.Heading')}
           <strong class="adv">{view.title.adventure}</strong>
@@ -274,7 +279,15 @@
     </div>
 
     <footer class="bar">
-      <span class="muted">{t(join ? 'SILK.Merge.JoinFooter' : 'SILK.Merge.Footer')}</span>
+      <span class="muted"
+        >{t(
+          join
+            ? 'SILK.Merge.JoinFooter'
+            : view.draft.kind === 'canonEdit'
+              ? 'SILK.Merge.CanonEditFooter'
+              : 'SILK.Merge.Footer',
+        )}</span
+      >
       <span class="grow"></span>
       <button type="button" onclick={() => run('merge.cancel')} data-silk-merge-cancel>
         {t('SILK.Commands.merge.cancel')}
@@ -302,12 +315,16 @@
     onclick={() => pick(row, side)}
     data-silk-merge-cell={side}
   >
-    {#if value === undefined}<span class="none">{t('SILK.Merge.None')}</span>{:else}{shown(value)}{/if}
+    {#if value === undefined}<span class="none">{t('SILK.Merge.None')}</span>{:else}{shown(
+        value,
+      )}{/if}
     {#if side === 'ours' && row.by}
       <span class="chip canon by" data-silk-merge-by>{by(row.by)}</span>
     {/if}
     {#if side === 'theirs' && row.from}
-      <span class="chip adv by" data-silk-merge-from>{t('SILK.Merge.From', { name: row.from })}</span>
+      <span class="chip adv by" data-silk-merge-from
+        >{t('SILK.Merge.From', { name: row.from })}</span
+      >
     {/if}
   </td>
 {/snippet}

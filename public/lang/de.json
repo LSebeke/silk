@@ -64,7 +64,8 @@
       },
       "adventure": {
         "start": "Abenteuer starten",
-        "end": "Abenteuer beenden"
+        "end": "Abenteuer beenden",
+        "abandon": "Abenteuer verwerfen"
       },
       "element": {
         "create": "Element erstellen",
@@ -230,7 +231,11 @@
         "Cancelled": "Import abgebrochen. Nichts wurde geschrieben."
       },
       "JoinTarget": "Zielkampagne…",
-      "CloseSource": "Quellkampagne schließen"
+      "CloseSource": "Quellkampagne schließen",
+      "Abandon": "Verwerfen…",
+      "AbandonPrompt": "Verwerfen löscht alles, was dieses Abenteuer geändert hat, und setzt die Welt auf main zurück. Dokumente von Elementen, die es auf main nicht gibt, werden gelöscht. Das lässt sich nicht rückgängig machen. Zur Bestätigung den Namen des Abenteuers eingeben:",
+      "AbandonConfirm": "Endgültig verwerfen",
+      "Synced": "main wurde in einer anderen Welt geändert; diese Welt wurde aktualisiert."
     },
     "Notice": {
       "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
@@ -453,7 +458,12 @@
         "infoBlock": "Infoblöcke",
         "connection": "Verbindungen",
         "playerNote": "Spielernotizen"
-      }
+      },
+      "CanonIncoming": "Kanon (eingehend)",
+      "ThisWorld": "Diese Welt",
+      "CanonEditHeading": "main wurde in einer anderen Welt geändert. Mit den nicht committeten Änderungen dieser Welt zusammenführen:",
+      "CanonEditFooter": "Abbrechen lässt die Änderungen dieser Welt uncommittet; Commits bleiben gesperrt, bis zusammengeführt ist.",
+      "CanonEditConfirmBody": "Das Ergebnis auf main committen und diese Welt umschreiben? Das lässt sich nicht rückgängig machen."
     },
     "Adopt": {
       "Adopt": "In Silk übernehmen",

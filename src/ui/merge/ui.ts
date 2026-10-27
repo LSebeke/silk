@@ -30,11 +30,18 @@ export function createMergeUi(deps: MergeDeps): MergeUi {
       await current()?.close();
     },
     async confirmNoUndo() {
-      const join = (await deps.view())?.draft.kind === 'join' ? 'Join' : '';
+      const kind = (await deps.view())?.draft.kind;
+      const body =
+        kind === 'join'
+          ? 'SILK.Merge.JoinConfirmBody'
+          : kind === 'canonEdit'
+            ? 'SILK.Merge.CanonEditConfirmBody'
+            : 'SILK.Merge.ConfirmBody';
+      const title = kind === 'join' ? 'SILK.Merge.JoinConfirmTitle' : 'SILK.Merge.ConfirmTitle';
       return !!(await foundry.applications.api.DialogV2.confirm({
         id: 'silk-merge-confirm',
-        window: { title: deps.t(`SILK.Merge.${join}ConfirmTitle`) },
-        content: `<p>${deps.t(`SILK.Merge.${join}ConfirmBody`)}</p>`,
+        window: { title: deps.t(title) },
+        content: `<p>${deps.t(body)}</p>`,
       }));
     },
     async focus(ref) {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createMemoryFiles, openCanon, type CanonFiles, type CanonRecord } from '../canon';
 import { createMemoryBackend } from '../working-copy';
 import { createWorkingCopy } from '../working-copy/working-copy';
-import { createHistory } from './history';
+import { MainMovedError, createHistory } from './history';
 
 const gareth: CanonRecord = { kind: 'element', id: 'el-gareth', data: { name: 'Gareth' } };
 const ulf: CanonRecord = { kind: 'element', id: 'el-ulf', data: { name: 'Ulf' } };
@@ -158,5 +158,40 @@ describe('history', () => {
         [sheet.id, sheet],
       ]),
     });
+  });
+
+  it('a Commit under main refuses when another World moved main (Canon edit mode)', async () => {
+    const files = createMemoryFiles();
+    const first = world(files);
+    const { canonId } = await first.history.createCanon({ name: 'A' });
+    await first.workingCopy.set([gareth]);
+    const head = await first.history.commit({});
+    const second = world(files);
+    await second.history.bind({ canonId });
+    await second.workingCopy.set([gareth, ulf]);
+    const moved = await second.history.commit({ label: 'Other World' });
+
+    await first.workingCopy.set([{ ...gareth, data: { name: 'Changed' } }]);
+    await expect(first.history.commit({})).rejects.toThrow(MainMovedError);
+
+    expect(await (await openCanon(files, canonId)).getMain()).toBe(moved);
+    expect(first.workingCopy.binding?.head).toBe(head);
+  });
+
+  it('snapshotCommit writes the working copy as a Commit on the head without moving a ref', async () => {
+    const files = createMemoryFiles();
+    const { history, workingCopy } = world(files);
+    const { canonId } = await history.createCanon({ name: 'A' });
+    await workingCopy.set([gareth]);
+    const head = await history.commit({});
+    await workingCopy.set([ulf]);
+
+    const hash = await history.snapshotCommit({ label: 'This World' });
+
+    const canon = await openCanon(files, canonId);
+    expect(await canon.getMain()).toBe(head);
+    expect(workingCopy.binding?.head).toBe(head);
+    expect((await canon.readCommit(hash)).parents).toEqual([head]);
+    expect(await canon.readSnapshot(hash)).toEqual(workingCopy.records());
   });
 });

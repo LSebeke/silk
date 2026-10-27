@@ -106,7 +106,7 @@ describe('Join Campaigns (spec §11.5)', () => {
     );
     await t.merges.join({ sourceId: t.sourceId, targetId: t.targetId });
 
-    await t.merges.confirm();
+    await t.merges.confirmJoin();
 
     expect(await t.campaigns.readRevelationMap(t.targetId)).toEqual(
       map({ elements: ['el-gareth', 'el-ulf'], playerNotes: ['pn-1'] }),
@@ -129,7 +129,7 @@ describe('Join Campaigns (spec §11.5)', () => {
     const view = await t.merges.view();
     const row = view?.records.find((r) => r.id === 'el-ulf')?.rows[0];
     expect(row?.result).toBeUndefined();
-    await t.merges.confirm();
+    await t.merges.confirmJoin();
 
     expect((await t.campaigns.readRevelationMap(t.targetId)).elements).toEqual(['el-gareth']);
     expect((await t.campaigns.list()).find((c) => c.id === t.sourceId)?.closed).toBe(false);
@@ -140,7 +140,7 @@ describe('Join Campaigns (spec §11.5)', () => {
     await t.campaigns.writeRevelationMap(t.sourceId, map({ elements: ['el-gareth'] }));
     await t.campaigns.startAdventure({ name: 'Ch. 1', campaignId: t.targetId });
     await t.merges.join({ sourceId: t.sourceId, targetId: t.targetId });
-    await t.merges.confirm();
+    await t.merges.confirmJoin();
     expect(t.ownership).toEqual([map({ elements: ['el-gareth'] })]);
   });
 

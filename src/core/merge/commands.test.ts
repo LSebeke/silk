@@ -41,7 +41,14 @@ async function setup(isGM = true) {
   await history.commit({});
   const { id } = await campaigns.create({ name: 'C' });
   await campaigns.startAdventure({ name: 'Adv', campaignId: id });
-  return { registry, workingCopy, campaigns, campaignId: id, calls, setAnswer: (a: boolean) => (answer = a) };
+  return {
+    registry,
+    workingCopy,
+    campaigns,
+    campaignId: id,
+    calls,
+    setAnswer: (a: boolean) => (answer = a),
+  };
 }
 
 describe('merge commands (spec §15)', () => {
