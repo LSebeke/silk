@@ -62,6 +62,8 @@ export interface MergeRow {
   text: boolean;
   /** Newest Canon change among its fields. */
   by?: Attribution;
+  /** Join Campaigns: the item is in the source Campaign's map (its name, "from <source>" chip). */
+  from?: string;
 }
 
 const unescape = (s: string) => s.replaceAll('~1', '/').replaceAll('~0', '~');

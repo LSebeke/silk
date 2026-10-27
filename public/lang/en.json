@@ -59,7 +59,8 @@
         "create": "Create Campaign",
         "rename": "Rename",
         "close": "Close",
-        "reopen": "Reopen"
+        "reopen": "Reopen",
+        "join": "Join into…"
       },
       "adventure": {
         "start": "Start Adventure",
@@ -229,6 +230,8 @@
         "ImportedMissing": "Files missing from the import: {files}",
         "Cancelled": "Import cancelled. Nothing was written."
       },
+      "JoinTarget": "Target Campaign…",
+      "CloseSource": "Close source Campaign",
       "Abandon": "Abandon…",
       "AbandonPrompt": "Abandoning drops everything this Adventure changed and resets the World to main. Docs of elements not on main are deleted. This cannot be undone. Type the Adventure name to confirm:",
       "AbandonConfirm": "Abandon for good",
@@ -440,6 +443,21 @@
           "abilities": "Advantages, disadvantages, abilities",
           "inventory": "Inventory"
         }
+      },
+      "Target": "Target",
+      "Source": "Source",
+      "JoinHeading": "Join Campaign",
+      "JoinInto": "into",
+      "JoinFooter": "Default: everything Revealed in either Campaign. Writes the target's Revelation Map; no Commit.",
+      "JoinConfirmTitle": "Join Campaigns",
+      "JoinConfirmBody": "Write the result into the target Campaign's Revelation Map? There is no undo.",
+      "From": "from {name}",
+      "Join": {
+        "element": "Revealed elements",
+        "appearance": "Appearance",
+        "infoBlock": "Info Blocks",
+        "connection": "Connections",
+        "playerNote": "Player Notes"
       },
       "CanonIncoming": "Canon (incoming)",
       "ThisWorld": "This World",

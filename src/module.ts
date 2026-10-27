@@ -304,6 +304,8 @@ function getMerges(): Merges {
         author: () => game.user?.name ?? 'GM',
         applyResult: (result) => docRewriter.apply(result),
         sections: dsa5Sections,
+        retagPlayerNotes: (from, to) => playerNotes.retag(from, to),
+        applyRevelationMap: (map) => reveal.applyMap(map),
       }),
     };
   return merges.merges;

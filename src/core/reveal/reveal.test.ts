@@ -295,6 +295,35 @@ describe('Truth: World ownership mirrored in the Revelation Map', () => {
     expect(t.maps.size).toBe(0);
   });
 
+  it('reconcile applies a map changed elsewhere (Join Campaigns in another World, §11.5)', async () => {
+    const t = setup();
+    const a = await materialized(t, 'location', 'A');
+    const b = await materialized(t, 'location', 'B');
+    await t.run('reveal.element', { id: a });
+    // Another World joined a Campaign into this one: B is Revealed in the stored map.
+    t.maps.set('camp1', { ...emptyRevelationMap(), elements: [a, b] });
+    await t.lifecycle.reconcile();
+    expect(t.level(t.doc(b))).toBe(OBSERVER);
+    expect(t.map().elements).toEqual([a, b].sort());
+    expect(t.world()).toEqual(t.map());
+  });
+
+  it('reconcile: a map changed elsewhere wins only for the items it changed', async () => {
+    const t = setup();
+    const a = await materialized(t, 'location', 'A');
+    const b = await materialized(t, 'location', 'B');
+    const c = await materialized(t, 'location', 'C');
+    await t.run('reveal.element', { id: a });
+    // Elsewhere: C was joined in. Here, by hand: A hidden, B opened.
+    t.maps.set('camp1', { ...emptyRevelationMap(), elements: [a, c].sort() });
+    t.doc(a).ownership = { default: NONE };
+    t.doc(b).ownership = { default: OBSERVER };
+    await t.lifecycle.reconcile();
+    expect(t.map().elements).toEqual([b, c].sort());
+    expect(t.level(t.doc(c))).toBe(OBSERVER);
+    expect(t.world()).toEqual(t.map());
+  });
+
   it('reconcile keeps map entries of Ghosts (Revealed again when Materialized)', async () => {
     const t = setup();
     const ghost = await t.create('location', 'Ghost');

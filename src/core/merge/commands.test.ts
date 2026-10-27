@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createMemoryFiles } from '../canon';
-import { createCampaigns } from '../campaigns';
+import { createCampaigns, emptyRevelationMap } from '../campaigns';
 import { createRegistry } from '../commands/registry';
 import { createHistory } from '../history';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
@@ -41,7 +41,14 @@ async function setup(isGM = true) {
   await history.commit({});
   const { id } = await campaigns.create({ name: 'C' });
   await campaigns.startAdventure({ name: 'Adv', campaignId: id });
-  return { registry, workingCopy, calls, setAnswer: (a: boolean) => (answer = a) };
+  return {
+    registry,
+    workingCopy,
+    campaigns,
+    campaignId: id,
+    calls,
+    setAnswer: (a: boolean) => (answer = a),
+  };
 }
 
 describe('merge commands (spec §15)', () => {
@@ -91,7 +98,24 @@ describe('merge commands (spec §15)', () => {
       'merge.pick',
       'merge.confirm',
       'merge.cancel',
+      'campaign.join',
     ])
       expect(t.registry.isAvailable(name)).toBe(false);
+  });
+
+  it('campaign.join opens the merge window; merge.confirm writes the target map', async () => {
+    const t = await setup();
+    const target = await t.campaigns.create({ name: 'D' });
+    await t.campaigns.writeRevelationMap(t.campaignId, {
+      ...emptyRevelationMap(),
+      elements: ['e1'],
+    });
+    await t.registry.run('campaign.join', { sourceId: t.campaignId, targetId: target.id });
+    expect(t.calls).toEqual(['open']);
+    expect(await t.registry.run('merge.confirm', { confirmed: true })).toEqual({
+      confirmed: true,
+    });
+    expect((await t.campaigns.readRevelationMap(target.id)).elements).toEqual(['e1']);
+    expect(t.calls).toEqual(['open', 'close']);
   });
 });

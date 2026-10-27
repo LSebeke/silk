@@ -32,6 +32,8 @@ import type { Campaigns } from '../campaigns';
 import type { History } from '../history';
 import type { WorkingCopy } from '../working-copy';
 import { attribute, type CanonChange } from './attribution';
+import { joinRecords, joinResult, type JoinDraft } from './join';
+import type { RevelationMap } from '../campaigns';
 import { rowsOf, type Attribution, type MergeRow, type SheetSections } from './rows';
 
 /** Working Copy meta key of the merge draft. */
@@ -116,7 +118,7 @@ export interface ReceivedMerge {
 }
 
 export interface MergeView {
-  draft: MergeDraft;
+  draft: MergeDraft | JoinDraft;
   title: { adventure: string; campaign: string };
   /** i18n keys of the side columns. */
   columns: { base: string; ours: string; theirs: string };
@@ -141,6 +143,10 @@ export interface MergesDeps {
   applyResult(result: Snapshot): Promise<void>;
   /** Sheet section labels (the Game System adapter's, spec §2). */
   sections?: SheetSections;
+  /** Join Campaigns (T18): Player Notes authored in `from` are re-tagged to `to`. */
+  retagPlayerNotes?(from: string, to: string): Promise<void>;
+  /** Join Campaigns (T16): World ownership follows `map` (the target is checked out). */
+  applyRevelationMap?(map: RevelationMap): Promise<void>;
 }
 
 /** Outcome of the Canon edit mode load sync. */
@@ -163,8 +169,18 @@ export interface Merges {
   pick(pick: Pick): Promise<void>;
   /** `merge.nextConflict`: the next open conflict after the cursor (wraps), or `null`. */
   nextConflict(): Promise<FieldRef | null>;
+  /**
+   * `campaign.join` (spec §11.5): review the source's Revelation Map into the target's in the
+   * merge window. Any Checkout; the target must be open; `closeSource` defaults on.
+   */
+  join(args: { sourceId: string; targetId: string; closeSource?: boolean }): Promise<MergeView>;
   /** `merge.confirm`: one Commit on main; the World checks out main. No undo. */
   confirm(): Promise<{ commit: string }>;
+  /**
+   * `merge.confirm` of a join: writes the target map (no Commit), re-tags Player Notes and
+   * closes the source if asked. No undo.
+   */
+  confirmJoin(): Promise<void>;
   /** `merge.cancel`: discard the draft; the Adventure stays checked out. */
   cancel(): Promise<void>;
 }
@@ -207,8 +223,19 @@ export function createMerges(deps: MergesDeps): Merges {
     return canon;
   }
 
+  function stored(): MergeDraft | JoinDraft | null {
+    const d = workingCopy.meta(MERGE_DRAFT) as unknown as MergeDraft | JoinDraft | undefined;
+    return d ?? null;
+  }
+
   function draft(): MergeDraft | null {
-    return (workingCopy.meta(MERGE_DRAFT) as unknown as MergeDraft | undefined) ?? null;
+    const d = stored();
+    return d?.kind === 'join' ? null : d;
+  }
+
+  function joinDraft(): JoinDraft | null {
+    const d = stored();
+    return d?.kind === 'join' ? d : null;
   }
 
   function requireDraft(): MergeDraft {
@@ -217,7 +244,7 @@ export function createMerges(deps: MergesDeps): Merges {
     return d;
   }
 
-  const saveDraft = (d: MergeDraft | null) =>
+  const saveDraft = (d: MergeDraft | JoinDraft | null) =>
     workingCopy.setMeta(MERGE_DRAFT, d as unknown as JsonValue | null);
 
   async function snapshot(canon: CanonStore, hash: string) {
@@ -405,6 +432,59 @@ export function createMerges(deps: MergesDeps): Merges {
     };
   }
 
+  async function joinMaps(d: JoinDraft) {
+    const [target, source] = await Promise.all([
+      deps.campaigns.readRevelationMap(d.targetId),
+      deps.campaigns.readRevelationMap(d.sourceId),
+    ]);
+    return { target, source };
+  }
+
+  async function buildJoinView(d: JoinDraft): Promise<MergeView> {
+    const { target, source } = await joinMaps(d);
+    const sourceName = await campaignName(d.sourceId);
+    const snapshot = workingCopy.records();
+    const records = joinRecords(snapshot, target, source, d.picks, sourceName);
+    return {
+      draft: d,
+      title: { adventure: sourceName, campaign: await campaignName(d.targetId) },
+      columns: { base: '', ours: 'SILK.Merge.Target', theirs: 'SILK.Merge.Source' },
+      records,
+      counts: {
+        conflicts: 0,
+        open: 0,
+        added: records.filter((r) => r.badge === 'added').length,
+        deleted: 0,
+        changed: 0,
+        canonOnly: 0,
+        layout: 0,
+        moves: 0,
+      },
+      received: [],
+      resolution: { snapshot, unresolved: [], removedWithEndpoint: [] },
+    };
+  }
+
+  async function requireOpenTarget(targetId: string) {
+    const target = await (await requireCanon()).getCampaign(targetId);
+    if (!target) throw new Error(`Silk: no Campaign "${targetId}" in this Canon`);
+    if (target.closed)
+      throw new Error(`Silk: Campaign "${target.name}" is closed; it can't be a join target`);
+  }
+
+  async function applyJoin(d: JoinDraft): Promise<void> {
+    await requireOpenTarget(d.targetId);
+    const { target, source } = await joinMaps(d);
+    const map = joinResult(workingCopy.records(), target, source, d.picks);
+    await deps.campaigns.writeRevelationMap(d.targetId, map);
+    // Re-tags this World's notes; copies on main and in other Adventures follow through merges.
+    await deps.retagPlayerNotes?.(d.sourceId, d.targetId);
+    if (d.closeSource) await deps.campaigns.close({ id: d.sourceId });
+    if ((await deps.campaigns.checkedOutCampaign())?.id === d.targetId)
+      await deps.applyRevelationMap?.(map);
+    await saveDraft(null);
+  }
+
   async function checkedOutAdventure(): Promise<AdventureRef> {
     const checkout = workingCopy.binding?.checkout;
     if (!checkout) throw new Error(UNBOUND);
@@ -417,6 +497,7 @@ export function createMerges(deps: MergesDeps): Merges {
 
   return {
     async endAdventure() {
+      if (joinDraft()) throw new Error('Silk: finish or cancel the open join first');
       const adventure = await checkedOutAdventure();
       const theirs = await history.commit({ label: 'Before merge' });
       const ours = await (await requireCanon()).getMain();
@@ -436,6 +517,16 @@ export function createMerges(deps: MergesDeps): Merges {
       return buildView(next);
     },
 
+    async join({ sourceId, targetId, closeSource = true }) {
+      if (sourceId === targetId) throw new Error('Silk: a Campaign cannot join itself');
+      if (stored()) throw new Error('Silk: finish or cancel the open merge first');
+      await deps.campaigns.readRevelationMap(sourceId);
+      await requireOpenTarget(targetId);
+      const next: JoinDraft = { kind: 'join', sourceId, targetId, closeSource, picks: [] };
+      await saveDraft(next);
+      return buildJoinView(next);
+    },
+
     async syncMain() {
       const binding = workingCopy.binding;
       if (!binding || !('main' in binding.checkout)) return 'current';
@@ -453,6 +544,8 @@ export function createMerges(deps: MergesDeps): Merges {
         if (draft()) await saveDraft(null);
         return 'fastForward';
       }
+      // Commits stay blocked until this merge is done, so it replaces an open join draft
+      // (only its picks are lost; the join can be started again).
       const previous = draft();
       const resumed = previous?.kind === 'canonEdit' ? previous : null;
       if (
@@ -490,11 +583,25 @@ export function createMerges(deps: MergesDeps): Merges {
     },
 
     async view() {
+      const j = joinDraft();
+      if (j) return buildJoinView(j);
       const d = draft();
       return d ? buildView(d) : null;
     },
 
     async pick(pick) {
+      const j = joinDraft();
+      if (j) {
+        const { records } = await buildJoinView(j);
+        const known = records.some(
+          (r) => r.id === pick.recordId && r.fields.some((f) => f.field === pick.field),
+        );
+        if (!known || !('side' in pick))
+          throw new Error(`Silk: no item "${pick.field}" of "${pick.recordId}" in this join`);
+        const picks = j.picks.filter((p) => p.recordId !== pick.recordId || p.field !== pick.field);
+        await saveDraft({ ...j, picks: [...picks, pick] });
+        return;
+      }
       const d = requireDraft();
       const merge = await mergeOf(d);
       if (!merge.records.has(pick.recordId))
@@ -516,6 +623,7 @@ export function createMerges(deps: MergesDeps): Merges {
     },
 
     async nextConflict() {
+      if (joinDraft()) return null;
       const d = requireDraft();
       const { unresolved } = resolve(await mergeOf(d), d.picks);
       if (!unresolved.length) return null;
@@ -527,6 +635,7 @@ export function createMerges(deps: MergesDeps): Merges {
     },
 
     async confirm() {
+      if (joinDraft()) throw new Error('Silk: a join has no Commit; confirm it with confirmJoin');
       const d = requireDraft();
       const canon = await requireCanon();
       const { snapshot, unresolved } = resolve(await mergeOf(d), d.picks);
@@ -554,8 +663,14 @@ export function createMerges(deps: MergesDeps): Merges {
       return { commit };
     },
 
+    async confirmJoin() {
+      const j = joinDraft();
+      if (!j) throw new Error('Silk: no join is open');
+      await applyJoin(j);
+    },
+
     async cancel() {
-      if (draft()) await saveDraft(null);
+      if (stored()) await saveDraft(null);
     },
   };
 }

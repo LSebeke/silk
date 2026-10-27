@@ -29,6 +29,16 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
       },
     },
     {
+      // Join Campaigns (spec §11.5): reviewed in the merge window; `merge.confirm` applies it.
+      name: 'campaign.join',
+      title: 'SILK.Commands.campaign.join',
+      available: gm,
+      async run(args: { sourceId: string; targetId: string; closeSource?: boolean }) {
+        await getMerges().join(args);
+        await ui.open();
+      },
+    },
+    {
       // Typed confirmation (the Canon window asks for the Adventure name): irreversible.
       name: 'adventure.abandon',
       title: 'SILK.Commands.adventure.abandon',
@@ -61,7 +71,13 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
       available: gm,
       async run(args: { confirmed?: boolean } = {}) {
         if (!args.confirmed && !(await ui.confirmNoUndo())) return { confirmed: false };
-        const { commit } = await getMerges().confirm();
+        const merges = getMerges();
+        if ((await merges.view())?.draft.kind === 'join') {
+          await merges.confirmJoin();
+          await ui.close();
+          return { confirmed: true };
+        }
+        const { commit } = await merges.confirm();
         await ui.close();
         return { confirmed: true, commit };
       },

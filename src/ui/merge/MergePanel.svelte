@@ -42,6 +42,12 @@
   const flow = useSvelteFlow();
 
   let showCanonOnly = $state(false);
+  /** Join Campaigns (§11.5): Target / Source / Result, no base column, no conflicts. */
+  const join = $derived(view?.draft.kind === 'join');
+  const sides = $derived<Side[]>(
+    view?.columns.base ? ['base', 'ours', 'theirs'] : ['ours', 'theirs'],
+  );
+  const shown = (value: string | undefined) => (join && value === 'true' ? '✓' : value);
   let editing = $state<{ recordId: string; field: string; text: string } | null>(null);
 
   const nodeId = $derived(view && focus ? nodeOf(view, focus.recordId) : undefined);
@@ -133,7 +139,12 @@
   {:else}
     <header class="bar">
       <div class="title" data-silk-merge-title data-silk-merge-kind={view.draft.kind}>
-        {#if view.draft.kind === 'canonEdit'}
+        {#if join}
+          {t('SILK.Merge.JoinHeading')}
+          <strong class="adv">{view.title.adventure}</strong>
+          {t('SILK.Merge.JoinInto')}
+          <strong class="canon">{view.title.campaign}</strong>
+        {:else if view.draft.kind === 'canonEdit'}
           {t('SILK.Merge.CanonEditHeading')}
           <strong class="adv">{view.title.adventure}</strong>
         {:else}
@@ -158,15 +169,17 @@
         {/if}
       </div>
       <span class="grow"></span>
-      <label class="toggle">
-        <input type="checkbox" bind:checked={showCanonOnly} data-silk-merge-canon-only />
-        {t('SILK.Merge.ShowCanonOnly')}
-      </label>
-      <button type="button" onclick={() => run('merge.nextConflict')} data-silk-merge-next>
-        {t('SILK.Commands.merge.nextConflict')} ⏎
-      </button>
+      {#if !join}
+        <label class="toggle">
+          <input type="checkbox" bind:checked={showCanonOnly} data-silk-merge-canon-only />
+          {t('SILK.Merge.ShowCanonOnly')}
+        </label>
+        <button type="button" onclick={() => run('merge.nextConflict')} data-silk-merge-next>
+          {t('SILK.Commands.merge.nextConflict')} ⏎
+        </button>
+      {/if}
     </header>
-    <div class="received" data-silk-merge-received>
+    <div class="received" data-silk-merge-received hidden={join}>
       {#if view.received.length}
         {t('SILK.Merge.Received')}:
         {#each view.received as m (m.commit)}
@@ -268,7 +281,11 @@
     <footer class="bar">
       <span class="muted"
         >{t(
-          view.draft.kind === 'canonEdit' ? 'SILK.Merge.CanonEditFooter' : 'SILK.Merge.Footer',
+          join
+            ? 'SILK.Merge.JoinFooter'
+            : view.draft.kind === 'canonEdit'
+              ? 'SILK.Merge.CanonEditFooter'
+              : 'SILK.Merge.Footer',
         )}</span
       >
       <span class="grow"></span>
@@ -298,9 +315,16 @@
     onclick={() => pick(row, side)}
     data-silk-merge-cell={side}
   >
-    {#if value === undefined}<span class="none">{t('SILK.Merge.None')}</span>{:else}{value}{/if}
+    {#if value === undefined}<span class="none">{t('SILK.Merge.None')}</span>{:else}{shown(
+        value,
+      )}{/if}
     {#if side === 'ours' && row.by}
       <span class="chip canon by" data-silk-merge-by>{by(row.by)}</span>
+    {/if}
+    {#if side === 'theirs' && row.from}
+      <span class="chip adv by" data-silk-merge-from
+        >{t('SILK.Merge.From', { name: row.from })}</span
+      >
     {/if}
   </td>
 {/snippet}
@@ -310,7 +334,7 @@
     <thead>
       <tr>
         <th>{t('SILK.Merge.Field')}</th>
-        <th>{t(view?.columns.base ?? '')}</th>
+        {#if sides.includes('base')}<th>{t(view?.columns.base ?? '')}</th>{/if}
         <th class="canon">{t(view?.columns.ours ?? '')}</th>
         <th class="adv">{t(view?.columns.theirs ?? '')}</th>
         <th>{t('SILK.Merge.Result')}</th>
@@ -318,7 +342,7 @@
     </thead>
     {#each sectionsOf(rows) as group (group.section)}
       <tbody data-silk-merge-section={group.section}>
-        <tr class="section"><th colspan="5">{t(group.section)}</th></tr>
+        <tr class="section"><th colspan={sides.length + 2}>{t(group.section)}</th></tr>
         {#each group.rows as row (row.field)}
           {@const result = formatRowValue(row, row.result)}
           <tr
@@ -330,9 +354,9 @@
             data-silk-merge-open={row.open ? '' : undefined}
           >
             <th scope="row">{row.label}</th>
-            {@render cell(row, 'base')}
-            {@render cell(row, 'ours')}
-            {@render cell(row, 'theirs')}
+            {#each sides as side (side)}
+              {@render cell(row, side)}
+            {/each}
             <td class="result" data-silk-merge-result>
               {#if editing && editing.recordId === r.id && editing.field === row.field}
                 <textarea bind:value={editing.text} data-silk-merge-text></textarea>
@@ -345,7 +369,7 @@
                 {:else if result === undefined}
                   <span class="none">{t('SILK.Merge.None')}</span>
                 {:else}
-                  {result}
+                  {shown(result)}
                 {/if}
                 {#if row.text}
                   <button

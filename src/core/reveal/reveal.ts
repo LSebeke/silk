@@ -14,6 +14,7 @@ import type { Command } from '../commands/registry';
 import {
   emptyRevelationMap,
   isRevealed,
+  mergeRevelationMaps,
   setRevealed,
   type RevealKind,
   type RevelationMap,
@@ -254,7 +255,12 @@ export function createReveal(deps: RevealDeps): Reveal {
       if (g.hasAppearance(el.id))
         map = setRevealed(map, 'appearance', el.id, revealed && !isHooded(found.main));
     }
-    // A Revealed Connection needs both ends Revealed.
+    return withConnectionEnds(map);
+  }
+
+  /** A Revealed Connection needs both ends Revealed. */
+  function withConnectionEnds(map: RevelationMap): RevelationMap {
+    const g = graph();
     for (const c of map.connections) {
       const ends = g.endsOf(c);
       if (!ends || ends.some((e) => !isRevealed(map, 'element', e)))
@@ -339,7 +345,12 @@ export function createReveal(deps: RevealDeps): Reveal {
         // the World state is the base (no Campaign map to write).
         const campaign = deps.adventure() ? await deps.campaign.current() : null;
         const stored = campaign ? await deps.campaign.read(campaign) : state;
-        const map = fromOwnership(stored);
+        // Items the stored map changed since this World last applied it (Join Campaigns in
+        // another World, §11.5; delete cleanup) win; ownership decides the rest.
+        const owned = fromOwnership(stored);
+        const map = campaign
+          ? withConnectionEnds(mergeRevelationMaps(state, stored, owned))
+          : owned;
         if (campaign && JSON.stringify(map) !== JSON.stringify(stored))
           await deps.campaign.write(campaign, map);
         await setWorld(map);

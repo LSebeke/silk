@@ -13,6 +13,8 @@ export interface CanonPanelProps extends Record<string, unknown> {
   overview: CanonOverview;
   /** A merge draft is open (End Adventure started): offer to resume it. */
   merging: boolean;
+  /** Any merge window draft (Adventure, Canon edit or join) is open. */
+  mergeOpen: boolean;
   /** Runs a command, reports errors, refreshes the window. */
   run(name: string, args?: object): Promise<void>;
   t(key: string): string;
@@ -48,7 +50,11 @@ export class CanonWindow extends SvelteApplication<CanonPanelProps> {
   protected getProps(): CanonPanelProps {
     return {
       overview: this.#overview,
-      merging: getSession().workingCopy.meta(MERGE_DRAFT) !== undefined,
+      // A join draft is not an Adventure merge: "End Adventure" stays, "Join into…" replaces it.
+      mergeOpen: getSession().workingCopy.meta(MERGE_DRAFT) !== undefined,
+      merging: !['join', undefined].includes(
+        (getSession().workingCopy.meta(MERGE_DRAFT) as { kind?: string } | undefined)?.kind,
+      ),
       run: async (name, args) => {
         try {
           const api = game.modules?.get(MODULE_ID)?.api;
