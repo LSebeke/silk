@@ -59,7 +59,8 @@
         "create": "Kampagne anlegen",
         "rename": "Umbenennen",
         "close": "Schließen",
-        "reopen": "Wieder öffnen"
+        "reopen": "Wieder öffnen",
+        "join": "Zusammenführen in…"
       },
       "adventure": {
         "start": "Abenteuer starten",
@@ -227,7 +228,9 @@
         "Imported": "Kanon „{name}“ ({id}) importiert.",
         "ImportedMissing": "Im Import fehlende Dateien: {files}",
         "Cancelled": "Import abgebrochen. Nichts wurde geschrieben."
-      }
+      },
+      "JoinTarget": "Zielkampagne…",
+      "CloseSource": "Quellkampagne schließen"
     },
     "Notice": {
       "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
@@ -435,6 +438,21 @@
           "abilities": "Vor-, Nachteile, Sonderfertigkeiten",
           "inventory": "Inventar"
         }
+      },
+      "Target": "Ziel",
+      "Source": "Quelle",
+      "JoinHeading": "Kampagne zusammenführen",
+      "JoinInto": "in",
+      "JoinFooter": "Standard: alles, was in einer der Kampagnen enthüllt ist. Schreibt die Enthüllungskarte des Ziels; kein Commit.",
+      "JoinConfirmTitle": "Kampagnen zusammenführen",
+      "JoinConfirmBody": "Das Ergebnis in die Enthüllungskarte der Zielkampagne schreiben? Rückgängig machen ist nicht möglich.",
+      "From": "aus {name}",
+      "Join": {
+        "element": "Enthüllte Elemente",
+        "appearance": "Aussehen",
+        "infoBlock": "Infoblöcke",
+        "connection": "Verbindungen",
+        "playerNote": "Spielernotizen"
       }
     },
     "Adopt": {

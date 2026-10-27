@@ -59,7 +59,8 @@
         "create": "Create Campaign",
         "rename": "Rename",
         "close": "Close",
-        "reopen": "Reopen"
+        "reopen": "Reopen",
+        "join": "Join into…"
       },
       "adventure": {
         "start": "Start Adventure",
@@ -227,7 +228,9 @@
         "Imported": "Imported Canon \"{name}\" ({id}).",
         "ImportedMissing": "Files missing from the import: {files}",
         "Cancelled": "Import cancelled. Nothing was written."
-      }
+      },
+      "JoinTarget": "Target Campaign…",
+      "CloseSource": "Close source Campaign"
     },
     "Notice": {
       "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
@@ -435,6 +438,21 @@
           "abilities": "Advantages, disadvantages, abilities",
           "inventory": "Inventory"
         }
+      },
+      "Target": "Target",
+      "Source": "Source",
+      "JoinHeading": "Join Campaign",
+      "JoinInto": "into",
+      "JoinFooter": "Default: everything Revealed in either Campaign. Writes the target's Revelation Map; no Commit.",
+      "JoinConfirmTitle": "Join Campaigns",
+      "JoinConfirmBody": "Write the result into the target Campaign's Revelation Map? There is no undo.",
+      "From": "from {name}",
+      "Join": {
+        "element": "Revealed elements",
+        "appearance": "Appearance",
+        "infoBlock": "Info Blocks",
+        "connection": "Connections",
+        "playerNote": "Player Notes"
       }
     },
     "Adopt": {

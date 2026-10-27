@@ -28,6 +28,16 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
       },
     },
     {
+      // Join Campaigns (spec §11.5): reviewed in the merge window; `merge.confirm` applies it.
+      name: 'campaign.join',
+      title: 'SILK.Commands.campaign.join',
+      available: gm,
+      async run(args: { sourceId: string; targetId: string; closeSource?: boolean }) {
+        await getMerges().join(args);
+        await ui.open();
+      },
+    },
+    {
       // ⏎ is handled inside the merge window (a global Enter keybinding would be wrong).
       name: 'merge.nextConflict',
       title: 'SILK.Commands.merge.nextConflict',

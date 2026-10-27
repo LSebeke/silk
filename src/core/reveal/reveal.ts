@@ -339,7 +339,10 @@ export function createReveal(deps: RevealDeps): Reveal {
         // the World state is the base (no Campaign map to write).
         const campaign = deps.adventure() ? await deps.campaign.current() : null;
         const stored = campaign ? await deps.campaign.read(campaign) : state;
-        const map = fromOwnership(stored);
+        // A stored map that differs from what this World last applied changed elsewhere
+        // (Join Campaigns, §11.5): it wins over ownership.
+        const changedElsewhere = !!campaign && JSON.stringify(stored) !== JSON.stringify(state);
+        const map = changedElsewhere ? stored : fromOwnership(stored);
         if (campaign && JSON.stringify(map) !== JSON.stringify(stored))
           await deps.campaign.write(campaign, map);
         await setWorld(map);
