@@ -32,6 +32,9 @@ const state = (page: Page) =>
 const waitForIds = (page: Page, ids: string[]) =>
   expect.poll(async () => (await state(page)).ids).toEqual(ids);
 
+// Needs an unbound World: other files bind the shared one.
+test.use({ worldKey: 'canon-binding' });
+
 test('bind a Canon, sync the working copy to players, commit and discard', async ({
   gm,
   player,
