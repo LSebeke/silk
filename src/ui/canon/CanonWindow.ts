@@ -48,7 +48,10 @@ export class CanonWindow extends SvelteApplication<CanonPanelProps> {
   protected getProps(): CanonPanelProps {
     return {
       overview: this.#overview,
-      merging: getSession().workingCopy.meta(MERGE_DRAFT) !== undefined,
+      // A join draft is not an Adventure merge: "End Adventure" stays, "Join into…" replaces it.
+      merging: !['join', undefined].includes(
+        (getSession().workingCopy.meta(MERGE_DRAFT) as { kind?: string } | undefined)?.kind,
+      ),
       run: async (name, args) => {
         try {
           const api = game.modules?.get(MODULE_ID)?.api;

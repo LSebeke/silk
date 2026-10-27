@@ -496,6 +496,7 @@ export function createMerges(deps: MergesDeps): Merges {
 
   return {
     async endAdventure() {
+      if (joinDraft()) throw new Error('Silk: finish or cancel the open join first');
       const adventure = await checkedOutAdventure();
       const theirs = await history.commit({ label: 'Before merge' });
       const ours = await (await requireCanon()).getMain();

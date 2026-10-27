@@ -163,4 +163,12 @@ describe('Join Campaigns (spec §11.5)', () => {
       /merge/,
     );
   });
+
+  it('an open join blocks End Adventure (the draft is kept)', async () => {
+    const t = await setup();
+    await t.campaigns.startAdventure({ name: 'Ch. 1', campaignId: t.targetId });
+    await t.merges.join({ sourceId: t.sourceId, targetId: t.targetId });
+    await expect(t.merges.endAdventure()).rejects.toThrow(/join/);
+    expect((await t.merges.view())?.draft.kind).toBe('join');
+  });
 });

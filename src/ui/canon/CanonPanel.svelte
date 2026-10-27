@@ -20,6 +20,8 @@
   let renaming = $state<{ id: string; name: string } | null>(null);
   /** Abandon: typed confirmation (spec §11.3). `null` = not asking. */
   let abandonTyped = $state<string | null>(null);
+  /** Join into… (spec §11.5): the source being joined, `null` = not asking. */
+  let joining = $state<{ sourceId: string; targetId: string; closeSource: boolean } | null>(null);
 
   const openCampaigns = $derived(overview.campaigns.filter((c) => !c.closed));
   const onMain = $derived(overview.checkout?.kind === 'main');
@@ -47,6 +49,12 @@
     const file = input.files?.[0];
     input.value = '';
     if (file) await run('canon.import', { file });
+  }
+
+  async function join() {
+    if (!joining?.targetId) return;
+    await run('campaign.join', joining);
+    joining = null;
   }
 
   async function rename() {
@@ -221,8 +229,51 @@
                   {t('SILK.Commands.campaign.close')}
                 </button>
               {/if}
+              <button
+                type="button"
+                disabled={merging}
+                onclick={() =>
+                  (joining =
+                    joining?.sourceId === campaign.id
+                      ? null
+                      : { sourceId: campaign.id, targetId: '', closeSource: true })}
+                data-silk-campaign-join
+              >
+                {t('SILK.Commands.campaign.join')}
+              </button>
             {/if}
           </li>
+          {#if joining?.sourceId === campaign.id}
+            <li>
+              <form
+                class="row"
+                onsubmit={(e) => {
+                  e.preventDefault();
+                  void join();
+                }}
+                data-silk-join
+              >
+                <!-- Closed Campaigns can't be a join target (spec §11.5). -->
+                <select bind:value={joining.targetId} data-silk-join-target>
+                  <option value="" disabled>{t('SILK.Canon.JoinTarget')}</option>
+                  {#each openCampaigns.filter((c) => c.id !== campaign.id) as target (target.id)}
+                    <option value={target.id}>{target.name}</option>
+                  {/each}
+                </select>
+                <label>
+                  <input
+                    type="checkbox"
+                    bind:checked={joining.closeSource}
+                    data-silk-join-close-source
+                  />
+                  {t('SILK.Canon.CloseSource')}
+                </label>
+                <button type="submit" disabled={!joining.targetId} data-silk-join-confirm>
+                  OK
+                </button>
+              </form>
+            </li>
+          {/if}
         {/each}
       </ul>
       <form
