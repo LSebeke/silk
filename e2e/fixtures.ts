@@ -101,10 +101,16 @@ async function setUpWorld(page: Page): Promise<void> {
   }, PLAYER);
 }
 
-export const test = base.extend<{ gm: Page; player: Page }, { world: World }>({
+export const test = base.extend<{ gm: Page; player: Page }, { world: World; worldKey: string }>({
+  /**
+   * The World is shared by every test in a worker. A file that needs a fresh one (e.g. an
+   * unbound World) sets its own key with `test.use({ worldKey })`: Playwright gives it a
+   * separate worker, hence a separate World.
+   */
+  worldKey: ['shared', { scope: 'worker', option: true }],
   world: [
-    async ({ browser }, use) => {
-      const run = `${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
+    async ({ browser, worldKey }, use) => {
+      const run = `${Date.now().toString(36)}-${randomBytes(2).toString('hex')}-${worldKey}`;
       const dataPath = prepareDataPath({
         source: FOUNDRY_USER_DATA,
         dist: resolve(import.meta.dirname, '../dist'),
