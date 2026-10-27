@@ -171,4 +171,12 @@ describe('Join Campaigns (spec §11.5)', () => {
     await expect(t.merges.endAdventure()).rejects.toThrow(/join/);
     expect((await t.merges.view())?.draft.kind).toBe('join');
   });
+
+  it('a second join is refused while one is open', async () => {
+    const t = await setup();
+    await t.merges.join({ sourceId: t.sourceId, targetId: t.targetId });
+    await expect(t.merges.join({ sourceId: t.targetId, targetId: t.sourceId })).rejects.toThrow(
+      /merge/,
+    );
+  });
 });

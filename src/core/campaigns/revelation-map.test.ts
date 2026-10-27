@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   emptyRevelationMap,
   isRevealed,
+  mergeRevelationMaps,
   parseRevelationMap,
   pruneRevelationMap,
   setRevealed,
@@ -75,5 +76,14 @@ describe('Revelation Map', () => {
       ...emptyRevelationMap(),
       elements: ['el-a'],
     });
+  });
+
+  it('three-way merge: items theirs changed since base win, ours decides the rest', () => {
+    const m = (elements: string[]) => ({ ...emptyRevelationMap(), elements });
+    // theirs added c and dropped d; ours dropped a and added b.
+    expect(mergeRevelationMaps(m(['a', 'd']), m(['a', 'c']), m(['b', 'd'])).elements).toEqual([
+      'b',
+      'c',
+    ]);
   });
 });

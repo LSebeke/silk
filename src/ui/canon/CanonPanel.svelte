@@ -4,11 +4,13 @@
   let {
     overview,
     merging = false,
+    mergeOpen = false,
     run,
     t,
   }: {
     overview: CanonOverview;
     merging?: boolean;
+    mergeOpen?: boolean;
     run: (name: string, args?: object) => Promise<void>;
     t: (key: string) => string;
   } = $props();
@@ -231,7 +233,7 @@
               {/if}
               <button
                 type="button"
-                disabled={merging}
+                disabled={mergeOpen}
                 onclick={() =>
                   (joining =
                     joining?.sourceId === campaign.id

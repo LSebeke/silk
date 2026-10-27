@@ -477,6 +477,7 @@ export function createMerges(deps: MergesDeps): Merges {
     const { target, source } = await joinMaps(d);
     const map = joinResult(workingCopy.records(), target, source, d.picks);
     await deps.campaigns.writeRevelationMap(d.targetId, map);
+    // Re-tags this World's notes; copies on main and in other Adventures follow through merges.
     await deps.retagPlayerNotes?.(d.sourceId, d.targetId);
     if (d.closeSource) await deps.campaigns.close({ id: d.sourceId });
     if ((await deps.campaigns.checkedOutCampaign())?.id === d.targetId)
@@ -518,7 +519,7 @@ export function createMerges(deps: MergesDeps): Merges {
 
     async join({ sourceId, targetId, closeSource = true }) {
       if (sourceId === targetId) throw new Error('Silk: a Campaign cannot join itself');
-      if (draft()) throw new Error('Silk: finish or cancel the open merge first');
+      if (stored()) throw new Error('Silk: finish or cancel the open merge first');
       await deps.campaigns.readRevelationMap(sourceId);
       await requireOpenTarget(targetId);
       const next: JoinDraft = { kind: 'join', sourceId, targetId, closeSource, picks: [] };
@@ -543,6 +544,8 @@ export function createMerges(deps: MergesDeps): Merges {
         if (draft()) await saveDraft(null);
         return 'fastForward';
       }
+      // Commits stay blocked until this merge is done, so it replaces an open join draft
+      // (only its picks are lost; the join can be started again).
       const previous = draft();
       const resumed = previous?.kind === 'canonEdit' ? previous : null;
       if (

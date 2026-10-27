@@ -136,6 +136,7 @@ export function joinRecords(
       });
     }
     const order = (a: { field: string }, b: { field: string }) => a.field.localeCompare(b.field);
+    if (!fields.length) continue;
     fields.sort(order);
     rows.sort(order);
     out.push({

@@ -308,6 +308,22 @@ describe('Truth: World ownership mirrored in the Revelation Map', () => {
     expect(t.world()).toEqual(t.map());
   });
 
+  it('reconcile: a map changed elsewhere wins only for the items it changed', async () => {
+    const t = setup();
+    const a = await materialized(t, 'location', 'A');
+    const b = await materialized(t, 'location', 'B');
+    const c = await materialized(t, 'location', 'C');
+    await t.run('reveal.element', { id: a });
+    // Elsewhere: C was joined in. Here, by hand: A hidden, B opened.
+    t.maps.set('camp1', { ...emptyRevelationMap(), elements: [a, c].sort() });
+    t.doc(a).ownership = { default: NONE };
+    t.doc(b).ownership = { default: OBSERVER };
+    await t.lifecycle.reconcile();
+    expect(t.map().elements).toEqual([b, c].sort());
+    expect(t.level(t.doc(c))).toBe(OBSERVER);
+    expect(t.world()).toEqual(t.map());
+  });
+
   it('reconcile keeps map entries of Ghosts (Revealed again when Materialized)', async () => {
     const t = setup();
     const ghost = await t.create('location', 'Ghost');

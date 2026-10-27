@@ -55,6 +55,24 @@ export function unionRevelationMaps(a: RevelationMap, b: RevelationMap): Revelat
   return mapFields((f) => normalize([...a[f], ...b[f]]));
 }
 
+/**
+ * Three-way merge per item: where `theirs` changed an item since `base`, it wins; otherwise
+ * `ours` decides. Reconcile: base = the map this World last applied, theirs = the stored map
+ * (changed elsewhere, e.g. Join Campaigns or a delete cleanup), ours = World ownership.
+ */
+export function mergeRevelationMaps(
+  base: RevelationMap,
+  theirs: RevelationMap,
+  ours: RevelationMap,
+): RevelationMap {
+  return mapFields((f) => {
+    const [b, t, o] = [new Set(base[f]), new Set(theirs[f]), new Set(ours[f])];
+    return normalize(
+      [...new Set([...b, ...t, ...o])].filter((id) => (t.has(id) !== b.has(id) ? t : o).has(id)),
+    );
+  });
+}
+
 /** Drop ids for which `exists` is false: deleted items drop out of the map. */
 export function pruneRevelationMap(
   map: RevelationMap,
