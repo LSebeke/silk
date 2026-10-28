@@ -1,0 +1,169 @@
+/**
+ * Working copy → Svelte Flow Nodes. Pure; the canvas recomputes on every working copy or
+ * selection change. Canvas Filters / Focus View (`core/canvas/filters.ts`) pass `filter`;
+ * Visual Groups (T26) add `group` Nodes; Connections (T7) add a `toFlowEdges`.
+ */
+import type { Node } from '@xyflow/svelte';
+import type { Snapshot } from '../../core/canon';
+import { ancestorsOf, containerOf, readGroup } from '../../core/canvas/groups';
+import { isGhost, readElement, type ElementClassId, type Point } from '../../core/elements';
+
+export interface ElementNodeData extends Record<string, unknown> {
+  class: ElementClassId;
+  name: string;
+  ghost: boolean;
+  /** Element image (T8); the card falls back to the class icon. */
+  img?: string;
+  /** Stored (non-default) Status (T10); the card shows `statusOf` it. */
+  status?: string;
+  /** Reconcile restored this Ghost from that Commit (T9, spec §6). */
+  restoredFrom?: string;
+  /** Neighbours hidden by Canvas Filters ("+N" badge, §10.5). */
+  hidden?: number;
+  /** Focus Pin (§10.6). */
+  pinned?: boolean;
+  /** Shown despite the filters (Search jump, new Node, "+N"): "filtered" marker (§10.8). */
+  filtered?: boolean;
+}
+
+/** What Canvas Filters let through (`FilterResult`). */
+export interface NodeFilter {
+  visible: ReadonlySet<string>;
+  badges: ReadonlyMap<string, number>;
+  /** Focus Pins (§10.6). */
+  pinned?: ReadonlySet<string>;
+  /** Passes the filters; visible but not matching = "filtered" marker. */
+  matches?(id: string): boolean;
+}
+
+export type ElementNode = Node<ElementNodeData, 'element'>;
+
+function sameNode(a: ElementNode, b: ElementNode) {
+  return (
+    a.parentId === b.parentId &&
+    a.position.x === b.position.x &&
+    a.position.y === b.position.y &&
+    !!a.selected === !!b.selected &&
+    a.data.class === b.data.class &&
+    a.data.name === b.data.name &&
+    a.data.ghost === b.data.ghost &&
+    a.data.img === b.data.img &&
+    a.data.status === b.data.status &&
+    a.data.restoredFrom === b.data.restoredFrom &&
+    a.data.hidden === b.data.hidden &&
+    a.data.pinned === b.data.pinned &&
+    a.data.filtered === b.data.filtered
+  );
+}
+
+/**
+ * `previous` Nodes are reused when unchanged, and otherwise keep their Svelte Flow
+ * bookkeeping (`measured`, …), so cards are not re-measured on every write.
+ */
+export function toFlowNodes(
+  records: Snapshot,
+  selection: readonly string[],
+  previous: readonly ElementNode[],
+  /** Absolute position override (Untangle tween), else the record's. */
+  at?: (id: string) => Point | undefined,
+  filter?: NodeFilter,
+): ElementNode[] {
+  const prev = new Map(previous.map((n) => [n.id, n]));
+  const selected = new Set(selection);
+  const nodes: ElementNode[] = [];
+  for (const record of records.values()) {
+    const element = readElement(record);
+    if (!element || (filter && !filter.visible.has(element.id))) continue;
+    const hidden = filter?.badges.get(element.id);
+    const pinned = filter?.pinned?.has(element.id) ?? false;
+    // Focus Pins are shown by intent, not despite the filters: no "filtered" marker.
+    const marked = filter?.matches && !pinned ? !filter.matches(element.id) : false;
+    // In a Visual Group: a child Node, positioned relative to the frame.
+    const parent = containerOf(records, element.id);
+    const origin = readGroup(parent ? records.get(parent) : undefined)?.position ?? { x: 0, y: 0 };
+    const position = at?.(element.id) ?? element.position;
+    const node: ElementNode = {
+      id: element.id,
+      type: 'element',
+      parentId: parent ?? undefined,
+      position: { x: position.x - origin.x, y: position.y - origin.y },
+      selected: selected.has(element.id),
+      data: {
+        class: element.class,
+        name: element.name,
+        ghost: isGhost(element),
+        ...(element.img ? { img: element.img } : {}),
+        ...(element.status ? { status: element.status } : {}),
+        ...(element.restoredFrom ? { restoredFrom: element.restoredFrom } : {}),
+        ...(hidden ? { hidden } : {}),
+        ...(pinned ? { pinned: true } : {}),
+        ...(marked ? { filtered: true } : {}),
+      },
+    };
+    const old = prev.get(element.id);
+    nodes.push(old ? (sameNode(old, node) ? old : { ...old, ...node }) : node);
+  }
+  return nodes;
+}
+
+export interface GroupNodeData extends Record<string, unknown> {
+  label: string;
+}
+
+export type GroupNode = Node<GroupNodeData, 'frame'>;
+
+/** Frames sit below cards and Connections, also when selected (Svelte Flow adds 1000). */
+const FRAME_Z = -1000;
+
+/**
+ * Visual Groups → frame Nodes (spec §10.4). Svelte Flow needs parents before children, so
+ * the result is ordered by nesting depth; a nested frame is positioned relative to its parent.
+ */
+export function toGroupNodes(
+  records: Snapshot,
+  selection: readonly string[],
+  previous: readonly GroupNode[],
+  /** Frames Canvas Filters keep (`FilterResult.frames`); default all. */
+  frames?: ReadonlySet<string>,
+): GroupNode[] {
+  const prev = new Map(previous.map((n) => [n.id, n]));
+  const selected = new Set(selection);
+  const groups = [...records.values()].flatMap((r) =>
+    !frames || frames.has(r.id) ? (readGroup(r) ?? []) : [],
+  );
+  const depth = new Map(groups.map((g) => [g.id, ancestorsOf(records, g.id).length]));
+  groups.sort((a, b) => (depth.get(a.id) ?? 0) - (depth.get(b.id) ?? 0));
+  return groups.map((group) => {
+    const parent = containerOf(records, group.id);
+    const origin = readGroup(parent ? records.get(parent) : undefined)?.position ?? { x: 0, y: 0 };
+    const node: GroupNode = {
+      id: group.id,
+      type: 'frame',
+      ...(parent && { parentId: parent }),
+      position: { x: group.position.x - origin.x, y: group.position.y - origin.y },
+      width: group.size.width,
+      height: group.size.height,
+      zIndex: FRAME_Z,
+      selected: selected.has(group.id),
+      data: { label: group.label },
+    };
+    const old = prev.get(group.id);
+    if (!old) return node;
+    const same =
+      old.parentId === node.parentId &&
+      old.position.x === node.position.x &&
+      old.position.y === node.position.y &&
+      old.width === node.width &&
+      old.height === node.height &&
+      !!old.selected === !!node.selected &&
+      old.data.label === node.data.label;
+    return same ? old : { ...old, parentId: undefined, ...node };
+  });
+}
+
+/** Three zoom levels (spec §10.2): full card → big title → coloured block with title. */
+export type Lod = 'full' | 'title' | 'block';
+
+export function lodForZoom(zoom: number): Lod {
+  return zoom > 0.75 ? 'full' : zoom > 0.35 ? 'title' : 'block';
+}

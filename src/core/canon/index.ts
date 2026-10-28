@@ -1,0 +1,5 @@
+export type { CanonFiles } from './files';
+export { createMemoryFiles, type MemoryFiles } from './memory-files';
+export * from './store';
+export * from './merge';
+export * from './portability';

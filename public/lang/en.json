@@ -1,0 +1,502 @@
+{
+  "SILK": {
+    "Title": "Silk",
+    "Settings": {
+      "materializeMode": {
+        "Name": "Materialize mode",
+        "Hint": "Immediate creates the Foundry document when an Element is created. On demand waits until you Materialize it.",
+        "Immediate": "Immediate",
+        "OnDemand": "On demand"
+      },
+      "hoodedImage": {
+        "Name": "Hooded default image",
+        "Hint": "Image players see for an Element whose appearance is not Revealed."
+      },
+      "detailDrop": {
+        "Name": "Drop detail while moving",
+        "Hint": "Simplify cards while panning or zooming the canvas to keep it fast."
+      },
+      "renderBudgetWarning": {
+        "Name": "Render budget warning",
+        "Hint": "Warn when the canvas would draw more Elements than this."
+      },
+      "confirmDelete": {
+        "Name": "Confirm delete",
+        "Hint": "Ask before deleting Elements."
+      },
+      "warnUnmaterializeReveal": {
+        "Name": "Warn on Unmaterialize of Revealed content",
+        "Hint": "Warn before Unmaterializing an Element players can see."
+      }
+    },
+    "Commands": {
+      "canvas": {
+        "open": "Open the World Canvas",
+        "moveNodes": "Move Nodes",
+        "select": "Select Nodes",
+        "group": "Group into a Visual Group",
+        "ungroup": "Dissolve Visual Group",
+        "renameGroup": "Rename Visual Group",
+        "untangle": "Untangle",
+        "undo": "Undo Untangle",
+        "search": "Search the canvas",
+        "jumpTo": "Jump to a Node"
+      },
+      "canon": {
+        "create": "Create Canon",
+        "bind": "Bind World to Canon",
+        "openWindow": "Open the Canon window",
+        "exportBackup": "Canon Backup",
+        "exportShare": "Canon Share",
+        "import": "Import Canon"
+      },
+      "history": {
+        "commit": "Commit",
+        "discard": "Discard uncommitted changes",
+        "endPlaySession": "End Play Session"
+      },
+      "campaign": {
+        "create": "Create Campaign",
+        "rename": "Rename",
+        "close": "Close",
+        "reopen": "Reopen",
+        "join": "Join into…"
+      },
+      "adventure": {
+        "start": "Start Adventure",
+        "end": "End Adventure",
+        "abandon": "Abandon Adventure"
+      },
+      "element": {
+        "create": "Create Element",
+        "rename": "Rename Element",
+        "setImage": "Set image",
+        "setFields": "Set class fields",
+        "changeClass": "Change class",
+        "openSheet": "Open sheet",
+        "tag": "Add Tag",
+        "untag": "Remove Tag",
+        "setStatus": "Set Status",
+        "toggleStatus": "Toggle Status",
+        "delete": "Delete Element",
+        "openDetail": "Element Detail"
+      },
+      "connection": {
+        "create": "Connect",
+        "setLabel": "Edit Connection label",
+        "cycleDirection": "Cycle Connection direction",
+        "cycleType": "Cycle Connection type",
+        "flip": "Flip Connection",
+        "delete": "Delete Connection"
+      },
+      "materialize": {
+        "elements": "Materialize",
+        "visible": "Materialize visible",
+        "unmaterialize": "Unmaterialize"
+      },
+      "infoBlock": {
+        "create": "Add Info Block",
+        "edit": "Edit Info Block",
+        "delete": "Delete Info Block"
+      },
+      "filter": {
+        "set": "Set Canvas Filter",
+        "clear": "Clear Canvas Filters",
+        "expandBadge": "Show hidden neighbours"
+      },
+      "focus": {
+        "setHops": "Set Focus View distance",
+        "pin": "Focus Pin",
+        "unpin": "Remove Focus Pin"
+      },
+      "event": {
+        "activateScene": "Activate Event Scene",
+        "createScene": "Create Scene",
+        "restoreScene": "Restore Scene from last commit",
+        "viewScene": "View Scene"
+      },
+      "reveal": {
+        "element": "Reveal",
+        "appearance": "Reveal Appearance",
+        "infoBlock": "Reveal Info Block",
+        "connection": "Reveal Connection",
+        "showToPlayers": "Show to players",
+        "playerNote": "Reveal Player Note"
+      },
+      "merge": {
+        "nextConflict": "Next conflict",
+        "pick": "Take this value",
+        "confirm": "Merge into Canon",
+        "cancel": "Cancel merge"
+      },
+      "adopt": {
+        "doc": "Adopt into Silk",
+        "folder": "Adopt folder into Silk",
+        "ignore": "Ignore for Silk"
+      },
+      "playerNote": {
+        "create": "Add Player Note",
+        "edit": "Edit Player Note",
+        "delete": "Delete Player Note",
+        "convert": "Convert to GM Info Block"
+      },
+      "playerCanvas": {
+        "openDoc": "Open the doc"
+      }
+    },
+    "Canvas": {
+      "Title": "World Canvas",
+      "ClassSearch": "Class…",
+      "NewGroup": "Group",
+      "Group": "Group",
+      "Ungroup": "Dissolve group",
+      "Untangle": "Untangle",
+      "ConnectHint": "Connect to: search or click the target, or empty canvas for a new Node. Esc cancels.",
+      "LabelPlaceholder": "label…",
+      "StatusConfirm": "Set {name} to “{status}”?",
+      "Yes": "Yes (y)",
+      "No": "No (n)",
+      "StatusChip": "Status: {status}. Click to change (s).",
+      "Search": "Search",
+      "SearchPlaceholder": "Search Nodes, Tags, Info Blocks…",
+      "SearchEmpty": "No results",
+      "NewNode": "New Node",
+      "NewNodeDirection": "New Node: direction (↑/↓, Enter)",
+      "Palette": "Palette",
+      "PaletteHint": "Drag a class onto the canvas or onto a Node.",
+      "Filtered": "filtered",
+      "FilteredTitle": "Hidden by the filters; shown until deselected."
+    },
+    "Connection": {
+      "Type": {
+        "free": "free-form",
+        "owns": "owns",
+        "presentAt": "present at",
+        "locatedIn": "located in",
+        "takesPlaceAt": "takes place at"
+      },
+      "Point": {
+        "out": "Outgoing",
+        "in": "Incoming",
+        "mutual": "Mutual"
+      },
+      "Sentence": {
+        "directed": "{from} {label} {to}",
+        "directedUnlabelled": "{from} is connected to {to}",
+        "mutual": "{from} and {to} {label}",
+        "mutualUnlabelled": "{from} and {to} are connected",
+        "owns": "{from} owns {to}",
+        "presentAt": "{from} is present at {to}",
+        "locatedIn": "{from} is located in {to}",
+        "takesPlaceAt": "{from} takes place at {to}"
+      }
+    },
+    "Canon": {
+      "Title": "Canon",
+      "Unbound": "This World is not bound to a Canon yet.",
+      "Name": "Canon name",
+      "Checkout": "Checkout",
+      "Main": "main (Canon edit mode)",
+      "Dirty": "uncommitted changes",
+      "ReadOnly": "read-only, update Silk",
+      "Adventures": "Adventures",
+      "AdventureName": "Adventure name",
+      "PickCampaign": "Campaign…",
+      "StartNeedsClean": "Commit or discard uncommitted changes to start an Adventure.",
+      "NoAdventures": "No Adventures yet.",
+      "History": "History",
+      "Unlabelled": "(no label)",
+      "NoCommits": "No Commits yet.",
+      "Campaigns": "Campaigns",
+      "CampaignName": "New Campaign name",
+      "Closed": "closed",
+      "Portability": {
+        "Heading": "Backup and Share",
+        "ShareCommit": "Share from",
+        "AdventureHead": "Adventure",
+        "ImportFile": "Import Backup or Share (.zip)",
+        "BackupTitle": "Canon Backup",
+        "ShareTitle": "Canon Share",
+        "Summary": "{objects} files, {assets} assets bundled.",
+        "Orphans": "Unreachable files left out (garbage collection): {count}.",
+        "Missing": "Referenced files not found on this server, not bundled:",
+        "Uncommitted": "This World has uncommitted changes. They are not part of the export; commit first to include them.",
+        "Download": "Download the zip?",
+        "DivergedTitle": "Canon has diverged",
+        "Diverged": "This Backup does not continue the Canon on this server (its main does not descend from local main). Import it as a copy with a new id instead?",
+        "OverwriteTitle": "Overwrite files?",
+        "Overwrite": "These files already exist with different content. Overwrite them with the Backup's version?",
+        "Imported": "Imported Canon \"{name}\" ({id}).",
+        "ImportedMissing": "Files missing from the import: {files}",
+        "Cancelled": "Import cancelled. Nothing was written."
+      },
+      "JoinTarget": "Target Campaign…",
+      "CloseSource": "Close source Campaign",
+      "Abandon": "Abandon…",
+      "AbandonPrompt": "Abandoning drops everything this Adventure changed and resets the World to main. Docs of elements not on main are deleted. This cannot be undone. Type the Adventure name to confirm:",
+      "AbandonConfirm": "Abandon for good",
+      "Synced": "Main moved in another World; this World was updated."
+    },
+    "Notice": {
+      "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
+    },
+    "Class": {
+      "person": "Person",
+      "creature": "Creature",
+      "playerCharacter": "Player Character",
+      "location": "Location",
+      "faction": "Faction",
+      "item": "Item",
+      "event": "Event",
+      "quest": "Quest",
+      "note": "Note"
+    },
+    "InfoBlock": {
+      "Appearance": "Appearance",
+      "Personality": "Personality",
+      "Secrets": "Secrets",
+      "Description": "Description",
+      "Overview": "Overview",
+      "Setup": "Setup",
+      "Outcome": "Outcome",
+      "Hook": "Hook",
+      "Resolution": "Resolution",
+      "New": "New block"
+    },
+    "Layout": {
+      "Cover": "Cover",
+      "Connections": "Connections",
+      "PlayerNotes": "Player Notes"
+    },
+    "Folder": {
+      "person": "Persons",
+      "creature": "Creatures",
+      "playerCharacter": "Player Characters",
+      "location": "Locations",
+      "faction": "Factions",
+      "item": "Items",
+      "event": "Events",
+      "quest": "Quests",
+      "note": "Notes",
+      "companions": "Silk Companions",
+      "scene": "Silk Scenes"
+    },
+    "Materialize": {
+      "Implicit": "Materialized {name}.",
+      "VisibleTitle": "Materialize visible",
+      "VisibleConfirm": "Materialize {count} elements shown on the canvas? Player Characters are skipped.",
+      "QuestNativeFields": "{name} is in the DSA5 quest log. Its native summary, details, objectives and GM notes stay DSA5’s and become visible to players when the element is Revealed."
+    },
+    "Status": {
+      "alive": "alive",
+      "dead": "dead",
+      "planned": "planned",
+      "happened": "happened",
+      "skipped": "skipped",
+      "open": "open",
+      "done": "done",
+      "failed": "failed"
+    },
+    "Focus": {
+      "Seeds": "Focus (Scene + selection)",
+      "Toggle": "Focus View",
+      "Hops": "Hops",
+      "Pin": "Focus Pin (p)",
+      "Unpin": "Remove Focus Pin (p)",
+      "Hint": "No active Scene and nothing selected: only Focus Pins show. Activate a Scene or select a Node."
+    },
+    "Filter": {
+      "Shown": "{n} of {m} shown",
+      "Clear": "Clear filters",
+      "Add": "Filter…",
+      "Badge": "{n} hidden neighbours. Click to show.",
+      "Expanded": "Neighbours shown: {n}",
+      "Budget": "{n} Nodes visible (more than {max}). The canvas may get slow; narrow it with filters.",
+      "Dimension": {
+        "class": "Class",
+        "status": "Status",
+        "revealed": "Revealed",
+        "materialized": "Materialized",
+        "tag": "Tag",
+        "group": "Group",
+        "hops": "N-hop",
+        "contents": "Contents"
+      },
+      "Value": {
+        "revealed": "revealed",
+        "hidden": "not revealed",
+        "materialized": "Materialized",
+        "ghost": "Ghost"
+      }
+    },
+    "Lifecycle": {
+      "Restored": "The Foundry doc of {name} was deleted while Silk was not running. It is a Ghost again, restored from commit {commit}.",
+      "RestoredBadge": "Restored from commit {commit}",
+      "CompanionRestored": "The Companion Journal of {name} was restored from the last commit. Uncommitted Info Block edits are lost.",
+      "DeleteTitle": "Delete elements",
+      "DeleteConfirm": "Delete {names}? Their Connections, Foundry docs and Revelation Map entries are deleted too. Only discarding uncommitted changes undoes this.",
+      "DeleteAdopted": "{count} of them were adopted from existing Foundry docs.",
+      "KeepDoc": "Keep Foundry doc",
+      "DeleteEverything": "Delete everything",
+      "Delete": "Delete",
+      "Cancel": "Cancel",
+      "DontAsk": "Don't ask again",
+      "UnmaterializeTitle": "Unmaterialize",
+      "UnmaterializeRevealed": "{names} is Revealed. Players will lose access until it is Materialized again.",
+      "Unmaterialize": "Unmaterialize"
+    },
+    "EventScene": {
+      "Box": "Present",
+      "Happened": "{name} happened (Event Scene activated). Set the Status back to undo.",
+      "Deleted": "The Scene of {name} was deleted. Its journal offers Create Scene and Restore from last commit.",
+      "NoScene": "This element has no Scene.",
+      "NothingToRestore": "The last commit holds no Scene of {name}.",
+      "Activate": "Activate",
+      "Create": "Create Scene",
+      "CreateOverview": "Create Overview Scene",
+      "None": "No Scene",
+      "Restore": "Restore from last commit"
+    },
+    "Reveal": {
+      "Reveal": "Reveal",
+      "Unreveal": "Un-reveal",
+      "RevealAppearance": "Reveal Appearance",
+      "HideAppearance": "Hide Appearance",
+      "Appearance": "Appearance (image)",
+      "NeedsAdventure": "Start an Adventure to Reveal.",
+      "TheConnection": "this Connection",
+      "Confirm": "Reveal {name} to the players?",
+      "UnrevealConfirm": "Hide {name} from the players again?"
+    },
+    "Detail": {
+      "Title": "Element Detail",
+      "InfoBlocks": "Info Blocks",
+      "Connections": "Connections",
+      "Gone": "This element no longer exists."
+    },
+    "Merge": {
+      "Title": "Merge",
+      "Heading": "Merge Adventure",
+      "Into": "into the Canon",
+      "Base": "Base (Adventure start)",
+      "CanonNow": "Canon now",
+      "Adventure": "Adventure",
+      "Result": "Result",
+      "Field": "Field",
+      "ResultHint": "The merged Canon, as it will look.",
+      "ShowCanonOnly": "Show Canon-only changes",
+      "Received": "Merged into the Canon since the Adventure started",
+      "NoneReceived": "Nothing merged into the Canon since the Adventure started.",
+      "ConflictsLeft": "{n} conflict(s) left",
+      "Footer": "Auto-commit \"Before merge\" done. Cancel keeps the Adventure checked out.",
+      "ConfirmTitle": "Merge into the Canon",
+      "ConfirmBody": "Merge the Adventure into the Canon and check out main? There is no undo.",
+      "WriteCombined": "Write combined text",
+      "UseText": "Use this text",
+      "AutoMerged": "Auto-merged",
+      "ClickNode": "Click a Node or Connection to see its changes.",
+      "NoChanges": "No changes.",
+      "Keep": "Keep (with edits)",
+      "Delete": "Delete",
+      "None": "— none",
+      "Whole": "Element",
+      "Layout": "layout changes, incoming wins",
+      "Resume": "Resume merge",
+      "Open": "conflict",
+      "Resolved": "resolved",
+      "Badge": {
+        "conflict": "Conflicts",
+        "added": "Added",
+        "deleted": "Deleted",
+        "changed": "Changed",
+        "layout": "Moved",
+        "canonOnly": "Canon only"
+      },
+      "Record": {
+        "element": "Element",
+        "connection": "Connection",
+        "sheet": "Sheet",
+        "eventScene": "Event Scene",
+        "layoutGroup": "Visual Group"
+      },
+      "Section": {
+        "element": "Element",
+        "infoBlocks": "Info Blocks",
+        "layout": "Layout",
+        "connection": "Connection",
+        "doc": "Document",
+        "system": "Sheet",
+        "items": "Embedded Items",
+        "effects": "Active Effects",
+        "companion": "Companion Journal",
+        "tokens": "Tokens",
+        "sceneContents": "Walls, lights etc. (counts)",
+        "scene": "Scene",
+        "dsa5": {
+          "characteristics": "Attributes",
+          "status": "Status",
+          "details": "Description",
+          "merchant": "Merchant",
+          "skills": "Skills",
+          "combatSkills": "Combat skills",
+          "magic": "Spells and liturgies",
+          "abilities": "Advantages, disadvantages, abilities",
+          "inventory": "Inventory"
+        }
+      },
+      "Target": "Target",
+      "Source": "Source",
+      "JoinHeading": "Join Campaign",
+      "JoinInto": "into",
+      "JoinFooter": "Default: everything Revealed in either Campaign. Writes the target's Revelation Map; no Commit.",
+      "JoinConfirmTitle": "Join Campaigns",
+      "JoinConfirmBody": "Write the result into the target Campaign's Revelation Map? There is no undo.",
+      "From": "from {name}",
+      "Join": {
+        "element": "Revealed elements",
+        "appearance": "Appearance",
+        "infoBlock": "Info Blocks",
+        "connection": "Connections",
+        "playerNote": "Player Notes"
+      },
+      "CanonIncoming": "Canon (incoming)",
+      "ThisWorld": "This World",
+      "CanonEditHeading": "Main moved in another World. Merge it with this World's uncommitted changes:",
+      "CanonEditFooter": "Cancel keeps this World's changes uncommitted; Commits stay blocked until the merge is done.",
+      "CanonEditConfirmBody": "Commit the merged result to main and rewrite this World? There is no undo."
+    },
+    "Adopt": {
+      "Adopt": "Adopt into Silk",
+      "AdoptFolder": "Adopt folder into Silk",
+      "Refused": "{name} can't be adopted: Silk adopts Actors (character, npc, creature), Items, Journals and Scenes.",
+      "WrongClass": "{name} can't become a {class}.",
+      "Missing": "No Foundry doc \"{uuid}\".",
+      "NoFolder": "That folder no longer exists.",
+      "DuplicateTitle": "Compendium entry already in the Canon",
+      "DuplicateSource": "{doc} comes from the same compendium entry as {element}.",
+      "UseFor": "Use this doc for {element}",
+      "CreateNew": "Create new",
+      "FolderTitle": "Adopt folder",
+      "FolderConfirm": "Adopt these {count} docs?",
+      "AlsoActor": "Also adopt {actor}?",
+      "Yes": "Yes",
+      "No": "No",
+      "Cancel": "Cancel",
+      "Ignore": "Ignore",
+      "Close": "Close",
+      "AdHocTitle": "New docs this session",
+      "AdHocIntro": "Created since the last commit and not in Silk yet. Ignored docs never show up again.",
+      "EndPlaySessionLabel": "End of play session"
+    },
+    "PlayerNote": {
+      "Name": "Player Note",
+      "Add": "Add Player Note",
+      "Prompt": "Your note (all players can read and edit it):",
+      "Save": "Save note"
+    },
+    "PlayerCanvas": {
+      "Title": "Player Canvas",
+      "Empty": "Nothing has been revealed yet."
+    }
+  }
+}

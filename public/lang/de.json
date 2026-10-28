@@ -1,0 +1,502 @@
+{
+  "SILK": {
+    "Title": "Silk",
+    "Settings": {
+      "materializeMode": {
+        "Name": "Materialisierungsmodus",
+        "Hint": "Sofort legt das Foundry-Dokument beim Erstellen eines Elements an. Bei Bedarf wartet, bis du es materialisierst.",
+        "Immediate": "Sofort",
+        "OnDemand": "Bei Bedarf"
+      },
+      "hoodedImage": {
+        "Name": "Standardbild für verhüllte Elemente",
+        "Hint": "Bild, das Spieler für ein Element sehen, dessen Aussehen nicht enthüllt ist."
+      },
+      "detailDrop": {
+        "Name": "Details beim Bewegen ausblenden",
+        "Hint": "Karten beim Verschieben oder Zoomen vereinfachen, damit die Leinwand flüssig bleibt."
+      },
+      "renderBudgetWarning": {
+        "Name": "Warnschwelle Darstellung",
+        "Hint": "Warnen, wenn die Leinwand mehr Elemente als diese Zahl zeichnen würde."
+      },
+      "confirmDelete": {
+        "Name": "Löschen bestätigen",
+        "Hint": "Vor dem Löschen von Elementen nachfragen."
+      },
+      "warnUnmaterializeReveal": {
+        "Name": "Warnung beim Entmaterialisieren enthüllter Inhalte",
+        "Hint": "Warnen, bevor ein Element entmaterialisiert wird, das Spieler sehen können."
+      }
+    },
+    "Commands": {
+      "canvas": {
+        "open": "Weltleinwand öffnen",
+        "moveNodes": "Knoten verschieben",
+        "select": "Knoten auswählen",
+        "group": "Zu Gruppe zusammenfassen",
+        "ungroup": "Gruppe auflösen",
+        "renameGroup": "Gruppe umbenennen",
+        "untangle": "Entwirren",
+        "undo": "Entwirren rückgängig",
+        "search": "Leinwand durchsuchen",
+        "jumpTo": "Zu Knoten springen"
+      },
+      "canon": {
+        "create": "Kanon anlegen",
+        "bind": "Welt an Kanon binden",
+        "openWindow": "Kanon-Fenster öffnen",
+        "exportBackup": "Kanon-Backup",
+        "exportShare": "Kanon teilen",
+        "import": "Kanon importieren"
+      },
+      "history": {
+        "commit": "Commit",
+        "discard": "Ungespeicherte Änderungen verwerfen",
+        "endPlaySession": "Spielsitzung beenden"
+      },
+      "campaign": {
+        "create": "Kampagne anlegen",
+        "rename": "Umbenennen",
+        "close": "Schließen",
+        "reopen": "Wieder öffnen",
+        "join": "Zusammenführen in…"
+      },
+      "adventure": {
+        "start": "Abenteuer starten",
+        "end": "Abenteuer beenden",
+        "abandon": "Abenteuer verwerfen"
+      },
+      "element": {
+        "create": "Element erstellen",
+        "rename": "Element umbenennen",
+        "setImage": "Bild setzen",
+        "setFields": "Klassenfelder setzen",
+        "changeClass": "Klasse ändern",
+        "openSheet": "Bogen öffnen",
+        "tag": "Tag hinzufügen",
+        "untag": "Tag entfernen",
+        "setStatus": "Status setzen",
+        "toggleStatus": "Status umschalten",
+        "delete": "Element löschen",
+        "openDetail": "Element-Details"
+      },
+      "connection": {
+        "create": "Verbinden",
+        "setLabel": "Verbindungstext bearbeiten",
+        "cycleDirection": "Verbindungsrichtung wechseln",
+        "cycleType": "Verbindungsart wechseln",
+        "flip": "Verbindung umkehren",
+        "delete": "Verbindung löschen"
+      },
+      "materialize": {
+        "elements": "Materialisieren",
+        "visible": "Sichtbare materialisieren",
+        "unmaterialize": "Entmaterialisieren"
+      },
+      "infoBlock": {
+        "create": "Infoblock hinzufügen",
+        "edit": "Infoblock bearbeiten",
+        "delete": "Infoblock löschen"
+      },
+      "filter": {
+        "set": "Canvas-Filter setzen",
+        "clear": "Canvas-Filter entfernen",
+        "expandBadge": "Verborgene Nachbarn zeigen"
+      },
+      "focus": {
+        "setHops": "Focus-View-Abstand setzen",
+        "pin": "Focus Pin setzen",
+        "unpin": "Focus Pin entfernen"
+      },
+      "event": {
+        "activateScene": "Ereignis-Szene aktivieren",
+        "createScene": "Szene erstellen",
+        "restoreScene": "Szene aus letztem Commit wiederherstellen",
+        "viewScene": "Szene ansehen"
+      },
+      "reveal": {
+        "element": "Aufdecken",
+        "appearance": "Aussehen aufdecken",
+        "infoBlock": "Infoblock aufdecken",
+        "connection": "Verbindung aufdecken",
+        "showToPlayers": "Den Spielern zeigen",
+        "playerNote": "Spielernotiz aufdecken"
+      },
+      "merge": {
+        "nextConflict": "Nächster Konflikt",
+        "pick": "Diesen Wert übernehmen",
+        "confirm": "In den Kanon übernehmen",
+        "cancel": "Zusammenführen abbrechen"
+      },
+      "adopt": {
+        "doc": "In Silk übernehmen",
+        "folder": "Ordner in Silk übernehmen",
+        "ignore": "Für Silk ignorieren"
+      },
+      "playerNote": {
+        "create": "Spielernotiz hinzufügen",
+        "edit": "Spielernotiz bearbeiten",
+        "delete": "Spielernotiz löschen",
+        "convert": "In SL-Infoblock umwandeln"
+      },
+      "playerCanvas": {
+        "openDoc": "Dokument öffnen"
+      }
+    },
+    "Canvas": {
+      "Title": "Weltleinwand",
+      "ClassSearch": "Klasse…",
+      "NewGroup": "Gruppe",
+      "Group": "Gruppieren",
+      "Ungroup": "Gruppe auflösen",
+      "Untangle": "Entwirren",
+      "ConnectHint": "Verbinden mit: Ziel suchen oder anklicken, leere Fläche für einen neuen Knoten. Esc bricht ab.",
+      "LabelPlaceholder": "Text…",
+      "StatusConfirm": "{name} auf „{status}“ setzen?",
+      "Yes": "Ja (y)",
+      "No": "Nein (n)",
+      "StatusChip": "Status: {status}. Klicken zum Ändern (s).",
+      "Search": "Suche",
+      "SearchPlaceholder": "Knoten, Tags, Infoblöcke suchen…",
+      "SearchEmpty": "Keine Treffer",
+      "NewNode": "Neuer Knoten",
+      "NewNodeDirection": "Neuer Knoten: Richtung (↑/↓, Enter)",
+      "Palette": "Palette",
+      "PaletteHint": "Klasse auf die Leinwand oder auf einen Knoten ziehen.",
+      "Filtered": "gefiltert",
+      "FilteredTitle": "Von den Filtern verborgen; sichtbar bis zur Abwahl."
+    },
+    "Connection": {
+      "Type": {
+        "free": "frei",
+        "owns": "besitzt",
+        "presentAt": "anwesend bei",
+        "locatedIn": "befindet sich in",
+        "takesPlaceAt": "findet statt in"
+      },
+      "Point": {
+        "out": "Ausgehend",
+        "in": "Eingehend",
+        "mutual": "Gegenseitig"
+      },
+      "Sentence": {
+        "directed": "{from} {label} {to}",
+        "directedUnlabelled": "{from} ist verbunden mit {to}",
+        "mutual": "{from} und {to} {label}",
+        "mutualUnlabelled": "{from} und {to} sind verbunden",
+        "owns": "{from} besitzt {to}",
+        "presentAt": "{from} ist anwesend bei {to}",
+        "locatedIn": "{from} befindet sich in {to}",
+        "takesPlaceAt": "{from} findet in {to} statt"
+      }
+    },
+    "Canon": {
+      "Title": "Kanon",
+      "Unbound": "Diese Welt ist noch an keinen Kanon gebunden.",
+      "Name": "Name des Kanons",
+      "Checkout": "Checkout",
+      "Main": "main (Kanon-Bearbeitung)",
+      "Dirty": "ungespeicherte Änderungen",
+      "ReadOnly": "schreibgeschützt, Silk aktualisieren",
+      "Adventures": "Abenteuer",
+      "AdventureName": "Name des Abenteuers",
+      "PickCampaign": "Kampagne…",
+      "StartNeedsClean": "Committe oder verwirf ungespeicherte Änderungen, um ein Abenteuer zu starten.",
+      "NoAdventures": "Noch keine Abenteuer.",
+      "History": "Verlauf",
+      "Unlabelled": "(ohne Titel)",
+      "NoCommits": "Noch keine Commits.",
+      "Campaigns": "Kampagnen",
+      "CampaignName": "Name der neuen Kampagne",
+      "Closed": "geschlossen",
+      "Portability": {
+        "Heading": "Backup und Teilen",
+        "ShareCommit": "Teilen ab",
+        "AdventureHead": "Abenteuer",
+        "ImportFile": "Backup oder geteilten Kanon importieren (.zip)",
+        "BackupTitle": "Kanon-Backup",
+        "ShareTitle": "Kanon teilen",
+        "Summary": "{objects} Dateien, {assets} Assets gebündelt.",
+        "Orphans": "Unerreichbare Dateien ausgelassen (Aufräumen): {count}.",
+        "Missing": "Referenzierte Dateien fehlen auf diesem Server und sind nicht enthalten:",
+        "Uncommitted": "Diese Welt hat ungespeicherte Änderungen. Sie sind nicht im Export; committe vorher, um sie mitzunehmen.",
+        "Download": "Zip herunterladen?",
+        "DivergedTitle": "Kanon ist auseinandergelaufen",
+        "Diverged": "Dieses Backup setzt den Kanon auf diesem Server nicht fort (sein main stammt nicht vom lokalen main ab). Stattdessen als Kopie mit neuer Id importieren?",
+        "OverwriteTitle": "Dateien überschreiben?",
+        "Overwrite": "Diese Dateien gibt es schon mit anderem Inhalt. Mit der Version aus dem Backup überschreiben?",
+        "Imported": "Kanon „{name}“ ({id}) importiert.",
+        "ImportedMissing": "Im Import fehlende Dateien: {files}",
+        "Cancelled": "Import abgebrochen. Nichts wurde geschrieben."
+      },
+      "JoinTarget": "Zielkampagne…",
+      "CloseSource": "Quellkampagne schließen",
+      "Abandon": "Verwerfen…",
+      "AbandonPrompt": "Verwerfen löscht alles, was dieses Abenteuer geändert hat, und setzt die Welt auf main zurück. Dokumente von Elementen, die es auf main nicht gibt, werden gelöscht. Das lässt sich nicht rückgängig machen. Zur Bestätigung den Namen des Abenteuers eingeben:",
+      "AbandonConfirm": "Endgültig verwerfen",
+      "Synced": "main wurde in einer anderen Welt geändert; diese Welt wurde aktualisiert."
+    },
+    "Notice": {
+      "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
+    },
+    "Class": {
+      "person": "Person",
+      "creature": "Kreatur",
+      "playerCharacter": "Spielercharakter",
+      "location": "Ort",
+      "faction": "Fraktion",
+      "item": "Gegenstand",
+      "event": "Ereignis",
+      "quest": "Quest",
+      "note": "Notiz"
+    },
+    "InfoBlock": {
+      "Appearance": "Aussehen",
+      "Personality": "Persönlichkeit",
+      "Secrets": "Geheimnisse",
+      "Description": "Beschreibung",
+      "Overview": "Überblick",
+      "Setup": "Ausgangslage",
+      "Outcome": "Ausgang",
+      "Hook": "Aufhänger",
+      "Resolution": "Auflösung",
+      "New": "Neuer Block"
+    },
+    "Layout": {
+      "Cover": "Titelbild",
+      "Connections": "Verbindungen",
+      "PlayerNotes": "Spielernotizen"
+    },
+    "Folder": {
+      "person": "Personen",
+      "creature": "Kreaturen",
+      "playerCharacter": "Spielercharaktere",
+      "location": "Orte",
+      "faction": "Fraktionen",
+      "item": "Gegenstände",
+      "event": "Ereignisse",
+      "quest": "Quests",
+      "note": "Notizen",
+      "companions": "Silk-Begleitjournale",
+      "scene": "Silk-Szenen"
+    },
+    "Materialize": {
+      "Implicit": "{name} materialisiert.",
+      "VisibleTitle": "Sichtbare materialisieren",
+      "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen.",
+      "QuestNativeFields": "{name} steht im DSA5-Questlog. Seine eigenen Felder Zusammenfassung, Details, Ziele und SL-Notizen gehören DSA5 und werden für Spieler sichtbar, sobald das Element enthüllt wird."
+    },
+    "Status": {
+      "alive": "lebendig",
+      "dead": "tot",
+      "planned": "geplant",
+      "happened": "geschehen",
+      "skipped": "ausgelassen",
+      "open": "offen",
+      "done": "erledigt",
+      "failed": "gescheitert"
+    },
+    "Focus": {
+      "Seeds": "Focus (Szene + Auswahl)",
+      "Toggle": "Focus View",
+      "Hops": "Schritte",
+      "Pin": "Focus Pin (p)",
+      "Unpin": "Focus Pin entfernen (p)",
+      "Hint": "Keine aktive Szene und nichts ausgewählt: nur Focus Pins werden gezeigt. Aktiviere eine Szene oder wähle einen Node."
+    },
+    "Filter": {
+      "Shown": "{n} von {m} angezeigt",
+      "Clear": "Filter entfernen",
+      "Add": "Filter…",
+      "Badge": "{n} verborgene Nachbarn. Klicken zum Anzeigen.",
+      "Expanded": "Nachbarn angezeigt: {n}",
+      "Budget": "{n} Knoten sichtbar (mehr als {max}). Das Canvas kann langsam werden; grenze es mit Filtern ein.",
+      "Dimension": {
+        "class": "Klasse",
+        "status": "Status",
+        "revealed": "Enthüllt",
+        "materialized": "Materialisiert",
+        "tag": "Tag",
+        "group": "Gruppe",
+        "hops": "N-hop",
+        "contents": "Inhalt"
+      },
+      "Value": {
+        "revealed": "enthüllt",
+        "hidden": "nicht enthüllt",
+        "materialized": "materialisiert",
+        "ghost": "Ghost"
+      }
+    },
+    "Lifecycle": {
+      "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Silk nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",
+      "RestoredBadge": "Wiederhergestellt aus Commit {commit}",
+      "CompanionRestored": "Das Begleitjournal von {name} wurde aus dem letzten Commit wiederhergestellt. Nicht committete Änderungen an Infoblöcken sind verloren.",
+      "DeleteTitle": "Elemente löschen",
+      "DeleteConfirm": "{names} löschen? Ihre Verbindungen, Foundry-Dokumente und Einträge in der Enthüllungskarte werden mitgelöscht. Nur das Verwerfen nicht committeter Änderungen macht das rückgängig.",
+      "DeleteAdopted": "{count} davon wurden aus bestehenden Foundry-Dokumenten übernommen.",
+      "KeepDoc": "Foundry-Dokument behalten",
+      "DeleteEverything": "Alles löschen",
+      "Delete": "Löschen",
+      "Cancel": "Abbrechen",
+      "DontAsk": "Nicht mehr fragen",
+      "UnmaterializeTitle": "Entmaterialisieren",
+      "UnmaterializeRevealed": "{names} ist enthüllt. Die Spieler verlieren den Zugriff, bis es wieder materialisiert wird.",
+      "Unmaterialize": "Entmaterialisieren"
+    },
+    "EventScene": {
+      "Box": "Anwesend",
+      "Happened": "{name} ist geschehen (Ereignis-Szene aktiviert). Zum Rückgängigmachen den Status zurücksetzen.",
+      "Deleted": "Die Szene von {name} wurde gelöscht. Ihr Journal bietet Szene erstellen und Aus letztem Commit wiederherstellen.",
+      "NoScene": "Dieses Element hat keine Szene.",
+      "NothingToRestore": "Der letzte Commit enthält keine Szene von {name}.",
+      "Activate": "Aktivieren",
+      "Create": "Szene erstellen",
+      "CreateOverview": "Übersichtsszene erstellen",
+      "None": "Keine Szene",
+      "Restore": "Aus letztem Commit wiederherstellen"
+    },
+    "Reveal": {
+      "Reveal": "Aufdecken",
+      "Unreveal": "Verbergen",
+      "RevealAppearance": "Aussehen aufdecken",
+      "HideAppearance": "Aussehen verbergen",
+      "Appearance": "Aussehen (Bild)",
+      "NeedsAdventure": "Starte ein Abenteuer, um aufzudecken.",
+      "TheConnection": "diese Verbindung",
+      "Confirm": "{name} den Spielern aufdecken?",
+      "UnrevealConfirm": "{name} wieder vor den Spielern verbergen?"
+    },
+    "Detail": {
+      "Title": "Element-Details",
+      "InfoBlocks": "Infoblöcke",
+      "Connections": "Verbindungen",
+      "Gone": "Dieses Element existiert nicht mehr."
+    },
+    "Merge": {
+      "Title": "Zusammenführen",
+      "Heading": "Abenteuer zusammenführen",
+      "Into": "in den Kanon",
+      "Base": "Basis (Abenteuerbeginn)",
+      "CanonNow": "Kanon jetzt",
+      "Adventure": "Abenteuer",
+      "Result": "Ergebnis",
+      "Field": "Feld",
+      "ResultHint": "Der zusammengeführte Kanon, wie er aussehen wird.",
+      "ShowCanonOnly": "Nur-Kanon-Änderungen zeigen",
+      "Received": "Seit Abenteuerbeginn in den Kanon übernommen",
+      "NoneReceived": "Seit Abenteuerbeginn wurde nichts in den Kanon übernommen.",
+      "ConflictsLeft": "Noch {n} Konflikt(e)",
+      "Footer": "Auto-Commit „Before merge“ erledigt. Abbrechen lässt das Abenteuer ausgecheckt.",
+      "ConfirmTitle": "In den Kanon übernehmen",
+      "ConfirmBody": "Das Abenteuer in den Kanon übernehmen und main auschecken? Das lässt sich nicht rückgängig machen.",
+      "WriteCombined": "Kombinierten Text schreiben",
+      "UseText": "Diesen Text verwenden",
+      "AutoMerged": "Automatisch zusammengeführt",
+      "ClickNode": "Klicke auf einen Knoten oder eine Verbindung, um die Änderungen zu sehen.",
+      "NoChanges": "Keine Änderungen.",
+      "Keep": "Behalten (mit Änderungen)",
+      "Delete": "Löschen",
+      "None": "— keins",
+      "Whole": "Element",
+      "Layout": "Layout-Änderungen, eingehende Seite gewinnt",
+      "Resume": "Zusammenführen fortsetzen",
+      "Open": "Konflikt",
+      "Resolved": "gelöst",
+      "Badge": {
+        "conflict": "Konflikte",
+        "added": "Neu",
+        "deleted": "Gelöscht",
+        "changed": "Geändert",
+        "layout": "Verschoben",
+        "canonOnly": "Nur Kanon"
+      },
+      "Record": {
+        "element": "Element",
+        "connection": "Verbindung",
+        "sheet": "Bogen",
+        "eventScene": "Ereignis-Szene",
+        "layoutGroup": "Visuelle Gruppe"
+      },
+      "Section": {
+        "element": "Element",
+        "infoBlocks": "Info-Blöcke",
+        "layout": "Layout",
+        "connection": "Verbindung",
+        "doc": "Dokument",
+        "system": "Bogen",
+        "items": "Eingebettete Items",
+        "effects": "Aktive Effekte",
+        "companion": "Begleit-Journal",
+        "tokens": "Token",
+        "sceneContents": "Wände, Lichter usw. (Anzahl)",
+        "scene": "Szene",
+        "dsa5": {
+          "characteristics": "Eigenschaften",
+          "status": "Status",
+          "details": "Beschreibung",
+          "merchant": "Händler",
+          "skills": "Talente",
+          "combatSkills": "Kampftechniken",
+          "magic": "Zauber und Liturgien",
+          "abilities": "Vor-, Nachteile, Sonderfertigkeiten",
+          "inventory": "Inventar"
+        }
+      },
+      "Target": "Ziel",
+      "Source": "Quelle",
+      "JoinHeading": "Kampagne zusammenführen",
+      "JoinInto": "in",
+      "JoinFooter": "Standard: alles, was in einer der Kampagnen enthüllt ist. Schreibt die Enthüllungskarte des Ziels; kein Commit.",
+      "JoinConfirmTitle": "Kampagnen zusammenführen",
+      "JoinConfirmBody": "Das Ergebnis in die Enthüllungskarte der Zielkampagne schreiben? Rückgängig machen ist nicht möglich.",
+      "From": "aus {name}",
+      "Join": {
+        "element": "Enthüllte Elemente",
+        "appearance": "Aussehen",
+        "infoBlock": "Infoblöcke",
+        "connection": "Verbindungen",
+        "playerNote": "Spielernotizen"
+      },
+      "CanonIncoming": "Kanon (eingehend)",
+      "ThisWorld": "Diese Welt",
+      "CanonEditHeading": "main wurde in einer anderen Welt geändert. Mit den nicht committeten Änderungen dieser Welt zusammenführen:",
+      "CanonEditFooter": "Abbrechen lässt die Änderungen dieser Welt uncommittet; Commits bleiben gesperrt, bis zusammengeführt ist.",
+      "CanonEditConfirmBody": "Das Ergebnis auf main committen und diese Welt umschreiben? Das lässt sich nicht rückgängig machen."
+    },
+    "Adopt": {
+      "Adopt": "In Silk übernehmen",
+      "AdoptFolder": "Ordner in Silk übernehmen",
+      "Refused": "{name} kann nicht übernommen werden: Silk übernimmt Akteure (Held, NSC, Kreatur), Gegenstände, Journale und Szenen.",
+      "WrongClass": "{name} kann kein {class} werden.",
+      "Missing": "Kein Foundry-Dokument „{uuid}“.",
+      "NoFolder": "Dieser Ordner existiert nicht mehr.",
+      "DuplicateTitle": "Kompendiumeintrag schon im Canon",
+      "DuplicateSource": "{doc} stammt aus demselben Kompendiumeintrag wie {element}.",
+      "UseFor": "Dieses Dokument für {element} verwenden",
+      "CreateNew": "Neu anlegen",
+      "FolderTitle": "Ordner übernehmen",
+      "FolderConfirm": "Diese {count} Dokumente übernehmen?",
+      "AlsoActor": "Auch {actor} übernehmen?",
+      "Yes": "Ja",
+      "No": "Nein",
+      "Cancel": "Abbrechen",
+      "Ignore": "Ignorieren",
+      "Close": "Schließen",
+      "AdHocTitle": "Neue Dokumente dieser Sitzung",
+      "AdHocIntro": "Seit dem letzten Commit erstellt und noch nicht in Silk. Ignorierte Dokumente erscheinen nie wieder.",
+      "EndPlaySessionLabel": "Ende der Spielsitzung"
+    },
+    "PlayerNote": {
+      "Name": "Spielernotiz",
+      "Add": "Spielernotiz hinzufügen",
+      "Prompt": "Deine Notiz (alle Spieler können sie lesen und bearbeiten):",
+      "Save": "Notiz speichern"
+    },
+    "PlayerCanvas": {
+      "Title": "Spieler-Leinwand",
+      "Empty": "Noch nichts enthüllt."
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "types": ["fvtt-types", "svelte"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["src", "scripts", "tools", "e2e", "*.ts", "*.js"]
+}
