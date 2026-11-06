@@ -178,26 +178,40 @@ describe('Creation Pipeline with Connections', () => {
   }
 
   /**
-   * §14: every entry point reaches a connected Element in ≤ 2 user commands. Each step
-   * below is one user input; the element is connected once the last one resolves.
+   * Spec 1.1 §B.4: the fastest path to a connected element is ≤ 2 user actions per entry
+   * point (name and label steps not counted). Each step below is one user action; the
+   * element is connected once the last one resolves. `out` = origin → new.
    */
-  it.each<[string, (p: CreationPipeline, from: string) => (() => Promise<unknown>)[]]>([
+  it.each<
+    [string, 'out' | 'in', (p: CreationPipeline, from: string) => (() => Promise<unknown>)[]]
+  >([
     [
-      'drag-out from a Connection Point',
+      'right-drag Node → canvas + class pick',
+      'out',
       (p, from) => [
         async () => p.open({ at: { x: 300, y: 0 }, from, connection: { direction: 'out' } }),
         () => p.pickClass('item'),
       ],
     ],
     [
-      'Node context menu class box',
+      'right-drag canvas → Node + class pick',
+      'in',
+      (p, from) => [
+        async () => p.open({ at: { x: -300, y: 0 }, from, connection: { direction: 'in' } }),
+        () => p.pickClass('item'),
+      ],
+    ],
+    [
+      'Node context menu class pick',
+      'out',
       (p, from) => [async () => p.open({ at: { x: 300, y: 0 }, from }), () => p.pickClass('item')],
     ],
     [
       'digit key on a selected Node',
+      'out',
       (p, from) => [() => p.create({ at: { x: 0, y: 0 }, from }, 'item')],
     ],
-  ])('%s', async (_name, inputs) => {
+  ])('%s', async (_name, way, inputs) => {
     const { pipeline, connectionsOf, registry } = connected();
     const { id: origin } = await registry.run<{ id: string }>('element.create', {
       class: 'person',
@@ -207,7 +221,9 @@ describe('Creation Pipeline with Connections', () => {
     expect(steps.length).toBeLessThanOrEqual(2);
     let id: unknown;
     for (const step of steps) id = await step();
-    expect(connectionsOf(id as string)).toMatchObject([{ from: origin, to: id, type: 'owns' }]);
+    expect(connectionsOf(id as string)).toMatchObject([
+      way === 'out' ? { from: origin, to: id, type: 'owns' } : { from: id, to: origin },
+    ]);
   });
 
   it('after the name, the Connection editor opens on the new Connection', async () => {
