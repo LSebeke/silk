@@ -91,36 +91,50 @@ export async function waitForSilk(page: Page): Promise<void> {
 }
 
 /** First GM session: add the player and enable silk (takes effect on next load). */
-async function setUpWorld(page: Page): Promise<void> {
-  await page.evaluate(async (playerName) => {
-    if (!game.users?.getName(playerName)) {
-      await User.implementation.create({ name: playerName, role: CONST.USER_ROLES.PLAYER });
-    }
-    const config = game.settings?.get('core', 'moduleConfiguration') ?? {};
-    await game.settings?.set('core', 'moduleConfiguration', { ...config, silk: true });
-  }, PLAYER);
+async function setUpWorld(page: Page, modules: readonly string[]): Promise<void> {
+  await page.evaluate(
+    async ([playerName, extra]) => {
+      if (!game.users?.getName(playerName)) {
+        await User.implementation.create({ name: playerName, role: CONST.USER_ROLES.PLAYER });
+      }
+      const config = game.settings?.get('core', 'moduleConfiguration') ?? {};
+      const enabled = Object.fromEntries(extra.map((id) => [id, true]));
+      await game.settings?.set('core', 'moduleConfiguration', {
+        ...config,
+        ...enabled,
+        silk: true,
+      });
+    },
+    [PLAYER, modules] as const,
+  );
 }
 
-export const test = base.extend<{ gm: Page; player: Page }, { world: World; worldKey: string }>({
+export const test = base.extend<
+  { gm: Page; player: Page },
+  { world: World; worldKey: string; modules: string[] }
+>({
   /**
    * The World is shared by every test in a worker. A file that needs a fresh one (e.g. an
    * unbound World) sets its own key with `test.use({ worldKey })`: Playwright gives it a
    * separate worker, hence a separate World.
    */
   worldKey: ['shared', { scope: 'worker', option: true }],
+  /** More installed modules (and their dependencies) to enable; set with `worldKey`. */
+  modules: [[], { scope: 'worker', option: true }],
   world: [
-    async ({ browser, worldKey }, use) => {
+    async ({ browser, worldKey, modules }, use) => {
       const run = `${Date.now().toString(36)}-${randomBytes(2).toString('hex')}-${worldKey}`;
       const dataPath = prepareDataPath({
         source: FOUNDRY_USER_DATA,
         dist: resolve(import.meta.dirname, '../dist'),
+        modules,
       });
       const foundry = await startFoundry({ dataPath, port: await freePort() });
       let id: string | undefined;
       try {
         id = await createAndLaunchWorld(foundry, run);
         const setup = await join(browser, foundry.url, GM);
-        await setUpWorld(setup);
+        await setUpWorld(setup, modules);
         await setup.context().close();
         await use({ url: foundry.url, id, join: (b, name) => join(b, foundry.url, name) });
       } finally {

@@ -153,7 +153,10 @@
       "blank": "Blank",
       "Cancel": "Cancel",
       "Unavailable": "Not available yet",
-      "NotForClass": "Not offered for this class"
+      "NotForClass": "Not offered for this class",
+      "GeneratorMissing": "Needs the module “The Dark Eye 5th Ed. - Master's Workshop” (dsa5-mastersworkshop)",
+      "GeneratorGMOnly": "Only the GM can use the generator",
+      "GeneratorFailed": "The NPC generator (NSC Zucht) could not be loaded"
     },
     "Canvas": {
       "Title": "World Canvas",

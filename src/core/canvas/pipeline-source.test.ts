@@ -7,6 +7,7 @@ import { createMemoryBackend, createWorkingCopy } from '../working-copy';
 import {
   createCreationPipeline,
   type CreationPipeline,
+  type SourcePick,
   type SourceProvider,
   type SourceProviders,
 } from './pipeline';
@@ -216,7 +217,7 @@ describe('Source providers (Compendium T33, Generator T34)', () => {
   });
 
   it('a pick that resolves after cancel creates nothing', async () => {
-    let done!: (value: { source: { kind: 'generator'; id: string }; name: string }) => void;
+    let done!: (value: SourcePick) => void;
     let signal: AbortSignal | undefined;
     const { pipeline, calls } = setup({
       generator: provider(
@@ -232,10 +233,33 @@ describe('Source providers (Compendium T33, Generator T34)', () => {
     pipeline.cancel();
     // The provider hears it, to close its window.
     expect(signal?.aborted).toBe(true);
-    done({ source: { kind: 'generator', id: 'nsc-zucht' }, name: 'Ulf' });
+    done({ source: { kind: 'generator', id: 'nsc-zucht', actorUuid: 'Actor.ulf' }, name: 'Ulf' });
     expect(await picking).toBeUndefined();
     expect(pipeline.get()).toEqual({ step: 'idle' });
     expect(calls).toEqual([]);
+  });
+
+  it('a provider that failed on open is greyed when the Source Step comes back', async () => {
+    let reason: string | undefined;
+    const { pipeline } = setup({
+      generator: {
+        unavailable: () => reason,
+        pick: async () => {
+          reason = 'SILK.Source.GeneratorFailed';
+          return undefined;
+        },
+      },
+    });
+    await pipeline.create({ at: { x: 0, y: 0 } }, 'person');
+    await pipeline.pickSource('generator');
+    expect(pipeline.get()).toMatchObject({
+      step: 'source',
+      choices: [
+        { kind: 'compendium' },
+        { kind: 'generator', available: false, reason: 'SILK.Source.GeneratorFailed' },
+        { kind: 'blank', available: true },
+      ],
+    });
   });
 });
 

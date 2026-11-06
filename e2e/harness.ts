@@ -19,8 +19,16 @@ export function testWorldId(run: string): string {
   return `silk-test-${run}`;
 }
 
-/** Throwaway data dir: license copied, dsa5 + built module symlinked, no worlds. */
-export function prepareDataPath(opts: { source: string; dist: string; parent?: string }): string {
+/**
+ * Throwaway data dir: license copied, dsa5 + built module symlinked, no worlds. `modules`:
+ * more installed modules to symlink (enabled by the fixture).
+ */
+export function prepareDataPath(opts: {
+  source: string;
+  dist: string;
+  parent?: string;
+  modules?: readonly string[];
+}): string {
   const dataPath = mkdtempSync(join(opts.parent ?? tmpdir(), 'silk-foundry-'));
   mkdirSync(join(dataPath, 'Config'));
   copyFileSync(join(opts.source, 'Config/license.json'), join(dataPath, 'Config/license.json'));
@@ -29,6 +37,8 @@ export function prepareDataPath(opts: { source: string; dist: string; parent?: s
   }
   symlinkSync(join(opts.source, 'Data/systems/dsa5'), join(dataPath, 'Data/systems/dsa5'));
   symlinkSync(opts.dist, join(dataPath, 'Data/modules/silk'));
+  for (const id of opts.modules ?? [])
+    symlinkSync(join(opts.source, 'Data/modules', id), join(dataPath, 'Data/modules', id));
   return dataPath;
 }
 

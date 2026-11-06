@@ -43,7 +43,7 @@ export interface ElementData {
   status?: string;
   /**
    * Source Step pick (spec 1.1 §B.1), never blank: a compendium entry is imported from here
-   * when the element is Materialized.
+   * when the element is Materialized; a generator's Actor becomes the doc at once (§B.3).
    */
   source?: Exclude<ElementSource, { kind: 'blank' }>;
   /** Adopted from an existing Foundry doc (T14), not created by Silk: delete can keep the doc (§6). */
