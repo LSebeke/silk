@@ -37,6 +37,7 @@ function fakeApi() {
       },
     }),
     fromUuid: (uuid) => doc(uuid, { _id: 'x', name: 'X', flags: { silk: { id: 'el' } } }),
+    importData: async () => undefined,
     journal: () => null,
     folders: () => folders,
     replace: (value) => ({ replaced: value }),

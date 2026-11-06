@@ -99,6 +99,19 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
     expect(t.connections('owns')).toEqual([[alrik, ring]]);
   });
 
+  it('a wanted Connection direction (Compendium World pick from a Node) is kept', async () => {
+    const t = setup();
+    const owner = t.foundryDoc('Actor', { name: 'Alrik', type: 'npc' });
+    const { id: alrik } = await t.adoptDoc({ uuid: owner.uuid });
+    const other = t.foundryDoc('Actor', { name: 'Ulf', type: 'npc' });
+    const { id: ulf } = await t.adoptDoc({
+      uuid: other.uuid,
+      connectTo: alrik,
+      connection: { direction: 'in' },
+    });
+    expect(t.connections('free')).toEqual([[ulf, alrik]]);
+  });
+
   it('a doc players can already see counts as Revealed; its ownership is unchanged', async () => {
     const t = setup();
     const open = t.textPage('Open', 'x', { ownership: { default: -1 } });

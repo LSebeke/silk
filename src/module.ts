@@ -8,6 +8,7 @@ import {
   foundryAdopt,
   registerAdoptHooks,
 } from './adapter/adopt';
+import { readPickerCatalog, type CatalogGame } from './adapter/compendium';
 import { registerConnectionsPageHooks } from './adapter/connections-page';
 import { dsa5Mapping, dsa5Sections } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
@@ -33,6 +34,7 @@ import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
+  compendiumProvider,
   createCanvasFilter,
   createCanvasSearch,
   createCanvasState,
@@ -99,6 +101,18 @@ const canvasState = createCanvasState();
 const pipeline = createCreationPipeline({
   run: (name, args) => registry.run(name, args),
   label: (id) => localize(`SILK.Class.${id}`),
+  sources: {
+    // Spec 1.1 §B.2: World actors and Actor packs of the class's DSA5 type.
+    compendium: compendiumProvider({
+      actorType: (cls) =>
+        cls === 'person' || cls === 'creature' ? dsa5Mapping.docType(cls) : undefined,
+      catalog: (type) => readPickerCatalog(game as unknown as CatalogGame, type),
+      async open(picker, signal) {
+        const { openCompendiumPicker } = await import('./ui/canvas/CompendiumPickerWindow');
+        return openCompendiumPicker(picker, signal, localize);
+      },
+    }),
+  },
 });
 const viewState = createViewState({
   load: () => game.settings?.get(MODULE_ID, 'viewState'),

@@ -10,3 +10,4 @@ export * from './filter-commands';
 export * from './focus';
 export * from './search';
 export * from './search-commands';
+export * from './compendium-picker';

@@ -85,6 +85,20 @@ export interface DocSnapshot extends DocData {
   parent?: string;
 }
 
+/**
+ * A compendium entry as a normal Foundry import prepares it (`fromCompendium`): no `_id`,
+ * folder, sort or ownership; foreign flags and `_stats.compendiumSource` kept.
+ */
+export interface ImportData {
+  name: string;
+  type?: string;
+  img?: string;
+  system?: Record<string, unknown>;
+  items?: (DocData & { _id: string })[];
+  flags?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 /** Silk folder identity: per Element Class plus "Silk Companions" (§8). */
 export type FolderKey = ElementClassId | 'companions';
 
@@ -99,6 +113,8 @@ export interface FoundryDocs {
   /** Deletes a doc (world or embedded). */
   delete(uuid: string): Promise<void>;
   get(uuid: string): DocSnapshot | undefined;
+  /** A compendium entry's import data (spec 1.1 §B.1 Ghost worlds); undefined if it is gone. */
+  importData(uuid: string): Promise<ImportData | undefined>;
   /** By world doc id (Companion Journals are linked by id). */
   journal(id: string): DocSnapshot | undefined;
   /** Foundry update data; dotted keys allowed. */
