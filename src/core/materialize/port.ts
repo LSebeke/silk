@@ -115,8 +115,8 @@ export interface FoundryDocs {
   registerQuestJournal(uuid: string, name: string): Promise<void>;
   /** Removes `flags.silk` from the doc (element delete, Keep Foundry doc, §6). */
   unflag(uuid: string): Promise<void>;
-  /** Opens the doc's sheet. */
-  open(uuid: string): Promise<void>;
+  /** Opens the doc's sheet; a journal at page `pageId` if given. */
+  open(uuid: string, pageId?: string): Promise<void>;
 }
 
 /** Game System (DSA5) field mapping, hand-written in the adapter (spec §2). Pure. */

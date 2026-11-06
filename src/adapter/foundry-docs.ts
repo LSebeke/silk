@@ -26,7 +26,7 @@ export interface FoundryDoc {
   delete?(options?: object): Promise<unknown>;
   /** Embedded docs: the parent doc (an Item's actor). */
   parent?: { uuid: string } | null;
-  sheet?: { render(force?: boolean): unknown } | null;
+  sheet?: { render(options?: { force?: boolean; pageId?: string }): unknown } | null;
   /** Actors: ActiveEffects, and the DSA5 condition API (§7 Dead). */
   effects?: Iterable<{ statuses: Set<string> }>;
   addCondition?(id: string): Promise<unknown>;
@@ -177,9 +177,9 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
     async unflag(uuid) {
       await must(uuid).update({ flags: { [`-=${MODULE_ID}`]: null } }, { ...SILK_WRITE });
     },
-    async open(uuid) {
+    async open(uuid, pageId) {
       // AppV2 sheets render asynchronously: resolve once the sheet is up.
-      await must(uuid).sheet?.render(true);
+      await must(uuid).sheet?.render({ force: true, ...(pageId ? { pageId } : {}) });
     },
   };
 }

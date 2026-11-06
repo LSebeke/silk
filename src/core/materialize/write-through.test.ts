@@ -207,3 +207,52 @@ describe('element.changeClass (spec §4 Class change)', () => {
     ]);
   });
 });
+
+describe('infoBlock.move: reorder among Info Blocks (v1.1 §C.1)', () => {
+  it('a Ghost reorders its record; `sort` is the new position', async () => {
+    const t = setup();
+    const id = await t.create('person', 'Alrik');
+    const [appearance, , secrets] = t.element(id).infoBlocks.map((b) => b._id);
+    await t.registry.run('infoBlock.move', { id: secrets, sort: 0 });
+    expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual([
+      'Secrets',
+      'Appearance',
+      'Personality',
+    ]);
+    await t.registry.run('infoBlock.move', { id: appearance, sort: 2 });
+    expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual([
+      'Secrets',
+      'Personality',
+      'Appearance',
+    ]);
+  });
+
+  it('a Materialized journal moves the page; Cover, quest and Connections keep their places', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('quest', 'Ring');
+    const [hook] = t.element(id).infoBlocks.map((b) => b._id);
+    await t.registry.run('infoBlock.move', { id: hook, sort: 5 });
+    expect(pageNames(t.doc(id))).toEqual(['Cover', 'Ring', 'Resolution', 'Hook', 'Connections']);
+    expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual(['Resolution', 'Hook']);
+  });
+
+  it('a Materialized actor moves the Companion Journal page', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('creature', 'Wolf');
+    const [, description] = t.element(id).infoBlocks.map((b) => b._id);
+    await t.registry.run('infoBlock.move', { id: description, sort: 0 });
+    expect(pageNames(t.companion(id))).toEqual(['Description', 'Appearance', 'Connections']);
+  });
+});
+
+describe('infoBlock.open: the "open in Foundry" link (v1.1 §C.1)', () => {
+  it('opens the journal at the block page, Materializing a Ghost first', async () => {
+    const t = setup();
+    const id = await t.create('creature', 'Wolf');
+    const [, description] = t.element(id).infoBlocks.map((b) => b._id);
+    await t.registry.run('infoBlock.open', { id: description });
+    const companion = t.companion(id);
+    expect(t.docs.opened).toEqual([`${companion.uuid}.JournalEntryPage.${description}`]);
+    expect(t.toasts.length).toBe(1);
+  });
+});

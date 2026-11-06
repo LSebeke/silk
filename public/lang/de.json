@@ -97,7 +97,9 @@
       "infoBlock": {
         "create": "Infoblock hinzufügen",
         "edit": "Infoblock bearbeiten",
-        "delete": "Infoblock löschen"
+        "delete": "Infoblock löschen",
+        "move": "Info-Block verschieben",
+        "open": "In Foundry öffnen"
       },
       "filter": {
         "set": "Canvas-Filter setzen",
@@ -372,7 +374,12 @@
       "Title": "Element-Details",
       "InfoBlocks": "Infoblöcke",
       "Connections": "Verbindungen",
-      "Gone": "Dieses Element existiert nicht mehr."
+      "Gone": "Dieses Element existiert nicht mehr.",
+      "AddInfoBlock": "+ Info-Block",
+      "AddInfoBlockMenu": "Info-Block hinzufügen…",
+      "InfoBlockName": "Name des Info-Blocks",
+      "DeleteInfoBlockTitle": "Info-Block löschen",
+      "DeleteInfoBlockConfirm": "Den Info-Block „{name}“ löschen?"
     },
     "Merge": {
       "Title": "Zusammenführen",

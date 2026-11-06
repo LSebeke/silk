@@ -3,7 +3,9 @@ import { SvelteApplication } from '../SvelteApplication.svelte';
 import type { DetailContext } from './context';
 import ElementDetail from './ElementDetail.svelte';
 
-export class ElementDetailWindow extends SvelteApplication<{ ctx: DetailContext; id: string }> {
+type Props = { ctx: DetailContext; id: string; focus: string | undefined };
+
+export class ElementDetailWindow extends SvelteApplication<Props> {
   static override DEFAULT_OPTIONS = {
     classes: ['silk', 'silk-detail-window'],
     window: { title: 'SILK.Detail.Title', resizable: true, icon: 'fa-solid fa-eye' },
@@ -16,6 +18,8 @@ export class ElementDetailWindow extends SvelteApplication<{ ctx: DetailContext;
 
   readonly #ctx: DetailContext;
   readonly #id: string;
+  /** Info Block whose name field gets focus on the next render (v1.1 §C.1). */
+  #focus: string | undefined;
 
   constructor(ctx: DetailContext, elementId: string) {
     super({ id: ElementDetailWindow.idFor(elementId) });
@@ -23,7 +27,11 @@ export class ElementDetailWindow extends SvelteApplication<{ ctx: DetailContext;
     this.#id = elementId;
   }
 
+  focusBlock(blockId: string) {
+    this.#focus = blockId;
+  }
+
   protected getProps() {
-    return { ctx: this.#ctx, id: this.#id };
+    return { ctx: this.#ctx, id: this.#id, focus: this.#focus };
   }
 }

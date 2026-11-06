@@ -21,6 +21,7 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
       'T(reveal.showToPlayers)',
       'T(element.toggleStatus)',
       'T(element.openDetail)',
+      'SILK.Detail.AddInfoBlockMenu',
       'T(element.openSheet)',
       'T(element.rename)',
       'T(materialize.unmaterialize)',
@@ -62,6 +63,28 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
     );
     expect(labels(entries)).toContain('T(canvas.untangle)');
     expect(entries.find((e) => e.command === 'element.delete')?.args).toEqual({ ids: ['a', 'b'] });
+  });
+});
+
+describe('Node context menu: Add Info Block… (v1.1 §C.1)', () => {
+  it('opens Element Detail with a new block, for every class', () => {
+    for (const cls of ['note', 'item', 'playerCharacter'] as const) {
+      const entry = nodeMenu({ id: 'a', class: cls, name: 'A' }, deps()).find(
+        (e) => e.label === 'SILK.Detail.AddInfoBlockMenu',
+      );
+      expect(entry).toMatchObject({
+        command: 'element.openDetail',
+        args: { id: 'a', addInfoBlock: true },
+      });
+    }
+  });
+
+  it('is disabled when Element Detail is', () => {
+    const entries = nodeMenu(
+      { id: 'a', class: 'note', name: 'A' },
+      deps({ available: (name) => name !== 'element.openDetail' }),
+    );
+    expect(entries.find((e) => e.label === 'SILK.Detail.AddInfoBlockMenu')?.disabled).toBe(true);
   });
 });
 

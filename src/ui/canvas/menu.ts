@@ -32,6 +32,7 @@ export interface MenuDeps {
 }
 
 const NEEDS_ADVENTURE = 'SILK.Reveal.NeedsAdventure';
+const ADD_INFO_BLOCK = 'SILK.Detail.AddInfoBlockMenu';
 
 function command(deps: MenuDeps, name: string, args: object, label?: string): MenuEntry {
   const off = !deps.available(name);
@@ -71,6 +72,11 @@ export function nodeMenu(
   if (hasStatus(el.class))
     entries.push({ ...command(deps, 'element.toggleStatus', { id }), action: 'status' });
   entries.push(command(deps, 'element.openDetail', { id }));
+  // v1.1 §C.1: Element Detail with a new Info Block, its name field focused.
+  entries.push({
+    ...command(deps, 'element.openDetail', { id, addInfoBlock: true }, ADD_INFO_BLOCK),
+    key: 'element.openDetail.addInfoBlock',
+  });
   entries.push(command(deps, 'element.openSheet', { id }));
   entries.push({ ...command(deps, 'element.rename', { id }), action: 'rename' });
   if (ids.length >= 2) entries.push(command(deps, 'canvas.untangle', { ids }));

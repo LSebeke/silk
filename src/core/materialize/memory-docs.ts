@@ -134,9 +134,9 @@ export function createMemoryDocs(): MemoryDocs {
       const doc = must(uuid);
       doc.flags = { ...doc.flags, silk: {} };
     },
-    async open(uuid) {
+    async open(uuid, pageId) {
       must(uuid);
-      opened.push(uuid);
+      opened.push(pageId ? `${uuid}.JournalEntryPage.${pageId}` : uuid);
     },
   };
 }
