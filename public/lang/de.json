@@ -146,6 +146,15 @@
         "openDoc": "Dokument öffnen"
       }
     },
+    "Source": {
+      "Label": "Ausgangspunkt",
+      "compendium": "Kompendium",
+      "generator": "Generator",
+      "blank": "Leer",
+      "Cancel": "Abbrechen",
+      "Unavailable": "Noch nicht verfügbar",
+      "NotForClass": "Für diese Klasse nicht angeboten"
+    },
     "Canvas": {
       "Title": "Weltleinwand",
       "ClassSearch": "Klasse…",

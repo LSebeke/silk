@@ -96,6 +96,9 @@ test('Connections: right-drag, digit keys, c, editor, Tab/q, rendering', async (
   await card(gm, 'Alrik').click();
   await expect(card(gm, 'Alrik')).toHaveClass(/selected/);
   await gm.keyboard.press('Digit1');
+  // Person takes the Source Step (spec 1.1 §B.1): → Blank.
+  await expect(gm.locator('[data-silk-source-step="person"]')).toBeFocused();
+  await gm.keyboard.press('ArrowRight');
   await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
   await gm.keyboard.type('Rondra');
   await gm.keyboard.press('Enter');
