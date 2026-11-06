@@ -337,6 +337,9 @@ test('Source Step (spec 1.1 §B.1): compass after Person/Creature, greyed choice
   await gm.locator('[data-silk-canvas]').focus();
   await gm.keyboard.press('Digit1');
   await expect(compass).toHaveAttribute('data-silk-source-step', 'person');
+  // §B.3: no dsa5-mastersworkshop in this World → NSC Zucht greyed, naming the module.
+  await expect(choice('generator')).toHaveAttribute('aria-disabled', 'true');
+  await expect(choice('generator')).toHaveAttribute('title', /dsa5-mastersworkshop/);
   await gm.keyboard.press('ArrowDown');
   await expect(compass).toHaveCount(0);
 

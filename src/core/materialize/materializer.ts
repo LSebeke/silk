@@ -14,6 +14,7 @@ import {
   elementClass,
   appearanceBlock,
   elementRecord,
+  generatedActor,
   hasAppearanceClass,
   isGhost,
   nextStatus,
@@ -213,12 +214,37 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     if (parent) plan.main.folder = null;
     // Companion first: the doc's flag points at it.
     if (plan.companion) await docs.create('JournalEntry', plan.companion);
-    const uuid = await docs.create(plan.documentName, plan.main, parent);
+    const bound = bindable(el);
+    const uuid = bound
+      ? await bind(bound, plan.main)
+      : await docs.create(plan.documentName, plan.main, parent);
     if (el.status === 'dead') await docs.setStatusEffect(uuid, system.deadEffect, true);
     if (el.class === 'quest') await questJournal(uuid, el.name);
     await write(id, { uuid });
     await sync(id);
     await deps.afterMaterialize?.(id);
+    return uuid;
+  }
+
+  /**
+   * Generator pick (v1.1 §B.3): the Actor it created, if still there and no Story Element.
+   * Otherwise Materialize creates a fresh doc as for any Ghost.
+   */
+  function bindable(el: StoryElement): string | undefined {
+    const uuid = generatedActor(el.source);
+    const doc = uuid ? docs.get(uuid) : undefined;
+    if (!doc || doc.documentName !== documentName(el.class) || doc.parent) return undefined;
+    return doc.flags.silk?.id ? undefined : doc.uuid;
+  }
+
+  /** The existing doc takes the plan's Silk-owned parts; what the generator made stays. */
+  async function bind(uuid: string, main: DocPlan['main']) {
+    await docs.update(uuid, {
+      name: main.name,
+      folder: main.folder,
+      ownership: main.ownership,
+      flags: { silk: main.flags.silk },
+    });
     return uuid;
   }
 
@@ -349,7 +375,9 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
 
     async afterCreate(created) {
       await write(created.id, { infoBlocks: defaultInfoBlocks(created.class, ctx) });
-      if (deps.mode() === 'immediate' && !deps.deferImmediate?.()) await materialize([created.id]);
+      // A generator's Actor already exists: bound at once, in every mode (v1.1 §B.1).
+      const immediate = deps.mode() === 'immediate' && !deps.deferImmediate?.();
+      if (generatedActor(created.source) || immediate) await materialize([created.id]);
       return undefined;
     },
 

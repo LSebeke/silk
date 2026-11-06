@@ -17,6 +17,7 @@ import { createFoundryDocs } from './adapter/foundry-docs';
 import { registerKeybindings } from './adapter/keybindings';
 import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
+import { foundryNscZucht } from './adapter/nsc-zucht';
 import { registerOwnsHooks } from './adapter/owns';
 import { createSocketRelay, registerPlayerNoteHooks, textToHtml } from './adapter/player-notes';
 import { foundryRevealStage, registerRevealHooks } from './adapter/reveal';
@@ -99,6 +100,8 @@ const workingCopy = () => getSession().workingCopy;
 
 /** Client-local canvas state (selection) and the Creation Pipeline, shared by every entry point. */
 const canvasState = createCanvasState();
+/** Spec 1.1 §B.3: the Source Step Generator, NSC Zucht (dsa5-mastersworkshop). */
+const nscZucht = foundryNscZucht((key) => localize(key));
 const pipeline = createCreationPipeline({
   run: (name, args) => registry.run(name, args),
   label: (id) => localize(`SILK.Class.${id}`),
@@ -113,6 +116,7 @@ const pipeline = createCreationPipeline({
         return openCompendiumPicker(picker, signal, localize);
       },
     }),
+    generator: nscZucht,
   },
 });
 const viewState = createViewState({
@@ -649,6 +653,7 @@ Hooks.once('init', () => {
 
 Hooks.once('ready', async () => {
   await startSession();
+  void nscZucht.probe();
   registerMaterializeHooks(materializer, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),

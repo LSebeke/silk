@@ -153,7 +153,10 @@
       "blank": "Leer",
       "Cancel": "Abbrechen",
       "Unavailable": "Noch nicht verfügbar",
-      "NotForClass": "Für diese Klasse nicht angeboten"
+      "NotForClass": "Für diese Klasse nicht angeboten",
+      "GeneratorMissing": "Benötigt das Modul „Das Schwarze Auge 5 - Meisterwerkstatt“ (dsa5-mastersworkshop)",
+      "GeneratorGMOnly": "Nur die Spielleitung kann den Generator nutzen",
+      "GeneratorFailed": "Der NSC-Generator (NSC Zucht) konnte nicht geladen werden"
     },
     "Picker": {
       "Title": "Kompendium",

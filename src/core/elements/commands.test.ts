@@ -95,6 +95,18 @@ describe('element commands', () => {
     expect(workingCopy.records().size).toBe(0);
   });
 
+  it('element.create refuses a generator source without the Actor it created', async () => {
+    const { registry, workingCopy } = setup();
+    await expect(
+      registry.run('element.create', {
+        class: 'person',
+        name: 'x',
+        source: { kind: 'generator', id: 'nsc-zucht' },
+      }),
+    ).rejects.toThrow(/actorUuid/);
+    expect(workingCopy.records().size).toBe(0);
+  });
+
   it('element.rename changes only the name', async () => {
     const { registry, workingCopy } = setup();
     const { id } = await registry.run<{ id: string }>('element.create', {

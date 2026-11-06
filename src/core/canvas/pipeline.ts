@@ -225,7 +225,10 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     }
     if (abort.signal.aborted || step.step !== 'source') return undefined;
     if (!pick) {
-      set(current);
+      // The provider may have become unavailable (a failed import): re-ask every choice.
+      const kinds = sourceKinds(current.class) ?? [];
+      const choices = SOURCE_KIND_ORDER.map((k) => choice(current.class, k, kinds));
+      set({ ...current, choices });
       return undefined;
     }
     if ('adopt' in pick) return adoptFromSource(current, pick.adopt.uuid);

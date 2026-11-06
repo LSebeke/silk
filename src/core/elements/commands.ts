@@ -59,6 +59,8 @@ export function elementCommands(deps: ElementCommandDeps): Command[] {
       const source = args.source;
       if (source && !classTakesSource(cls.id, source.kind))
         throw new Error(`Silk: ${cls.id} elements take no ${source.kind} source`);
+      if (source?.kind === 'generator' && typeof source.actorUuid !== 'string')
+        throw new Error('Silk: a generator source needs the actorUuid of the Actor it created');
       const id = deps.newId();
       const data: ElementData = {
         class: cls.id,
