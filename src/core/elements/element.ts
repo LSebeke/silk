@@ -58,6 +58,11 @@ export interface InfoBlock {
   name: string;
   /** HTML. */
   text: string;
+  /**
+   * Person/Creature: the Appearance block (v1.1 §C.2), which guards the image. Mirrors the
+   * page flag `flags.silk.appearance`; the flag, not the name, marks it.
+   */
+  appearance?: true;
 }
 
 /** A party note (§9): page id once Materialized; `campaign` = the authoring Campaign. */
@@ -85,6 +90,17 @@ export function readElement(record: CanonRecord | undefined): StoryElement | und
   if (record?.kind !== 'element') return undefined;
   const data = record.data as unknown as ElementData;
   return { ...data, position: data.position ?? { x: 0, y: 0 }, id: record.id };
+}
+
+/** Person and Creature have an Appearance (spec §8), as long as its block exists. */
+export const hasAppearanceClass = (cls: string) => cls === 'person' || cls === 'creature';
+
+/** The element's Appearance block (v1.1 §C.2): marked by its flag, not by its name. */
+export function appearanceBlock(
+  element: Pick<ElementData, 'class' | 'infoBlocks'>,
+): InfoBlock | undefined {
+  if (!hasAppearanceClass(element.class)) return undefined;
+  return element.infoBlocks?.find((b) => b.appearance);
 }
 
 /** Ghost = a Node whose Story Element is not Materialized in this World (glossary). */

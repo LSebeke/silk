@@ -10,7 +10,7 @@ import { expect, test, waitForSilk } from './fixtures';
 
 /** Player sync is slow under load (e2e.md): never poll it below 20 s. */
 const SYNC = { timeout: 45_000 };
-const HOODED = 'modules/silk/assets/hooded.svg';
+const HOODED = 'icons/svg/mystery-man-black.svg';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
   page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
@@ -61,6 +61,8 @@ test('Player View follows Reveal and moves; the player canvas shows it read-only
     (await api<{ id: string }>(gm, 'element.create', { class: cls, name, at: { x, y } })).id;
   const gareth = await create('location', 'Gareth-T17', 600, 200);
   const alrik = await create('person', 'Alrik-T17', 200, 200);
+  // A real image: DSA5's default actor icon is the core hood itself (v1.1 §C.4).
+  await api(gm, 'element.setImage', { id: alrik, img: 'icons/svg/cowled.svg' });
   const spy = await create('person', 'Spy-T17', 400, 500);
   const livesIn = (
     await api<{ id: string }>(gm, 'connection.create', {

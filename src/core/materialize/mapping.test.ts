@@ -139,3 +139,34 @@ describe('Materialize: class → doc mapping (spec §4)', () => {
     expect(t.docs.docs.size).toBe(1);
   });
 });
+
+describe('Appearance flag (v1.1 §C.2)', () => {
+  it('the default Appearance block is flagged on the record and its page; others are not', async () => {
+    const t = setup();
+    const id = await t.create('person', 'Alrik');
+    expect(t.element(id).infoBlocks.map((b) => [b.name, !!b.appearance])).toEqual([
+      ['Appearance', true],
+      ['Personality', false],
+      ['Secrets', false],
+    ]);
+    await t.registry.run('materialize.elements', { ids: [id] });
+    const companion = t.companion(id);
+    const flagged = companion.pages.filter((p) => p.flags?.silk?.appearance);
+    expect(flagged.map((p) => p.name)).toEqual(['Appearance']);
+    // Read back: the flag, not the name, marks it. A renamed block stays the Appearance.
+    page(companion, must(flagged[0])._id).name = 'Aussehen';
+    await t.materializer.sync(id);
+    expect(
+      t
+        .element(id)
+        .infoBlocks.filter((b) => b.appearance)
+        .map((b) => b.name),
+    ).toEqual(['Aussehen']);
+  });
+
+  it('a non-actor class has no Appearance block', async () => {
+    const t = setup();
+    const id = await t.create('location', 'Gareth');
+    expect(t.element(id).infoBlocks.some((b) => b.appearance)).toBe(false);
+  });
+});

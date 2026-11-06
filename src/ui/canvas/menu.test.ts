@@ -14,7 +14,16 @@ const labels = (entries: { label: string; disabled?: boolean }[]) =>
 
 describe('Node context menu (spec §8 Controls, §10.3)', () => {
   it('a Materialized Person: Reveal, Reveal Appearance, Show to players, then the other actions', () => {
-    const entries = nodeMenu({ id: 'a', class: 'person', name: 'A', uuid: 'Actor.x' }, deps());
+    const entries = nodeMenu(
+      {
+        id: 'a',
+        class: 'person',
+        name: 'A',
+        uuid: 'Actor.x',
+        infoBlocks: [{ _id: 'b', name: 'Looks', text: '', appearance: true }],
+      },
+      deps(),
+    );
     expect(labels(entries)).toEqual([
       'SILK.Reveal.Reveal',
       'SILK.Reveal.RevealAppearance',
@@ -31,6 +40,19 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
       command: 'reveal.element',
       args: { id: 'a', revealed: true },
     });
+  });
+
+  it('a Person whose Appearance block was deleted: no Appearance toggle (v1.1 §C.2)', () => {
+    const entries = nodeMenu(
+      {
+        id: 'a',
+        class: 'person',
+        name: 'A',
+        infoBlocks: [{ _id: 'b', name: 'Appearance', text: '' }],
+      },
+      deps(),
+    );
+    expect(labels(entries)).not.toContain('SILK.Reveal.RevealAppearance');
   });
 
   it('a Revealed Ghost Location: Un-reveal, Materialize, no Appearance or Status', () => {

@@ -35,6 +35,8 @@ export interface SilkDocFlags {
   hood?: string;
   /** On a Player Note page: its authoring Campaign (§9). */
   campaign?: string;
+  /** On an Info Block page: it is the Appearance block (v1.1 §C.2). */
+  appearance?: boolean;
 }
 
 export const OWNERSHIP_NONE = 0;

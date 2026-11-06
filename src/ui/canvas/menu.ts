@@ -4,7 +4,12 @@
  * Pure; the canvas and the Element Detail window render the same entries.
  */
 import type { RevealKind } from '../../core/campaigns';
-import { hasStatus, type ElementClassId } from '../../core/elements';
+import {
+  appearanceBlock,
+  hasStatus,
+  type ElementClassId,
+  type InfoBlock,
+} from '../../core/elements';
 
 export interface MenuEntry {
   key: string;
@@ -60,14 +65,14 @@ function toggle(deps: MenuDeps, kind: Exclude<RevealKind, 'playerNote'>, id: str
 }
 
 export function nodeMenu(
-  el: { id: string; class: ElementClassId; name: string; uuid?: string },
+  el: { id: string; class: ElementClassId; name: string; uuid?: string; infoBlocks?: InfoBlock[] },
   deps: MenuDeps,
 ): MenuEntry[] {
   const { id } = el;
   const ids = deps.selection.includes(id) ? [...deps.selection] : [id];
   const entries: MenuEntry[] = [toggle(deps, 'element', id)];
-  if (el.class === 'person' || el.class === 'creature')
-    entries.push(toggle(deps, 'appearance', id));
+  // Only while the Appearance block exists (v1.1 §C.2).
+  if (appearanceBlock(el)) entries.push(toggle(deps, 'appearance', id));
   entries.push(command(deps, 'reveal.showToPlayers', { id }));
   if (hasStatus(el.class))
     entries.push({ ...command(deps, 'element.toggleStatus', { id }), action: 'status' });

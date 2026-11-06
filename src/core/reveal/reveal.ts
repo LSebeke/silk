@@ -21,7 +21,7 @@ import {
 } from '../campaigns';
 import { readConnection } from '../connections/connection';
 import { connectionsIn } from '../connections/rules';
-import { readElement, type StoryElement } from '../elements';
+import { appearanceBlock, readElement, type StoryElement } from '../elements';
 import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { Materializer } from '../materialize/materializer';
 import type { DocSnapshot, FoundryDocs, SystemMapping } from '../materialize/port';
@@ -117,7 +117,6 @@ export function createReveal(deps: RevealDeps): Reveal {
   function graph(): RevealGraph {
     const recs = records();
     const connections = connectionsIn(recs);
-    const appearanceName = deps.localize('SILK.InfoBlock.Appearance');
     const blocks = (id: string) => readElement(recs.get(id))?.infoBlocks ?? [];
     return {
       elementOfBlock(id) {
@@ -143,10 +142,13 @@ export function createReveal(deps: RevealDeps): Reveal {
         connections.filter((c) => c.from === id || c.to === id).map((c) => c.id),
       appearanceBlock(id) {
         const el = readElement(recs.get(id));
-        if (!el || !hasAppearance(el.class)) return undefined;
-        return el.infoBlocks?.find((b) => b.name === appearanceName)?._id;
+        return el ? appearanceBlock(el)?._id : undefined;
       },
-      hasAppearance: (id) => hasAppearance(readElement(recs.get(id))?.class ?? ''),
+      // Deleted Appearance block: nothing to Reveal (v1.1 §C.2).
+      hasAppearance(id) {
+        const el = readElement(recs.get(id));
+        return !!el && !!appearanceBlock(el);
+      },
     };
   }
 
@@ -254,6 +256,7 @@ export function createReveal(deps: RevealDeps): Reveal {
         );
       if (g.hasAppearance(el.id))
         map = setRevealed(map, 'appearance', el.id, revealed && !isHooded(found.main));
+      else if (hasAppearance(el.class)) map = setRevealed(map, 'appearance', el.id, false);
     }
     return withConnectionEnds(map);
   }
@@ -376,9 +379,26 @@ export function createReveal(deps: RevealDeps): Reveal {
     watch() {
       const wc = deps.workingCopy();
       const ends = new Map(connectionsIn(wc.records()).map((c) => [c.id, [c.from, c.to]]));
+      /** Person/Creature → its Appearance block: added or deleted re-applies the hood. */
+      const guards = new Map<string, string | undefined>();
+      const guardOf = (id: string) => {
+        const el = readElement(wc.get(id));
+        return el && hasAppearance(el.class) ? appearanceBlock(el)?._id : undefined;
+      };
+      for (const id of wc.records().keys()) guards.set(id, guardOf(id));
       return wc.watch((change) => {
         const touched = new Set<string>();
-        const gone: string[] = [];
+        const gone: [RevealKind, string][] = [];
+        for (const id of change.set) {
+          const guard = guardOf(id);
+          if (guards.has(id) && guards.get(id) !== guard) {
+            // A deleted Appearance block leaves nothing to Reveal (v1.1 §C.2).
+            if (!guard) gone.push(['appearance', id]);
+            if (read(id)?.uuid) touched.add(id);
+          }
+          guards.set(id, guard);
+        }
+        for (const id of change.deleted) guards.delete(id);
         for (const id of [...change.set, ...change.deleted]) {
           const before = ends.get(id);
           const c = readConnection(wc.get(id));
@@ -387,15 +407,15 @@ export function createReveal(deps: RevealDeps): Reveal {
           if (c) ends.set(id, [c.from, c.to]);
           else {
             ends.delete(id);
-            if (isRevealed(state, 'connection', id)) gone.push(id);
+            if (isRevealed(state, 'connection', id)) gone.push(['connection', id]);
           }
         }
-        if (!touched.size) return;
+        if (!touched.size && !gone.length) return;
         // Deleted Connections drop out of the maps (§11.5); their ends' pages may close.
         void serial(async () => {
           if (gone.length) {
             const drop = (m: RevelationMap) =>
-              gone.reduce((acc, id) => setRevealed(acc, 'connection', id, false), m);
+              gone.reduce((acc, [kind, id]) => setRevealed(acc, kind, id, false), m);
             const campaign = deps.adventure() ? await deps.campaign.current() : null;
             if (campaign)
               await deps.campaign.write(campaign, drop(await deps.campaign.read(campaign)));

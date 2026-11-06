@@ -12,7 +12,9 @@ import { canonicalJson, type JsonObject } from '../canon';
 import type { Command } from '../commands/registry';
 import {
   elementClass,
+  appearanceBlock,
   elementRecord,
+  hasAppearanceClass,
   isGhost,
   nextStatus,
   readElement,
@@ -103,7 +105,13 @@ export interface Materializer {
   setImage(id: string, img: string): Promise<void>;
   setFields(id: string, fields: ClassFields): Promise<void>;
   changeClass(id: string, cls: string): Promise<void>;
-  createInfoBlock(args: { elementId: string; name?: string; text?: string }): Promise<string>;
+  /** `appearance`: the Appearance preset (v1.1 §C.2), actor classes without one only. */
+  createInfoBlock(args: {
+    elementId: string;
+    name?: string;
+    text?: string;
+    appearance?: boolean;
+  }): Promise<string>;
   editInfoBlock(args: { id: string; name?: string; text?: string }): Promise<void>;
   deleteInfoBlock(id: string): Promise<void>;
   /** Moves an Info Block to position `index` among the element's Info Blocks (v1.1 §C.1). */
@@ -426,12 +434,17 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       await sync(id);
     },
 
-    async createInfoBlock({ elementId, name, text }) {
+    async createInfoBlock({ elementId, name, text, appearance }) {
       const el = element(elementId);
+      // v1.1 §C.2: the Appearance preset, on an actor class that has none.
+      if (appearance && (!hasAppearanceClass(el.class) || appearanceBlock(el)))
+        throw new Error(`Silk: "${el.name}" cannot get an Appearance block`);
+      const fallback = appearance ? 'SILK.InfoBlock.Appearance' : 'SILK.InfoBlock.New';
       const block: InfoBlock = {
         _id: deps.newId(),
-        name: name?.trim() || deps.localize('SILK.InfoBlock.New'),
+        name: name?.trim() || deps.localize(fallback),
         text: text ?? '',
+        ...(appearance ? { appearance: true as const } : {}),
       };
       if (!el.uuid) {
         await write(elementId, { infoBlocks: [...(el.infoBlocks ?? []), block] });
@@ -585,7 +598,7 @@ export function materializeCommands(m: Materializer): Command[] {
     ),
     command(
       'infoBlock.create',
-      async (args: { elementId: string; name?: string; text?: string }) => ({
+      async (args: { elementId: string; name?: string; text?: string; appearance?: boolean }) => ({
         id: await m.createInfoBlock(args),
       }),
     ),

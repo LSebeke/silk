@@ -396,6 +396,8 @@
       "Gone": "This element no longer exists.",
       "AddInfoBlock": "+ Info Block",
       "AddInfoBlockMenu": "Add Info Block…",
+      "AddAppearance": "+ Appearance",
+      "AddAppearanceHint": "Adds the Appearance block: the image stays hooded until it is Revealed.",
       "InfoBlockName": "Info Block name",
       "DeleteInfoBlockTitle": "Delete Info Block",
       "DeleteInfoBlockConfirm": "Delete the Info Block \"{name}\"?"

@@ -4,7 +4,7 @@ import { emptyRevelationMap, type RevelationMap } from '../campaigns';
 import { setup as materializeSetup } from '../materialize/test-setup';
 import { createReveal, revealCommands, type RevealStage } from './reveal';
 
-export const HOOD = 'modules/silk/assets/hooded.svg';
+export const HOOD = 'icons/svg/mystery-man-black.svg';
 
 export function setup(opts: { adventure?: boolean } = {}) {
   const hooks: ((id: string) => Promise<void>)[] = [];
@@ -41,6 +41,7 @@ export function setup(opts: { adventure?: boolean } = {}) {
     refreshPages: async (ids) => void pageRefreshes.push([...ids]),
   });
   reveal.reload();
+  reveal.watch();
   hooks.push((id) => reveal.afterMaterialize(id));
   t.lifecycle.contribute({ reconcile: () => reveal.reconcile() });
   for (const command of revealCommands(reveal)) t.registry.register(command);
