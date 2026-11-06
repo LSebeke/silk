@@ -4,7 +4,8 @@
  *   2. name field, focused → `element.rename`
  *   3. Connection editor, focused on its label, when created from a Node (`element.create`
  *      returned a `connectionId`) → `connection.setLabel`
- * Entry points (right-click, drag-out, palette) differ only in `open()` args; digit keys
+ * Entry points (right-click / right-drag, spec 1.1 §A; palette; Node menu) differ only in
+ * `open()` args (`from` + relative `connection.direction`); digit keys
  * skip the class box with `create()`. A Connection made on its own opens step 3 directly.
  * Pure: runs commands through the injected `run`.
  */

@@ -51,7 +51,7 @@ async function boxOf(locator: Locator) {
 
 const card = (page: Page, name: string) => page.locator('[data-silk-node]', { hasText: name });
 
-test('Connections: drag-out, digit keys, c, editor, Tab/q, rendering', async ({ gm }) => {
+test('Connections: right-drag, digit keys, c, editor, Tab/q, rendering', async ({ gm }) => {
   test.setTimeout(240_000);
   await resetCanvas(gm);
   const { id: alrik } = await api<{ id: string }>(gm, 'element.create', {
@@ -63,16 +63,14 @@ test('Connections: drag-out, digit keys, c, editor, Tab/q, rendering', async ({ 
   await api(gm, 'canvas.open');
   await expect(card(gm, 'Alrik')).toBeVisible();
 
-  // Drag-out from the outgoing point on the right → class box → Item. Counting real
-  // inputs: one drag gesture, one click: the connected Element exists (§14: ≤ 2).
-  const out = card(gm, 'Alrik').locator('[data-silk-point="out"][data-silk-point-side="right"]');
-  await expect(out).toBeVisible();
-  const p = await boxOf(out);
+  // Right-drag from Alrik onto the canvas → class box → Item. Counting real inputs: one
+  // drag gesture, one click: the connected Element exists (spec 1.1 §B.4: ≤ 2).
+  const p = await boxOf(card(gm, 'Alrik'));
   await gm.mouse.move(p.x + p.width / 2, p.y + p.height / 2);
-  await gm.mouse.down();
-  await gm.mouse.move(p.x + 150, p.y + 40, { steps: 5 });
-  await gm.mouse.move(p.x + 300, p.y + 80, { steps: 5 });
-  await gm.mouse.up();
+  await gm.mouse.down({ button: 'right' });
+  await gm.mouse.move(p.x + 250, p.y + 80, { steps: 5 });
+  await gm.mouse.move(p.x + 450, p.y + 120, { steps: 5 });
+  await gm.mouse.up({ button: 'right' });
   await expect(gm.locator('[data-silk-class-box]')).toBeVisible();
   await gm.locator('[data-silk-class-option="item"]').click();
   await expect.poll(async () => (await records(gm, 'connection')).length).toBe(1);

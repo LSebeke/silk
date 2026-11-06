@@ -196,3 +196,109 @@ test('a detached canvas re-detaches on open and works in its own window', async 
   await expect(gm.locator('[data-silk-canvas]')).toBeVisible();
   await expect.poll(() => savedDetached(gm)).toBe(false);
 });
+
+const connections = (page: Page): Promise<CanonRecord[]> =>
+  page.evaluate(() => {
+    const records = game.modules?.get('silk')?.session?.().workingCopy.records();
+    return [...(records?.values() ?? [])].filter((r) => r.kind === 'connection');
+  });
+
+/** Right-button drag in screen px; `onTheWay` runs mid-drag. */
+async function rightDrag(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  onTheWay?: () => Promise<void>,
+) {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2, { steps: 5 });
+  await page.mouse.move(to.x, to.y, { steps: 5 });
+  await onTheWay?.();
+  await page.mouse.up({ button: 'right' });
+}
+
+const center = (b: { x: number; y: number; width: number; height: number }) => ({
+  x: b.x + b.width / 2,
+  y: b.y + b.height / 2,
+});
+
+test('right-drag (spec 1.1 §A): connect, create from/onto a Node, menu, never pans', async ({
+  gm,
+}) => {
+  await resetCanvas(gm);
+  const run = <T>(name: string, args: object) => api(gm, name, args) as Promise<T>;
+  const { id: alrik } = await run<{ id: string }>('element.create', {
+    class: 'person',
+    name: 'Alrik',
+    at: { x: 200, y: 200 },
+  });
+  const { id: tavern } = await run<{ id: string }>('element.create', {
+    class: 'location',
+    name: 'Tavern',
+    at: { x: 700, y: 200 },
+  });
+  await openCanvas(gm);
+  const card = (name: string) => gm.locator('[data-silk-node]', { hasText: name });
+  await expect(card('Tavern')).toBeVisible();
+  // No Connection Points: edges float.
+  await expect(gm.locator('[data-silk-point]')).toHaveCount(0);
+  const pane = await boxOf(gm.locator('[data-silk-canvas] .svelte-flow__pane'));
+  const before = await viewportTransform(gm);
+
+  // Node A → Node B, Shift at release: incoming (Tavern → Alrik); rubber band + highlight.
+  await rightDrag(
+    gm,
+    center(await boxOf(card('Alrik'))),
+    center(await boxOf(card('Tavern'))),
+    async () => {
+      await expect(gm.locator('[data-silk-rubber-band]')).toBeVisible();
+      await expect(card('Tavern')).toHaveClass(/silk-drop-target/);
+      await gm.keyboard.down('Shift');
+    },
+  );
+  await gm.keyboard.up('Shift');
+  await expect(gm.locator('[data-silk-rubber-band]')).toHaveCount(0);
+  await expect(card('Tavern')).not.toHaveClass(/silk-drop-target/);
+  await expect.poll(async () => (await connections(gm)).length).toBe(1);
+  expect((await connections(gm))[0]?.data).toMatchObject({ from: tavern, to: alrik });
+  await expect(gm.locator('[data-silk-label-input]')).toBeFocused();
+  await gm.keyboard.press('Escape');
+
+  // canvas → canvas: standalone class box at the press point; right-drag never pans.
+  await rightDrag(gm, { x: pane.x + 300, y: pane.y + 600 }, { x: pane.x + 500, y: pane.y + 700 });
+  expect(await viewportTransform(gm)).toBe(before);
+  await gm.locator('[data-silk-class-option="note"]').click();
+  await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
+  await gm.keyboard.type('Loose');
+  await gm.keyboard.press('Enter');
+  await expect(gm.locator('[data-silk-label-input]')).toHaveCount(0);
+  await expect
+    .poll(
+      async () => (await elements(gm)).find((r) => r.data['name'] === 'Loose')?.data['position'],
+    )
+    .toEqual({ x: 300, y: 600 });
+  expect(await connections(gm)).toHaveLength(1);
+
+  // canvas → Node B: new element at the press point, connected new → B.
+  await rightDrag(gm, { x: pane.x + 700, y: pane.y + 600 }, center(await boxOf(card('Tavern'))));
+  await gm.locator('[data-silk-class-option="note"]').click();
+  await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
+  await gm.keyboard.type('Rumour');
+  await gm.keyboard.press('Enter');
+  await expect(gm.locator('[data-silk-label-input]')).toBeFocused();
+  await gm.keyboard.press('Escape');
+  const rumour = (await elements(gm)).find((r) => r.data['name'] === 'Rumour');
+  expect(rumour?.data['position']).toEqual({ x: 700, y: 600 });
+  await expect.poll(async () => (await connections(gm)).length).toBe(2);
+  expect((await connections(gm)).map((c) => c.data)).toContainEqual(
+    expect.objectContaining({ from: rumour?.id, to: tavern }),
+  );
+
+  // Node A → Node A: the Node context menu.
+  await card('Alrik').click({ button: 'right' });
+  await expect(gm.locator(`[data-silk-menu="${alrik}"]`)).toBeVisible();
+  await gm.keyboard.press('Escape');
+  await expect(gm.locator('[data-silk-menu]')).toHaveCount(0);
+  expect(await viewportTransform(gm)).toBe(before);
+});

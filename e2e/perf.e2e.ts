@@ -117,7 +117,7 @@ test(
 );
 
 test(
-  'create connected: ≤ 2 real input events per entry point',
+  'create connected: fastest path ≤ 2 real input events per entry point',
   { tag: '@perf' },
   async ({ gm }) => {
     test.setTimeout(240_000);
@@ -172,15 +172,25 @@ test(
       await expect(gm.locator('[data-silk-class-box]')).toHaveCount(0);
     }
 
-    await entryPoint('drag-out', async () => {
-      const point = alrik.locator('[data-silk-point="out"][data-silk-point-side="right"]');
-      const p = await point.boundingBox();
-      if (!p) throw new Error('no connection point');
+    await entryPoint('right-drag Node → canvas', async () => {
+      const p = await alrik.boundingBox();
+      if (!p) throw new Error('no card');
       await gm.mouse.move(p.x + p.width / 2, p.y + p.height / 2);
-      await gm.mouse.down();
-      await gm.mouse.move(p.x + 150, p.y + 200, { steps: 5 });
-      await gm.mouse.move(p.x + 300, p.y + 300, { steps: 5 });
-      await gm.mouse.up();
+      await gm.mouse.down({ button: 'right' });
+      await gm.mouse.move(p.x + 250, p.y + 200, { steps: 5 });
+      await gm.mouse.move(p.x + 400, p.y + 300, { steps: 5 });
+      await gm.mouse.up({ button: 'right' });
+      await gm.locator('[data-silk-class-option="note"]').click();
+    });
+
+    await entryPoint('right-drag canvas → Node', async () => {
+      const p = await alrik.boundingBox();
+      if (!p) throw new Error('no card');
+      await gm.mouse.move(p.x - 200, p.y + 300);
+      await gm.mouse.down({ button: 'right' });
+      await gm.mouse.move(p.x, p.y + 100, { steps: 5 });
+      await gm.mouse.move(p.x + p.width / 2, p.y + p.height / 2, { steps: 5 });
+      await gm.mouse.up({ button: 'right' });
       await gm.locator('[data-silk-class-option="note"]').click();
     });
 
