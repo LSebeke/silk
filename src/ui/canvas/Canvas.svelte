@@ -11,7 +11,6 @@
     useSvelteFlow,
     type EdgeTypes,
     type NodeTypes,
-    type OnConnectEnd,
     type Viewport,
   } from '@xyflow/svelte';
   import { onDestroy, setContext, untrack } from 'svelte';
@@ -38,7 +37,6 @@
   import SearchBox from './SearchBox.svelte';
   import GroupFrame from './GroupFrame.svelte';
   import { canvasBridge } from './bridge';
-  import { pointKind } from './connection-points';
   import { CANVAS_CONTEXT, PALETTE_MIME, type CanvasContext } from './context';
   import { toFlowEdges, type ConnectionEdge as FlowEdge } from './flow-edges';
   import {
@@ -49,6 +47,7 @@
     type GroupNode,
   } from './flow-model';
   import { canvasKey, confirmKey } from './keys';
+  import { rightDragAction } from './right-drag';
   import { STATUS_PROMPT, type StatusPrompt } from './status-prompt';
 
   let props: { ctx: CanvasContext } = $props();
@@ -332,16 +331,6 @@
     flushView();
   });
 
-  function onPaneContextMenu({ event }: { event: MouseEvent }) {
-    event.preventDefault();
-    if (!root) return;
-    const rect = root.getBoundingClientRect();
-    pipeline.open({
-      at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }),
-      anchor: { x: event.clientX - rect.left, y: event.clientY - rect.top },
-    });
-  }
-
   // --- Connections (T7) ---
 
   const local = (event: { clientX: number; clientY: number }) => {
@@ -358,27 +347,6 @@
     const { id } = (await ctx.run('connection.create', { from, to, direction })) as { id: string };
     pipeline.editConnection(id);
   }
-
-  /** Drag-out from a Connection Point: onto a Node connects, onto the canvas opens the class box. */
-  const onConnectEnd: OnConnectEnd = (event, state) => {
-    const from = state.fromNode?.id;
-    if (!from) return;
-    const point = 'changedTouches' in event ? event.changedTouches[0] : event;
-    if (!point) return;
-    const direction = pointKind(state.fromHandle?.id);
-    const to = state.toNode?.id ?? nodeAt(point);
-    if (to === from) return;
-    if (to) {
-      connect(from, to, direction).catch(fail);
-      return;
-    }
-    pipeline.open({
-      at: flow.screenToFlowPosition({ x: point.clientX, y: point.clientY }),
-      anchor: local(point),
-      from,
-      connection: { direction },
-    });
-  };
 
   /** Where a Node created from `origin` goes: to its right, stacked by existing Connections. */
   function besideNode(origin: string) {
@@ -574,12 +542,13 @@
     }),
   );
 
-  /** Palette drag: the Node under the pointer highlights as the connect target. */
+  /** Palette drag, right-drag: the Node under the pointer highlights as the connect target. */
   let dropEl: HTMLElement | undefined;
-  function dropTarget(event: DragEvent) {
-    const el = (root?.ownerDocument ?? document)
+  function dropTarget(event: { clientX: number; clientY: number }, except?: string) {
+    let el = (root?.ownerDocument ?? document)
       .elementFromPoint(event.clientX, event.clientY)
       ?.closest<HTMLElement>('[data-silk-node]');
+    if (except && el?.dataset['silkNode'] === except) el = null;
     if (el !== dropEl) {
       dropEl?.classList.remove('silk-drop-target');
       el?.classList.add('silk-drop-target');
@@ -634,25 +603,103 @@
    * Node context menu (§8 Controls, §10.3): actions, plus a class box to the right of them
    * that creates a connected Node.
    */
-  function onNodeContextMenu({
-    event,
-    node,
-  }: {
-    event: MouseEvent;
-    node: ElementNode | GroupNode;
-  }) {
-    // Inside a frame: create there, as on the canvas (the new Node joins the frame).
-    if (node.type === 'frame') return onPaneContextMenu({ event });
-    event.preventDefault();
-    const el = readElement(workingCopy.get(node.id));
+  function openNodeMenu(id: string, event: { clientX: number; clientY: number }) {
+    const el = readElement(workingCopy.get(id));
     if (!el) return;
     const at = local(event);
-    menu = { kind: 'node', id: node.id, ...at, entries: nodeMenu(el, menuDeps()) };
+    menu = { kind: 'node', id, ...at, entries: nodeMenu(el, menuDeps()) };
     pipeline.open({
-      at: besideNode(node.id),
+      at: besideNode(id),
       anchor: { x: at.x + MENU_WIDTH, y: at.y },
-      from: node.id,
+      from: id,
     });
+  }
+
+  // --- Right-click / right-drag (spec 1.1 §A): decided by where the press starts and ends ---
+
+  /** Below this many px the press is a click, not a drag (no rubber band). */
+  const DRAG_MIN = 4;
+  let rightDrag = $state<
+    | { start: string | undefined; from: { clientX: number; clientY: number }; to?: Point }
+    | undefined
+  >();
+  /** Rubber band, window-local: from the press point to the cursor. */
+  const band = $derived.by(() => {
+    if (!rightDrag?.to) return undefined;
+    const a = local(rightDrag.from);
+    return { x1: a.x, y1: a.y, x2: rightDrag.to.x, y2: rightDrag.to.y };
+  });
+
+  /** Edges, labels and overlays keep their own right-click (edge context menu, inputs). */
+  function rightTarget(target: EventTarget | null) {
+    const el = target as HTMLElement | null;
+    if (!el?.closest?.('.svelte-flow__pane')) return false;
+    return !el.closest('.svelte-flow__edge, .svelte-flow__edgelabel-renderer, input, textarea');
+  }
+
+  function onPointerDown(event: PointerEvent) {
+    if (event.button !== 2 || !rightTarget(event.target)) return;
+    const win = root?.ownerDocument.defaultView;
+    if (!win) return;
+    menu = undefined;
+    pipeline.cancel();
+    const start = (event.target as HTMLElement).closest<HTMLElement>('[data-silk-node]')?.dataset[
+      'silkNode'
+    ];
+    const from = { clientX: event.clientX, clientY: event.clientY };
+    rightDrag = { start, from };
+    const move = (e: PointerEvent) => {
+      if (!rightDrag) return;
+      const far = Math.hypot(e.clientX - from.clientX, e.clientY - from.clientY) >= DRAG_MIN;
+      if (!far && !rightDrag.to) return;
+      rightDrag = { ...rightDrag, to: local(e) };
+      dropTarget(e, start);
+    };
+    const stop = () => {
+      win.removeEventListener('pointermove', move, true);
+      win.removeEventListener('pointerup', up, true);
+      win.removeEventListener('pointercancel', stop, true);
+      win.removeEventListener('blur', stop);
+      dropEl?.classList.remove('silk-drop-target');
+      dropEl = undefined;
+      rightDrag = undefined;
+    };
+    const up = (e: PointerEvent) => {
+      if (e.button !== 2) return;
+      stop();
+      finishRightDrag(start, from, e);
+    };
+    win.addEventListener('pointermove', move, true);
+    win.addEventListener('pointerup', up, true);
+    win.addEventListener('pointercancel', stop, true);
+    win.addEventListener('blur', stop);
+  }
+
+  function finishRightDrag(
+    start: string | undefined,
+    from: { clientX: number; clientY: number },
+    end: PointerEvent,
+  ) {
+    const action = rightDragAction(start, nodeAt(end), end);
+    root?.focus();
+    if (action.kind === 'nodeMenu') return openNodeMenu(action.id, end);
+    if (action.kind === 'connect') {
+      connect(action.from, action.to, action.direction).catch(fail);
+      return;
+    }
+    const point = action.at === 'end' ? end : from;
+    pipeline.open({
+      at: flow.screenToFlowPosition({ x: point.clientX, y: point.clientY }),
+      anchor: local(point),
+      ...(action.from ? { from: action.from, connection: { direction: action.direction } } : {}),
+    });
+  }
+
+  /** The native menu never shows on the canvas; the press decides (above). */
+  function onContextMenu(event: MouseEvent) {
+    if (!rightTarget(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   function onEdgeContextMenu({ event, edge }: { event: MouseEvent; edge: FlowEdge }) {
@@ -700,6 +747,8 @@
   ondragover={onDragOver}
   ondragleave={onDragLeave}
   ondrop={onDrop}
+  onpointerdowncapture={onPointerDown}
+  oncontextmenucapture={onContextMenu}
 >
   <SvelteFlow
     bind:nodes
@@ -707,10 +756,9 @@
     {nodeTypes}
     {edgeTypes}
     connectionMode={ConnectionMode.Loose}
-    onbeforeconnect={() => false}
-    onconnectend={onConnectEnd}
+    nodesConnectable={false}
+    panOnDrag={[0, 1]}
     onnodeclick={onNodeClick}
-    onnodecontextmenu={onNodeContextMenu}
     onedgecontextmenu={onEdgeContextMenu}
     initialViewport={saved}
     fitView={!saved}
@@ -721,13 +769,17 @@
     colorMode="light"
     onmovestart={onMoveStart}
     onmoveend={onMoveEnd}
-    onpanecontextmenu={onPaneContextMenu}
     onpaneclick={onPaneClick}
     onnodedragstop={onNodeDragStop}
     onselectionchange={onSelectionChange}
   >
     <Background gap={40} />
   </SvelteFlow>
+  {#if band}
+    <svg class="silk-rubber-band" data-silk-rubber-band aria-hidden="true">
+      <line x1={band.x1} y1={band.y1} x2={band.x2} y2={band.y2} />
+    </svg>
+  {/if}
   <ClassBox />
   {#if menu}
     <ContextMenu
@@ -902,6 +954,20 @@
   }
   .silk-canvas-tools button.active {
     border-color: #2b6cb0;
+  }
+  .silk-rubber-band {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .silk-rubber-band line {
+    stroke: #2b6cb0;
+    stroke-width: 2;
+    stroke-dasharray: 6 4;
   }
   .silk-canvas :global(.silk-drop-target) {
     outline: 3px solid #2b6cb0;
