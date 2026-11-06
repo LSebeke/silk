@@ -49,7 +49,7 @@ _Avoid_: merge Revelation Maps, merge Campaigns
 
 **Cover**: The image a Revealed Story Element shows players first, before any of its Info Blocks are Revealed.
 
-**Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
+**Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. A Person's or Creature's Appearance block guards its image: until it is Revealed, players see a hooded image. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
 
 **Player Note**: An Info Block the players write on a Story Element to record their own thoughts and findings. Any player of the party can write, edit or delete any Player Note, and the whole party sees them. Player Notes are kept together on the element and become part of the Canon like other Info Blocks; players of other Campaigns see one only if their GM Reveals it. The GM can turn one into an ordinary Info Block.
 
@@ -81,8 +81,10 @@ _Avoid_: auto-layout
 
 **Visual Group**: A labelled frame on a World Canvas that holds Nodes for the GM's overview. Visual Groups can sit inside other Visual Groups. Visual Groups are layout: they are part of the Canon like Node positions, but do not change the Story.
 
-**Connection Point**: A spot on a Node from which the GM drags out a Connection. The kind of Connection Point (outgoing, incoming or mutual) sets the new Connection's direction. Connections attach on the side of the Node that faces the other Node.
-
 **Status**: The one toggleable state an Element Class may carry, e.g. dead for a Person, happened for an Event, open/done/failed for a Quest. Classes without one have no Status.
 
-**Creation Pipeline**: The fixed sequence every way of creating a Story Element on the canvas ends in: pick the Element Class, type the name, and, if it was created from another Node, label the Connection.
+**Creation Pipeline**: The fixed sequence every way of creating a Story Element on the canvas ends in: pick the Element Class, take the Source Step if the class has one, type the name, and, if it was created from or onto another Node, label the Connection.
+
+**Source Step**: The Creation Pipeline step, after the class, where the GM picks what a new Story Element starts from: a compendium entry, a Generator, or blank. Only some Element Classes have one.
+
+**Generator**: A tool offered in the Source Step that builds a new Foundry document for the GM, e.g. the DSA5 Master's Workshop NPC generator (NSC Zucht) for a Person.
