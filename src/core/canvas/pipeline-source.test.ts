@@ -263,6 +263,69 @@ describe('Source providers (Compendium T33, Generator T34)', () => {
   });
 });
 
+describe('Compendium World pick (spec 1.1 §B.2 Outcome)', () => {
+  const world = (uuid: string, name: string): SourceProvider => ({
+    unavailable: () => undefined,
+    pick: async () => ({ adopt: { uuid }, name }),
+  });
+
+  /** A stand-in `adopt.doc` that records its args. */
+  function withAdopt(s: ReturnType<typeof setup>, result: object | null) {
+    const adopted: object[] = [];
+    s.registry.register({
+      name: 'adopt.doc',
+      title: 'adopt.doc',
+      available: () => true,
+      run: async (args: object) => {
+        adopted.push(args);
+        return result;
+      },
+    });
+    return adopted;
+  }
+
+  it('Adopts the world actor instead of creating; the name step is prefilled', async () => {
+    const s = setup({ compendium: world('Actor.ulf', 'Ulf') });
+    const adopted = withAdopt(s, { id: 'el-ulf', name: 'Ulf' });
+    await s.pipeline.create({ at: { x: 7, y: 8 } }, 'person');
+    expect(await s.pipeline.pickSource('compendium')).toBe('el-ulf');
+    expect(adopted).toEqual([{ uuid: 'Actor.ulf', class: 'person', at: { x: 7, y: 8 } }]);
+    expect(s.commands()).toEqual(['adopt.doc']);
+    expect(s.pipeline.get()).toEqual({ step: 'name', id: 'el-ulf' });
+    await s.pipeline.submitName('Ulf');
+    expect(s.commands()).toEqual(['adopt.doc']);
+  });
+
+  it('from a Node: connects with the drag direction, then the Connection editor', async () => {
+    const s = setup({ compendium: world('Actor.ulf', 'Ulf') });
+    const adopted = withAdopt(s, { id: 'el-ulf', name: 'Ulf', connectionId: 'c1' });
+    await s.pipeline.create(
+      { at: { x: 0, y: 0 }, from: 'gareth', connection: { direction: 'in' } },
+      'person',
+    );
+    await s.pipeline.pickSource('compendium');
+    expect(adopted).toEqual([
+      {
+        uuid: 'Actor.ulf',
+        class: 'person',
+        at: { x: 0, y: 0 },
+        connectTo: 'gareth',
+        connection: { direction: 'in' },
+      },
+    ]);
+    await s.pipeline.submitName('');
+    expect(s.pipeline.get()).toEqual({ step: 'connection', id: 'c1', elementId: 'el-ulf' });
+  });
+
+  it('a cancelled Adopt ends the pipeline', async () => {
+    const s = setup({ compendium: world('Actor.ulf', 'Ulf') });
+    withAdopt(s, null);
+    await s.pipeline.create({ at: { x: 0, y: 0 } }, 'person');
+    expect(await s.pipeline.pickSource('compendium')).toBeUndefined();
+    expect(s.pipeline.get()).toEqual({ step: 'idle' });
+  });
+});
+
 describe('Interaction budget with a Source Step (spec 1.1 §B.4)', () => {
   /** Each step is one user action; the element is connected once the last one resolves. */
   it.each<[string, (p: CreationPipeline, from: string) => (() => Promise<unknown>)[]]>([

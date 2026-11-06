@@ -10,6 +10,7 @@ import type {
   DocumentName,
   FolderKey,
   FoundryDocs,
+  ImportData,
 } from '../core/materialize/port';
 import { SILK_WRITE } from './working-copy-journal';
 
@@ -48,6 +49,8 @@ export interface FoundryDocumentClass {
 export interface FoundryApi {
   documentClass(name: DocumentName | 'Folder'): FoundryDocumentClass;
   fromUuid(uuid: string): FoundryDoc | null | undefined;
+  /** A compendium entry's data as `collection.fromCompendium` prepares it for import. */
+  importData(uuid: string): Promise<object | undefined>;
   journal(id: string): FoundryDoc | null | undefined;
   folders(): Iterable<{ id: string | null; type: string; flags: Record<string, unknown> }>;
   /** `foundry.data.operators.ForcedReplacement.create`. */
@@ -124,6 +127,7 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
       return doc.uuid;
     },
     get: (uuid) => snapshot(api.fromUuid(uuid)),
+    importData: async (uuid) => (await api.importData(uuid)) as ImportData | undefined,
     async delete(uuid) {
       await must(uuid).delete?.({ ...SILK_WRITE });
     },

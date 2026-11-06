@@ -158,6 +158,9 @@ test('the Creation Pipeline Materializes after the name step, with the typed nam
   await pane.click({ button: 'right', position: { x: 400, y: 300 } });
   await gm.locator('[data-silk-class-search]').fill('Pers');
   await gm.locator('[data-silk-class-search]').press('Enter');
+  // Source Step (spec 1.1 §B.1): → Blank.
+  await expect(gm.locator('[data-silk-source-step]')).toBeFocused();
+  await gm.keyboard.press('ArrowRight');
   await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
   await gm.keyboard.type('Pipeline Pete');
   await gm.keyboard.press('Enter');

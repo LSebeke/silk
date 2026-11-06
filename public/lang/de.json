@@ -158,6 +158,15 @@
       "GeneratorGMOnly": "Nur die Spielleitung kann den Generator nutzen",
       "GeneratorFailed": "Der NSC-Generator (NSC Zucht) konnte nicht geladen werden"
     },
+    "Picker": {
+      "Title": "Kompendium",
+      "Search": "Suchen…",
+      "Sources": "Quellen",
+      "Results": "Ergebnisse",
+      "All": "Alle",
+      "World": "Welt",
+      "None": "Keine Treffer"
+    },
     "Canvas": {
       "Title": "Weltleinwand",
       "ClassSearch": "Klasse…",
@@ -296,6 +305,7 @@
       "scene": "Silk-Szenen"
     },
     "Materialize": {
+      "CompendiumMissing": "{name}: Der Kompendiumseintrag fehlt; leer materialisiert.",
       "Implicit": "{name} materialisiert.",
       "VisibleTitle": "Sichtbare materialisieren",
       "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen.",

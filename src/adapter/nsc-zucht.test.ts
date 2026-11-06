@@ -99,7 +99,7 @@ describe('NSC Zucht Source Step provider (spec 1.1 §B.3)', () => {
     t.create({ uuid: 'Actor.silk', silk: true });
     t.create({ uuid: 'Actor.pc', type: 'character' });
     t.create({ uuid: 'Actor.ok' });
-    expect((await picking)?.source).toMatchObject({ actorUuid: 'Actor.ok' });
+    expect(await picking).toMatchObject({ source: { actorUuid: 'Actor.ok' } });
   });
 
   it('closed without generating: no pick (back to the Source Step)', async () => {

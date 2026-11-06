@@ -312,18 +312,17 @@ test('Source Step (spec 1.1 §B.1): compass after Person/Creature, greyed choice
   const compass = gm.locator('[data-silk-source-step]');
   const choice = (kind: string) => gm.locator(`[data-silk-source-choice="${kind}"]`);
 
-  // Class box → Creature → compass; Generator not offered, Compendium not yet available.
+  // Class box → Creature → compass; Generator not offered.
   await pane.click({ button: 'right', position: { x: 300, y: 200 } });
   await gm.locator('[data-silk-class-option="creature"]').click();
   await expect(compass).toBeFocused();
   await expect(compass).toHaveAttribute('data-silk-source-step', 'creature');
   await expect(choice('generator')).toHaveAttribute('aria-disabled', 'true');
   await expect(choice('generator')).toHaveAttribute('title', /.+/);
-  await expect(choice('compendium')).toHaveAttribute('aria-disabled', 'true');
+  await expect(choice('compendium')).toHaveAttribute('aria-disabled', 'false');
   await expect(choice('blank')).toHaveAttribute('aria-disabled', 'false');
 
   // Greyed: arrow and click do nothing.
-  await gm.keyboard.press('ArrowUp');
   await gm.keyboard.press('ArrowLeft');
   await choice('generator').click({ force: true });
   await expect(compass).toBeVisible();
@@ -355,4 +354,123 @@ test('Source Step (spec 1.1 §B.1): compass after Person/Creature, greyed choice
   const [wolf] = await elements(gm);
   expect(wolf?.data).toMatchObject({ class: 'creature', name: 'Wolf' });
   expect(wolf?.data['source']).toBeUndefined();
+});
+
+test('Compendium picker (spec 1.1 §B.2): pack pick is a Ghost world, World pick Adopts', async ({
+  gm,
+}) => {
+  await resetCanvas(gm);
+  const { packId, brin, ulf } = await gm.evaluate(async () => {
+    const name = 'silk-npcs';
+    const existing = game.packs?.get(`world.${name}`);
+    const pack =
+      existing ??
+      (await foundry.documents.collections.CompendiumCollection.createCompendium({
+        type: 'Actor',
+        label: 'Silk NPCs',
+        name,
+      } as never));
+    const make = (data: object, options: object = {}) =>
+      CONFIG.Actor.documentClass.create(data as never, options) as unknown as Promise<{
+        uuid: string;
+      }>;
+    const brin = await make(
+      { name: 'Brin', type: 'npc', img: 'icons/svg/cowled.svg' },
+      { pack: pack.collection },
+    );
+    await make({ name: 'Brinwolf', type: 'creature' }, { pack: pack.collection });
+    const ulf = await make({ name: 'Ulfried', type: 'npc' });
+    return { packId: pack.collection, brin: brin.uuid, ulf: ulf.uuid };
+  });
+  await openCanvas(gm);
+  const canvas = gm.locator('[data-silk-canvas]');
+  const picker = gm.locator('[data-silk-picker]');
+  const search = gm.locator('[data-silk-picker-search]');
+  const nameInput = gm.locator('[data-silk-name-input]');
+
+  // Digit → compass → ↑ opens the picker, search focused; the pack lists its npc only.
+  await canvas.focus();
+  await gm.keyboard.press('Digit1');
+  await gm.keyboard.press('ArrowUp');
+  await expect(search).toBeFocused();
+  await expect(gm.locator(`[data-silk-picker-source="${packId}"] .count`)).toHaveText('1');
+  await expect(gm.locator('[data-silk-picker-source="all"]')).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+
+  // Esc goes back to the Source Step.
+  await gm.keyboard.press('Escape');
+  await expect(picker).toHaveCount(0);
+  await expect(gm.locator('[data-silk-source-step]')).toBeFocused();
+
+  // Pack pick: search, Enter → name step prefilled.
+  await gm.keyboard.press('ArrowUp');
+  await expect(search).toBeFocused();
+  await gm.keyboard.type('brin');
+  await expect(gm.locator('[data-silk-picker-row]')).toHaveCount(1);
+  await gm.keyboard.press('Enter');
+  await expect(picker).toHaveCount(0);
+  await expect(nameInput).toBeFocused();
+  await expect(nameInput).toHaveValue('Brin');
+  await gm.keyboard.type('Brin Sohn');
+  await gm.keyboard.press('Enter');
+  await expect(nameInput).toHaveCount(0);
+  const ghost = (await elements(gm)).find((r) => r.data['name'] === 'Brin Sohn');
+  expect(ghost?.data).toMatchObject({
+    class: 'person',
+    source: { kind: 'compendium', uuid: brin },
+  });
+  expect(ghost?.data['uuid']).toBeUndefined();
+
+  // Materialize imports the entry under the element's name, with a Companion Journal.
+  await api(gm, 'materialize.elements', { ids: [ghost?.id] });
+  const imported = await gm.evaluate(
+    ([id, source]) => {
+      const el = game.modules
+        ?.get('silk')
+        ?.session?.()
+        .workingCopy.get(id as string);
+      const actor = fromUuidSync((el?.data as { uuid: string }).uuid) as unknown as {
+        name: string;
+        type: string;
+        pack: string | null;
+        _stats: { compendiumSource: string };
+        flags: { silk: { id: string; companion: string } };
+      };
+      const companion = game.journal?.get(actor.flags.silk.companion);
+      return {
+        name: actor.name,
+        type: actor.type,
+        pack: actor.pack,
+        fromPack: actor._stats.compendiumSource === source,
+        silk: actor.flags.silk.id,
+        pages: companion?.pages.map((p) => p.name) ?? [],
+      };
+    },
+    [ghost?.id, brin] as const,
+  );
+  expect(imported).toMatchObject({
+    name: 'Brin Sohn',
+    type: 'npc',
+    pack: null,
+    fromPack: true,
+    silk: ghost?.id,
+  });
+  expect(imported.pages.length).toBeGreaterThan(1);
+
+  // World pick: Adopts the actor in place.
+  await canvas.focus();
+  await gm.keyboard.press('Digit1');
+  await gm.keyboard.press('ArrowUp');
+  await expect(search).toBeFocused();
+  await gm.locator('[data-silk-picker-source="world"]').click();
+  await search.fill('Ulfried');
+  await search.press('Enter');
+  await expect(nameInput).toHaveValue('Ulfried');
+  await nameInput.press('Enter');
+  await expect(nameInput).toHaveCount(0);
+  const adopted = (await elements(gm)).find((r) => r.data['name'] === 'Ulfried');
+  expect(adopted?.data).toMatchObject({ class: 'person', uuid: ulf });
+  expect(adopted?.data['source']).toBeUndefined();
 });

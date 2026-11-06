@@ -20,6 +20,7 @@ import {
   connectionsIn,
   resolveCreateFrom,
   validTypes,
+  type CreateFromConnection,
 } from '../connections';
 import {
   elementClass,
@@ -123,6 +124,8 @@ export interface AdoptDocArgs {
   at?: Point;
   /** Dropped onto this Node: connect it to the new element (§6 Ways in). */
   connectTo?: string;
+  /** With `connectTo`: the wanted Connection, direction relative to `connectTo` (§10.3). */
+  connection?: CreateFromConnection;
   /** Inventory item: also adopt its actor (and add owns). */
   alsoAdoptActor?: boolean;
 }
@@ -509,7 +512,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     const origin = element(args.connectTo);
     const created = element(done.id);
     if (origin && created && origin.id !== created.id) {
-      const connection = resolveCreateFrom(origin.class, created.class);
+      const connection = resolveCreateFrom(origin.class, created.class, args.connection);
       const made = (await deps.run('connection.create', {
         from: origin.id,
         to: created.id,

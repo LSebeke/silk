@@ -38,6 +38,8 @@ export interface PipelineAdopt {
   classes: ElementClassId[];
   /** Dropped onto this Node. */
   connectTo?: string;
+  /** With `connectTo`: the wanted Connection, direction relative to `connectTo`. */
+  connection?: ElementCreateArgs['connection'];
   alsoAdoptActor?: boolean;
 }
 
@@ -84,11 +86,13 @@ export interface SourceRequest {
   signal: AbortSignal;
 }
 
-/** The new element is `element.create`d with `source`; the name step is prefilled with `name`. */
-export interface SourcePick {
-  source: Exclude<ElementSource, { kind: 'blank' }>;
-  name: string;
-}
+/**
+ * The new element is `element.create`d with `source`; the name step is prefilled with `name`.
+ * `adopt` instead (a Compendium World actor, 1.1 §B.2 Outcome): the doc is Adopted (§6).
+ */
+export type SourcePick =
+  | { source: Exclude<ElementSource, { kind: 'blank' }>; name: string }
+  | { adopt: { uuid: string }; name: string };
 
 export type SourceProviders = Partial<Record<Exclude<SourceKind, 'blank'>, SourceProvider>>;
 
@@ -227,7 +231,29 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
       set({ ...current, choices });
       return undefined;
     }
+    if ('adopt' in pick) return adoptFromSource(current, pick.adopt.uuid);
     return createFromSource(current, pick.source, pick.name);
+  }
+
+  /** World pick: `adopt.doc` with the Source Step's origin; connected like a creation. */
+  async function adoptFromSource(current: Extract<PipelineStep, { step: 'source' }>, uuid: string) {
+    sourceCreating = true;
+    try {
+      const { at, from, connection } = current;
+      const id = await adoptAs(
+        at,
+        {
+          uuid,
+          classes: [current.class],
+          ...(from ? { connectTo: from } : {}),
+          ...(connection ? { connection } : {}),
+        },
+        current.class,
+      );
+      return id || undefined;
+    } finally {
+      sourceCreating = false;
+    }
   }
 
   async function createFromSource(
@@ -264,12 +290,13 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
   /** Adopt: `adopt.doc`, then the name step pre-filled with the doc's name. */
   async function adoptAs(at: Point, adopt: PipelineAdopt, id: ElementClassId) {
     set({ step: 'idle' });
-    const { uuid, connectTo, alsoAdoptActor } = adopt;
+    const { uuid, connectTo, connection, alsoAdoptActor } = adopt;
     const result = (await deps.run('adopt.doc', {
       uuid,
       class: id,
       at,
       ...(connectTo ? { connectTo } : {}),
+      ...(connectTo && connection ? { connection } : {}),
       ...(alsoAdoptActor !== undefined ? { alsoAdoptActor } : {}),
     })) as { id: string; name: string; existing?: boolean; connectionId?: string } | null;
     if (!result || result.existing) return result?.id ?? '';

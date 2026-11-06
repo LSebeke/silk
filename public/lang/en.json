@@ -158,6 +158,15 @@
       "GeneratorGMOnly": "Only the GM can use the generator",
       "GeneratorFailed": "The NPC generator (NSC Zucht) could not be loaded"
     },
+    "Picker": {
+      "Title": "Compendium",
+      "Search": "Search…",
+      "Sources": "Sources",
+      "Results": "Results",
+      "All": "All",
+      "World": "World",
+      "None": "No matches"
+    },
     "Canvas": {
       "Title": "World Canvas",
       "ClassSearch": "Class…",
@@ -296,6 +305,7 @@
       "scene": "Silk Scenes"
     },
     "Materialize": {
+      "CompendiumMissing": "{name}: its compendium entry is gone; Materialized blank.",
       "Implicit": "Materialized {name}.",
       "VisibleTitle": "Materialize visible",
       "VisibleConfirm": "Materialize {count} elements shown on the canvas? Player Characters are skipped.",

@@ -44,7 +44,7 @@ import {
   type DocPlan,
   type LayoutContext,
 } from './layout';
-import type { DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
+import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
 export type MaterializeMode = 'immediate' | 'onDemand';
 
@@ -135,6 +135,17 @@ export interface Materializer {
 
 const FOLDER_DOC = (cls: ElementClassId) => documentName(cls);
 
+type Json = Record<string, unknown>;
+const isObject = (v: unknown): v is Json => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Deep merge of `over` into a copy of `base` (objects merge, the rest replaces). */
+function mergeSystem(base: Json, over: Json): Json {
+  const out: Json = { ...base };
+  for (const [key, value] of Object.entries(over))
+    out[key] = isObject(value) && isObject(out[key]) ? mergeSystem(out[key], value) : value;
+  return out;
+}
+
 export function createMaterializer(deps: MaterializerDeps): Materializer {
   const { docs, system } = deps;
   const ctx: LayoutContext = { system, newId: deps.newId, localize: (k) => deps.localize(k) };
@@ -197,7 +208,8 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       ? await docs.ensureFolder('JournalEntry', 'companions', folderName('companions'))
       : undefined;
     const folders = companion ? { main, companion } : { main };
-    const plan = deps.restorePlan?.(el, folders) ?? planDocs(el, folders, ctx);
+    const plan =
+      deps.restorePlan?.(el, folders) ?? (await fromSource(el, planDocs(el, folders, ctx)));
     const parent = name === 'Item' ? deps.parentOf?.(id) : undefined;
     if (parent) plan.main.folder = null;
     // Companion first: the doc's flag points at it.
@@ -234,6 +246,38 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       flags: { silk: main.flags.silk },
     });
     return uuid;
+  }
+
+  /**
+   * Ghost worlds (1.1 §B.1): a Compendium-sourced element imports its entry now. The entry's
+   * data replaces the blank main doc; Silk's id, name, folder, ownership and flags stay.
+   */
+  async function fromSource(el: StoryElement, plan: DocPlan): Promise<DocPlan> {
+    if (el.source?.kind !== 'compendium') return plan;
+    const data = await docs.importData(el.source.uuid);
+    if (!data) {
+      deps.notify(deps.localize('SILK.Materialize.CompendiumMissing', { name: el.name }));
+      return plan;
+    }
+    const blank = plan.main;
+    const fields = el.fields && Object.keys(el.fields).length ? el.fields : undefined;
+    const main: DocData = {
+      ...data,
+      _id: blank._id,
+      name: blank.name,
+      folder: blank.folder,
+      ...(blank.ownership ? { ownership: blank.ownership } : {}),
+      flags: { ...data.flags, silk: blank.flags.silk },
+      // Edits made while a Ghost win over the entry's.
+      system: fields
+        ? mergeSystem(data.system ?? {}, system.toSystem(el.class, { ...fields }))
+        : (data.system ?? {}),
+    };
+    const type = data.type ?? blank.type;
+    if (type) main.type = type;
+    const img = el.img ?? data.img;
+    if (img) main.img = img;
+    return { ...plan, main };
   }
 
   function materializeOne(id: string): Promise<string> {
