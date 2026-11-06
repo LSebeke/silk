@@ -51,6 +51,50 @@ describe('element commands', () => {
     expect(workingCopy.records().size).toBe(0);
   });
 
+  it('element.create takes a source (spec 1.1 §D); blank is the default and writes nothing', async () => {
+    const { registry, workingCopy } = setup();
+    const { id } = await registry.run<{ id: string }>('element.create', {
+      class: 'person',
+      name: 'Alrik',
+      source: { kind: 'blank' },
+    });
+    expect(workingCopy.get(id)?.data).toEqual({
+      class: 'person',
+      name: 'Alrik',
+      position: { x: 0, y: 0 },
+    });
+  });
+
+  it('element.create stores a compendium source on the element (Ghost worlds, §B.1)', async () => {
+    const { registry, workingCopy } = setup();
+    const source = { kind: 'compendium', uuid: 'Compendium.dsa5.npcs.Actor.abc' };
+    const { id } = await registry.run<{ id: string }>('element.create', {
+      class: 'creature',
+      name: 'Wolf',
+      source,
+    });
+    expect(workingCopy.get(id)?.data['source']).toEqual(source);
+  });
+
+  it('element.create refuses a source the class does not offer', async () => {
+    const { registry, workingCopy } = setup();
+    await expect(
+      registry.run('element.create', {
+        class: 'creature',
+        name: 'x',
+        source: { kind: 'generator', id: 'nsc-zucht' },
+      }),
+    ).rejects.toThrow(/source/);
+    await expect(
+      registry.run('element.create', {
+        class: 'location',
+        name: 'x',
+        source: { kind: 'compendium', uuid: 'Compendium.a.b.Actor.c' },
+      }),
+    ).rejects.toThrow(/source/);
+    expect(workingCopy.records().size).toBe(0);
+  });
+
   it('element.rename changes only the name', async () => {
     const { registry, workingCopy } = setup();
     const { id } = await registry.run<{ id: string }>('element.create', {

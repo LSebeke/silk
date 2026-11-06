@@ -161,8 +161,8 @@ const materializer = createMaterializer({
   // The rendered Nodes: Canvas Filters / Focus View (§10.5, §10.6).
   visibleIds: () => canvasFilter.visibleIds(),
   selection: () => canvasState.get().selection,
-  // The pipeline is still in the class box while `element.create` runs.
-  deferImmediate: () => pipeline.get().step === 'classBox',
+  // The pipeline is still in the class box / Source Step while `element.create` runs.
+  deferImmediate: () => pipeline.picking(),
   parentOf: (id) => owns.parentOf(id),
   restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
   afterMaterialize: async (id) => {
@@ -177,7 +177,7 @@ owns = createOwns({
   docs: foundryDocs,
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
-  deferImmediate: () => pipeline.get().step === 'classBox',
+  deferImmediate: () => pipeline.picking(),
   newId: () => foundry.utils.randomID(16),
   now: () => Date.now(),
   localize,
@@ -252,7 +252,7 @@ const eventScenes = createEventScenes({
   scenes: eventScenesDocs,
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
-  deferImmediate: () => pipeline.get().step === 'classBox',
+  deferImmediate: () => pipeline.picking(),
   newId: () => foundry.utils.randomID(16),
   localize: format,
   notify: (message) => void ui.notifications?.info(message),

@@ -33,7 +33,7 @@ function setup() {
   });
   const steps: PipelineStep['step'][] = [];
   pipeline.subscribe((s) => steps.push(s.step));
-  const element = (id: string) => readElement(workingCopy.get(id));
+  const element = (id: string | undefined) => readElement(id ? workingCopy.get(id) : undefined);
   return { pipeline, workingCopy, commands, steps, element };
 }
 
@@ -142,7 +142,7 @@ describe('Creation Pipeline', () => {
     const done: string[] = [];
     pipeline.onComplete(({ id }) => done.push(id));
     pipeline.open({ at: { x: 0, y: 0 } });
-    const id = await pipeline.pickClass('person');
+    const id = await pipeline.pickClass('location');
     expect(done).toEqual([]);
     await pipeline.submitName('Alrik');
     expect(done).toEqual([id]);
@@ -235,8 +235,8 @@ describe('Creation Pipeline with Connections', () => {
     const done: string[] = [];
     pipeline.onComplete(({ id }) => done.push(id));
     commands.length = 0;
-    const id = await pipeline.create({ at: { x: 0, y: 0 }, from: origin }, 'person');
-    await pipeline.submitName('Rondra');
+    const id = await pipeline.create({ at: { x: 0, y: 0 }, from: origin }, 'location');
+    await pipeline.submitName('Gareth');
     expect(pipeline.get()).toMatchObject({ step: 'connection', elementId: id });
     expect(done).toEqual([]);
     await pipeline.submitLabel(' loves ');
@@ -286,7 +286,7 @@ describe('Creation Pipeline with Connections', () => {
     });
     const done: string[] = [];
     pipeline.onComplete(({ id }) => done.push(id));
-    const id = await pipeline.create({ at: { x: 0, y: 0 }, from: origin }, 'person');
+    const id = await pipeline.create({ at: { x: 0, y: 0 }, from: origin }, 'location');
     await pipeline.submitName('');
     pipeline.cancel();
     expect(pipeline.get()).toEqual({ step: 'idle' });

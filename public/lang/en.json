@@ -144,6 +144,15 @@
         "openDoc": "Open the doc"
       }
     },
+    "Source": {
+      "Label": "Start from",
+      "compendium": "Compendium",
+      "generator": "Generator",
+      "blank": "Blank",
+      "Cancel": "Cancel",
+      "Unavailable": "Not available yet",
+      "NotForClass": "Not offered for this class"
+    },
     "Canvas": {
       "Title": "World Canvas",
       "ClassSearch": "Class…",

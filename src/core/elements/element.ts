@@ -5,6 +5,7 @@
  */
 import type { CanonRecord, JsonObject } from '../canon';
 import type { ElementClassId } from './classes';
+import type { ElementSource } from './sources';
 
 export interface Point {
   x: number;
@@ -40,6 +41,11 @@ export interface ElementData {
    * mirrors Foundry for a Materialized Person/Creature (`dead`) and Quest (quest `status`).
    */
   status?: string;
+  /**
+   * Source Step pick (spec 1.1 §B.1), never blank: a compendium entry is imported from here
+   * when the element is Materialized.
+   */
+  source?: Exclude<ElementSource, { kind: 'blank' }>;
   /** Adopted from an existing Foundry doc (T14), not created by Silk: delete can keep the doc (§6). */
   adopted?: boolean;
   /** Its doc vanished while Silk wasn't listening: reconcile restored it from this Commit (§6). */
