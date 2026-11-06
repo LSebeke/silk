@@ -97,7 +97,9 @@
       "infoBlock": {
         "create": "Add Info Block",
         "edit": "Edit Info Block",
-        "delete": "Delete Info Block"
+        "delete": "Delete Info Block",
+        "move": "Move Info Block",
+        "open": "Open in Foundry"
       },
       "filter": {
         "set": "Set Canvas Filter",
@@ -372,7 +374,12 @@
       "Title": "Element Detail",
       "InfoBlocks": "Info Blocks",
       "Connections": "Connections",
-      "Gone": "This element no longer exists."
+      "Gone": "This element no longer exists.",
+      "AddInfoBlock": "+ Info Block",
+      "AddInfoBlockMenu": "Add Info Block…",
+      "InfoBlockName": "Info Block name",
+      "DeleteInfoBlockTitle": "Delete Info Block",
+      "DeleteInfoBlockConfirm": "Delete the Info Block \"{name}\"?"
     },
     "Merge": {
       "Title": "Merge",

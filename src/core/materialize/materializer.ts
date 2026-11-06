@@ -106,6 +106,10 @@ export interface Materializer {
   createInfoBlock(args: { elementId: string; name?: string; text?: string }): Promise<string>;
   editInfoBlock(args: { id: string; name?: string; text?: string }): Promise<void>;
   deleteInfoBlock(id: string): Promise<void>;
+  /** Moves an Info Block to position `index` among the element's Info Blocks (v1.1 §C.1). */
+  moveInfoBlock(id: string, index: number): Promise<void>;
+  /** "Open in Foundry" (v1.1 §C.1): the journal at the block's page; implicit Materialize. */
+  openInfoBlock(id: string): Promise<void>;
   tag(ids: readonly string[], tag: string, on: boolean): Promise<void>;
   /** Status (§4): Foundry for a Materialized Person/Creature/Quest, else the record. */
   setStatus(id: string, status: string): Promise<void>;
@@ -427,6 +431,31 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       await sync(el.id);
     },
 
+    async moveInfoBlock(id, index) {
+      const { el, block } = findBlock(id);
+      const rest = (el.infoBlocks ?? []).filter((b) => b._id !== id);
+      const at = Math.max(0, Math.min(Math.trunc(index) || 0, rest.length));
+      const order = [...rest.slice(0, at), block, ...rest.slice(at)];
+      if (!el.uuid) {
+        await write(el.id, { infoBlocks: order });
+        return;
+      }
+      // Renumber in steps: Cover/quest (sort 0/1) stay first, Connections last.
+      const holder = holderOf(el.id);
+      const sorts = new Map(infoBlockPages(holder).map((p) => [p._id, p.sort]));
+      for (const [i, b] of order.entries()) {
+        const sort = (i + 1) * SORT_STEP;
+        if (sorts.get(b._id) !== sort) await docs.updatePage(holder.uuid, b._id, { sort });
+      }
+      await sync(el.id);
+    },
+
+    async openInfoBlock(id) {
+      const { el } = findBlock(id);
+      await ensureMaterialized(el.id);
+      await docs.open(holderOf(el.id).uuid, id);
+    },
+
     async tag(ids, tag, on) {
       const name = tag.trim();
       if (!name) throw new Error('Silk: empty Tag');
@@ -520,5 +549,9 @@ export function materializeCommands(m: Materializer): Command[] {
       m.editInfoBlock(args),
     ),
     command('infoBlock.delete', (args: { id: string }) => m.deleteInfoBlock(args.id)),
+    command('infoBlock.move', (args: { id: string; sort: number }) =>
+      m.moveInfoBlock(args.id, args.sort),
+    ),
+    command('infoBlock.open', (args: { id: string }) => m.openInfoBlock(args.id)),
   ];
 }

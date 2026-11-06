@@ -12,4 +12,11 @@ export interface DetailContext {
   format(key: string, data: Record<string, string>): string;
   /** Errors as notifications. */
   error(message: string): void;
+  /** Yes/no dialog (delete an Info Block, v1.1 §C.1). */
+  confirm(title: string, content: string): Promise<boolean>;
+  /**
+   * Mounts Foundry's ProseMirror editor (toggled) into `host` with `html`; `save` gets the
+   * edited HTML. Returns the unmount.
+   */
+  editor(host: HTMLElement, html: string, save: (html: string) => void): () => void;
 }
