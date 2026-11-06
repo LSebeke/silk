@@ -12,10 +12,11 @@
  * Actor/Item: the Companion Journal is OBSERVER once a block, Connection or Player Note
  * is Revealed. Person/Creature: hooded image + token texture until Appearance is Revealed
  * (real ones wait in `flags.silk.img` / `flags.silk.token`), token `displayName` OWNER
- * before the element Reveal, HOVER after.
+ * before the element Reveal, HOVER after. Without an Appearance block (deleted, v1.1 §C.2)
+ * the class icon stands in for the hood, permanently.
  */
 import { isRevealed, type RevelationMap } from '../campaigns';
-import type { StoryElement } from '../elements';
+import { appearanceBlock, elementClass, hasAppearanceClass, type StoryElement } from '../elements';
 import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { DocSnapshot, SystemMapping } from '../materialize/port';
 
@@ -54,7 +55,8 @@ interface TokenSource {
 const level = (o: { ownership?: { default?: number } } | undefined) =>
   o?.ownership?.default ?? OWNERSHIP.NONE;
 
-export const hasAppearance = (cls: string) => cls === 'person' || cls === 'creature';
+/** The class hides the image from players (spec §8): behind the hood, or the class icon. */
+export const hasAppearance = hasAppearanceClass;
 
 /** `flags.silk.img` holds the real image while `img` shows the hood. */
 export function isHooded(main: Pick<DocSnapshot, 'img' | 'flags'>): boolean {
@@ -131,7 +133,9 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
 }
 
 function appearanceWrites(input: OwnershipInput, revealed: boolean): RevealWrite[] {
-  const { element: el, main, map, hood } = input;
+  const { element: el, main, map } = input;
+  const guarded = !!appearanceBlock(el);
+  const hood = guarded ? input.hood : (elementClass(el.class)?.icon ?? input.hood);
   const writes: RevealWrite[] = [];
   const flags = main.flags.silk;
   const proto = (main as unknown as { prototypeToken?: TokenSource }).prototypeToken ?? {};
@@ -140,7 +144,7 @@ function appearanceWrites(input: OwnershipInput, revealed: boolean): RevealWrite
   /** Real image and token texture, wherever they are now. */
   const realImg = el.img ?? (hooded ? flags.img : main.img) ?? '';
   const realToken = (protoSrc === flags.hood ? flags.token : protoSrc) ?? realImg;
-  const showReal = isRevealed(map, 'appearance', el.id) && revealed;
+  const showReal = guarded && isRevealed(map, 'appearance', el.id) && revealed;
   const display = revealed ? DISPLAY.HOVER : DISPLAY.OWNER;
 
   const data: Record<string, unknown> = {};

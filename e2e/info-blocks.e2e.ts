@@ -122,3 +122,46 @@ test('Info Blocks: add from the Node menu, rename, edit text, reorder, delete, o
     )
     .toBe(rumours);
 });
+
+test('Appearance (v1.1 §C.2, §C.4): core hood; deleted → class icon; the preset brings it back', async ({
+  gm,
+}) => {
+  test.setTimeout(180_000);
+  await ready(gm);
+  const { id } = await api<{ id: string }>(gm, 'element.create', {
+    class: 'person',
+    name: 'Alrik',
+    at: { x: 200, y: 200 },
+  });
+  await closePopups(gm);
+  const actor = () =>
+    gm.evaluate((i) => {
+      const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['uuid'];
+      const doc = fromUuidSync(uuid as string) as any;
+      return doc ? `${doc.img}|${doc.prototypeToken.texture.src}` : null;
+    }, id);
+  const HOOD = 'icons/svg/mystery-man-black.svg';
+  const ICON = 'icons/svg/mystery-man.svg';
+  await expect.poll(actor).toBe(`${HOOD}|${HOOD}`);
+
+  await api(gm, 'element.openDetail', { id });
+  const detail = gm.locator(`[data-silk-detail="${id}"]`);
+  await expect(detail.locator('[data-silk-detail-appearance]')).toBeVisible();
+  await expect(detail.locator('[data-silk-detail-add-appearance]')).toHaveCount(0);
+  const appearance = await gm.evaluate((i) => {
+    const data = game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data as any;
+    return data.infoBlocks.find((b: any) => b.appearance)._id as string;
+  }, id);
+
+  // Deleted: the class icon stands in for the hood; nothing left to Reveal.
+  await detail.locator(`[data-silk-detail-block-delete="${appearance}"]`).click();
+  await gm.locator('.application.dialog button[data-action="yes"]').click();
+  await expect.poll(actor).toBe(`${ICON}|${ICON}`);
+  await expect(detail.locator('[data-silk-detail-appearance]')).toHaveCount(0);
+
+  // Re-added with the preset: hooded again.
+  await detail.locator('[data-silk-detail-add-appearance]').click();
+  await expect.poll(actor).toBe(`${HOOD}|${HOOD}`);
+  await expect(detail.locator('[data-silk-detail-appearance]')).toBeVisible();
+  await expect(detail.locator('[data-silk-detail-add-appearance]')).toHaveCount(0);
+});

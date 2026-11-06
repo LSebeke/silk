@@ -12,7 +12,12 @@
   import type { Attachment } from 'svelte/attachments';
   import type { Snapshot } from '../../core/canon';
   import { connectionSentence, connectionsIn } from '../../core/connections';
-  import { classLabelKey, readElement } from '../../core/elements';
+  import {
+    appearanceBlock,
+    classLabelKey,
+    hasAppearanceClass,
+    readElement,
+  } from '../../core/elements';
   import { nodeMenu, type MenuEntry } from '../canvas/menu';
   import type { DetailContext } from './context';
 
@@ -37,7 +42,10 @@
     void $reveal;
     return ctx.available('reveal.element');
   });
-  const appearance = $derived(element?.class === 'person' || element?.class === 'creature');
+  // v1.1 §C.2: the Appearance block (by its flag) guards the image; deleted, nothing to Reveal.
+  const appearance = $derived(!!element && !!appearanceBlock(element));
+  /** An actor class without one: "+ Info Block" offers the Appearance preset. */
+  const appearancePreset = $derived(!!element && hasAppearanceClass(element.class) && !appearance);
   const entries = $derived.by(() => {
     void $reveal;
     if (!element) return [];
@@ -78,9 +86,10 @@
     if (block && blocks.some((b) => b._id === block)) void focusName(block);
   });
 
-  async function addBlock() {
+  async function addBlock(preset?: 'appearance') {
     try {
-      const { id: block } = (await ctx.run('infoBlock.create', { elementId: id })) as {
+      const args = preset ? { elementId: id, appearance: true } : { elementId: id };
+      const { id: block } = (await ctx.run('infoBlock.create', args)) as {
         id: string;
       };
       await focusName(block);
@@ -248,9 +257,19 @@
         type="button"
         class="add"
         disabled={!canEdit}
-        onclick={addBlock}
+        onclick={() => addBlock()}
         data-silk-detail-add-block>{ctx.localize('SILK.Detail.AddInfoBlock')}</button
       >
+      {#if appearancePreset}
+        <button
+          type="button"
+          class="add"
+          disabled={!canEdit}
+          title={ctx.localize('SILK.Detail.AddAppearanceHint')}
+          onclick={() => addBlock('appearance')}
+          data-silk-detail-add-appearance>{ctx.localize('SILK.Detail.AddAppearance')}</button
+        >
+      {/if}
     </section>
     <section>
       <h3>{ctx.localize('SILK.Detail.Connections')}</h3>

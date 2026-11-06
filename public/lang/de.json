@@ -377,6 +377,8 @@
       "Gone": "Dieses Element existiert nicht mehr.",
       "AddInfoBlock": "+ Info-Block",
       "AddInfoBlockMenu": "Info-Block hinzufügen…",
+      "AddAppearance": "+ Aussehen",
+      "AddAppearanceHint": "Fügt den Aussehen-Block hinzu: das Bild bleibt verhüllt, bis er enthüllt ist.",
       "InfoBlockName": "Name des Info-Blocks",
       "DeleteInfoBlockTitle": "Info-Block löschen",
       "DeleteInfoBlockConfirm": "Den Info-Block „{name}“ löschen?"

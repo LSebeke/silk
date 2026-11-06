@@ -95,6 +95,8 @@ test('Reveal through menu, r, Element Detail and header buttons; the player sees
     (await api<{ id: string }>(gm, 'element.create', { class: cls, name, at: { x, y: 200 } })).id;
   const gareth = await create('location', 'Gareth-T16', 600);
   const alrik = await create('person', 'Alrik-T16', 200);
+  // A real image: DSA5's default actor icon is the core hood itself (v1.1 §C.4).
+  await api(gm, 'element.setImage', { id: alrik, img: 'icons/svg/cowled.svg' });
   const livesIn = (
     await api<{ id: string }>(gm, 'connection.create', {
       from: alrik,
@@ -112,7 +114,7 @@ test('Reveal through menu, r, Element Detail and header buttons; the player sees
   // Before Reveal the actor is hooded even in Foundry, for tokens on any Scene.
   await expect
     .poll(async () => (await playerView(player, alrikUuid))?.img, SYNC)
-    .toBe('modules/silk/assets/hooded.svg');
+    .toBe('icons/svg/mystery-man-black.svg');
 
   await closePopups(gm);
   await api(gm, 'canvas.open');
@@ -170,7 +172,7 @@ test('Reveal through menu, r, Element Detail and header buttons; the player sees
   await detail.locator('[data-silk-detail-appearance] [data-silk-eye]').click();
   await expect
     .poll(async () => (await playerView(player, alrikUuid))?.img, SYNC)
-    .not.toBe('modules/silk/assets/hooded.svg');
+    .not.toBe('icons/svg/mystery-man-black.svg');
 
   // Sheet header button: Un-reveal Gareth reverses everything for the player.
   const labels = await gm.evaluate(async (u) => {

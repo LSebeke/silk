@@ -45,6 +45,7 @@ export function defaultInfoBlocks(cls: ElementClassId, ctx: LayoutContext): Info
     _id: ctx.newId(),
     name: ctx.localize(`SILK.InfoBlock.${name}`),
     text: '',
+    ...(name === 'Appearance' ? { appearance: true as const } : {}),
   }));
 }
 
@@ -67,6 +68,7 @@ export const blockPage = (block: InfoBlock, sort: number): PageData => ({
   sort,
   ownership: { ...NONE },
   text: { content: block.text },
+  ...(block.appearance ? { flags: { silk: { appearance: true } } } : {}),
 });
 
 export function coverPage(id: string, src: string | undefined, ctx: LayoutContext): PageData {
@@ -320,6 +322,7 @@ export function readBack(
       _id: p._id,
       name: p.name,
       text: p.text?.content ?? '',
+      ...(p.flags?.silk?.appearance ? { appearance: true as const } : {}),
     }));
     const notes = playerNotePages(holder).map((p) => {
       const campaign = p.flags?.silk?.campaign;
