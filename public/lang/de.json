@@ -155,6 +155,15 @@
       "Unavailable": "Noch nicht verfügbar",
       "NotForClass": "Für diese Klasse nicht angeboten"
     },
+    "Picker": {
+      "Title": "Kompendium",
+      "Search": "Suchen…",
+      "Sources": "Quellen",
+      "Results": "Ergebnisse",
+      "All": "Alle",
+      "World": "Welt",
+      "None": "Keine Treffer"
+    },
     "Canvas": {
       "Title": "Weltleinwand",
       "ClassSearch": "Klasse…",
@@ -293,6 +302,7 @@
       "scene": "Silk-Szenen"
     },
     "Materialize": {
+      "CompendiumMissing": "{name}: Der Kompendiumseintrag fehlt; leer materialisiert.",
       "Implicit": "{name} materialisiert.",
       "VisibleTitle": "Sichtbare materialisieren",
       "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen.",

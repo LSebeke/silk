@@ -14,6 +14,18 @@ export function foundryApi(): FoundryApi {
       (CONFIG as unknown as Record<string, { documentClass: FoundryDocumentClass }>)[name]
         ?.documentClass as FoundryDocumentClass,
     fromUuid: (uuid) => fromUuidSync(uuid) as FoundryDoc | null,
+    async importData(uuid) {
+      // The data half of a normal Foundry import (`importFromCompendium`): no id, folder,
+      // sort or ownership; `_stats.compendiumSource` set.
+      const entry = (await fromUuid(uuid)) as unknown as {
+        pack?: string;
+        documentName: string;
+      } | null;
+      if (!entry?.pack) return undefined;
+      const collection = game.collections?.get(entry.documentName as never) as unknown as
+        { fromCompendium(doc: unknown, options?: object): object } | undefined;
+      return collection?.fromCompendium(entry);
+    },
     journal: (id) => game.journal?.get(id) as unknown as FoundryDoc | undefined,
     folders: () => (game.folders ?? []) as never,
     replace: (value) => foundry.data.operators.ForcedReplacement.create(value) as object,
