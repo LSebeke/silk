@@ -81,6 +81,7 @@ import { canvasUiCommands } from './ui/canvas/commands';
 import type { CanvasContext } from './ui/canvas/context';
 import { devUiCommands } from './ui/dev/commands';
 import { createMergeUi } from './ui/merge/ui';
+import { mountProseEditor } from './adapter/prose-editor';
 import { detailUiCommands } from './ui/detail/commands';
 import type { DetailContext } from './ui/detail/context';
 import { playerCanvasCommands } from './ui/player-canvas/commands';
@@ -436,6 +437,12 @@ const detailContext = (): DetailContext => ({
   localize,
   format: (key, data) => game.i18n?.format(key, data) ?? key,
   error: (message) => void ui.notifications?.error(message),
+  confirm: async (title, content) =>
+    !!(await foundry.applications.api.DialogV2.confirm({
+      window: { title },
+      content: `<p>${foundry.utils.escapeHTML(content)}</p>`,
+    })),
+  editor: mountProseEditor,
 });
 
 /** T14 Adopt: existing Foundry docs become Story Elements (spec §6 Adopt). */

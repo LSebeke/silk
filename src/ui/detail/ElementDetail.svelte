@@ -4,21 +4,26 @@
    * Info Block and each Connection, plus the Node context menu. Every toggle runs a Reveal
    * command, which writes through to Foundry ownership. The GM sees every Connection here,
    * also those not Revealed (the journal Connections page lists Revealed ones only).
+   *
+   * Info Blocks (v1.1 §C.1): add, rename inline, delete with confirmation, edit the text in
+   * Foundry's ProseMirror editor, open the page in Foundry, reorder by drag. All commands.
    */
-  import { onDestroy, untrack } from 'svelte';
+  import { onDestroy, tick, untrack } from 'svelte';
+  import type { Attachment } from 'svelte/attachments';
   import type { Snapshot } from '../../core/canon';
   import { connectionSentence, connectionsIn } from '../../core/connections';
   import { classLabelKey, readElement } from '../../core/elements';
   import { nodeMenu, type MenuEntry } from '../canvas/menu';
   import type { DetailContext } from './context';
 
-  let props: { ctx: DetailContext; id: string } = $props();
+  let props: { ctx: DetailContext; id: string; focus?: string | undefined } = $props();
   const ctx = untrack(() => props.ctx);
   const id = untrack(() => props.id);
   const reveal = ctx.reveal;
 
   let records = $state.raw<Snapshot>(ctx.workingCopy.records());
-  const off = ctx.workingCopy.subscribe((r) => (records = r));
+  // The working copy hands out the same (mutated) Map: copy it so `$state.raw` sees a change.
+  const off = ctx.workingCopy.subscribe((r) => (records = new Map(r)));
   onDestroy(off);
 
   const element = $derived(readElement(records.get(id)));
@@ -41,8 +46,10 @@
       title: ctx.title,
       isRevealed: ctx.reveal.isRevealed,
       selection: [],
-    }).filter((e) => e.action !== 'rename' && e.key !== 'element.openDetail');
+    }).filter((e) => e.action !== 'rename' && !e.key.startsWith('element.openDetail'));
   });
+  const blocks = $derived(element?.infoBlocks ?? []);
+  const canEdit = ctx.available('infoBlock.edit');
 
   async function run(name: string, args: object) {
     try {
@@ -57,6 +64,64 @@
     if (entry.action === 'status') return run('element.toggleStatus', { id });
     if (entry.command) return run(entry.command, entry.args ?? {});
   };
+
+  /** Focuses (and selects) a block's name field once it is rendered. */
+  async function focusName(block: string) {
+    await tick();
+    const input = root?.querySelector<HTMLInputElement>(`[data-silk-detail-block-name="${block}"]`);
+    input?.focus();
+    input?.select();
+  }
+  let root = $state<HTMLElement>();
+  $effect(() => {
+    const block = props.focus;
+    if (block && blocks.some((b) => b._id === block)) void focusName(block);
+  });
+
+  async function addBlock() {
+    try {
+      const { id: block } = (await ctx.run('infoBlock.create', { elementId: id })) as {
+        id: string;
+      };
+      await focusName(block);
+    } catch (error) {
+      ctx.error(error instanceof Error ? error.message : String(error));
+    }
+  }
+  function rename(block: { _id: string; name: string }, input: HTMLInputElement) {
+    const next = input.value.trim();
+    if (!next) input.value = block.name;
+    else if (next !== block.name) void run('infoBlock.edit', { id: block._id, name: next });
+  }
+  async function remove(block: { _id: string; name: string }) {
+    const yes = await ctx.confirm(
+      ctx.localize('SILK.Detail.DeleteInfoBlockTitle'),
+      ctx.format('SILK.Detail.DeleteInfoBlockConfirm', { name: block.name }),
+    );
+    if (yes) await run('infoBlock.delete', { id: block._id });
+  }
+  /**
+   * Mounts the editor once per `{#key}` (the block's text: its own save or a Foundry edit),
+   * not on other record changes, which would close an editor that is open.
+   */
+  const editor =
+    (block: { _id: string; text: string }): Attachment<HTMLElement> =>
+    (host) =>
+      untrack(() => {
+        const { _id: id, text: html } = block;
+        return ctx.editor(host, html, (text) => void run('infoBlock.edit', { id, text }));
+      });
+
+  // Drag reorder (page `sort`), among Info Blocks only.
+  let dragging = $state<string>();
+  let over = $state<string>();
+  function drop(target: string) {
+    const moved = dragging;
+    dragging = over = undefined;
+    if (!moved || moved === target) return;
+    const sort = blocks.findIndex((b) => b._id === target);
+    if (sort >= 0) void run('infoBlock.move', { id: moved, sort });
+  }
 </script>
 
 {#snippet eye(kind: 'element' | 'appearance' | 'infoBlock' | 'connection', target: string)}
@@ -79,7 +144,7 @@
   >
 {/snippet}
 
-<div class="silk-detail" data-silk-detail={id}>
+<div class="silk-detail" data-silk-detail={id} bind:this={root}>
   {#if element}
     <header>
       {@render eye('element', id)}
@@ -101,12 +166,91 @@
     {/if}
     <section>
       <h3>{ctx.localize('SILK.Detail.InfoBlocks')}</h3>
-      {#each element.infoBlocks ?? [] as block (block._id)}
-        <div class="row" data-silk-detail-block={block._id}>
-          {@render eye('infoBlock', block._id)}
-          <span>{block.name}</span>
+      {#each blocks as block (block._id)}
+        <div
+          class="block"
+          class:over={over === block._id && dragging !== block._id}
+          data-silk-detail-block={block._id}
+          role="listitem"
+          ondragover={(e) => {
+            if (!dragging) return;
+            e.preventDefault();
+            over = block._id;
+          }}
+          ondrop={(e) => {
+            e.preventDefault();
+            drop(block._id);
+          }}
+        >
+          <div class="row">
+            <span
+              class="grip"
+              draggable={canEdit}
+              role="button"
+              tabindex="-1"
+              title={ctx.title('infoBlock.move')}
+              data-silk-detail-block-handle={block._id}
+              ondragstart={(e) => {
+                dragging = block._id;
+                e.dataTransfer?.setData('text/plain', block._id);
+                const row = (e.currentTarget as HTMLElement).closest('.block');
+                if (row && e.dataTransfer) e.dataTransfer.setDragImage(row, 0, 0);
+              }}
+              ondragend={() => (dragging = over = undefined)}
+              ><i class="fa-solid fa-grip-vertical"></i></span
+            >
+            {@render eye('infoBlock', block._id)}
+            <input
+              type="text"
+              class="name"
+              value={block.name}
+              disabled={!canEdit}
+              aria-label={ctx.localize('SILK.Detail.InfoBlockName')}
+              data-silk-detail-block-name={block._id}
+              onchange={(e) => rename(block, e.currentTarget)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+                if (e.key === 'Escape') {
+                  e.currentTarget.value = block.name;
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+            <button
+              type="button"
+              class="icon"
+              title={ctx.title('infoBlock.open')}
+              onclick={() => run('infoBlock.open', { id: block._id })}
+              data-silk-detail-block-open={block._id}
+              ><i class="fa-solid fa-arrow-up-right-from-square"></i></button
+            >
+            <button
+              type="button"
+              class="icon danger"
+              disabled={!canEdit}
+              title={ctx.title('infoBlock.delete')}
+              onclick={() => remove(block)}
+              data-silk-detail-block-delete={block._id}><i class="fa-solid fa-trash"></i></button
+            >
+          </div>
+          {#if canEdit}
+            {#key block.text}
+              <div
+                class="text"
+                data-silk-detail-block-text={block._id}
+                {@attach untrack(() => editor(block))}
+              ></div>
+            {/key}
+          {/if}
         </div>
       {/each}
+      <button
+        type="button"
+        class="add"
+        disabled={!canEdit}
+        onclick={addBlock}
+        data-silk-detail-add-block>{ctx.localize('SILK.Detail.AddInfoBlock')}</button
+      >
     </section>
     <section>
       <h3>{ctx.localize('SILK.Detail.Connections')}</h3>
@@ -165,6 +309,47 @@
     display: flex;
     gap: 6px;
     align-items: center;
+  }
+  .block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-top: 2px solid transparent;
+  }
+  .block.over {
+    border-top-color: #2b6cb0;
+  }
+  .grip {
+    flex: none;
+    cursor: grab;
+    opacity: 0.6;
+  }
+  .name {
+    flex: 1;
+    min-width: 0;
+  }
+  .icon {
+    flex: none;
+    width: 26px;
+    height: 22px;
+    padding: 0;
+  }
+  .text {
+    margin-left: 22px;
+  }
+  /* Room for Foundry's hover edit button, also when the block is empty. */
+  .text :global(prose-mirror) {
+    position: relative;
+    min-height: 32px;
+  }
+  /* Open: a fixed height for the toolbar and the editable area. */
+  .text :global(prose-mirror.active) {
+    height: 220px;
+  }
+  .add {
+    width: auto;
+    align-self: flex-start;
+    padding: 0 8px;
   }
   .eye {
     flex: none;
