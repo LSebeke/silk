@@ -28,7 +28,7 @@ import {
   setRevelationMapApplier,
   startSession,
 } from './adapter/session';
-import { registerSettings } from './adapter/settings';
+import { hoodedImage, registerSettings } from './adapter/settings';
 import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
@@ -64,6 +64,7 @@ import { elementCommands, readElement, type ElementCommandDeps } from './core/el
 import { createEventScenes, eventSceneCommands } from './core/event-scenes';
 import { historyCommands } from './core/history';
 import {
+  appearanceMigration,
   createConnectionsPages,
   createDocRewriter,
   createLifecycle,
@@ -214,6 +215,10 @@ const lifecycle = createLifecycle({
   confirmDelete: (args) => dialogs.confirmDelete(args),
   lastCommit: () => getSession().history.lastCommit(),
 });
+// v1.1 §C.3: before Reveal's reconcile, which finds the Appearance by its flag.
+lifecycle.contribute(
+  appearanceMigration({ workingCopy, docs: foundryDocs, materializer, localize }),
+);
 lifecycle.contribute(
   revelationMapCleanup(
     () => getSession().campaigns,
@@ -349,8 +354,7 @@ const reveal = createReveal({
       )),
   },
   adventure: adventureCheckedOut,
-  hood: () =>
-    game.settings?.get(MODULE_ID, 'hoodedImage') ?? `modules/${MODULE_ID}/assets/hooded.svg`,
+  hood: () => hoodedImage(game.settings?.get(MODULE_ID, 'hoodedImage')),
   stage: foundryRevealStage(),
   localize,
   refreshPages: (ids) => connectionsPages.refresh(ids),

@@ -5,6 +5,7 @@ import { createRegistry } from '../commands/registry';
 import { connectionCommands } from '../connections';
 import { elementCommands, readElement, type InfoBlock, type StoryElement } from '../elements';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
+import { appearanceMigration } from './appearance-migration';
 import { createLifecycle, lifecycleCommands, type DeleteAnswer, type Lifecycle } from './lifecycle';
 import { createMaterializer, materializeCommands, type MaterializeMode } from './materializer';
 import { createMemoryDocs } from './memory-docs';
@@ -104,6 +105,15 @@ export function setup(
     },
     lastCommit: async () => lastCommit,
   });
+  // Before any other contributor (Reveal reads the flag), as in `module.ts`.
+  lifecycle.contribute(
+    appearanceMigration({
+      workingCopy: () => workingCopy,
+      docs,
+      materializer,
+      localize: (key) => key.split('.').pop() ?? key,
+    }),
+  );
   for (const command of [
     ...(opts.connections ? connectionCommands({ workingCopy: () => workingCopy, newId }) : []),
     ...lifecycleCommands(lifecycle, () => selection),

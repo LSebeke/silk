@@ -242,6 +242,89 @@ describe('Appearance (Person/Creature)', () => {
   });
 });
 
+describe('Appearance by flag, deleted and re-added (v1.1 §C.2)', () => {
+  type ActorDoc = ReturnType<ReturnType<typeof setup>['doc']> & {
+    prototypeToken: { texture: { src: string } };
+  };
+  const PERSON_ICON = 'icons/svg/mystery-man.svg';
+  const appearanceOf = (t: ReturnType<typeof setup>, id: string) =>
+    must(t.element(id).infoBlocks.find((b) => b.appearance)?._id, 'Appearance');
+
+  async function alrik() {
+    const t = setup();
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.setImage', { id, img: 'alrik.webp' });
+    await t.registry.run('materialize.elements', { ids: [id] });
+    return { t, id };
+  }
+
+  it('a renamed Appearance block still guards the image', async () => {
+    const { t, id } = await alrik();
+    await t.registry.run('infoBlock.edit', { id: appearanceOf(t, id), name: 'Aussehen' });
+    await t.run('reveal.infoBlock', { id: appearanceOf(t, id) });
+    expect(t.map().appearance).toEqual([id]);
+    expect(t.doc(id).img).toBe('alrik.webp');
+  });
+
+  it('a block merely named "Appearance" does not guard the image', async () => {
+    const { t, id } = await alrik();
+    await t.registry.run('infoBlock.delete', { id: appearanceOf(t, id) });
+    const { id: block } = await t.registry.run<{ id: string }>('infoBlock.create', {
+      elementId: id,
+      name: 'Appearance',
+    });
+    await t.run('reveal.infoBlock', { id: block });
+    expect(t.map().appearance).toEqual([]);
+    expect(t.doc(id).img).toBe(PERSON_ICON);
+  });
+
+  it('deleted: players see the class icon as img and token, permanently; the real image waits', async () => {
+    const { t, id } = await alrik();
+    await t.run('reveal.appearance', { id });
+    await t.registry.run('infoBlock.delete', { id: appearanceOf(t, id) });
+    await t.reveal.idle();
+    const doc = t.doc(id) as ActorDoc;
+    expect(doc.img).toBe(PERSON_ICON);
+    expect(doc.prototypeToken.texture.src).toBe(PERSON_ICON);
+    expect(doc.flags.silk.img).toBe('alrik.webp');
+    expect(t.tokens.at(-1)?.data['texture.src']).toBe(PERSON_ICON);
+    expect(t.element(id).img).toBe('alrik.webp');
+    // Nothing left to Reveal: the element Reveal keeps the icon.
+    await t.run('reveal.element', { id });
+    await t.run('reveal.appearance', { id });
+    expect(t.doc(id).img).toBe(PERSON_ICON);
+    expect(t.map().appearance).toEqual([]);
+    await t.lifecycle.reconcile();
+    expect(t.doc(id).img).toBe(PERSON_ICON);
+  });
+
+  it('re-added with the preset: the hood behaviour is back', async () => {
+    const { t, id } = await alrik();
+    await t.registry.run('infoBlock.delete', { id: appearanceOf(t, id) });
+    await t.reveal.idle();
+    expect(t.doc(id).img).toBe(PERSON_ICON);
+    await t.registry.run('infoBlock.create', { elementId: id, appearance: true });
+    await t.reveal.idle();
+    const block = t.element(id).infoBlocks.find((b) => b.appearance);
+    expect(block?.name).toBe('Appearance');
+    expect(t.doc(id).img).toBe(HOOD);
+    expect(t.doc(id).flags.silk.img).toBe('alrik.webp');
+    await t.run('reveal.appearance', { id });
+    expect(t.doc(id).img).toBe('alrik.webp');
+  });
+
+  it('the preset is only for actor classes without an Appearance', async () => {
+    const { t, id } = await alrik();
+    await expect(
+      t.registry.run('infoBlock.create', { elementId: id, appearance: true }),
+    ).rejects.toThrow();
+    const place = await t.create('location', 'Gareth');
+    await expect(
+      t.registry.run('infoBlock.create', { elementId: place, appearance: true }),
+    ).rejects.toThrow();
+  });
+});
+
 describe('Truth: World ownership mirrored in the Revelation Map', () => {
   it('checkout applies the Campaign map to ownership and the World state', async () => {
     const t = setup();
