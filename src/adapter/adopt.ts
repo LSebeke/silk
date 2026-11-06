@@ -24,7 +24,7 @@ export interface StarterDeps {
   run(name: string, args?: object): Promise<unknown>;
   pipeline: {
     open(origin: PipelineOrigin): void;
-    create(origin: PipelineOrigin, id: ElementClassId): Promise<string>;
+    create(origin: PipelineOrigin, id: ElementClassId): Promise<string | undefined>;
   };
   /** Canvas viewport centre (after `canvas.open`). */
   center(): Point;

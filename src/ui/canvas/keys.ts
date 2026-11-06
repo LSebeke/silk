@@ -4,7 +4,7 @@
  * Pure: event + what is selected → action.
  */
 import type { CreateFromConnection } from '../../core/connections';
-import { ELEMENT_CLASSES, type ElementClassId } from '../../core/elements';
+import { ELEMENT_CLASSES, type ElementClassId, type SourceKind } from '../../core/elements';
 
 export type CanvasKeyAction =
   | { kind: 'create'; class: ElementClassId; connection?: CreateFromConnection }
@@ -76,4 +76,18 @@ export function confirmKey(e: Pick<KeyLike, 'code'>): 'yes' | 'no' | undefined {
   if (e.code === 'KeyY') return 'yes';
   if (e.code === 'KeyN' || e.code === 'Enter' || e.code === 'Escape') return 'no';
   return undefined;
+}
+
+const SOURCE_KEYS: Partial<Record<string, SourceKind | 'cancel'>> = {
+  ArrowUp: 'compendium',
+  ArrowLeft: 'generator',
+  ArrowRight: 'blank',
+  ArrowDown: 'cancel',
+};
+
+/** Source Step compass (spec 1.1 §B.1): ↑ Compendium, ← Generator, → Blank, ↓ / Esc cancel. */
+export function sourceKey(e: KeyLike): SourceKind | 'cancel' | undefined {
+  if (e.code === 'Escape') return 'cancel';
+  if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return undefined;
+  return SOURCE_KEYS[e.code];
 }

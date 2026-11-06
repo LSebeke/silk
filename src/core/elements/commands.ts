@@ -9,6 +9,7 @@ import {
   type Point,
   type StoryElement,
 } from './element';
+import { classTakesSource, type ElementSource } from './sources';
 
 export interface ElementCreateArgs {
   class: string;
@@ -18,6 +19,8 @@ export interface ElementCreateArgs {
   /** Origin element: the new one is connected to it (T7). */
   from?: string;
   connection?: { type?: string; direction?: string; label?: string };
+  /** What it starts from (spec 1.1 §B.1, §D); default blank. Non-blank is stored on the element. */
+  source?: ElementSource;
 }
 
 export interface ElementCreateResult {
@@ -53,11 +56,15 @@ export function elementCommands(deps: ElementCommandDeps): Command[] {
       if (!cls) throw new Error(`Silk: unknown Element class "${args.class}"`);
       if (!cls.creatable)
         throw new Error(`Silk: ${cls.id} elements are never created, only Adopted`);
+      const source = args.source;
+      if (source && !classTakesSource(cls.id, source.kind))
+        throw new Error(`Silk: ${cls.id} elements take no ${source.kind} source`);
       const id = deps.newId();
       const data: ElementData = {
         class: cls.id,
         name: args.name.trim(),
         position: { x: args.at?.x ?? 0, y: args.at?.y ?? 0 },
+        ...(source && source.kind !== 'blank' ? { source } : {}),
       };
       await deps.workingCopy().set([elementRecord(id, data)]);
       let result: ElementCreateResult = { id };

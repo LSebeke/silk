@@ -199,9 +199,11 @@ test(
       await gm.locator('[data-silk-class-option="note"]').click();
     });
 
+    // Spec 1.1 §B.4: digit + → (Person takes the Source Step); selecting the origin is not counted.
+    await alrik.click();
     await entryPoint('digit key', async () => {
-      await alrik.click();
       await gm.keyboard.press('Digit1');
+      await gm.keyboard.press('ArrowRight');
     });
   },
 );

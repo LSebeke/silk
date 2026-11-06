@@ -302,3 +302,54 @@ test('right-drag (spec 1.1 §A): connect, create from/onto a Node, menu, never p
   await expect(gm.locator('[data-silk-menu]')).toHaveCount(0);
   expect(await viewportTransform(gm)).toBe(before);
 });
+
+test('Source Step (spec 1.1 §B.1): compass after Person/Creature, greyed choices inert, Blank', async ({
+  gm,
+}) => {
+  await resetCanvas(gm);
+  await openCanvas(gm);
+  const pane = gm.locator('[data-silk-canvas] .svelte-flow__pane');
+  const compass = gm.locator('[data-silk-source-step]');
+  const choice = (kind: string) => gm.locator(`[data-silk-source-choice="${kind}"]`);
+
+  // Class box → Creature → compass; Generator not offered, Compendium not yet available.
+  await pane.click({ button: 'right', position: { x: 300, y: 200 } });
+  await gm.locator('[data-silk-class-option="creature"]').click();
+  await expect(compass).toBeFocused();
+  await expect(compass).toHaveAttribute('data-silk-source-step', 'creature');
+  await expect(choice('generator')).toHaveAttribute('aria-disabled', 'true');
+  await expect(choice('generator')).toHaveAttribute('title', /.+/);
+  await expect(choice('compendium')).toHaveAttribute('aria-disabled', 'true');
+  await expect(choice('blank')).toHaveAttribute('aria-disabled', 'false');
+
+  // Greyed: arrow and click do nothing.
+  await gm.keyboard.press('ArrowUp');
+  await gm.keyboard.press('ArrowLeft');
+  await choice('generator').click({ force: true });
+  await expect(compass).toBeVisible();
+  expect(await elements(gm)).toHaveLength(0);
+
+  // Esc cancels the creation; nothing is created.
+  await gm.keyboard.press('Escape');
+  await expect(compass).toHaveCount(0);
+  expect(await elements(gm)).toHaveLength(0);
+
+  // Digit key → compass; ↓ cancels too.
+  await gm.locator('[data-silk-canvas]').focus();
+  await gm.keyboard.press('Digit1');
+  await expect(compass).toHaveAttribute('data-silk-source-step', 'person');
+  await gm.keyboard.press('ArrowDown');
+  await expect(compass).toHaveCount(0);
+
+  // Mouse: Blank → the name step, default name selected.
+  await gm.keyboard.press('Digit2');
+  await choice('blank').click();
+  const nameInput = gm.locator('[data-silk-name-input]');
+  await expect(nameInput).toBeFocused();
+  await gm.keyboard.type('Wolf');
+  await gm.keyboard.press('Enter');
+  await expect(nameInput).toHaveCount(0);
+  const [wolf] = await elements(gm);
+  expect(wolf?.data).toMatchObject({ class: 'creature', name: 'Wolf' });
+  expect(wolf?.data['source']).toBeUndefined();
+});

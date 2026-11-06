@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canvasKey, confirmKey } from './keys';
+import { canvasKey, confirmKey, sourceKey } from './keys';
 
 const key = (
   code: string,
@@ -112,5 +112,21 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('Delete'), node)).toEqual({ kind: 'delete' });
     expect(canvasKey(key('Backspace'), node)).toEqual({ kind: 'delete' });
     expect(canvasKey(key('Delete'), none)).toBeUndefined();
+  });
+});
+
+describe('Source Step compass keys (spec 1.1 §B.1)', () => {
+  it('↑ Compendium, ← Generator, → Blank, ↓ / Esc cancel', () => {
+    expect(sourceKey(key('ArrowUp'))).toBe('compendium');
+    expect(sourceKey(key('ArrowLeft'))).toBe('generator');
+    expect(sourceKey(key('ArrowRight'))).toBe('blank');
+    expect(sourceKey(key('ArrowDown'))).toBe('cancel');
+    expect(sourceKey(key('Escape'))).toBe('cancel');
+  });
+
+  it('other keys and modified arrows do nothing', () => {
+    expect(sourceKey(key('KeyA'))).toBeUndefined();
+    expect(sourceKey(key('Enter'))).toBeUndefined();
+    expect(sourceKey(key('ArrowRight', { ctrlKey: true }))).toBeUndefined();
   });
 });

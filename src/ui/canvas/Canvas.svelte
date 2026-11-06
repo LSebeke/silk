@@ -16,6 +16,7 @@
   import { onDestroy, setContext, untrack } from 'svelte';
   import { cameraMove, FOCUS_SEEDS, type CameraReason } from '../../core/canvas/focus';
   import { TWEEN_MS } from '../../core/canvas/tween';
+  import type { PipelineOrigin } from '../../core/canvas';
   import type { RelativeDirection } from '../../core/connections';
   import {
     ELEMENT_CLASSES,
@@ -28,6 +29,7 @@
     type Status,
   } from '../../core/elements';
   import ClassBox from './ClassBox.svelte';
+  import SourceStep from './SourceStep.svelte';
   import ContextMenu from './ContextMenu.svelte';
   import { edgeMenu, nodeMenu, type MenuEntry } from './menu';
   import ConnectionEdge from './ConnectionEdge.svelte';
@@ -46,7 +48,7 @@
     type ElementNode,
     type GroupNode,
   } from './flow-model';
-  import { canvasKey, confirmKey } from './keys';
+  import { canvasKey, confirmKey, sourceKey } from './keys';
   import { rightDragAction } from './right-drag';
   import { STATUS_PROMPT, type StatusPrompt } from './status-prompt';
 
@@ -337,6 +339,15 @@
     const rect = root?.getBoundingClientRect();
     return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) };
   };
+  /** Window-local pixels of a canvas point: where a Source Step shows for a digit / palette create. */
+  const anchorAt = (at: Point) => {
+    const p = flow.flowToScreenPosition({ x: at.x + 95, y: at.y + 40 });
+    return local({ clientX: p.x, clientY: p.y });
+  };
+  /** Digit keys, palette: the class box is skipped; the Source Step shows at the new Node's spot. */
+  function createAt(origin: PipelineOrigin, cls: ElementClassId) {
+    pipeline.create({ ...origin, anchor: anchorAt(origin.at) }, cls).catch(fail);
+  }
   const nodeAt = (event: { clientX: number; clientY: number }) =>
     (root?.ownerDocument ?? document)
       .elementFromPoint(event.clientX, event.clientY)
@@ -438,6 +449,16 @@
       closeSearch();
       return;
     }
+    // The compass handles its own keys; this catches them when it lost focus.
+    if ($pipeline.step === 'source') {
+      const choice = sourceKey(event);
+      if (!choice) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (choice === 'cancel') pipeline.cancel();
+      else pipeline.pickSource(choice).catch(fail);
+      return;
+    }
     if ($pipeline.step !== 'idle') return;
     const node = canvasState.get().selection.at(-1);
     const edge = edges.find((e) => e.selected);
@@ -447,18 +468,16 @@
     event.stopPropagation();
     switch (action.kind) {
       case 'create':
-        pipeline
-          .create(
-            node
-              ? {
-                  at: besideNode(node),
-                  from: node,
-                  ...(action.connection ? { connection: action.connection } : {}),
-                }
-              : { at: viewCenter() },
-            action.class,
-          )
-          .catch(fail);
+        createAt(
+          node
+            ? {
+                at: besideNode(node),
+                from: node,
+                ...(action.connection ? { connection: action.connection } : {}),
+              }
+            : { at: viewCenter() },
+          action.class,
+        );
         break;
       case 'connect':
         searching = false;
@@ -579,7 +598,7 @@
     const origin = target
       ? { at: besideNode(target), from: target }
       : { at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }) };
-    pipeline.create(origin, cls).catch(fail);
+    createAt(origin, cls);
   }
 
   function onNodeClick({ node }: { node: ElementNode | GroupNode }) {
@@ -781,6 +800,7 @@
     </svg>
   {/if}
   <ClassBox />
+  <SourceStep />
   {#if menu}
     <ContextMenu
       entries={menu.entries}
