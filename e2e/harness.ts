@@ -4,7 +4,15 @@
  * run can never see or touch `silk-dev` and parallel runs from other worktrees don't clash.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import {
+  copyFileSync,
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+} from 'node:fs';
 import { createServer } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -37,9 +45,21 @@ export function prepareDataPath(opts: {
   }
   symlinkSync(join(opts.source, 'Data/systems/dsa5'), join(dataPath, 'Data/systems/dsa5'));
   symlinkSync(opts.dist, join(dataPath, 'Data/modules/silk'));
-  for (const id of opts.modules ?? [])
-    symlinkSync(join(opts.source, 'Data/modules', id), join(dataPath, 'Data/modules', id));
+  for (const id of opts.modules ?? []) linkModule(join(opts.source, 'Data/modules', id), dataPath);
   return dataPath;
+}
+
+/**
+ * A module linked file by file, its `packs/` copied: a running `silk-dev` holds the LevelDB
+ * locks of the installed packs, and a second server could not open them.
+ */
+function linkModule(source: string, dataPath: string) {
+  const target = join(dataPath, 'Data/modules', source.split('/').at(-1) as string);
+  mkdirSync(target);
+  for (const entry of readdirSync(source)) {
+    if (entry === 'packs') cpSync(join(source, entry), join(target, entry), { recursive: true });
+    else symlinkSync(join(source, entry), join(target, entry));
+  }
 }
 
 export function freePort(): Promise<number> {
@@ -139,6 +159,23 @@ export async function createAndLaunchWorld(foundry: Foundry, run: string): Promi
     await new Promise((r) => setTimeout(r, 250));
   }
   throw new Error(`World ${id} did not launch`);
+}
+
+/**
+ * Launches `id` again once the GM has shut it down (`game.shutDown()`): the server loads a
+ * module's compendium packs only at launch, so modules enabled in a running World need it.
+ */
+export async function relaunchWorld(foundry: Foundry, id: string): Promise<void> {
+  const deadline = Date.now() + 60_000;
+  const world = async () =>
+    ((await (await fetch(`${foundry.url}/api/status`)).json()) as { world?: string }).world;
+  while ((await world()) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 250));
+  await foundry.post('/setup', { action: 'launchWorld', world: id });
+  while (Date.now() < deadline) {
+    if ((await world()) === id) return;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`World ${id} did not relaunch`);
 }
 
 /** Deletes a `silk-test-*` world dir; refuses any other id. */

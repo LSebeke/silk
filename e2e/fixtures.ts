@@ -12,6 +12,7 @@ import {
   deleteWorld,
   freePort,
   prepareDataPath,
+  relaunchWorld,
   startFoundry,
 } from './harness';
 
@@ -135,6 +136,11 @@ export const test = base.extend<
         id = await createAndLaunchWorld(foundry, run);
         const setup = await join(browser, foundry.url, GM);
         await setUpWorld(setup, modules);
+        if (modules.length) {
+          // Their compendium packs load only at World launch.
+          await setup.evaluate(() => game.shutDown?.()).catch(() => undefined);
+          await relaunchWorld(foundry, id);
+        }
         await setup.context().close();
         await use({ url: foundry.url, id, join: (b, name) => join(b, foundry.url, name) });
       } finally {
