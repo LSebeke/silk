@@ -2,7 +2,8 @@
   /**
    * Canvas legend (spec 1.1 §E.3): bottom left, open by default; the "?" button and the `?` key
    * run `legend.toggle`. Rows come from `legendGroups` (the canvas's own tables). Foundry
-   * keybindings are read each time it opens, so rebinds show.
+   * keybindings are read each time it opens, so rebinds show. The panel is see-through to
+   * the pointer: canvas gestures (right-drag, clicks, wheel) work under it.
    */
   import { legendGroups, type LegendRow } from './legend';
   import { untrack } from 'svelte';
@@ -24,8 +25,7 @@
 
 <div class="silk-legend" data-silk-legend>
   {#if $open}
-    <div class="panel" data-silk-legend-panel>
-      <header>{ctx.localize('SILK.Legend.Title')}</header>
+    <div class="panel" aria-label={ctx.localize('SILK.Legend.Title')} data-silk-legend-panel>
       {#each groups as group (group.id)}
         <section data-silk-legend-group={group.id}>
           <h4>{ctx.localize(group.title)}</h4>
@@ -73,36 +73,36 @@
     flex-direction: column;
     gap: 4px;
     align-items: flex-start;
+    max-width: calc(100% - 16px);
     max-height: calc(100% - 96px);
     pointer-events: none;
   }
-  .silk-legend > * {
-    pointer-events: auto;
-  }
+  /* Groups side by side, so the panel stays low. */
   .panel {
-    width: 300px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
     min-height: 0;
-    padding: 6px 8px;
-    overflow-y: auto;
-    font-size: 11px;
-    line-height: 1.35;
-    background: #fffdf8e6;
+    padding: 4px 8px;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.3;
+    background: #fffdf8d9;
     border: 1px solid #c9bfa8;
     border-radius: 6px;
     box-shadow: 0 1px 3px #0003;
   }
-  header {
-    margin-bottom: 2px;
-    font-weight: bold;
+  section {
+    width: 240px;
   }
   h4 {
-    margin: 6px 0 2px;
+    margin: 2px 0;
     font-size: 11px;
     border-bottom: 1px solid #e3dccb;
   }
   h5 {
-    margin: 4px 0 1px;
-    font-size: 11px;
+    margin: 3px 0 1px;
+    font-size: 10px;
     font-weight: normal;
     font-style: italic;
   }
@@ -130,6 +130,7 @@
     opacity: 0.6;
   }
   button {
+    pointer-events: auto;
     width: 28px;
     height: 28px;
     min-height: 0;
