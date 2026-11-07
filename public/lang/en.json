@@ -177,6 +177,9 @@
       "Results": "Results",
       "All": "All",
       "World": "World",
+      "ChooseSource": "Choose a source",
+      "Adopt": "Adopt",
+      "Import": "Import",
       "None": "No matches"
     },
     "Canvas": {

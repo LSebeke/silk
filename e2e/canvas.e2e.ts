@@ -499,3 +499,64 @@ test('Compendium picker (spec 1.1 §B.2): pack pick is a Ghost world, World pick
   const viaApi = (await elements(gm)).filter((r) => r.data['name'] === 'Brin');
   expect(viaApi.map((r) => r.data['source'])).toEqual([{ kind: 'compendium', uuid: brin }]);
 });
+
+test('Compendium picker (spec 1.1 §B.2, #87): same-name entries merge; their sources are chosen', async ({
+  gm,
+}) => {
+  await resetCanvas(gm);
+  const { packId, packTwin, worldTwin } = await gm.evaluate(async () => {
+    const name = 'silk-twins';
+    const pack =
+      game.packs?.get(`world.${name}`) ??
+      (await foundry.documents.collections.CompendiumCollection.createCompendium({
+        type: 'Actor',
+        label: 'Silk Twins',
+        name,
+      } as never));
+    const make = (data: object, options: object = {}) =>
+      CONFIG.Actor.documentClass.create(data as never, options) as unknown as Promise<{
+        uuid: string;
+      }>;
+    const packTwin = await make({ name: 'Zwilling', type: 'npc' }, { pack: pack.collection });
+    const worldTwin = await make({ name: ' zwilling', type: 'npc' });
+    return { packId: pack.collection, packTwin: packTwin.uuid, worldTwin: worldTwin.uuid };
+  });
+  await openCanvas(gm);
+  const canvas = gm.locator('[data-silk-canvas]');
+  const search = gm.locator('[data-silk-picker-search]');
+  const rows = gm.locator('[data-silk-picker-row]');
+  const nameInput = gm.locator('[data-silk-name-input]');
+
+  await canvas.focus();
+  await gm.keyboard.press('Digit1');
+  await gm.keyboard.press('ArrowUp');
+  await expect(search).toBeFocused();
+  await gm.keyboard.type('zwilling');
+  // All: one merged row "×2".
+  await expect(rows).toHaveCount(1);
+  await expect(gm.locator('[data-silk-picker-count]')).toHaveText('×2');
+  // A single pack is unmerged.
+  await gm.locator(`[data-silk-picker-source="${packId}"]`).click();
+  await expect(rows).toHaveCount(1);
+  await expect(gm.locator('[data-silk-picker-count]')).toHaveCount(0);
+  await gm.locator('[data-silk-picker-source="all"]').click();
+
+  // Enter → its source list: World (Adopt) first, then the pack (Import); Esc goes back.
+  await search.press('Enter');
+  await expect(gm.locator('[data-silk-picker-choosing]')).toBeVisible();
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toHaveAttribute('data-silk-picker-row', worldTwin);
+  await expect(gm.locator('[data-silk-picker-outcome]')).toHaveText(['Adopt', 'Import']);
+  await search.press('Escape');
+  await expect(gm.locator('[data-silk-picker-choosing]')).toHaveCount(0);
+  await expect(gm.locator('[data-silk-picker-count]')).toHaveText('×2');
+
+  // Via commands: { choose }, then a second pick picks one.
+  expect(await api(gm, 'picker.pick', {})).toEqual({ choose: [worldTwin, packTwin] });
+  expect(await api(gm, 'picker.pick', { uuid: packTwin })).toEqual({ picked: true });
+  await expect(nameInput).toHaveValue('Zwilling');
+  await nameInput.press('Enter');
+  await expect(nameInput).toHaveCount(0);
+  const ghost = (await elements(gm)).find((r) => r.data['name'] === 'Zwilling');
+  expect(ghost?.data['source']).toEqual({ kind: 'compendium', uuid: packTwin });
+});

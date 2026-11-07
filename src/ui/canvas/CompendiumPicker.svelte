@@ -1,8 +1,9 @@
 <script lang="ts">
   /**
    * Compendium picker (spec 1.1 §B.2): search bar (focused on open), side list of sources,
-   * results. ↑/↓ move, Enter picks, Esc goes back to the Source Step. Search, source, pick
-   * and cancel run as `picker.*` commands (ADR 0003).
+   * results. ↑/↓ move, Enter picks, Esc goes back to the Source Step. A merged row ("×N") opens
+   * its source list, where Esc goes back to the results. Search, source, pick and cancel run as
+   * `picker.*` commands (ADR 0003).
    */
   import type { CompendiumPicker } from '../../core/canvas';
   import { fail, focus } from './actions';
@@ -27,7 +28,7 @@
       ArrowDown: () => picker.move(1),
       ArrowUp: () => picker.move(-1),
       Enter: () => pick(),
-      Escape: () => command('picker.cancel'),
+      Escape: () => picker.back() || command('picker.cancel'),
     };
     const action = keys[event.key];
     if (!action) return;
@@ -75,6 +76,12 @@
       {/each}
     </ul>
     <ul class="rows" role="listbox" aria-label={localize('SILK.Picker.Results')}>
+      {#if $picker.choosing !== undefined}
+        <li class="choosing" data-silk-picker-choosing>
+          <span class="name">{$picker.choosing}</span>
+          <span class="label">{localize('SILK.Picker.ChooseSource')}</span>
+        </li>
+      {/if}
       {#each $picker.rows as row, i (row.uuid)}
         <li>
           <button
@@ -89,8 +96,19 @@
             data-silk-picker-row={row.uuid}
           >
             <img src={row.img || 'icons/svg/mystery-man.svg'} alt="" />
-            <span class="name">{row.name}</span>
-            <span class="label">{row.label}</span>
+            {#if $picker.choosing !== undefined}
+              <span class="name" title={row.label}>{row.label}</span>
+              <span class="chip" data-silk-picker-outcome>
+                {localize(row.source === 'world' ? 'SILK.Picker.Adopt' : 'SILK.Picker.Import')}
+              </span>
+            {:else}
+              <span class="name">{row.name}</span>
+              {#if row.count}
+                <span class="count" data-silk-picker-count>×{row.count}</span>
+              {:else}
+                <span class="label">{row.label}</span>
+              {/if}
+            {/if}
           </button>
         </li>
       {:else}
@@ -159,6 +177,21 @@
     height: 28px;
     object-fit: cover;
     border: none;
+  }
+  .choosing {
+    display: flex;
+    gap: 6px;
+    padding: 2px 6px 4px;
+    font-weight: bold;
+    border-bottom: 1px solid #ccc;
+  }
+  .chip {
+    margin-left: auto;
+    padding: 0 6px;
+    font-size: 11px;
+    border: 1px solid currentColor;
+    border-radius: 8px;
+    opacity: 0.8;
   }
   .empty {
     padding: 6px;
