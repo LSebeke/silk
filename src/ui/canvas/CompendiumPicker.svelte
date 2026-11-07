@@ -1,44 +1,40 @@
 <script lang="ts">
   /**
    * Compendium picker (spec 1.1 §B.2): search bar (focused on open), side list of sources,
-   * results. ↑/↓ move, Enter picks, Esc goes back to the Source Step.
+   * results. ↑/↓ move, Enter picks, Esc goes back to the Source Step. Search, source, pick
+   * and cancel run as `picker.*` commands (ADR 0003).
    */
-  import type { CompendiumPicker, SourcePick } from '../../core/canvas';
+  import type { CompendiumPicker } from '../../core/canvas';
+  import { fail, focus } from './actions';
 
   let {
     picker,
     localize,
-    done,
+    run,
   }: {
     picker: CompendiumPicker;
     localize: (key: string) => string;
-    done: (pick: SourcePick | undefined) => void;
+    run: (name: string, args?: object) => Promise<unknown>;
   } = $props();
 
-  const sourceLabel = (s: { id: string; label?: string }) =>
-    s.label ?? localize(`SILK.Picker.${s.id === 'world' ? 'World' : 'All'}`);
+  const command = (name: string, args: object = {}) => void run(name, args).catch(fail);
+  /** Picks the row (default: the active one) and closes the window. */
+  const pick = (uuid?: string) => command('picker.pick', uuid ? { uuid } : {});
 
   function onKeydown(event: KeyboardEvent) {
     if (event.isComposing) return;
     const keys: Record<string, () => void> = {
       ArrowDown: () => picker.move(1),
       ArrowUp: () => picker.move(-1),
-      Enter: () => {
-        const pick = picker.pick();
-        if (pick) done(pick);
-      },
-      Escape: () => done(undefined),
+      Enter: () => pick(),
+      Escape: () => command('picker.cancel'),
     };
-    const run = keys[event.key];
-    if (!run) return;
+    const action = keys[event.key];
+    if (!action) return;
     event.preventDefault();
     event.stopPropagation();
-    run();
+    action();
   }
-
-  const focus = (el: HTMLInputElement) => {
-    queueMicrotask(() => el.focus());
-  };
 
   /** Keeps the active row in view while moving with the keys. */
   const reveal = (el: HTMLElement, active: boolean) => {
@@ -55,7 +51,7 @@
     class="search"
     placeholder={localize('SILK.Picker.Search')}
     value={$picker.query}
-    oninput={(e) => picker.setQuery(e.currentTarget.value)}
+    oninput={(e) => command('picker.search', { query: e.currentTarget.value })}
     use:focus
     data-silk-picker-search
   />
@@ -69,10 +65,10 @@
             aria-selected={$picker.source === source.id}
             class:selected={$picker.source === source.id}
             tabindex="-1"
-            onclick={() => picker.setSource(source.id)}
+            onclick={() => command('picker.source', { id: source.id })}
             data-silk-picker-source={source.id}
           >
-            <span>{sourceLabel(source)}</span>
+            <span>{source.label ?? localize('SILK.Picker.All')}</span>
             <span class="count">{source.count}</span>
           </button>
         </li>
@@ -89,16 +85,12 @@
             tabindex="-1"
             use:reveal={$picker.active === i}
             onmouseenter={() => picker.activate(i)}
-            onclick={() => {
-              picker.activate(i);
-              const pick = picker.pick();
-              if (pick) done(pick);
-            }}
+            onclick={() => pick(row.uuid)}
             data-silk-picker-row={row.uuid}
           >
             <img src={row.img || 'icons/svg/mystery-man.svg'} alt="" />
             <span class="name">{row.name}</span>
-            <span class="label">{row.label ?? localize('SILK.Picker.World')}</span>
+            <span class="label">{row.label}</span>
           </button>
         </li>
       {:else}

@@ -31,9 +31,10 @@ function fakeGame(): CatalogGame & { indexed: object[] } {
 describe('readPickerCatalog', () => {
   it('World actors that are not Story Elements; visible Actor packs with their lang flag', async () => {
     const game = fakeGame();
-    expect(await readPickerCatalog(game, 'npc')).toEqual({
+    expect(await readPickerCatalog(game, 'npc', 'Welt')).toEqual({
       type: 'npc',
       lang: 'de',
+      worldLabel: 'Welt',
       world: [{ uuid: 'Actor.ulf', name: 'Ulf', img: 'ulf.webp', type: 'npc' }],
       packs: [
         {

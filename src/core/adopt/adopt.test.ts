@@ -3,7 +3,7 @@ import { must } from '../materialize/test-setup';
 import { setup } from './test-setup';
 
 describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Element (spec §6)', () => {
-  it('adopts an npc as a Person in place: Silk id flag, empty Companion Journal', async () => {
+  it('adopts an npc as a Person in place: Silk id flag, Companion Journal with only an Appearance block', async () => {
     const t = setup();
     const actor = t.foundryDoc('Actor', { name: 'Alrik', type: 'npc', img: 'alrik.webp' });
     const { id, name } = await t.adoptDoc({ uuid: actor.uuid, at: { x: 10, y: 20 } });
@@ -15,14 +15,28 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
       uuid: actor.uuid,
       adopted: true,
       position: { x: 10, y: 20 },
-      infoBlocks: [],
     });
+    // v1.1 §C.2: hooded from the start; no other default blocks.
+    const blocks = t.element(id).infoBlocks ?? [];
+    expect(blocks.map((b) => [b.name, b.appearance])).toEqual([['Appearance', true]]);
     const live = t.doc(id);
     expect(live.flags.silk.id).toBe(id);
     expect(live.folder).toBe('userFolder');
     const companion = must(t.docs.journal(must(live.flags.silk.companion)));
     expect(companion.flags.silk.companionOf).toBe(id);
-    // No default Info Blocks: only the generated Connections page.
+    expect(companion.pages?.map((p) => p._id)).toEqual([
+      blocks[0]?._id,
+      companion.flags.silk.connections,
+    ]);
+    expect(companion.pages?.[0]?.flags?.silk?.appearance).toBe(true);
+  });
+
+  it('an adopted Item gets an empty Companion Journal (no default Info Blocks)', async () => {
+    const t = setup();
+    const item = t.foundryDoc('Item', { name: 'Sword', type: 'meleeweapon' });
+    const { id } = await t.adoptDoc({ uuid: item.uuid });
+    expect(t.element(id).infoBlocks ?? []).toEqual([]);
+    const companion = must(t.docs.journal(must(t.doc(id).flags.silk.companion)));
     expect(companion.pages?.map((p) => p._id)).toEqual([companion.flags.silk.connections]);
   });
 
@@ -209,7 +223,7 @@ describe('duplicates (spec §6 Duplicates)', () => {
     expect(t.useForPrompts).toEqual([{ doc: 'Bandit', element: 'Bandit' }]);
     expect(second?.id).toBe(first.id);
     expect(t.element(first.id).uuid).toMatch(/^Actor\./);
-    expect(t.element(first.id).infoBlocks?.map((b) => b.name)).toEqual(['Notes']);
+    expect(t.element(first.id).infoBlocks?.map((b) => b.name)).toEqual(['Appearance', 'Notes']);
 
     t.answers.useFor = 'new';
     await t.run('materialize.unmaterialize', { ids: [first.id] });

@@ -2,10 +2,12 @@
   /**
    * Creation Pipeline Source Step (spec 1.1 §B.1): a compass of four buttons at the spot.
    * ↑ Compendium, ← Generator, → Blank, ↓ / Esc cancel; mouse and arrows work the same.
-   * Greyed choices carry their reason as a tooltip and do nothing.
+   * Greyed choices carry their reason as a tooltip and do nothing. Picks and cancel run as
+   * `pipeline.pickSource` / `pipeline.cancel` (ADR 0003).
    */
   import { getContext } from 'svelte';
   import { classLabelKey, type SourceKind } from '../../core/elements';
+  import { fail, focus } from './actions';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
   import { sourceKey } from './keys';
 
@@ -13,8 +15,7 @@
   const pipeline = ctx.pipeline;
   const box = $derived($pipeline.step === 'source' ? $pipeline : undefined);
 
-  const fail = (error: unknown) => console.error(error);
-  const pick = (kind: SourceKind) => pipeline.pickSource(kind).catch(fail);
+  const pick = (kind: SourceKind) => ctx.run('pipeline.pickSource', { kind }).catch(fail);
 
   const ARROWS: Record<SourceKind, string> = { compendium: '↑', generator: '←', blank: '→' };
 
@@ -22,7 +23,7 @@
   /** Cancelled: keys go back to the canvas (digit keys work again). */
   function cancel() {
     el?.closest<HTMLElement>('[data-silk-canvas]')?.focus();
-    pipeline.cancel();
+    ctx.run('pipeline.cancel').catch(fail);
   }
 
   function onKeydown(event: KeyboardEvent) {
@@ -33,10 +34,6 @@
     if (action === 'cancel') cancel();
     else void pick(action);
   }
-
-  const focus = (el: HTMLElement) => {
-    queueMicrotask(() => el.focus());
-  };
 </script>
 
 {#if box && !box.pending}

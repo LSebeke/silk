@@ -2,7 +2,7 @@
  * Foundry side of the Compendium picker (spec 1.1 §B.2): World actors and Actor packs as a
  * `PickerCatalog`. Filtering by type and language is the core's.
  */
-import type { PickerCatalog, PickerEntry } from '../core/canvas';
+import type { ActorType, PickerCatalog, PickerEntry } from '../core/canvas';
 
 interface IndexEntry {
   uuid: string;
@@ -31,7 +31,12 @@ const entry = (e: IndexEntry): PickerEntry => ({
   ...(e.img ? { img: e.img } : {}),
 });
 
-export async function readPickerCatalog(game: CatalogGame, type: string): Promise<PickerCatalog> {
+/** `worldLabel`: the localised source label of World actors. */
+export async function readPickerCatalog(
+  game: CatalogGame,
+  type: ActorType,
+  worldLabel: string,
+): Promise<PickerCatalog> {
   const world = [...(game.actors ?? [])]
     .filter((a) => !(a.flags?.['silk'] as { id?: string } | undefined)?.id)
     .map(entry);
@@ -50,5 +55,5 @@ export async function readPickerCatalog(game: CatalogGame, type: string): Promis
       };
     }),
   );
-  return { type, lang: game.i18n?.lang ?? 'en', world, packs };
+  return { type, lang: game.i18n?.lang ?? 'en', worldLabel, world, packs };
 }

@@ -4,6 +4,7 @@
    * "N of M shown", one-click clear, a dimension/value picker, and the render budget warning.
    * Every action runs a `filter.*` command.
    */
+  import { fail } from './actions';
   import {
     activeFilters,
     FILTER_DIMENSIONS,
@@ -16,7 +17,6 @@
 
   let { ctx, result }: { ctx: CanvasContext; result: FilterResult } = $props();
 
-  const fail = (error: unknown) => console.error(error);
   const run = (name: string, args?: object) => ctx.run(name, args).catch(fail);
   const text = (label: ChipLabel) => ('key' in label ? ctx.localize(label.key) : label.text);
   const fmt = (key: string, data: Record<string, number>) =>

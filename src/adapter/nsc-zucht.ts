@@ -4,7 +4,9 @@
  * module's own GM menu does, renders it, and takes the first NPC Actor the GM creates
  * while it is open (`createActor`). The import is guarded: a failure greys the choice.
  */
+import type { ActorType } from '../core/canvas/compendium-picker';
 import type { SourcePick, SourceProvider, SourceRequest } from '../core/canvas/pipeline';
+import type { Dsa5ActorType } from './dsa5';
 
 export const NSC_ZUCHT_MODULE = 'dsa5-mastersworkshop';
 const GENERATOR_PATH = `/modules/${NSC_ZUCHT_MODULE}/modules/npcgenerator.js`;
@@ -20,7 +22,7 @@ export interface GeneratorApp {
 export interface CreatedActor {
   uuid: string;
   name: string;
-  type: string;
+  type: ActorType;
   /** Already a Silk doc (flagged at create): Materialize, not the generator, made it. */
   silk?: boolean;
 }
@@ -46,7 +48,7 @@ export interface NscZucht extends SourceProvider {
 }
 
 /** The NPC Actor type DSA5 uses for Persons. */
-const NPC = 'npc';
+const NPC: Dsa5ActorType = 'npc';
 
 export function createNscZucht(deps: NscZuchtDeps): NscZucht {
   let failed = false;
@@ -57,12 +59,17 @@ export function createNscZucht(deps: NscZuchtDeps): NscZucht {
     return failed ? 'SILK.Source.GeneratorFailed' : undefined;
   }
 
+  /** The import failed: the choice greys from now on. */
+  function importFailed(err: unknown) {
+    failed = true;
+    console.warn('Silk | NSC Zucht import failed', err);
+  }
+
   async function open(): Promise<GeneratorApp | undefined> {
     try {
       return await deps.load();
     } catch (err) {
-      failed = true;
-      console.warn('Silk | NSC Zucht import failed', err);
+      importFailed(err);
       deps.warn(deps.localize('SILK.Source.GeneratorFailed'));
       return undefined;
     }
@@ -103,12 +110,7 @@ export function createNscZucht(deps: NscZuchtDeps): NscZucht {
     pick,
     async probe() {
       if (unavailable() || !deps.probe) return;
-      try {
-        await deps.probe();
-      } catch (err) {
-        failed = true;
-        console.warn('Silk | NSC Zucht import failed', err);
-      }
+      await deps.probe().catch(importFailed);
     },
   };
 }
@@ -116,7 +118,7 @@ export function createNscZucht(deps: NscZuchtDeps): NscZucht {
 interface FoundryActor {
   uuid: string;
   name: string;
-  type: string;
+  type: ActorType;
   flags?: { silk?: { id?: unknown } };
 }
 

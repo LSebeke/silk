@@ -417,11 +417,16 @@ test('Compendium picker (spec 1.1 §B.2): pack pick is a Ghost world, World pick
   await gm.keyboard.press('Enter');
   await expect(nameInput).toHaveCount(0);
   const ghost = (await elements(gm)).find((r) => r.data['name'] === 'Brin Sohn');
+  // The Ghost carries the entry's portrait: its card shows it before Materialize.
   expect(ghost?.data).toMatchObject({
     class: 'person',
+    img: 'icons/svg/cowled.svg',
     source: { kind: 'compendium', uuid: brin },
   });
   expect(ghost?.data['uuid']).toBeUndefined();
+  await expect(
+    gm.locator(`[data-silk-node="${ghost?.id}"] img[src="icons/svg/cowled.svg"]`),
+  ).not.toHaveCount(0);
 
   // Materialize imports the entry under the element's name, with a Companion Journal.
   await api(gm, 'materialize.elements', { ids: [ghost?.id] });
@@ -473,4 +478,24 @@ test('Compendium picker (spec 1.1 §B.2): pack pick is a Ghost world, World pick
   const adopted = (await elements(gm)).find((r) => r.data['name'] === 'Ulfried');
   expect(adopted?.data).toMatchObject({ class: 'person', uuid: ulf });
   expect(adopted?.data['source']).toBeUndefined();
+  // Adopted with only an Appearance block, so it starts hooded (v1.1 §C.2).
+  expect(adopted?.data['infoBlocks']).toMatchObject([{ appearance: true }]);
+
+  // ADR 0003: the compass and the picker run as commands, drivable through the API.
+  await canvas.focus();
+  await gm.keyboard.press('Digit1');
+  await expect(gm.locator('[data-silk-source-step]')).toBeVisible();
+  expect(await api(gm, 'pipeline.pickSource', { kind: 'compendium' })).toEqual({
+    pending: 'compendium',
+  });
+  await api(gm, 'picker.source', { id: packId });
+  await api(gm, 'picker.search', { query: 'brin' });
+  await expect(gm.locator('[data-silk-picker-row]')).toHaveCount(1);
+  expect(await api(gm, 'picker.pick', {})).toEqual({ picked: true });
+  await expect(picker).toHaveCount(0);
+  await expect(nameInput).toHaveValue('Brin');
+  await nameInput.press('Enter');
+  await expect(nameInput).toHaveCount(0);
+  const viaApi = (await elements(gm)).filter((r) => r.data['name'] === 'Brin');
+  expect(viaApi.map((r) => r.data['source'])).toEqual([{ kind: 'compendium', uuid: brin }]);
 });

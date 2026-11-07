@@ -209,17 +209,17 @@ describe('element.changeClass (spec §4 Class change)', () => {
 });
 
 describe('infoBlock.move: reorder among Info Blocks (v1.1 §C.1)', () => {
-  it('a Ghost reorders its record; `sort` is the new position', async () => {
+  it('a Ghost reorders its record; `index` is the new 0-based position among Info Blocks', async () => {
     const t = setup();
     const id = await t.create('person', 'Alrik');
     const [appearance, , secrets] = t.element(id).infoBlocks.map((b) => b._id);
-    await t.registry.run('infoBlock.move', { id: secrets, sort: 0 });
+    await t.registry.run('infoBlock.move', { id: secrets, index: 0 });
     expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual([
       'Secrets',
       'Appearance',
       'Personality',
     ]);
-    await t.registry.run('infoBlock.move', { id: appearance, sort: 2 });
+    await t.registry.run('infoBlock.move', { id: appearance, index: 2 });
     expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual([
       'Secrets',
       'Personality',
@@ -231,7 +231,7 @@ describe('infoBlock.move: reorder among Info Blocks (v1.1 §C.1)', () => {
     const t = setup({ mode: 'immediate' });
     const id = await t.create('quest', 'Ring');
     const [hook] = t.element(id).infoBlocks.map((b) => b._id);
-    await t.registry.run('infoBlock.move', { id: hook, sort: 5 });
+    await t.registry.run('infoBlock.move', { id: hook, index: 5 });
     expect(pageNames(t.doc(id))).toEqual(['Cover', 'Ring', 'Resolution', 'Hook', 'Connections']);
     expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual(['Resolution', 'Hook']);
   });
@@ -240,7 +240,7 @@ describe('infoBlock.move: reorder among Info Blocks (v1.1 §C.1)', () => {
     const t = setup({ mode: 'immediate' });
     const id = await t.create('creature', 'Wolf');
     const [, description] = t.element(id).infoBlocks.map((b) => b._id);
-    await t.registry.run('infoBlock.move', { id: description, sort: 0 });
+    await t.registry.run('infoBlock.move', { id: description, index: 0 });
     expect(pageNames(t.companion(id))).toEqual(['Description', 'Appearance', 'Connections']);
   });
 });

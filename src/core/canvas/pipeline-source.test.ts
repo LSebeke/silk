@@ -1,11 +1,12 @@
 /** Source Step (spec 1.1 §B.1): class → Source Step (Person, Creature) → name → label. */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createRegistry } from '../commands/registry';
 import { connectionCommands, connectOnCreate, readConnection } from '../connections';
 import { elementCommands, readElement } from '../elements';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
 import {
   createCreationPipeline,
+  pipelineCommands,
   type CreationPipeline,
   type SourcePick,
   type SourceProvider,
@@ -363,5 +364,57 @@ describe('Interaction budget with a Source Step (spec 1.1 §B.4)', () => {
     for (const step of steps) id = await step();
     const connections = [...workingCopy.records().values()].flatMap((r) => readConnection(r) ?? []);
     expect(connections).toMatchObject([{ from: origin, to: id }]);
+  });
+});
+
+describe('pipeline commands (ADR 0003): class box and Source Step through the registry', () => {
+  function withCommands(sources?: SourceProviders) {
+    const s = setup(sources);
+    for (const c of pipelineCommands(s.pipeline)) s.registry.register(c);
+    return s;
+  }
+
+  it('pipeline.search filters the class box; pipeline.pickClass without a class takes the first', async () => {
+    const s = withCommands();
+    s.pipeline.open({ at: { x: 0, y: 0 } });
+    await s.registry.run('pipeline.search', { query: 'loc' });
+    expect(s.pipeline.options().map((c) => c.id)).toEqual(['location']);
+    const { id } = await s.registry.run<{ id?: string }>('pipeline.pickClass', {});
+    expect(s.element(id)).toMatchObject({ class: 'location' });
+  });
+
+  it('pipeline.pickClass { class } then pipeline.pickSource { kind: blank } creates', async () => {
+    const s = withCommands();
+    s.pipeline.open({ at: { x: 1, y: 1 } });
+    expect(await s.registry.run('pipeline.pickClass', { class: 'person' })).toEqual({});
+    expect(s.pipeline.get()).toMatchObject({ step: 'source', class: 'person' });
+    const { id } = await s.registry.run<{ id?: string }>('pipeline.pickSource', { kind: 'blank' });
+    expect(s.pipeline.get()).toEqual({ step: 'name', id });
+  });
+
+  it('pipeline.pickSource on a provider returns while it is open; its pick finishes later', async () => {
+    let pick!: (value: SourcePick) => void;
+    const s = withCommands({
+      compendium: { unavailable: () => undefined, pick: () => new Promise((r) => (pick = r)) },
+    });
+    await s.pipeline.create({ at: { x: 0, y: 0 } }, 'person');
+    expect(await s.registry.run('pipeline.pickSource', { kind: 'compendium' })).toEqual({
+      pending: 'compendium',
+    });
+    pick({
+      source: { kind: 'compendium', uuid: 'Compendium.p.Actor.x' },
+      name: 'X',
+      img: 'x.webp',
+    });
+    await vi.waitFor(() => expect(s.pipeline.get().step).toBe('name'));
+    // The Ghost shows the entry's portrait before Materialize.
+    expect(s.calls[0]?.[1]).toMatchObject({ name: 'X', img: 'x.webp' });
+  });
+
+  it('pipeline.cancel ends the creation', async () => {
+    const s = withCommands();
+    await s.pipeline.create({ at: { x: 0, y: 0 } }, 'creature');
+    await s.registry.run('pipeline.cancel', {});
+    expect(s.pipeline.get()).toEqual({ step: 'idle' });
   });
 });

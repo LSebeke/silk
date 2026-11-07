@@ -147,7 +147,7 @@ test('Appearance (v1.1 §C.2, §C.4): core hood; deleted → class icon; the pre
   await api(gm, 'element.openDetail', { id });
   const detail = gm.locator(`[data-silk-detail="${id}"]`);
   await expect(detail.locator('[data-silk-detail-appearance]')).toBeVisible();
-  await expect(detail.locator('[data-silk-detail-add-appearance]')).toHaveCount(0);
+  await expect(detail.locator('[data-silk-detail-add-menu]')).toHaveCount(0);
   const appearance = await gm.evaluate((i) => {
     const data = game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data as any;
     return data.infoBlocks.find((b: any) => b.appearance)._id as string;
@@ -159,9 +159,10 @@ test('Appearance (v1.1 §C.2, §C.4): core hood; deleted → class icon; the pre
   await expect.poll(actor).toBe(`${ICON}|${ICON}`);
   await expect(detail.locator('[data-silk-detail-appearance]')).toHaveCount(0);
 
-  // Re-added with the preset: hooded again.
+  // Re-added with the preset on "+ Info Block": hooded again.
+  await detail.locator('[data-silk-detail-add-menu]').click();
   await detail.locator('[data-silk-detail-add-appearance]').click();
   await expect.poll(actor).toBe(`${HOOD}|${HOOD}`);
   await expect(detail.locator('[data-silk-detail-appearance]')).toBeVisible();
-  await expect(detail.locator('[data-silk-detail-add-appearance]')).toHaveCount(0);
+  await expect(detail.locator('[data-silk-detail-add-menu]')).toHaveCount(0);
 });

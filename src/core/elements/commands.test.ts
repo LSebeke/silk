@@ -76,6 +76,17 @@ describe('element commands', () => {
     expect(workingCopy.get(id)?.data['source']).toEqual(source);
   });
 
+  it('element.create stores a given image (the portrait of a compendium pick, on the Ghost)', async () => {
+    const { registry, workingCopy } = setup();
+    const { id } = await registry.run<{ id: string }>('element.create', {
+      class: 'person',
+      name: 'Alrik',
+      img: 'alrik.webp',
+      source: { kind: 'compendium', uuid: 'Compendium.dsa5.npcs.Actor.a' },
+    });
+    expect(workingCopy.get(id)?.data['img']).toBe('alrik.webp');
+  });
+
   it('element.create refuses a source the class does not offer', async () => {
     const { registry, workingCopy } = setup();
     await expect(

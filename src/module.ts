@@ -35,7 +35,7 @@ import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
-  compendiumProvider,
+  compendiumSource,
   createCanvasFilter,
   createCanvasSearch,
   createCanvasState,
@@ -48,6 +48,8 @@ import {
   focusCommands,
   joinFrameOnCreate,
   layoutCommands,
+  pickerCommands,
+  pipelineCommands,
   readViewState,
   searchCommands,
 } from './core/canvas';
@@ -63,7 +65,12 @@ import {
   serializeRevelationMap,
 } from './core/campaigns';
 import { connectionCommands, connectOnCreate } from './core/connections';
-import { elementCommands, readElement, type ElementCommandDeps } from './core/elements';
+import {
+  elementCommands,
+  isActorSourceClass,
+  readElement,
+  type ElementCommandDeps,
+} from './core/elements';
 import { createEventScenes, eventSceneCommands } from './core/event-scenes';
 import { historyCommands } from './core/history';
 import {
@@ -102,22 +109,23 @@ const workingCopy = () => getSession().workingCopy;
 const canvasState = createCanvasState();
 /** Spec 1.1 §B.3: the Source Step Generator, NSC Zucht (dsa5-mastersworkshop). */
 const nscZucht = foundryNscZucht((key) => localize(key));
+/** Spec 1.1 §B.2: World actors and Actor packs of the class's DSA5 type. */
+const compendium = compendiumSource({
+  actorType: (cls) => (isActorSourceClass(cls) ? dsa5Mapping.docType(cls) : undefined),
+  catalog: (type) =>
+    readPickerCatalog(game as unknown as CatalogGame, type, localize('SILK.Picker.World')),
+  async open(picker) {
+    const { openCompendiumPicker } = await import('./ui/canvas/CompendiumPickerWindow');
+    return openCompendiumPicker(picker, {
+      run: (name, args) => registry.run(name, args),
+      localize,
+    });
+  },
+});
 const pipeline = createCreationPipeline({
   run: (name, args) => registry.run(name, args),
   label: (id) => localize(`SILK.Class.${id}`),
-  sources: {
-    // Spec 1.1 §B.2: World actors and Actor packs of the class's DSA5 type.
-    compendium: compendiumProvider({
-      actorType: (cls) =>
-        cls === 'person' || cls === 'creature' ? dsa5Mapping.docType(cls) : undefined,
-      catalog: (type) => readPickerCatalog(game as unknown as CatalogGame, type),
-      async open(picker, signal) {
-        const { openCompendiumPicker } = await import('./ui/canvas/CompendiumPickerWindow');
-        return openCompendiumPicker(picker, signal, localize);
-      },
-    }),
-    generator: nscZucht,
-  },
+  sources: { compendium, generator: nscZucht },
 });
 const viewState = createViewState({
   load: () => game.settings?.get(MODULE_ID, 'viewState'),
@@ -182,7 +190,7 @@ const materializer = createMaterializer({
   visibleIds: () => canvasFilter.visibleIds(),
   selection: () => canvasState.get().selection,
   // The pipeline is still in the class box / Source Step while `element.create` runs.
-  deferImmediate: () => pipeline.picking(),
+  deferImmediate: () => pipeline.deferringMaterialize(),
   parentOf: (id) => owns.parentOf(id),
   restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
   afterMaterialize: async (id) => {
@@ -197,7 +205,7 @@ owns = createOwns({
   docs: foundryDocs,
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
-  deferImmediate: () => pipeline.picking(),
+  deferImmediate: () => pipeline.deferringMaterialize(),
   newId: () => foundry.utils.randomID(16),
   now: () => Date.now(),
   localize,
@@ -276,7 +284,7 @@ const eventScenes = createEventScenes({
   scenes: eventScenesDocs,
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
-  deferImmediate: () => pipeline.picking(),
+  deferImmediate: () => pipeline.deferringMaterialize(),
   newId: () => foundry.utils.randomID(16),
   localize: format,
   notify: (message) => void ui.notifications?.info(message),
@@ -575,6 +583,8 @@ for (const command of [
   ),
   ...eventSceneCommands(eventScenes),
   ...canvasCoreCommands({ workingCopy, state: canvasState }),
+  ...pipelineCommands(pipeline),
+  ...pickerCommands(compendium),
   ...layoutCommands({
     workingCopy,
     state: canvasState,

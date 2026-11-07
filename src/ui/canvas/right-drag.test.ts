@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { rightDragAction } from './right-drag';
 
-const plain = { shiftKey: false, altKey: false };
-const shift = { shiftKey: true, altKey: false };
-const alt = { shiftKey: false, altKey: true };
+const mods = (m: Partial<{ shiftKey: boolean; ctrlKey: boolean; altKey: boolean }> = {}) => ({
+  shiftKey: false,
+  ctrlKey: false,
+  altKey: false,
+  ...m,
+});
+const plain = mods();
+const shift = mods({ shiftKey: true });
+const ctrl = mods({ ctrlKey: true });
+const alt = mods({ altKey: true });
 
 describe('right-click start/end (spec 1.1 §A)', () => {
   it('Node A → Node A opens the Node context menu', () => {
@@ -15,7 +22,7 @@ describe('right-click start/end (spec 1.1 §A)', () => {
       kind: 'connect',
       from: 'a',
       to: 'b',
-      direction: 'out',
+      connection: { direction: 'out' },
     });
   });
 
@@ -24,7 +31,7 @@ describe('right-click start/end (spec 1.1 §A)', () => {
       kind: 'create',
       at: 'end',
       from: 'a',
-      direction: 'out',
+      connection: { direction: 'out' },
     });
   });
 
@@ -38,16 +45,30 @@ describe('right-click start/end (spec 1.1 §A)', () => {
       kind: 'create',
       at: 'start',
       from: 'b',
-      direction: 'in',
+      connection: { direction: 'in' },
     });
   });
 
-  it('Shift at release = incoming, Alt = mutual, relative to the start of the drag', () => {
-    expect(rightDragAction('a', 'b', shift)).toMatchObject({ from: 'a', direction: 'in' });
-    expect(rightDragAction('a', 'b', alt)).toMatchObject({ direction: 'mutual' });
-    expect(rightDragAction('a', undefined, shift)).toMatchObject({ direction: 'in' });
-    expect(rightDragAction(undefined, 'b', shift)).toMatchObject({ from: 'b', direction: 'out' });
-    expect(rightDragAction(undefined, 'b', alt)).toMatchObject({ direction: 'mutual' });
+  it('modifiers at release match the digit keys: Shift = incoming, Ctrl = mutual, Alt = free-form outgoing', () => {
+    expect(rightDragAction('a', 'b', shift)).toMatchObject({ connection: { direction: 'in' } });
+    expect(rightDragAction('a', 'b', ctrl)).toMatchObject({ connection: { direction: 'mutual' } });
+    expect(rightDragAction('a', 'b', alt)).toMatchObject({
+      connection: { type: 'free', direction: 'out' },
+    });
+    expect(rightDragAction('a', undefined, shift)).toMatchObject({
+      connection: { direction: 'in' },
+    });
+    // Seen from B, the direction flips; mutual stays.
+    expect(rightDragAction(undefined, 'b', shift)).toMatchObject({
+      from: 'b',
+      connection: { direction: 'out' },
+    });
+    expect(rightDragAction(undefined, 'b', ctrl)).toMatchObject({
+      connection: { direction: 'mutual' },
+    });
+    expect(rightDragAction(undefined, 'b', alt)).toMatchObject({
+      connection: { type: 'free', direction: 'in' },
+    });
   });
 
   it('modifiers do not change a menu or a standalone Node', () => {

@@ -4,6 +4,7 @@
    * so zooming changes classes once, not per card. Ghosts render faint.
    * Later tickets add: eye toggle.
    */
+  import { fail } from './actions';
   import { Handle, Position } from '@xyflow/svelte';
   import { getContext } from 'svelte';
   import { classLabelKey, elementClass, statusLabelKey, statusOf } from '../../core/elements';
@@ -28,8 +29,6 @@
     if (!ctx.available('reveal.element')) return;
     ctx.run('reveal.element', { id, revealed: !revealed }).catch(fail);
   }
-
-  const fail = (error: unknown) => console.error(error);
 
   function onKeydown(event: KeyboardEvent & { currentTarget: HTMLInputElement }) {
     event.stopPropagation();
