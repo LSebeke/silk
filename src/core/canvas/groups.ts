@@ -31,8 +31,14 @@ export interface VisualGroup {
 /** Element field naming the innermost Visual Group holding the Node. */
 export const ELEMENT_GROUP = 'group';
 
-/** A card's footprint for layout and frame fitting (ElementCard: 190 px wide, ≥ 78 px high). */
+/**
+ * A card's default footprint for layout and frame fitting (ElementCard: 190 px wide, ≥ 78 px
+ * high), used until the card is measured: its name wraps, so it grows (spec 1.1 §E.1).
+ */
 export const NODE_SIZE: Size = { width: 190, height: 80 };
+/** A card's measured size; `undefined` when not measured (not rendered). */
+export type NodeSizeOf = (id: string) => Size | undefined;
+const sized = (sizeOf: NodeSizeOf | undefined, id: string) => sizeOf?.(id) ?? NODE_SIZE;
 /** Space between a frame and its contents; the top adds room for the title. */
 export const FRAME_PAD = 30;
 export const FRAME_TITLE = 40;
@@ -86,10 +92,10 @@ export function ancestorsOf(records: Snapshot, id: string): string[] {
 }
 
 /** Footprint of an element (card) or a group (frame). */
-export function rectOf(record: CanonRecord | undefined): Rect | undefined {
+export function rectOf(record: CanonRecord | undefined, sizeOf?: NodeSizeOf): Rect | undefined {
   if (record?.kind === 'element') {
     const p = record.data['position'] as Point | undefined;
-    return { x: p?.x ?? 0, y: p?.y ?? 0, ...NODE_SIZE };
+    return { x: p?.x ?? 0, y: p?.y ?? 0, ...sized(sizeOf, record.id) };
   }
   const group = readGroup(record);
   return group && { ...group.position, ...group.size };
@@ -151,7 +157,11 @@ export function descendantsOf(records: Snapshot, groupId: string): string[] {
  * Grow the frames enclosing `ids` (all levels) so they contain their contents. Frames never
  * shrink. Reads and writes `records` (a mutable copy); returns the grown group ids.
  */
-export function growFrames(records: Map<string, CanonRecord>, ids: Iterable<string>): string[] {
+export function growFrames(
+  records: Map<string, CanonRecord>,
+  ids: Iterable<string>,
+  sizeOf?: NodeSizeOf,
+): string[] {
   const grown: string[] = [];
   const todo = new Set<string>();
   for (const id of ids) for (const g of ancestorsOf(records, id)) todo.add(g);
@@ -163,7 +173,7 @@ export function growFrames(records: Map<string, CanonRecord>, ids: Iterable<stri
     const group = readGroup(records.get(id));
     if (!group) continue;
     const children = [...records.keys()].filter((c) => containerOf(records, c) === id);
-    const content = union(children.flatMap((c) => rectOf(records.get(c)) ?? []));
+    const content = union(children.flatMap((c) => rectOf(records.get(c), sizeOf) ?? []));
     if (!content) continue;
     const current = { ...group.position, ...group.size };
     const next = union([current, frameAround(content)]);
@@ -194,7 +204,11 @@ export interface LayoutMove {
  * `canvas.moveNodes` on layout: a moved frame carries everything inside it along; a moved
  * Node joins the innermost frame under its centre (or none). Returns the changed records.
  */
-export function applyMoves(records: Snapshot, moves: readonly LayoutMove[]): CanonRecord[] {
+export function applyMoves(
+  records: Snapshot,
+  moves: readonly LayoutMove[],
+  sizeOf?: NodeSizeOf,
+): CanonRecord[] {
   const next = new Map(records);
   const moved = new Set(moves.map((m) => m.id));
   const shifted = new Set<string>();
@@ -224,7 +238,8 @@ export function applyMoves(records: Snapshot, moves: readonly LayoutMove[]): Can
   for (const { id, x, y } of moves) {
     const record = next.get(id);
     if (record?.kind !== 'element') continue;
-    const center = { x: x + NODE_SIZE.width / 2, y: y + NODE_SIZE.height / 2 };
+    const size = sized(sizeOf, id);
+    const center = { x: x + size.width / 2, y: y + size.height / 2 };
     const data = withElementGroup(
       { ...record.data, position: { x, y } },
       innermostGroupAt(next, center),

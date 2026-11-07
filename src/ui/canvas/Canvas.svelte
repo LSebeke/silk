@@ -62,6 +62,13 @@
   const nodeTypes = { element: ElementCard, frame: GroupFrame } as unknown as NodeTypes;
   const edgeTypes = { connection: ConnectionEdge } as unknown as EdgeTypes;
   const flow = useSvelteFlow();
+  // Cards grow to fit their name (spec 1.1 §E.1): layout reads the size Svelte Flow measured.
+  $effect(() =>
+    canvasState.measureWith((id) => {
+      const { width, height } = flow.getInternalNode(id)?.measured ?? {};
+      return width && height ? { width, height } : undefined;
+    }),
+  );
   const saved = viewState.get().viewport;
 
   let nodes = $state.raw<(ElementNode | GroupNode)[]>([]);
@@ -265,12 +272,7 @@
         const node = flow.getInternalNode(id);
         const at = node?.internals.positionAbsolute ?? readElement(workingCopy.get(id))?.position;
         if (!at) return undefined;
-        return {
-          x: at.x,
-          y: at.y,
-          width: node?.measured.width ?? 190,
-          height: node?.measured.height ?? 80,
-        };
+        return { ...at, ...canvasState.nodeSize(id) };
       },
     });
     if (move)
@@ -567,7 +569,12 @@
   $effect(() =>
     ctx.search.onJump((id) => {
       const p = readElement(workingCopy.get(id))?.position;
-      if (p) void flow.setCenter(p.x + 95, p.y + 40, { zoom: flow.getZoom(), duration: 300 });
+      const { width, height } = canvasState.nodeSize(id);
+      if (p)
+        void flow.setCenter(p.x + width / 2, p.y + height / 2, {
+          zoom: flow.getZoom(),
+          duration: 300,
+        });
     }),
   );
 

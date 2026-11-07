@@ -93,7 +93,8 @@ test('GM groups with g, renames, drops a Node in, moves and dissolves the frame'
   expect(created?.data).toMatchObject({
     parent: null,
     position: { x: 70, y: 30 },
-    size: { width: 550, height: 230 },
+    // Measured cards (spec 1.1 §E.1): a short name is 78 px high.
+    size: { width: 550, height: 228 },
   });
   expect((await record(gm, 'ga'))?.data['group']).toBe(groupId);
   // The frame is drawn where the record says (zoom 1, view at the origin).
@@ -197,4 +198,52 @@ test('u untangles the selection left to right in one tween; Ctrl+Z undoes it', a
   await expect.poll(() => position(gm, 'ua')).toEqual({ x: 600, y: 400 });
   expect(await position(gm, 'ub')).toEqual({ x: 100, y: 100 });
   expect(await position(gm, 'uc')).toEqual({ x: 300, y: 600 });
+});
+
+test('cards (spec 1.1 §E.1): long names wrap, the card grows; frames and Untangle fit it', async ({
+  gm,
+}) => {
+  const long = 'Alrik Sohn des Brodomir vom Hohen Kamm zu Gareth und Weiden';
+  await openWith(gm, [
+    el('wa', 'Boron', 100, 100),
+    el('wb', long, 600, 100),
+    el('wc', `${long} II`, 600, 120),
+    link('wab', 'wa', 'wb'),
+    link('wac', 'wa', 'wc'),
+  ]);
+  const card = gm.locator('[data-silk-node="wb"]');
+  const title = card.locator('[data-silk-node-title]');
+  // No ellipsis: the whole name on several lines; same width, taller than a short card.
+  await expect(title).toHaveCSS('white-space', 'normal');
+  const [tb, cb, sb] = [
+    await boxOf(title),
+    await boxOf(card),
+    await boxOf(gm.locator('[data-silk-node="wa"]')),
+  ];
+  expect(tb.height).toBeGreaterThan(40);
+  expect(cb.width).toBe(sb.width);
+  expect(cb.height).toBeGreaterThan(sb.height + 20);
+  // One control row under the name: eye, then pin, at the right.
+  const [eye, pin] = [
+    await boxOf(card.locator('[data-silk-eye]')),
+    await boxOf(card.locator('[data-silk-pin]')),
+  ];
+  expect(eye.y).toBeGreaterThanOrEqual(tb.y + tb.height - 1);
+  expect(pin.x).toBeGreaterThan(eye.x);
+  expect(Math.abs(pin.y - eye.y)).toBeLessThan(4);
+
+  // The frame holds the measured card (zoom 1: screen px = canvas units): 30 px below, 70 above.
+  await api(gm, 'canvas.group', { ids: ['wb'] });
+  const [frame] = await groups(gm);
+  const size = frame?.data['size'] as { width: number; height: number };
+  expect(size.height).toBeGreaterThanOrEqual(Math.floor(cb.height) + 100);
+
+  // Untangle: wb and wc share a rank and stack without overlapping.
+  await api(gm, 'canvas.untangle', { ids: ['wa', 'wb', 'wc'] });
+  await expect
+    .poll(async () => {
+      const [b, c] = [await position(gm, 'wb'), await position(gm, 'wc')];
+      return !!b && !!c && Math.abs(b.y - c.y) >= cb.height;
+    })
+    .toBe(true);
 });
