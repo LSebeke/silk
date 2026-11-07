@@ -473,3 +473,88 @@ describe('merged rows (spec 1.1 §B.2, #87)', () => {
     expect(await again).toBeUndefined();
   });
 });
+
+describe('Scene picker (spec 1.1 §B.2.1)', () => {
+  const scenes = (thumb?: string): PickerCatalog => ({
+    kind: { documentName: 'Scene' },
+    lang: 'de',
+    worldLabel: 'World',
+    world: [{ uuid: 'Scene.inn', name: 'Inn', img: 'inn.webp', thumb: 'inn-thumb.webp' }],
+    packs: [
+      {
+        id: 'dsa5-core.coremaps',
+        label: 'Karten',
+        entries: [
+          {
+            uuid: 'Compendium.dsa5-core.coremaps.Scene.a',
+            name: 'Aventurien',
+            img: 'maps/aventurien.webp',
+            ...(thumb ? { thumb } : {}),
+          },
+        ],
+      },
+    ],
+  });
+
+  it('rows show the Scene thumb; a pick carries the background as img and the thumb', () => {
+    const picker = createCompendiumPicker(scenes('maps/aventurien-thumb.webp'));
+    expect(picker.get().rows.map((r) => r.thumb ?? r.img)).toEqual([
+      'maps/aventurien-thumb.webp',
+      'inn-thumb.webp',
+    ]);
+    expect(picker.pick()).toEqual({
+      source: { kind: 'compendium', uuid: 'Compendium.dsa5-core.coremaps.Scene.a' },
+      name: 'Aventurien',
+      img: 'maps/aventurien.webp',
+      thumb: 'maps/aventurien-thumb.webp',
+    });
+  });
+
+  it('a World Scene is Adopted', () => {
+    const picker = createCompendiumPicker(scenes());
+    expect(picker.pick('Scene.inn')).toEqual({ adopt: { uuid: 'Scene.inn' }, name: 'Inn' });
+  });
+
+  function sceneSource(thumbnail: (src: string) => Promise<string | undefined>) {
+    const made: string[] = [];
+    const source = compendiumSource({
+      kind: (cls) =>
+        cls === 'location' || cls === 'event' ? { documentName: 'Scene' } : undefined,
+      catalog: async () => scenes(),
+      open: async () => () => undefined,
+      thumbnail: async (src) => {
+        made.push(src);
+        return thumbnail(src);
+      },
+    });
+    const registry = createRegistry(() => ({ isGM: true }));
+    for (const c of pickerCommands(source)) registry.register(c);
+    const pick = () =>
+      source.pick({ class: 'location', at: { x: 0, y: 0 }, signal: new AbortController().signal });
+    return { registry, made, pick };
+  }
+
+  it('a Scene without a thumb gets one made from its background', async () => {
+    const { registry, made, pick } = sceneSource(async () => 'data:image/webp;base64,AAA');
+    const picked = pick();
+    expect(await registry.run('picker.pick', {})).toEqual({ picked: true });
+    expect(await picked).toEqual({
+      source: { kind: 'compendium', uuid: 'Compendium.dsa5-core.coremaps.Scene.a' },
+      name: 'Aventurien',
+      img: 'maps/aventurien.webp',
+      thumb: 'data:image/webp;base64,AAA',
+    });
+    expect(made).toEqual(['maps/aventurien.webp']);
+  });
+
+  it('a failed thumbnail leaves the pick without one (the card shows img)', async () => {
+    const { registry, pick } = sceneSource(() => Promise.reject(new Error('no canvas')));
+    const picked = pick();
+    await registry.run('picker.pick', {});
+    expect(await picked).toEqual({
+      source: { kind: 'compendium', uuid: 'Compendium.dsa5-core.coremaps.Scene.a' },
+      name: 'Aventurien',
+      img: 'maps/aventurien.webp',
+    });
+  });
+});

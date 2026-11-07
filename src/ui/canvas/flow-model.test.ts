@@ -35,6 +35,24 @@ describe('flow model', () => {
     ]);
   });
 
+  it('a card with a Scene source shows its thumb, else img (1.1 §E.1)', () => {
+    const scene = (id: string, thumb?: string) =>
+      elementRecord(id, {
+        class: 'location',
+        name: id,
+        position: { x: 0, y: 0 },
+        source: { kind: 'compendium', uuid: 'Compendium.p.Scene.x' },
+        img: 'map.webp',
+        ...(thumb ? { thumb } : {}),
+      });
+    const nodes = toFlowNodes(
+      records(scene('a', 'data:image/webp;base64,AAA'), scene('b')),
+      [],
+      [],
+    );
+    expect(nodes.map((n) => n.data.img)).toEqual(['data:image/webp;base64,AAA', 'map.webp']);
+  });
+
   it('marks Nodes shown despite the filters as "filtered" (§10.8)', () => {
     const filter = {
       visible: new Set(['el-a', 'el-g']),

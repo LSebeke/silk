@@ -43,10 +43,10 @@ describe('Creation Pipeline', () => {
     pipeline.open({ at: { x: 10, y: 20 } });
     expect(pipeline.get()).toMatchObject({ step: 'classBox', at: { x: 10, y: 20 }, query: '' });
 
-    const id = await pipeline.pickClass('location');
+    const id = await pipeline.pickClass('faction');
     expect(element(id)).toMatchObject({
-      class: 'location',
-      name: 'Location',
+      class: 'faction',
+      name: 'Faction',
       position: { x: 10, y: 20 },
     });
     expect(pipeline.get()).toEqual({ step: 'name', id });
@@ -142,7 +142,7 @@ describe('Creation Pipeline', () => {
     const done: string[] = [];
     pipeline.onComplete(({ id }) => done.push(id));
     pipeline.open({ at: { x: 0, y: 0 } });
-    const id = await pipeline.pickClass('location');
+    const id = await pipeline.pickClass('faction');
     expect(done).toEqual([]);
     await pipeline.submitName('Alrik');
     expect(done).toEqual([id]);
@@ -235,7 +235,7 @@ describe('Creation Pipeline with Connections', () => {
     const done: string[] = [];
     pipeline.onComplete(({ id }) => done.push(id));
     commands.length = 0;
-    const id = await pipeline.create({ at: { x: 0, y: 0 }, from: origin }, 'location');
+    const id = await pipeline.create({ at: { x: 0, y: 0 }, from: origin }, 'faction');
     await pipeline.submitName('Gareth');
     expect(pipeline.get()).toMatchObject({ step: 'connection', elementId: id });
     expect(done).toEqual([]);
@@ -286,7 +286,7 @@ describe('Creation Pipeline with Connections', () => {
     });
     const done: string[] = [];
     pipeline.onComplete(({ id }) => done.push(id));
-    const id = await pipeline.create({ at: { x: 0, y: 0 }, from: origin }, 'location');
+    const id = await pipeline.create({ at: { x: 0, y: 0 }, from: origin }, 'faction');
     await pipeline.submitName('');
     pipeline.cancel();
     expect(pipeline.get()).toEqual({ step: 'idle' });

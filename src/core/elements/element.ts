@@ -26,6 +26,11 @@ export interface ElementData {
    * (spec §7) and these mirror it (`src/core/materialize`); for a Ghost they are the truth.
    */
   img?: string;
+  /**
+   * Card image of a Scene-sourced Location/Event (1.1 §B.2.1, §E.1): the Scene's `thumb`, or
+   * Silk's WebP data URL of its background. Silk-owned; Foundry's thumbs are never changed.
+   */
+  thumb?: string;
   infoBlocks?: InfoBlock[];
   /**
    * Player Notes (§9): pages in the "Player Notes" category, mirrored like Info Blocks and
@@ -43,7 +48,8 @@ export interface ElementData {
   status?: string;
   /**
    * Source Step pick (spec 1.1 §B.1), never blank: a compendium entry is imported from here
-   * when the element is Materialized; a generator's Actor becomes the doc at once (§B.3).
+   * when the element is Materialized (a Scene, for Location/Event, as its Scene, §B.2.1); a
+   * generator's Actor becomes the doc at once (§B.3).
    */
   source?: Exclude<ElementSource, { kind: 'blank' }>;
   /** Adopted from an existing Foundry doc (T14), not created by Silk: delete can keep the doc (§6). */

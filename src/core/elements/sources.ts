@@ -1,6 +1,7 @@
 /**
- * Element sources (spec 1.1 §B.1, §D): what a new Story Element starts from. Classes listed in
- * `SOURCE_KINDS` take the Source Step in the Creation Pipeline; the rest are always blank.
+ * Element sources (spec 1.1 §B.1, §B.2.1, §D): what a new Story Element starts from. Classes
+ * listed in `SOURCE_KINDS` take the Source Step in the Creation Pipeline; the rest are always
+ * blank.
  */
 import type { ElementClassId } from './classes';
 
@@ -33,7 +34,25 @@ export const SOURCE_KIND_ORDER: readonly SourceKind[] = ['compendium', 'generato
 const SOURCE_KINDS: Partial<Record<ElementClassId, readonly SourceKind[]>> = {
   person: ['compendium', 'generator', 'blank'],
   creature: ['compendium', 'blank'],
+  location: ['compendium', 'blank'],
+  event: ['compendium', 'blank'],
 };
+
+/**
+ * The Foundry document a class's Compendium choice picks (§B.2 Actors, §B.2.1 Scenes): the
+ * one place that names it per class.
+ */
+const COMPENDIUM_DOCUMENT: Partial<Record<ElementClassId, 'Actor' | 'Scene'>> = {
+  person: 'Actor',
+  creature: 'Actor',
+  location: 'Scene',
+  event: 'Scene',
+};
+
+/** What the class's Compendium choice picks; undefined = the class has none. */
+export function compendiumDocument(cls: string): 'Actor' | 'Scene' | undefined {
+  return COMPENDIUM_DOCUMENT[cls as ElementClassId];
+}
 
 /** The Source Step choices for a class; undefined = the class has no Source Step. */
 export function sourceKinds(cls: ElementClassId): readonly SourceKind[] | undefined {
@@ -42,10 +61,20 @@ export function sourceKinds(cls: ElementClassId): readonly SourceKind[] | undefi
 
 /**
  * Person and Creature: classes whose source is an Actor (Compendium Actor packs, NSC Zucht).
- * The one place that names them; their Appearance (§8) and picker type derive from it.
+ * Their Appearance (§8) and picker type derive from it.
  */
 export function isActorSourceClass(cls: string): boolean {
-  return !!SOURCE_KINDS[cls as ElementClassId]?.includes('compendium');
+  return compendiumDocument(cls) === 'Actor';
+}
+
+/** Location and Event: a compendium source is a Scene (§B.2.1), imported as their Scene. */
+export function sceneSource(
+  cls: string,
+  source: ElementSource | undefined,
+): { uuid: string } | undefined {
+  return source?.kind === 'compendium' && compendiumDocument(cls) === 'Scene'
+    ? { uuid: source.uuid }
+    : undefined;
 }
 
 /** Blank works for every class (the default); the others only where the class offers them. */

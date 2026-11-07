@@ -34,7 +34,7 @@ import {
   type Point,
   type StoryElement,
 } from '../elements';
-import type { SceneDocs, SceneSnapshot } from '../event-scenes/port';
+import { sceneBackground, type SceneDocs, type SceneSnapshot } from '../event-scenes/port';
 import {
   OWNERSHIP_NONE,
   connectionsPage,
@@ -464,7 +464,17 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     at: Point,
   ) {
     const id = deps.newId();
-    await writeElement(id, { class: cls, name: c.scene.name, position: at, adopted: true });
+    // 1.1 §B.2.1 Images: img (journal Cover) = background, card image = the Scene's thumb.
+    const img = sceneBackground(c.scene as Parameters<typeof sceneBackground>[0]);
+    const thumb = c.scene['thumb'];
+    await writeElement(id, {
+      class: cls,
+      name: c.scene.name,
+      position: at,
+      adopted: true,
+      ...(img ? { img } : {}),
+      ...(typeof thumb === 'string' && thumb ? { thumb } : {}),
+    });
     await join(id, at);
     // Link first: the Materialize then finds the Scene instead of generating one.
     await scenes.update(c.scene._id, { 'flags.silk.sceneOf': id });

@@ -8,7 +8,7 @@ import {
   foundryAdopt,
   registerAdoptHooks,
 } from './adapter/adopt';
-import { readPickerCatalog, type CatalogGame } from './adapter/compendium';
+import { readPickerCatalog, sceneThumbnail, type CatalogGame } from './adapter/compendium';
 import { registerConnectionsPageHooks } from './adapter/connections-page';
 import { dsa5Mapping, dsa5Sections } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
@@ -66,8 +66,8 @@ import {
 } from './core/campaigns';
 import { connectionCommands, connectOnCreate } from './core/connections';
 import {
+  compendiumDocument,
   elementCommands,
-  isActorSourceClass,
   readElement,
   type ElementCommandDeps,
 } from './core/elements';
@@ -110,12 +110,18 @@ const workingCopy = () => getSession().workingCopy;
 const canvasState = createCanvasState();
 /** Spec 1.1 §B.3: the Source Step Generator, NSC Zucht (dsa5-mastersworkshop). */
 const nscZucht = foundryNscZucht((key) => localize(key));
-/** Spec 1.1 §B.2: World actors and Actor packs of the class's DSA5 type. */
+/**
+ * Spec 1.1 §B.2: World actors and Actor packs of the class's DSA5 type; §B.2.1: Scenes for
+ * Location and Event.
+ */
 const compendium = compendiumSource({
   kind: (cls) => {
-    const type = isActorSourceClass(cls) ? dsa5Mapping.docType(cls) : undefined;
+    const documentName = compendiumDocument(cls);
+    if (documentName === 'Scene') return { documentName };
+    const type = documentName === 'Actor' ? dsa5Mapping.docType(cls) : undefined;
     return type ? { documentName: 'Actor', type } : undefined;
   },
+  thumbnail: (src) => sceneThumbnail(src),
   catalog: (kind) =>
     readPickerCatalog(game as unknown as CatalogGame, kind, localize('SILK.Picker.World')),
   async open(picker) {

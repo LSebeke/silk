@@ -1,9 +1,9 @@
 /**
  * Creation Pipeline (spec §10.3, 1.1 §B): every way of creating ends here.
  *   1. class box (searchable, at the spot)
- *   2. Source Step, only for classes that have one (Person, Creature; 1.1 §B.1): a compass of
- *      Compendium / Generator / Blank → `element.create` with `source`. Classes without one
- *      run `element.create` straight from step 1.
+ *   2. Source Step, only for classes that have one (Person, Creature, Location, Event; 1.1
+ *      §B.1): a compass of Compendium / Generator / Blank → `element.create` with `source`.
+ *      Classes without one run `element.create` straight from step 1.
  *   3. name field, focused (prefilled with the source's name) → `element.rename`
  *   4. Connection editor, focused on its label, when created from a Node (`element.create`
  *      returned a `connectionId`) → `connection.setLabel`
@@ -92,8 +92,16 @@ export interface SourceRequest {
  * `adopt` instead (a Compendium World actor, 1.1 §B.2 Outcome): the doc is Adopted (§6).
  */
 export type SourcePick =
-  /** `img`: the source's portrait, stored on the Ghost (shown before Materialize). */
-  | { source: Exclude<ElementSource, { kind: 'blank' }>; name: string; img?: string }
+  /**
+   * `img`: the source's portrait (a Scene's background), stored on the Ghost (shown before
+   * Materialize); `thumb`: a Scene's card image (§B.2.1).
+   */
+  | {
+      source: Exclude<ElementSource, { kind: 'blank' }>;
+      name: string;
+      img?: string;
+      thumb?: string;
+    }
   | { adopt: { uuid: string }; name: string };
 
 export type SourceProviders = Partial<Record<Exclude<SourceKind, 'blank'>, SourceProvider>>;
@@ -234,7 +242,7 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
       return undefined;
     }
     if ('adopt' in pick) return adoptFromSource(current, pick.adopt.uuid);
-    return createFromSource(current, pick.source, pick.name, pick.img);
+    return createFromSource(current, pick.source, pick);
   }
 
   /** World pick: `adopt.doc` with the Source Step's origin; connected like a creation. */
@@ -261,12 +269,11 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
   async function createFromSource(
     current: Extract<PipelineStep, { step: 'source' }>,
     source: ElementSource,
-    name?: string,
-    img?: string,
+    images?: { name: string; img?: string; thumb?: string },
   ) {
     sourceCreating = true;
     try {
-      return await createElement(current, current.class, source, name, img);
+      return await createElement(current, current.class, source, images);
     } finally {
       sourceCreating = false;
     }
@@ -276,8 +283,7 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     { at, from, connection }: PipelineOrigin,
     id: ElementClassId,
     source?: ElementSource,
-    name = deps.label(id),
-    img?: string,
+    { name = deps.label(id), img, thumb }: { name?: string; img?: string; thumb?: string } = {},
   ) {
     defaultName = name;
     const args: ElementCreateArgs = { class: id, name, at };
@@ -285,6 +291,7 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     if (connection) args.connection = connection;
     if (source) args.source = source;
     if (img) args.img = img;
+    if (thumb) args.thumb = thumb;
     const result = (await deps.run('element.create', args)) as ElementCreateResult;
     connectionId = result.connectionId;
     renaming = false;
