@@ -70,6 +70,15 @@ describe('Connections page', () => {
     expect(await w.content(inn)).toBe('');
   });
 
+  it('never shows Connection Notes (v1.1 §F.2)', async () => {
+    const w = world();
+    const alrik = await w.create('person', 'Alrik');
+    const inn = await w.create('location', 'Inn');
+    const id = await w.connect(alrik, inn, { label: 'runs' });
+    await w.registry.run('connection.setNotes', { id, notes: '<p>secret debt</p>' });
+    expect(await w.content(inn)).toBe('<ul><li>Alrik runs Inn</li></ul>');
+  });
+
   it('a renamed endpoint renames the sentence on the other page', async () => {
     const w = world();
     const alrik = await w.create('person', 'Alrik');

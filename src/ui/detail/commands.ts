@@ -1,8 +1,10 @@
 /**
  * `element.openDetail` (spec §8 Controls, §15). With `addInfoBlock` (v1.1 §C.1, Node menu
  * "Add Info Block…") it first runs `infoBlock.create` and focuses the new block's name.
+ * `connection.openDetail` (v1.1 §F.2), `element.openImageEditor` (v1.1 §G.3).
  */
 import type { Command } from '../../core/commands/registry';
+import { readConnection } from '../../core/connections';
 import { hasAppearanceClass, readElement } from '../../core/elements';
 import type { DetailContext } from './context';
 
@@ -24,6 +26,21 @@ export function detailUiCommands(getContext: () => DetailContext): Command[] {
           (window) => block && window.focusBlock(block),
         );
         return block ? { infoBlock: block } : undefined;
+      },
+    },
+    {
+      name: 'connection.openDetail',
+      title: 'SILK.Commands.connection.openDetail',
+      available: (ctx) => ctx.isGM,
+      async run({ id }: { id: string }) {
+        const ctx = getContext();
+        if (!readConnection(ctx.workingCopy.get(id)))
+          throw new Error(`Silk: no Connection "${id}"`);
+        const { ConnectionDetailWindow } = await import('./ConnectionDetailWindow');
+        await ConnectionDetailWindow.open(
+          ConnectionDetailWindow.idFor(id),
+          () => new ConnectionDetailWindow(ctx, id),
+        );
       },
     },
     {

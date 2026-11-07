@@ -4,6 +4,7 @@ import { elementRecord, type ElementClassId } from '../elements';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
 import { connectionCommands } from './commands';
 import { readConnection } from './connection';
+import { typeOptions } from './rules';
 
 function setup(isGM = true) {
   const workingCopy = createWorkingCopy(createMemoryBackend(), { canWrite: () => true });
@@ -186,6 +187,49 @@ describe('editing Connections', () => {
     expect(connection(other)).toMatchObject({ type: 'free' });
   });
 
+  it('connection.setType sets one of typeOptions (Connection Detail select)', async () => {
+    const { add, create, registry, connection, workingCopy } = setup();
+    await add('alrik', 'person');
+    await add('fest', 'event');
+    const id = await create({ from: 'alrik', to: 'fest', direction: 'mutual', label: 'x' });
+    const c = connection(id);
+    expect(c && typeOptions(workingCopy.records(), c)).toEqual(['presentAt', 'free']);
+    await registry.run('connection.setType', { id, type: 'presentAt' });
+    expect(connection(id)).toMatchObject({ type: 'presentAt', direction: 'directed' });
+    await registry.run('connection.setType', { id, type: 'presentAt' });
+    expect(connection(id)?.type).toBe('presentAt');
+    await expect(registry.run('connection.setType', { id, type: 'owns' })).rejects.toThrow(/owns/);
+    await registry.run('connection.setType', { id, type: 'free' });
+    expect(connection(id)?.type).toBe('free');
+  });
+
+  it('connection.setType replaces conflicting Connections like the cycle', async () => {
+    const { add, create, registry, connections } = setup();
+    await add('realm', 'location');
+    await add('city', 'location');
+    await add('inn', 'location');
+    const up = await create({ from: 'city', to: 'realm', type: 'locatedIn' });
+    const free = await create({ from: 'city', to: 'inn' });
+    await registry.run('connection.setType', { id: free, type: 'locatedIn' });
+    expect(connections()).toEqual([free]);
+    expect(connections()).not.toContain(up);
+  });
+
+  it('connection.setDirection sets directed or mutual', async () => {
+    const { add, create, registry, connection } = setup();
+    await add('a', 'person');
+    await add('b', 'person');
+    const id = await create({ from: 'b', to: 'a' });
+    await registry.run('connection.setDirection', { id, direction: 'directed' });
+    expect(connection(id)).toMatchObject({ from: 'b', to: 'a', direction: 'directed' });
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
+    expect(connection(id)?.direction).toBe('mutual');
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
+    expect(connection(id)?.direction).toBe('mutual');
+    await registry.run('connection.setDirection', { id, direction: 'directed' });
+    expect(connection(id)).toMatchObject({ from: 'a', to: 'b', direction: 'directed' });
+  });
+
   it('connection.cycleType applies cardinality and skips types that would cycle', async () => {
     const { add, create, registry, connection, connections } = setup();
     await add('realm', 'location');
@@ -235,5 +279,33 @@ describe('editing Connections', () => {
   it('are GM-only', () => {
     const { registry } = setup(false);
     for (const c of registry.list()) expect(registry.isAvailable(c.name)).toBe(false);
+  });
+});
+
+describe('Connection Notes (v1.1 §F.2)', () => {
+  it('connection.setNotes stores HTML notes; empty notes leave no field', async () => {
+    const { add, create, registry, workingCopy, connection } = setup();
+    await add('a', 'person');
+    await add('b', 'person');
+    const id = await create({ from: 'a', to: 'b', label: 'knows' });
+    await registry.run('connection.setNotes', { id, notes: '<p>Owes <b>money</b></p>' });
+    expect(connection(id)?.notes).toBe('<p>Owes <b>money</b></p>');
+    await registry.run('connection.setNotes', { id, notes: '' });
+    expect(workingCopy.get(id)?.data).not.toHaveProperty('notes');
+    expect(connection(id)?.notes).toBeUndefined();
+    await expect(registry.run('connection.setNotes', { id: 'x', notes: '' })).rejects.toThrow(/x/);
+  });
+
+  it('notes survive every other edit', async () => {
+    const { add, create, registry, connection } = setup();
+    await add('a', 'person');
+    await add('b', 'person');
+    const id = await create({ from: 'a', to: 'b', label: 'knows' });
+    await registry.run('connection.setNotes', { id, notes: '<p>n</p>' });
+    await registry.run('connection.setLabel', { id, label: 'trusts' });
+    await registry.run('connection.cycleDirection', { id });
+    await registry.run('connection.flip', { id });
+    await registry.run('connection.cycleType', { id });
+    expect(connection(id)?.notes).toBe('<p>n</p>');
   });
 });

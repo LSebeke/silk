@@ -27,6 +27,10 @@
       "warnUnmaterializeReveal": {
         "Name": "Warn on Unmaterialize of Revealed content",
         "Hint": "Warn before Unmaterializing an Element players can see."
+      },
+      "canonWindow": {
+        "Name": "Canon",
+        "Hint": "Create or pick this World's Canon; Checkout, Adventures, Campaigns."
       }
     },
     "Commands": {
@@ -86,6 +90,7 @@
         "setFields": "Set class fields",
         "changeClass": "Change class",
         "openSheet": "Open sheet",
+        "openJournal": "Open journal",
         "tag": "Add Tag",
         "untag": "Remove Tag",
         "setStatus": "Set Status",
@@ -100,7 +105,11 @@
         "cycleDirection": "Cycle Connection direction",
         "cycleType": "Cycle Connection type",
         "flip": "Flip Connection",
-        "delete": "Delete Connection"
+        "delete": "Delete Connection",
+        "openDetail": "Connection Detail",
+        "setNotes": "Edit Connection notes",
+        "setType": "Set Connection type",
+        "setDirection": "Set Connection direction"
       },
       "materialize": {
         "elements": "Materialize",
@@ -318,7 +327,9 @@
       "Abandon": "Abandon…",
       "AbandonPrompt": "Abandoning drops everything this Adventure changed and resets the World to main. Docs of elements not on main are deleted. This cannot be undone. Type the Adventure name to confirm:",
       "AbandonConfirm": "Abandon for good",
-      "Synced": "Main moved in another World; this World was updated."
+      "Synced": "Main moved in another World; this World was updated.",
+      "NoCanon": "No Canon yet",
+      "ChipMain": "main"
     },
     "Notice": {
       "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
@@ -482,6 +493,20 @@
       "InfoBlockName": "Info Block name",
       "DeleteInfoBlockTitle": "Delete Info Block",
       "DeleteInfoBlockConfirm": "Delete the Info Block \"{name}\"?"
+    },
+    "ConnectionDetail": {
+      "Title": "Connection Detail",
+      "Label": "Label",
+      "Type": "Type",
+      "Direction": "Direction",
+      "Directed": "Directed",
+      "Mutual": "Mutual",
+      "Reverse": "Reverse",
+      "Notes": "Notes",
+      "NotesHint": "GM only: never shown to players, on Connections pages or in Search.",
+      "DeleteTitle": "Delete Connection",
+      "DeleteConfirm": "Delete the Connection \"{sentence}\"?",
+      "Gone": "This Connection no longer exists."
     },
     "Merge": {
       "Title": "Merge",

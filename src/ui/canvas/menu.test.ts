@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ElementClassId } from '../../core/elements';
 import { edgeMenu, nodeMenu, type MenuDeps } from './menu';
 
 const deps = (over: Partial<MenuDeps> = {}): MenuDeps => ({
@@ -32,6 +33,7 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
       'T(element.openDetail)',
       'SILK.Detail.AddInfoBlockMenu',
       'T(element.openSheet)',
+      'T(element.openJournal)',
       'T(element.rename)',
       'T(materialize.unmaterialize)',
       'T(element.delete)',
@@ -85,6 +87,23 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
     );
     expect(labels(entries)).toContain('T(canvas.untangle)');
     expect(entries.find((e) => e.command === 'element.delete')?.args).toEqual({ ids: ['a', 'b'] });
+  });
+});
+
+describe('Node context menu: Open sheet / Open journal (v1.1 §G.2)', () => {
+  const opens = (cls: ElementClassId) =>
+    nodeMenu({ id: 'a', class: cls, name: 'A' }, deps())
+      .filter((e) => e.command === 'element.openSheet' || e.command === 'element.openJournal')
+      .map((e) => e.command);
+
+  it('actor and item classes: both', () => {
+    for (const cls of ['person', 'creature', 'playerCharacter', 'item'] as const)
+      expect(opens(cls)).toEqual(['element.openSheet', 'element.openJournal']);
+  });
+
+  it('journal classes: only Open journal', () => {
+    for (const cls of ['location', 'faction', 'event', 'quest', 'note'] as const)
+      expect(opens(cls)).toEqual(['element.openJournal']);
   });
 });
 

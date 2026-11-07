@@ -32,7 +32,7 @@ describe('buildPlayerView (spec §9 Player Canvas data)', () => {
     element('alrik', { class: 'person', uuid: 'Actor.a', position: { x: 300, y: 40 } }),
     element('hidden', { class: 'person', uuid: 'Actor.h', position: { x: 5, y: 5 } }),
     element('ghost', { class: 'note', position: { x: 1, y: 1 } }),
-    connection('c1', { from: 'alrik', to: 'gareth', label: 'lives in' }),
+    connection('c1', { from: 'alrik', to: 'gareth', label: 'lives in', notes: '<p>owes rent</p>' }),
     connection('c2', { from: 'alrik', to: 'hidden', label: 'serves' }),
     connection('c3', { from: 'gareth', to: 'alrik', type: 'locatedIn' }),
     { kind: 'layoutGroup', id: 'grp', data: { label: 'Villains' } } as never,
@@ -63,7 +63,7 @@ describe('buildPlayerView (spec §9 Player Canvas data)', () => {
         ['connection', 'c2'],
       ),
     );
-    // c2's other end is unrevealed; c3 is not Revealed.
+    // c2's other end is unrevealed; c3 is not Revealed. Notes are GM-only (v1.1 §F.2).
     expect(view.connections).toEqual([
       {
         id: 'c1',

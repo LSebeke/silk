@@ -27,6 +27,10 @@
       "warnUnmaterializeReveal": {
         "Name": "Warnung beim Entmaterialisieren enthüllter Inhalte",
         "Hint": "Warnen, bevor ein Element entmaterialisiert wird, das Spieler sehen können."
+      },
+      "canonWindow": {
+        "Name": "Kanon",
+        "Hint": "Kanon dieser Welt anlegen oder wählen; Checkout, Abenteuer, Kampagnen."
       }
     },
     "Commands": {
@@ -86,6 +90,7 @@
         "setFields": "Klassenfelder setzen",
         "changeClass": "Klasse ändern",
         "openSheet": "Bogen öffnen",
+        "openJournal": "Journal öffnen",
         "tag": "Tag hinzufügen",
         "untag": "Tag entfernen",
         "setStatus": "Status setzen",
@@ -100,7 +105,11 @@
         "cycleDirection": "Verbindungsrichtung wechseln",
         "cycleType": "Verbindungsart wechseln",
         "flip": "Verbindung umkehren",
-        "delete": "Verbindung löschen"
+        "delete": "Verbindung löschen",
+        "openDetail": "Verbindungsdetails",
+        "setNotes": "Notizen der Verbindung bearbeiten",
+        "setType": "Verbindungstyp setzen",
+        "setDirection": "Verbindungsrichtung setzen"
       },
       "materialize": {
         "elements": "Materialisieren",
@@ -318,7 +327,9 @@
       "Abandon": "Verwerfen…",
       "AbandonPrompt": "Verwerfen löscht alles, was dieses Abenteuer geändert hat, und setzt die Welt auf main zurück. Dokumente von Elementen, die es auf main nicht gibt, werden gelöscht. Das lässt sich nicht rückgängig machen. Zur Bestätigung den Namen des Abenteuers eingeben:",
       "AbandonConfirm": "Endgültig verwerfen",
-      "Synced": "main wurde in einer anderen Welt geändert; diese Welt wurde aktualisiert."
+      "Synced": "main wurde in einer anderen Welt geändert; diese Welt wurde aktualisiert.",
+      "NoCanon": "Noch kein Kanon",
+      "ChipMain": "main"
     },
     "Notice": {
       "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
@@ -482,6 +493,20 @@
       "InfoBlockName": "Name des Info-Blocks",
       "DeleteInfoBlockTitle": "Info-Block löschen",
       "DeleteInfoBlockConfirm": "Den Info-Block „{name}“ löschen?"
+    },
+    "ConnectionDetail": {
+      "Title": "Verbindungsdetails",
+      "Label": "Beschriftung",
+      "Type": "Typ",
+      "Direction": "Richtung",
+      "Directed": "Gerichtet",
+      "Mutual": "Gegenseitig",
+      "Reverse": "Umkehren",
+      "Notes": "Notizen",
+      "NotesHint": "Nur für die Spielleitung: nie für Spieler sichtbar, nicht auf Verbindungsseiten und nicht in der Suche.",
+      "DeleteTitle": "Verbindung löschen",
+      "DeleteConfirm": "Die Verbindung „{sentence}“ löschen?",
+      "Gone": "Diese Verbindung existiert nicht mehr."
     },
     "Merge": {
       "Title": "Zusammenführen",
