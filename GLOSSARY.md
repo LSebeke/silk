@@ -39,6 +39,11 @@ _Avoid_: merge Revelation Maps, merge Campaigns
 
 **Node**: The representation of one Story Element on a World Canvas. Where Nodes sit is part of the Canon, so every World and Adventure starts from the same layout.
 
+**Connection Notes**: The GM's private notes on one Connection. Never shown to players, never Revealed.
+
+**Portrait**: The image a Story Element shows (sheet image and token). For a Person or Creature whose Appearance is not Revealed, players see the hooded image while the real Portrait waits.
+_Avoid_: avatar
+
 **Behavioural Connection**: A Connection of a fixed type, valid only between certain Element Classes, that drives behaviour in Foundry or Silk (e.g. "owns", "present at"). All other Connections are free-form, with a label.
 
 **Reveal**: The GM sharing a Story Element, a single Info Block, or a single Connection with the whole party of a Campaign. Revealing an Info Block or Connection also Reveals the Story Element(s) it belongs to, but nothing more. Can be undone.
@@ -65,7 +70,7 @@ _Avoid_: import, promote, link
 
 **Ghost**: A Node whose Story Element is not Materialized in this World.
 
-**Focus View**: A canvas mode that shows only the Story Elements within a few Connections of the active Foundry Scene and the actors in it, or of the selected Story Element, plus any Focus Pins.
+**Focus View**: A canvas mode that shows only the Story Elements within a few Connections of the active Foundry Scene and the actors in it, or of the selected Story Element (kept after deselecting when no Scene gives a focus), plus any Focus Pins.
 
 **Focus Pin**: A Story Element the GM has marked to always show in Focus View, regardless of distance.
 _Avoid_: anchor, favourite
