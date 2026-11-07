@@ -18,6 +18,7 @@
   import { cameraMove, FOCUS_SEEDS, type CameraReason } from '../../core/canvas/focus';
   import { TWEEN_MS } from '../../core/canvas/tween';
   import type { PipelineOrigin } from '../../core/canvas';
+  import type { CheckoutSummary } from '../../core/campaigns';
   import type { CreateFromConnection, RelativeDirection } from '../../core/connections';
   import {
     ELEMENT_CLASSES,
@@ -786,6 +787,22 @@
     return focusOn() && ctx.focus.seeds().length === 0;
   });
 
+  // Canon entry points (v1.1 §H): the toolbar chip, or "No Canon yet" while unbound.
+  /** `undefined` until read. */
+  let checkout = $state<CheckoutSummary | null | undefined>();
+  $effect(() => {
+    const read = () =>
+      void ctx.checkoutSummary().then(
+        (summary) => (checkout = summary),
+        () => (checkout = undefined),
+      );
+    read();
+    return workingCopy.watch((change) => {
+      if (change.binding) read();
+    });
+  });
+  const openCanon = () => void run('canon.openWindow');
+
   function onSelectionChange({ nodes: selected }: { nodes: (ElementNode | GroupNode)[] }) {
     const ids = selected.map((n) => n.id);
     const current = canvasState.get().selection;
@@ -876,6 +893,18 @@
   {/if}
   <FilterBar {ctx} result={filtered} />
   <div class="silk-canvas-tools">
+    {#if checkout}
+      <button
+        type="button"
+        class="silk-canon-chip"
+        title={ctx.title('canon.openWindow')}
+        disabled={!ctx.available('canon.openWindow')}
+        onclick={openCanon}
+        data-silk-canon-chip
+      >
+        {checkout.canon} · {checkout.adventure ?? ctx.localize('SILK.Canon.ChipMain')}
+      </button>
+    {/if}
     <button
       type="button"
       title="{ctx.localize('SILK.Canvas.Search')} (Ctrl+F)"
@@ -952,6 +981,19 @@
       </button>
     </div>
   {/if}
+  {#if checkout === null}
+    <div class="silk-no-canon" role="status" data-silk-no-canon>
+      <strong>{ctx.localize('SILK.Canon.NoCanon')}</strong>
+      <button
+        type="button"
+        disabled={!ctx.available('canon.openWindow')}
+        onclick={openCanon}
+        data-silk-action="open-canon"
+      >
+        {ctx.title('canon.openWindow')}
+      </button>
+    </div>
+  {/if}
   {#if focusHint}
     <div class="silk-focus-hint" role="status" data-silk-focus-hint>
       {ctx.localize('SILK.Focus.Hint')}
@@ -1016,6 +1058,31 @@
   }
   .silk-canvas-tools button.active {
     border-color: #2b6cb0;
+  }
+  .silk-canvas-tools .silk-canon-chip {
+    width: auto;
+    max-width: 280px;
+    padding: 0 10px;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-radius: 14px;
+  }
+  .silk-no-canon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    padding: 16px 20px;
+    background: #fffdf8;
+    border: 1px solid #c9bfa8;
+    border-radius: 8px;
+    transform: translate(-50%, -50%);
   }
   .silk-rubber-band {
     position: absolute;

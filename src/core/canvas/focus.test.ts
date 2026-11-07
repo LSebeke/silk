@@ -172,6 +172,38 @@ describe('Focus View', () => {
     expect(t.visible()).toEqual(['a', 'b', 'ev']);
   });
 
+  it('without Scene seeds, a cleared selection stays as sticky seeds (v1.1 §E.2)', async () => {
+    const t = await setup(null);
+    t.state.select(['d']);
+    t.state.select([]);
+    expect(t.focus.seeds()).toEqual(['d']);
+    expect(t.visible()).toEqual(['b', 'c', 'd']);
+    // A new selection replaces them.
+    t.state.select(['x']);
+    t.state.select([]);
+    expect(t.focus.seeds()).toEqual(['x']);
+    // Not persisted.
+    expect(t.stored()).not.toHaveProperty('seeds');
+    expect(JSON.stringify(t.stored())).not.toContain('"x"');
+  });
+
+  it('an active Scene with seeds clears the sticky seeds (v1.1 §E.2)', async () => {
+    const t = await setup(null);
+    t.state.select(['d']);
+    t.state.select([]);
+    t.setScene({ id: 's1', sceneOf: 'ev', actorIds: [] });
+    expect(t.focus.seeds()).toEqual(['ev']);
+    t.setScene(undefined);
+    expect(t.focus.seeds()).toEqual([]);
+  });
+
+  it('a Scene without seeds keeps the sticky seeds (v1.1 §E.2)', async () => {
+    const t = await setup({ id: 's1', actorIds: [] });
+    t.state.select(['d']);
+    t.state.select([]);
+    expect(t.focus.seeds()).toEqual(['d']);
+  });
+
   it('always shows Focus Pins, which are not seeds; pins persist in the view state', async () => {
     const t = await setup();
     await t.registry.run('focus.pin', { ids: ['x'] });

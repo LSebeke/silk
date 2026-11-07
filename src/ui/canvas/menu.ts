@@ -6,6 +6,7 @@
 import type { RevealKind } from '../../core/campaigns';
 import {
   appearanceBlock,
+  elementClass,
   hasStatus,
   type ElementClassId,
   type InfoBlock,
@@ -82,7 +83,10 @@ export function nodeMenu(
     ...command(deps, 'element.openDetail', { id, addInfoBlock: true }, ADD_INFO_BLOCK),
     key: 'element.openDetail.addInfoBlock',
   });
-  entries.push(command(deps, 'element.openSheet', { id }));
+  // v1.1 §G.2: a journal class's sheet is its journal.
+  if (elementClass(el.class)?.docKind !== 'journal')
+    entries.push(command(deps, 'element.openSheet', { id }));
+  entries.push(command(deps, 'element.openJournal', { id }));
   entries.push({ ...command(deps, 'element.rename', { id }), action: 'rename' });
   if (ids.length >= 2) entries.push(command(deps, 'canvas.untangle', { ids }));
   entries.push(

@@ -59,6 +59,13 @@ export interface Campaigns {
   /** `adventure.start`: branch from clean main's head and check the Adventure out. */
   startAdventure(args: { name: string; campaignId: string }): Promise<{ adventureId: string }>;
   overview(): Promise<CanonOverview>;
+  /** The Canon chip (v1.1 §H): Canon name and Adventure (`null` under main); `null` unbound. */
+  checkoutSummary(): Promise<CheckoutSummary | null>;
+}
+
+export interface CheckoutSummary {
+  canon: string;
+  adventure: string | null;
 }
 
 export function createCampaigns(deps: CampaignsDeps): Campaigns {
@@ -168,6 +175,12 @@ export function createCampaigns(deps: CampaignsDeps): Campaigns {
       await workingCopy.setBinding({ ...binding, checkout: { adventure: adventureId } });
       await deps.applyRevelationMap(await campaigns.readRevelationMap(campaignId), campaignId);
       return { adventureId };
+    },
+
+    async checkoutSummary() {
+      const canon = await history.canon();
+      if (!canon || !workingCopy.binding) return null;
+      return { canon: canon.manifest.name, adventure: (await checkedOutAdventure())?.name ?? null };
     },
 
     async overview() {

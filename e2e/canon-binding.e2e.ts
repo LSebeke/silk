@@ -50,9 +50,36 @@ test('bind a Canon, sync the working copy to players, commit and discard', async
   });
   expect(journal).toEqual({ folder: 'Silk (internal)', ownership: 0 });
 
+  // v1.1 §H: unbound, the canvas offers "No Canon yet" → Canon window; bound, the Canon chip.
+  await silk(gm, ({ api }) => api.run('canvas.open'));
+  const noCanon = gm.locator('[data-silk-no-canon]');
+  await expect(noCanon).toBeVisible();
+  await noCanon.locator('[data-silk-action="open-canon"]').click();
+  await expect(gm.locator('#silk-canon')).toBeVisible();
+
   const { canonId } = await silk(gm, ({ api }) =>
     api.run<{ canonId: string }>('canon.create', { name: 'E2E' }),
   );
+  await expect(noCanon).toHaveCount(0);
+  await expect(gm.locator('[data-silk-canon-chip]')).toHaveText('E2E · main');
+  await gm.evaluate(async () => {
+    await foundry.applications.instances.get('silk-canon')?.close();
+    // Toasts sit over the toolbar's top right.
+    document.getElementById('notifications')?.style.setProperty('display', 'none');
+  });
+  await expect(gm.locator('#silk-canon')).toHaveCount(0);
+  await gm.locator('[data-silk-canon-chip]').click();
+  await expect(gm.locator('#silk-canon')).toBeVisible();
+
+  // Module Settings: "Open Canon window" (GM).
+  await gm.evaluate(async () => {
+    await foundry.applications.instances.get('silk-canon')?.close();
+    await new foundry.applications.settings.SettingsConfig().render({ force: true });
+  });
+  await expect(gm.locator('#silk-canon')).toHaveCount(0);
+  await gm.locator('#settings-config [data-tab="silk"]').first().click();
+  await gm.locator('button[data-action="openSubmenu"][data-key="silk.canonWindow"]').click();
+  await expect(gm.locator('#silk-canon')).toBeVisible();
   expect(canonId).toMatch(/^[0-9a-f]{32}$/);
   await expect(
     silk(gm, ({ api }, id) => api.run('canon.bind', { canonId: id }), canonId),

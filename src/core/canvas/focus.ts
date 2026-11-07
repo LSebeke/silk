@@ -1,6 +1,6 @@
 /**
  * Focus View (spec §10.6): the N-hop Canvas Filter seeded by the active Scene, its tokens'
- * elements and the current selection, plus Focus Pins (always shown, not seeds) and the
+ * elements and the current selection (sticky without Scene seeds, v1.1 §E.2), plus Focus Pins (always shown, not seeds) and the
  * camera rules. Focus View is on while the `hops` dimension holds `FOCUS_SEEDS`.
  */
 import type { Snapshot } from '../canon';
@@ -39,7 +39,10 @@ export function sceneSeeds(records: Snapshot, scene: ActiveScene | undefined): s
 }
 
 export interface Focus {
-  /** Scene seeds ∪ selection (element ids). */
+  /**
+   * Scene seeds ∪ selection (element ids). Without Scene seeds a cleared selection leaves the
+   * last one as sticky seeds (v1.1 §E.2): a new selection replaces them, Scene seeds clear them.
+   */
   seeds(): string[];
   /** N of the N-hop filter. */
   hops(): number;
@@ -74,11 +77,26 @@ export function createFocus(deps: FocusDeps): Focus {
     return active;
   };
   let selection = deps.state.get().selection;
+  /** The last non-empty selection; in memory only. */
+  let sticky: readonly string[] = selection;
   deps.state.subscribe(({ selection: next }) => {
     if (next === selection) return;
     selection = next;
+    if (next.length) sticky = next;
     emit('local');
   });
+
+  /** Scene seeds now; any clear the sticky seeds. */
+  function currentSceneSeeds() {
+    let seeds: string[] = [];
+    try {
+      seeds = sceneSeeds(deps.workingCopy().records(), scene());
+    } catch {
+      // No Canon bound yet: no Scene seeds.
+    }
+    if (seeds.length) sticky = [];
+    return seeds;
+  }
 
   /** Unsaved changes: the canvas follows at once, not after the setting round trip. */
   let pending: Pick<ViewState, 'pins' | 'hops'> = {};
@@ -97,13 +115,8 @@ export function createFocus(deps: FocusDeps): Focus {
 
   return {
     seeds() {
-      let records;
-      try {
-        records = deps.workingCopy().records();
-      } catch {
-        return [...selection];
-      }
-      return [...new Set([...sceneSeeds(records, scene()), ...selection])];
+      const fromScene = currentSceneSeeds();
+      return [...new Set([...fromScene, ...(selection.length ? selection : sticky)])];
     },
     hops: () => view().hops ?? DEFAULT_HOPS,
     pins: () => view().pins ?? [],
@@ -121,6 +134,7 @@ export function createFocus(deps: FocusDeps): Focus {
     sceneChanged() {
       const first = sceneId === null;
       const next = scene()?.id;
+      currentSceneSeeds();
       const changed = !first && next !== sceneId;
       sceneId = next;
       emit(changed ? 'scene' : 'local');

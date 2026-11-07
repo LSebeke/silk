@@ -133,7 +133,10 @@ export interface Materializer {
   setStatus(id: string, status: string): Promise<void>;
   /** Next Status in the class's order. Returns it. */
   toggleStatus(id: string): Promise<Status>;
+  /** The main doc only (v1.1 §G.2); implicit Materialize. */
   openSheet(id: string): Promise<void>;
+  /** The Companion Journal, or a journal class's main journal (v1.1 §G.2); implicit Materialize. */
+  openJournal(id: string): Promise<void>;
   /** Foundry → record mirror for a Materialized element (Foundry edits flow back, §7). */
   sync(id: string): Promise<void>;
   /** The Story Element a Silk doc (or Companion Journal) belongs to. */
@@ -574,9 +577,12 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
 
     async openSheet(id) {
       await ensureMaterialized(id);
-      const { main, companion } = requireDocs(id);
-      await docs.open(main.uuid);
-      if (companion) await docs.open(companion.uuid);
+      await docs.open(requireDocs(id).main.uuid);
+    },
+
+    async openJournal(id) {
+      await ensureMaterialized(id);
+      await docs.open(holderOf(id).uuid);
     },
 
     elementIdOf(doc) {
@@ -630,6 +636,7 @@ export function materializeCommands(m: Materializer): Command[] {
       status: await m.toggleStatus(args.id),
     })),
     command('element.openSheet', (args: { id: string }) => m.openSheet(args.id)),
+    command('element.openJournal', (args: { id: string }) => m.openJournal(args.id)),
     command('element.tag', (args: { ids: string[]; tag: string }) =>
       m.tag(args.ids, args.tag, true),
     ),

@@ -88,3 +88,39 @@ export const SETTINGS: Record<string, SettingData> = {
 export function registerSettings(register: RegisterSetting): void {
   for (const [key, data] of Object.entries(SETTINGS)) register(MODULE_ID, key, data);
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS mixin constructor shape
+type AppClass = new (...args: any[]) => { render(...args: never[]): Promise<unknown> };
+
+/** `game.settings.registerMenu` data. */
+export interface MenuData<T extends AppClass> {
+  name: string;
+  label: string;
+  hint: string;
+  icon: string;
+  type: T;
+  restricted: boolean;
+}
+
+/**
+ * Module Settings button "Open Canon window" (v1.1 §H), GM only. Foundry constructs and
+ * renders an ApplicationV2 subclass; this one only runs `canon.openWindow`.
+ */
+export function canonWindowMenu<T extends AppClass>(
+  Base: T,
+  run: (command: string) => Promise<unknown>,
+): MenuData<T> {
+  class CanonWindowLauncher extends Base {
+    override render() {
+      return run('canon.openWindow').then(() => this);
+    }
+  }
+  return {
+    name: 'SILK.Settings.canonWindow.Name',
+    label: 'SILK.Commands.canon.openWindow',
+    hint: 'SILK.Settings.canonWindow.Hint',
+    icon: 'fa-solid fa-book-atlas',
+    type: CanonWindowLauncher,
+    restricted: true,
+  };
+}
