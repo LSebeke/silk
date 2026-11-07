@@ -1,4 +1,7 @@
-/** Source Step (spec 1.1 §B.1): class → Source Step (Person, Creature) → name → label. */
+/**
+ * Source Step (spec 1.1 §B.1): class → Source Step (Person, Creature, Location, Event) → name
+ * → label.
+ */
 import { describe, expect, it, vi } from 'vitest';
 import { createRegistry } from '../commands/registry';
 import { connectionCommands, connectOnCreate, readConnection } from '../connections';
@@ -43,9 +46,9 @@ function setup(sources?: SourceProviders) {
 }
 
 describe('Source Step', () => {
-  it('Person and Creature take the Source Step after the class; nothing is created yet', async () => {
+  it('Person, Creature, Location and Event take the Source Step after the class; nothing is created yet', async () => {
     const { pipeline, workingCopy } = setup();
-    for (const cls of ['person', 'creature'] as const) {
+    for (const cls of ['person', 'creature', 'location', 'event'] as const) {
       pipeline.open({ at: { x: 5, y: 6 }, anchor: { x: 50, y: 60 } });
       expect(await pipeline.pickClass(cls)).toBeUndefined();
       expect(pipeline.get()).toMatchObject({
@@ -61,7 +64,7 @@ describe('Source Step', () => {
 
   it('other classes skip it', async () => {
     const { pipeline } = setup();
-    for (const cls of ['location', 'event', 'item', 'note'] as const) {
+    for (const cls of ['item', 'note', 'faction', 'quest'] as const) {
       const id = await pipeline.create({ at: { x: 0, y: 0 } }, cls);
       expect(pipeline.get()).toEqual({ step: 'name', id });
       await pipeline.submitName('');
@@ -338,6 +341,20 @@ describe('Interaction budget with a Source Step (spec 1.1 §B.4)', () => {
       ],
     ],
     [
+      'digit + → (Location, Scene picker class)',
+      (p, from) => [
+        () => p.create({ at: { x: 0, y: 0 }, from }, 'location'),
+        () => p.pickSource('blank'),
+      ],
+    ],
+    [
+      'digit + → (Event)',
+      (p, from) => [
+        () => p.create({ at: { x: 0, y: 0 }, from }, 'event'),
+        () => p.pickSource('blank'),
+      ],
+    ],
+    [
       'palette drop on a Node + →',
       (p, from) => [
         () => p.create({ at: { x: 0, y: 0 }, from }, 'creature'),
@@ -363,7 +380,9 @@ describe('Interaction budget with a Source Step (spec 1.1 §B.4)', () => {
     let id: unknown;
     for (const step of steps) id = await step();
     const connections = [...workingCopy.records().values()].flatMap((r) => readConnection(r) ?? []);
-    expect(connections).toMatchObject([{ from: origin, to: id }]);
+    // Connected either way: the inferred Connection type decides the direction (§5).
+    expect(connections).toHaveLength(1);
+    expect([connections[0]?.from, connections[0]?.to].sort()).toEqual([origin, id].sort());
   });
 });
 
@@ -377,10 +396,10 @@ describe('pipeline commands (ADR 0003): class box and Source Step through the re
   it('pipeline.search filters the class box; pipeline.pickClass without a class takes the first', async () => {
     const s = withCommands();
     s.pipeline.open({ at: { x: 0, y: 0 } });
-    await s.registry.run('pipeline.search', { query: 'loc' });
-    expect(s.pipeline.options().map((c) => c.id)).toEqual(['location']);
+    await s.registry.run('pipeline.search', { query: 'not' });
+    expect(s.pipeline.options().map((c) => c.id)).toEqual(['note']);
     const { id } = await s.registry.run<{ id?: string }>('pipeline.pickClass', {});
-    expect(s.element(id)).toMatchObject({ class: 'location' });
+    expect(s.element(id)).toMatchObject({ class: 'note' });
   });
 
   it('pipeline.pickClass { class } then pipeline.pickSource { kind: blank } creates', async () => {
@@ -409,6 +428,27 @@ describe('pipeline commands (ADR 0003): class box and Source Step through the re
     await vi.waitFor(() => expect(s.pipeline.get().step).toBe('name'));
     // The Ghost shows the entry's portrait before Materialize.
     expect(s.calls[0]?.[1]).toMatchObject({ name: 'X', img: 'x.webp' });
+  });
+
+  it('a Scene pick passes its card thumb to element.create (1.1 §B.2.1)', async () => {
+    const s = withCommands({
+      compendium: {
+        unavailable: () => undefined,
+        pick: async () => ({
+          source: { kind: 'compendium', uuid: 'Compendium.p.Scene.x' },
+          name: 'Gareth',
+          img: 'gareth.webp',
+          thumb: 'gareth-thumb.webp',
+        }),
+      },
+    });
+    await s.pipeline.create({ at: { x: 0, y: 0 } }, 'location');
+    const id = await s.pipeline.pickSource('compendium');
+    expect(s.element(id)).toMatchObject({
+      class: 'location',
+      img: 'gareth.webp',
+      thumb: 'gareth-thumb.webp',
+    });
   });
 
   it('pipeline.cancel ends the creation', async () => {

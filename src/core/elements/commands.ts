@@ -23,6 +23,8 @@ export interface ElementCreateArgs {
   source?: ElementSource;
   /** Image path (a compendium pick's portrait, shown on the Ghost until Materialize). */
   img?: string;
+  /** A Scene pick's card image (1.1 §B.2.1): its `thumb` or a WebP data URL. */
+  thumb?: string;
 }
 
 export interface ElementCreateResult {
@@ -70,6 +72,7 @@ export function elementCommands(deps: ElementCommandDeps): Command[] {
         position: { x: args.at?.x ?? 0, y: args.at?.y ?? 0 },
         ...(source && source.kind !== 'blank' ? { source } : {}),
         ...(typeof args.img === 'string' && args.img ? { img: args.img } : {}),
+        ...(typeof args.thumb === 'string' && args.thumb ? { thumb: args.thumb } : {}),
       };
       await deps.workingCopy().set([elementRecord(id, data)]);
       let result: ElementCreateResult = { id };

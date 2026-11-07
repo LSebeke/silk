@@ -75,3 +75,21 @@ export interface EmbeddedOps {
   update: { _id: string; [key: string]: unknown }[];
   delete: string[];
 }
+
+interface Texture {
+  src?: string | null;
+}
+
+/**
+ * A Scene's background image (1.1 §B.2.1 Images). v14 keeps it on the first Level
+ * (`levels[0].background.src`; top-level `background` is only a deprecated shim, absent from
+ * `toObject()` and pack indexes); older data has `background.src`. `levels` may be an array
+ * or a live EmbeddedCollection.
+ */
+export function sceneBackground(scene: {
+  levels?: Iterable<{ background?: Texture | null }> | null;
+  background?: Texture | null;
+}): string | undefined {
+  const [first] = scene.levels ?? [];
+  return first?.background?.src || scene.background?.src || undefined;
+}

@@ -87,6 +87,25 @@ describe('element commands', () => {
     expect(workingCopy.get(id)?.data['img']).toBe('alrik.webp');
   });
 
+  it('element.create takes a Scene source for Location and Event, with its card thumb (1.1 §B.2.1)', async () => {
+    const { registry, workingCopy } = setup();
+    for (const cls of ['location', 'event']) {
+      const source = { kind: 'compendium', uuid: 'Compendium.dsa5-core.coremaps.Scene.a' };
+      const { id } = await registry.run<{ id: string }>('element.create', {
+        class: cls,
+        name: 'Gareth',
+        source,
+        img: 'maps/gareth.webp',
+        thumb: 'data:image/webp;base64,AAA',
+      });
+      expect(workingCopy.get(id)?.data).toMatchObject({
+        source,
+        img: 'maps/gareth.webp',
+        thumb: 'data:image/webp;base64,AAA',
+      });
+    }
+  });
+
   it('element.create refuses a source the class does not offer', async () => {
     const { registry, workingCopy } = setup();
     await expect(
@@ -98,7 +117,7 @@ describe('element commands', () => {
     ).rejects.toThrow(/source/);
     await expect(
       registry.run('element.create', {
-        class: 'location',
+        class: 'note',
         name: 'x',
         source: { kind: 'compendium', uuid: 'Compendium.a.b.Actor.c' },
       }),

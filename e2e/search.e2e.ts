@@ -126,6 +126,9 @@ test('c: connect search to an existing Node, or "New Node" with direction + clas
   await gm.keyboard.press('Enter');
   await expect(gm.locator('[data-silk-class-search]')).toBeFocused();
   await gm.locator('[data-silk-class-option="location"]').click();
+  // Location takes the Source Step (spec 1.1 §B.1): → Blank.
+  await expect(gm.locator('[data-silk-source-step]')).toBeFocused();
+  await gm.keyboard.press('ArrowRight');
   await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
   await gm.keyboard.type('Gareth');
   await gm.keyboard.press('Enter');
@@ -157,6 +160,9 @@ test('Palette: drag a class onto the canvas or onto a Node; new filtered Node is
   await gm
     .locator('[data-silk-palette-class="location"]')
     .dragTo(pane, { targetPosition: { x: 300, y: 400 } });
+  // Location takes the Source Step (spec 1.1 §B.1): → Blank.
+  await expect(gm.locator('[data-silk-source-step]')).toBeFocused();
+  await gm.keyboard.press('ArrowRight');
   await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
   await gm.keyboard.press('Enter');
   await expect(gm.locator('[data-silk-node]')).toHaveCount(4);

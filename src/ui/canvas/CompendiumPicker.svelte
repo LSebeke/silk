@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * Compendium picker (spec 1.1 §B.2): search bar (focused on open), side list of sources,
+   * Compendium picker (spec 1.1 §B.2, Scenes §B.2.1): search bar (focused on open), side list of sources,
    * results. ↑/↓ move, Enter picks, Esc goes back to the Source Step. A merged row ("×N") opens
    * its source list, where Esc goes back to the results. Search, source, pick and cancel run as
    * `picker.*` commands (ADR 0003).
@@ -97,7 +97,7 @@
             onclick={() => pick(row.uuid)}
             data-silk-picker-row={row.uuid}
           >
-            <img src={row.img || 'icons/svg/mystery-man.svg'} alt="" />
+            <img src={row.thumb || row.img || 'icons/svg/mystery-man.svg'} alt="" />
             {#if $picker.choosing !== undefined}
               <span class="name" title={row.label}>{row.label}</span>
               <span class="chip" data-silk-picker-outcome>

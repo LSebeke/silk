@@ -373,6 +373,23 @@ describe('inferred Connections (spec §6 Connections)', () => {
     expect(t.doc(id).flags.silk.scene).toBe(scene._id);
     expect(t.scenes.all.size).toBe(1);
   });
+
+  it('the element takes the Scene background as img and its thumb as card image (1.1 §B.2.1)', async () => {
+    const t = setup();
+    const scene = t.foundryScene('Gareth map');
+    Object.assign(must(t.scenes.all.get(scene._id)), {
+      // v14: the background lives on the first Level.
+      levels: [{ _id: 'level0000000001', background: { src: 'maps/gareth.webp' } }],
+      thumb: 'maps/gareth-thumb.webp',
+    });
+    const { id } = await t.adoptDoc({ uuid: `Scene.${scene._id}`, class: 'location' });
+    expect(t.element(id)).toMatchObject({
+      img: 'maps/gareth.webp',
+      thumb: 'maps/gareth-thumb.webp',
+    });
+    // Foundry's Scene thumb is never changed.
+    expect(t.scenes.all.get(scene._id)?.['thumb']).toBe('maps/gareth-thumb.webp');
+  });
 });
 
 describe('adopt.folder: bulk Adopt (spec §6 Ways in, Placement)', () => {
