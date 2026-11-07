@@ -25,7 +25,12 @@ export interface PickerEntry {
 export interface PickerPack {
   /** `pack.collection`. */
   id: string;
+  /** The pack's own label (`metadata.label`); its source label is `sourceLabel(pack)`. */
   label: string;
+  /** The pack's folder ancestry, root first; empty or undefined = no folder. */
+  folders?: string[];
+  /** Title of the module/system/world the pack comes from. */
+  packageTitle?: string;
   /** `metadata.flags.dsalang`, if set. */
   lang?: string;
   entries: PickerEntry[];
@@ -221,6 +226,15 @@ export function pickerCommands(source: CompendiumSource): Command[] {
 /** DSA5's rule (`hooks/sidebar.js`): a pack in another language is hidden; no flag = shown. */
 const packShown = (pack: PickerPack, lang: string) => !pack.lang || pack.lang === lang;
 
+/**
+ * A pack's source label (§B.2 #88): its folder ancestry, then its label, joined by ` › `; a pack
+ * without a folder is prefixed with its package title instead.
+ */
+function sourceLabel(pack: PickerPack): string {
+  const prefix = pack.folders?.length ? pack.folders : pack.packageTitle ? [pack.packageTitle] : [];
+  return [...prefix, pack.label].join(' › ');
+}
+
 const byName = (a: PickerRow, b: PickerRow) => a.name.localeCompare(b.name);
 
 /** Same name for merging: case-insensitive, trimmed. */
@@ -228,13 +242,12 @@ const nameKey = (name: string) => name.trim().toLowerCase();
 
 /**
  * All's rows (§B.2 #87): same-name entries become one row with a count. Each merged row's
- * entries, World first then packs by label, are its source list, keyed by the row's uuid.
+ * entries, World first then packs in the given (label) order, are its source list, keyed by the
+ * row's uuid.
  */
 function merge(world: PickerRow[], packs: PickerRow[][]) {
   const groups = new Map<string, PickerRow[]>();
-  const byLabel = (a: PickerRow[], b: PickerRow[]) =>
-    (a[0]?.label ?? '').localeCompare(b[0]?.label ?? '');
-  for (const r of [world, ...[...packs].sort(byLabel)].flat()) {
+  for (const r of [world, ...packs].flat()) {
     const key = nameKey(r.name);
     groups.set(key, [...(groups.get(key) ?? []), r]);
   }
@@ -267,13 +280,17 @@ function rowsOf(catalog: PickerCatalog) {
   const world = ofType(catalog.world).map((e) => row(e, 'world', catalog.worldLabel));
   const packs = catalog.packs
     .filter((p) => packShown(p, catalog.lang))
-    .map((p) => ({ pack: p, rows: ofType(p.entries).map((e) => row(e, p.id, p.label)) }))
-    .filter((p) => p.rows.length);
+    .map((p) => {
+      const label = sourceLabel(p);
+      return { id: p.id, label, rows: ofType(p.entries).map((e) => row(e, p.id, label)) };
+    })
+    .filter((p) => p.rows.length)
+    .sort((a, b) => a.label.localeCompare(b.label));
   const unmerged = [...world, ...packs.flatMap((p) => p.rows)].sort(byName);
   const sources: PickerSource[] = [
     { id: 'all', count: unmerged.length },
     { id: 'world', label: catalog.worldLabel, count: world.length },
-    ...packs.map((p) => ({ id: p.pack.id, label: p.pack.label, count: p.rows.length })),
+    ...packs.map((p) => ({ id: p.id, label: p.label, count: p.rows.length })),
   ];
   return {
     unmerged,

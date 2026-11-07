@@ -69,7 +69,9 @@
             onclick={() => command('picker.source', { id: source.id })}
             data-silk-picker-source={source.id}
           >
-            <span>{source.label ?? localize('SILK.Picker.All')}</span>
+            <span class="name" title={source.label}
+              >{source.label ?? localize('SILK.Picker.All')}</span
+            >
             <span class="count">{source.count}</span>
           </button>
         </li>
@@ -106,7 +108,7 @@
               {#if row.count}
                 <span class="count" data-silk-picker-count>×{row.count}</span>
               {:else}
-                <span class="label">{row.label}</span>
+                <span class="label" title={row.label}>{row.label}</span>
               {/if}
             {/if}
           </button>
@@ -166,11 +168,18 @@
     font-size: 11px;
     opacity: 0.7;
   }
-  .name {
-    flex: 1;
+  .label {
+    max-width: 50%;
+  }
+  .name,
+  .label {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .name {
+    flex: 1;
   }
   img {
     width: 28px;

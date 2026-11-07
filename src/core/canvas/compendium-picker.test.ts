@@ -55,8 +55,8 @@ describe('side list', () => {
     expect(picker.get().sources).toEqual([
       { id: 'all', count: 4 },
       { id: 'world', label: 'World', count: 1 },
-      { id: 'dsa5.npcs-de', label: 'NSC', count: 2 },
       { id: 'world.homebrew', label: 'Homebrew', count: 1 },
+      { id: 'dsa5.npcs-de', label: 'NSC', count: 2 },
     ]);
     expect(picker.get().source).toBe('all');
   });
@@ -66,8 +66,8 @@ describe('side list', () => {
     expect(picker.get().sources.map((s) => s.id)).toEqual([
       'all',
       'world',
-      'dsa5.npcs-en',
       'world.homebrew',
+      'dsa5.npcs-en',
     ]);
   });
 
@@ -78,8 +78,8 @@ describe('side list', () => {
     expect(picker.get().sources).toEqual([
       { id: 'all', count: 3 },
       { id: 'world', label: 'World', count: 1 },
-      { id: 'dsa5.npcs-de', label: 'NSC', count: 1 },
       { id: 'world.beasts', label: 'Beasts', count: 1 },
+      { id: 'dsa5.npcs-de', label: 'NSC', count: 1 },
     ]);
     expect(picker.get().rows.map((r) => r.name)).not.toContain('Held');
   });
@@ -107,6 +107,58 @@ describe('side list', () => {
       { id: 'world', label: 'World', count: 1 },
       { id: 'dsa5-core.coremaps', label: 'Karten', count: 2 },
     ]);
+  });
+});
+
+describe('source label (spec 1.1 §B.2, #88)', () => {
+  it('folder ancestry › pack label; package title › pack label without a folder', () => {
+    const picker = createCompendiumPicker(
+      catalog({
+        world: [],
+        packs: [
+          {
+            id: 'm.karten',
+            label: 'Karten',
+            folders: ['Adventures', 'Nightblack sea'],
+            packageTitle: 'Nightblack',
+            entries: [{ uuid: 'Compendium.m.karten.Actor.k', name: 'Kapitän', type: 'npc' }],
+          },
+          {
+            id: 'dsa5.npcs',
+            label: 'NSC',
+            packageTitle: 'DSA5',
+            entries: [{ uuid: 'Compendium.dsa5.npcs.Actor.a', name: 'Alrik', type: 'npc' }],
+          },
+          {
+            id: 'world.zz',
+            label: 'Zz',
+            entries: [{ uuid: 'Compendium.world.zz.Actor.z', name: 'Zord', type: 'npc' }],
+          },
+        ],
+      }),
+    );
+    expect(picker.get().sources.slice(2)).toEqual([
+      { id: 'm.karten', label: 'Adventures › Nightblack sea › Karten', count: 1 },
+      { id: 'dsa5.npcs', label: 'DSA5 › NSC', count: 1 },
+      { id: 'world.zz', label: 'Zz', count: 1 },
+    ]);
+    expect(picker.get().rows.map((r) => r.label)).toEqual([
+      'DSA5 › NSC',
+      'Adventures › Nightblack sea › Karten',
+      'Zz',
+    ]);
+  });
+
+  it('the side list is flat: packs sorted by label after All and World', () => {
+    const picker = createCompendiumPicker(
+      catalog({
+        packs: [
+          { id: 'b', label: 'beta', entries: [{ uuid: 'b.1', name: 'B', type: 'npc' }] },
+          { id: 'a', label: 'Alpha', entries: [{ uuid: 'a.1', name: 'A', type: 'npc' }] },
+        ],
+      }),
+    );
+    expect(picker.get().sources.map((s) => s.id)).toEqual(['all', 'world', 'a', 'b']);
   });
 });
 

@@ -18,13 +18,41 @@ export interface CatalogGame {
   i18n?: { lang: string };
   actors?: Iterable<WorldDoc>;
   scenes?: Iterable<WorldDoc>;
+  modules?: { get(id: string): { title: string } | undefined };
+  system?: { title: string };
+  world?: { title: string };
   packs?: Iterable<{
     collection: string;
     documentName: string;
     visible?: boolean;
-    metadata: { label: string; flags?: { dsalang?: string } };
+    /** `game.folders.get(pack.config.folder)`; `ancestors` = [parent, grandparent, …]. */
+    folder?: { name: string; ancestors?: { name: string }[] } | null;
+    metadata: {
+      label: string;
+      packageType?: string;
+      packageName?: string;
+      flags?: { dsalang?: string };
+    };
     getIndex(options: { fields: string[] }): Promise<Iterable<IndexEntry>>;
   }>;
+}
+
+type CatalogPack = NonNullable<CatalogGame['packs']> extends Iterable<infer P> ? P : never;
+
+/** The pack's folder names, root first; undefined = no folder. */
+const folders = ({ folder }: CatalogPack) =>
+  folder
+    ? [...(folder.ancestors ?? [])]
+        .reverse()
+        .map((f) => f.name)
+        .concat(folder.name)
+    : undefined;
+
+/** Title of the module, system or world the pack comes from. */
+function packageTitle(game: CatalogGame, { metadata }: CatalogPack): string | undefined {
+  if (metadata.packageType === 'system') return game.system?.title;
+  if (metadata.packageType === 'world') return game.world?.title;
+  return metadata.packageName ? game.modules?.get(metadata.packageName)?.title : undefined;
 }
 
 /** The World collection of each picker document name. */
@@ -56,9 +84,13 @@ export async function readPickerCatalog(
     kindPacks.map(async (p) => {
       const lang = p.metadata.flags?.dsalang;
       const index = await p.getIndex({ fields: ['type', 'img'] });
+      const path = folders(p);
+      const title = packageTitle(game, p);
       return {
         id: p.collection,
         label: p.metadata.label,
+        ...(path ? { folders: path } : {}),
+        ...(title ? { packageTitle: title } : {}),
         ...(lang ? { lang } : {}),
         entries: [...index].map(entry),
       };
