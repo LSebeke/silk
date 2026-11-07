@@ -92,6 +92,7 @@
     {id}
     path={geometry.path}
     {markerEnd}
+    interactionWidth={16}
     class={['silk-edge', behavioural ? 'behavioural' : 'free', selected && 'selected']}
   />
   <EdgeLabel

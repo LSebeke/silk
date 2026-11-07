@@ -184,6 +184,11 @@
       "None": "Keine Treffer"
     },
     "Canvas": {
+      "EdgeMenu": {
+        "OpenDetails": "Details öffnen",
+        "DirectedMutual": "Gerichtet ⇄ Gegenseitig",
+        "Reverse": "Richtung umkehren"
+      },
       "Title": "Weltleinwand",
       "ClassSearch": "Klasse…",
       "NewGroup": "Gruppe",
