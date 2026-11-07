@@ -391,4 +391,33 @@ describe('merged rows (spec 1.1 §B.2, #87)', () => {
       name: 'ALRIK',
     });
   });
+
+  it('picker.cancel in the source list goes back to the results; { close } closes', async () => {
+    let closed = 0;
+    let opened: CompendiumPicker | undefined;
+    const source = compendiumSource({
+      kind: () => ({ documentName: 'Actor', type: 'npc' }),
+      catalog: async () => twins(),
+      open: async (picker) => {
+        opened = picker;
+        return () => void closed++;
+      },
+    });
+    const registry = createRegistry(() => ({ isGM: true }));
+    for (const c of pickerCommands(source)) registry.register(c);
+    const signal = new AbortController().signal;
+    const picked = source.pick({ class: 'person', at: { x: 0, y: 0 }, signal });
+    await registry.run('picker.pick', {});
+    expect(await registry.run('picker.cancel', {})).toEqual({ back: true });
+    expect(opened?.get().choosing).toBeUndefined();
+    expect(closed).toBe(0);
+    expect(await registry.run('picker.cancel', {})).toEqual({ back: false });
+    expect(await picked).toBeUndefined();
+    expect(closed).toBe(1);
+
+    const again = source.pick({ class: 'person', at: { x: 0, y: 0 }, signal });
+    await registry.run('picker.pick', {});
+    expect(await registry.run('picker.cancel', { close: true })).toEqual({ back: false });
+    expect(await again).toBeUndefined();
+  });
 });

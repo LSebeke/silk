@@ -28,7 +28,7 @@
       ArrowDown: () => picker.move(1),
       ArrowUp: () => picker.move(-1),
       Enter: () => pick(),
-      Escape: () => picker.back() || command('picker.cancel'),
+      Escape: () => command('picker.cancel'),
     };
     const action = keys[event.key];
     if (!action) return;

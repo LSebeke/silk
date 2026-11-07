@@ -118,8 +118,11 @@ export interface CompendiumSource extends SourceProvider {
    * (`{ choose }`) and stays open. `picked: false` = no such row.
    */
   choose(uuid?: string): Promise<{ picked: boolean } | { choose: string[] }>;
-  /** Closes without a pick: back to the Source Step. */
-  cancel(): Promise<void>;
+  /**
+   * Esc: in a merged row's source list, back to the results (`back: true`); otherwise, or with
+   * `close` (the window's X), closes without a pick: back to the Source Step.
+   */
+  cancel(close?: boolean): Promise<{ back: boolean }>;
 }
 
 interface PickerSession {
@@ -181,8 +184,11 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
       finish(pick);
       return { picked: true };
     },
-    async cancel() {
-      (await session)?.finish(undefined);
+    async cancel(close) {
+      const open = await session;
+      if (!close && open?.picker.back()) return { back: true };
+      open?.finish(undefined);
+      return { back: false };
     },
   };
 }
@@ -208,7 +214,7 @@ export function pickerCommands(source: CompendiumSource): Command[] {
       (await picker()).setSource(id),
     ),
     command('picker.pick', ({ uuid }: { uuid?: string }) => source.choose(uuid)),
-    command('picker.cancel', () => source.cancel()),
+    command('picker.cancel', ({ close }: { close?: boolean }) => source.cancel(close === true)),
   ];
 }
 
