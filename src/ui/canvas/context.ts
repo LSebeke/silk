@@ -8,10 +8,12 @@ import type {
   LayoutTween,
   ViewStateStore,
 } from '../../core/canvas';
+import type { LiveKeybinding } from '../../adapter/keybindings';
 import type { CheckoutSummary } from '../../core/campaigns';
 import type { Point } from '../../core/elements';
 import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
+import type { LegendState } from './legend';
 
 export interface CanvasContext {
   /** Registry runner: every UI action is a command. */
@@ -43,6 +45,10 @@ export interface CanvasContext {
   title(name: string): string;
   /** The World's reveal state (eye toggles, menus; §8). Svelte-store `subscribe`. */
   reveal: Pick<Reveal, 'subscribe' | 'isRevealed'>;
+  /** Legend open/closed (1.1 §E.3, client setting `legendOpen`); `legend.toggle` writes it. */
+  legend: LegendState;
+  /** Silk's Foundry keybindings as bound now (`game.keybindings`), for the legend. */
+  keybindings(): LiveKeybinding[];
   /** Warning toast. */
   warn(message: string): void;
   /** Canon chip / unbound empty state (v1.1 §H); `null` while the World has no Canon. */

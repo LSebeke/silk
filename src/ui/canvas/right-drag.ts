@@ -15,27 +15,30 @@ export type RightDragAction =
 export interface RightDragGesture {
   start: 'node' | 'canvas' | 'edge';
   end: 'sameNode' | 'otherNode' | 'node' | 'canvas' | 'anywhere';
+  /** What `rightDragAction` returns for it; `edgeMenu`: the edge's own context menu. */
+  result: RightDragAction['kind'] | 'edgeMenu';
   /** i18n key. */
   label: string;
 }
 
-const gesture = (start: RightDragGesture['start'], end: RightDragGesture['end']) => ({
-  start,
-  end,
-  label: `SILK.Canvas.Gesture.${start}-${end}`,
-});
+const gesture = (
+  start: RightDragGesture['start'],
+  end: RightDragGesture['end'],
+  result: RightDragGesture['result'],
+): RightDragGesture => ({ start, end, result, label: `SILK.Canvas.Gesture.${start}-${end}` });
 
 /**
- * The §A table, for the legend (1.1 §E.3). `rightDragAction` decides the Node/canvas rows;
- * the edge row is the edge's own context menu. Modifiers: `MODIFIER_CONNECTIONS`.
+ * The §A table, for the legend (1.1 §E.3). `rightDragAction` decides the Node/canvas rows
+ * (right-drag.test.ts checks each `result` against it); the edge row is the edge's own
+ * context menu. Modifiers: `MODIFIER_CONNECTIONS`.
  */
 export const RIGHT_DRAG_GESTURES: readonly RightDragGesture[] = [
-  gesture('node', 'sameNode'),
-  gesture('node', 'otherNode'),
-  gesture('node', 'canvas'),
-  gesture('canvas', 'canvas'),
-  gesture('canvas', 'node'),
-  gesture('edge', 'anywhere'),
+  gesture('node', 'sameNode', 'nodeMenu'),
+  gesture('node', 'otherNode', 'connect'),
+  gesture('node', 'canvas', 'create'),
+  gesture('canvas', 'canvas', 'create'),
+  gesture('canvas', 'node', 'create'),
+  gesture('edge', 'anywhere', 'edgeMenu'),
 ];
 
 const REVERSE: Record<RelativeDirection, RelativeDirection> = {

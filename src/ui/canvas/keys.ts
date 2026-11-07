@@ -16,6 +16,7 @@ export type CanvasKeyAction =
   | { kind: 'reveal' }
   | { kind: 'editConnection' }
   | { kind: 'delete' }
+  | { kind: 'legend' }
   | { kind: 'command'; name: 'connection.cycleDirection' | 'connection.cycleType' }
   | { kind: 'layout'; name: 'canvas.group' | 'canvas.untangle' | 'canvas.undo' };
 
@@ -93,8 +94,10 @@ const ACCEPTS: Record<KeyModifiers, (e: KeyLike) => boolean> = {
 };
 
 export interface CanvasKeyBinding {
-  /** `KeyboardEvent.code` values. */
+  /** `KeyboardEvent.code` values (layout-independent). */
   codes: readonly string[];
+  /** `KeyboardEvent.key` values, for keys whose place depends on the layout (`?`). */
+  keys?: readonly string[];
   mods: KeyModifiers;
   when: KeyCondition;
   /** For `create`, the action without a modifier (`canvasKey` adds the Connection). */
@@ -109,7 +112,15 @@ const row = (
   action: CanvasKeyAction,
   label: string,
   mods: KeyModifiers = 'none',
-): CanvasKeyBinding => ({ codes, mods, when, action, label: `SILK.Canvas.Key.${label}` });
+  keys?: readonly string[],
+): CanvasKeyBinding => ({
+  codes,
+  ...(keys ? { keys } : {}),
+  mods,
+  when,
+  action,
+  label: `SILK.Canvas.Key.${label}`,
+});
 
 /**
  * The canvas keymap (spec §10.3, 1.1 §E): `canvasKey` and the legend read it.
@@ -134,16 +145,22 @@ export const CANVAS_KEYS: readonly CanvasKeyBinding[] = [
   row(['KeyS'], 'node', { kind: 'status' }, 'status'),
   row(['KeyP'], 'node', { kind: 'pin' }, 'pin'),
   row(['KeyR'], 'nodeOrEdge', { kind: 'reveal' }, 'reveal'),
-  row(['Delete', 'Backspace'], 'node', { kind: 'delete' }, 'delete'),
+  // Nodes: element.delete (confirms) plus the selected Connections; Connections only: at once.
+  row(['Delete', 'Backspace'], 'nodeOrEdge', { kind: 'delete' }, 'delete'),
   row(['KeyG'], 'node', { kind: 'layout', name: 'canvas.group' }, 'group'),
   row(['KeyU'], 'node', { kind: 'layout', name: 'canvas.untangle' }, 'untangle'),
   row(['Tab'], 'edge', { kind: 'command', name: 'connection.cycleDirection' }, 'cycleDirection'),
   row(['KeyQ'], 'edge', { kind: 'command', name: 'connection.cycleType' }, 'cycleType'),
+  // `?` sits on Shift+/ (US) or Shift+ß (DE): matched by `key`, Shift allowed.
+  row([], 'always', { kind: 'legend' }, 'legend', 'shiftOk', ['?']),
 ];
 
 export function canvasKey(e: KeyLike, selected: Selected): CanvasKeyAction | undefined {
   const hit = CANVAS_KEYS.find(
-    (b) => b.codes.includes(e.code) && ACCEPTS[b.mods](e) && MET[b.when](selected),
+    (b) =>
+      (b.codes.includes(e.code) || !!b.keys?.includes(e.key)) &&
+      ACCEPTS[b.mods](e) &&
+      MET[b.when](selected),
   );
   if (hit?.action.kind !== 'create') return hit?.action;
   const connection = modifierConnection(e);

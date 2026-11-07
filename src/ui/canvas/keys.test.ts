@@ -125,6 +125,22 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('Backspace'), node)).toEqual({ kind: 'delete' });
     expect(canvasKey(key('Delete'), none)).toBeUndefined();
   });
+
+  it('Delete/Backspace also act on selected Connections only (1.1 §E.4)', () => {
+    const edge = { node: false, edge: true };
+    expect(canvasKey(key('Delete'), edge)).toEqual({ kind: 'delete' });
+    expect(canvasKey(key('Backspace'), edge)).toEqual({ kind: 'delete' });
+  });
+
+  it('? toggles the legend on any layout (1.1 §E.3)', () => {
+    const question = (shiftKey: boolean) => ({ ...key('Slash', { shiftKey }), key: '?' });
+    expect(canvasKey(question(true), none)).toEqual({ kind: 'legend' });
+    // German layout: Shift+ß.
+    expect(canvasKey({ ...key('Minus', { shiftKey: true }), key: '?' }, none)).toEqual({
+      kind: 'legend',
+    });
+    expect(canvasKey({ ...key('Slash'), key: '/' }, none)).toBeUndefined();
+  });
 });
 
 describe('Source Step compass keys (spec 1.1 §B.1)', () => {
@@ -154,8 +170,10 @@ describe('canvas keymap table (spec 1.1 §E.3: the legend reads it)', () => {
 
   it('every row is what canvasKey does under its condition, and nothing without it', () => {
     for (const row of CANVAS_KEYS)
-      for (const code of row.codes) {
-        const e = key(code, held[row.mods]);
+      for (const e of [
+        ...row.codes.map((code) => key(code, held[row.mods])),
+        ...(row.keys ?? []).map((k) => ({ ...key('Unidentified', held[row.mods]), key: k })),
+      ]) {
         expect(canvasKey(e, selections[row.when])).toEqual(row.action);
         if (row.when !== 'always') expect(canvasKey(e, none)).toBeUndefined();
       }

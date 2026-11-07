@@ -26,5 +26,6 @@ declare module 'fvtt-types/configuration' {
     'silk.playerViewState': object;
     'silk.windowState': object;
     'silk.fileBrowseNoticeShown': boolean;
+    'silk.legendOpen': boolean;
   }
 }

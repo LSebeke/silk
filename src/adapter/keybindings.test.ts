@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRegistry } from '../core/commands/registry';
-import { registerKeybindings, type KeybindingData } from './keybindings';
+import { liveKeybindings, registerKeybindings, type KeybindingData } from './keybindings';
 
 function setup(isGM: boolean) {
   const runs: string[] = [];
@@ -46,5 +46,36 @@ describe('keybindings from command keys', () => {
     const { runs, bindings } = setup(false);
     expect(bindings.get('canvas.open')?.onDown()).toBe(false);
     expect(runs).toEqual([]);
+  });
+});
+
+describe('live keybindings for the legend (spec 1.1 §E.3)', () => {
+  it('lists each keyed command with its current chords, so rebinds show', () => {
+    const registry = createRegistry(() => ({ isGM: true }));
+    registry.register({
+      name: 'canvas.open',
+      title: 'SILK.Commands.canvas.open',
+      keys: [{ key: 'KeyS', modifiers: ['Shift'] }],
+      available: () => true,
+      run: async () => {},
+    });
+    registry.register({
+      name: 'canvas.search',
+      title: 'x',
+      available: () => true,
+      run: async () => {},
+    });
+    // Rebound by the user in Foundry's Configure Controls.
+    const current = (action: string) =>
+      action === 'canvas.open'
+        ? [
+            { key: 'KeyW', modifiers: ['Control' as const, 'Alt' as const] },
+            { key: 'F4', modifiers: [] },
+          ]
+        : [];
+    const names: Record<string, string> = { Control: 'Ctrl', KeyW: 'W' };
+    expect(liveKeybindings(registry, current, (code) => names[code] ?? code)).toEqual([
+      { title: 'SILK.Commands.canvas.open', keys: ['Ctrl+Alt+W', 'F4'] },
+    ]);
   });
 });
