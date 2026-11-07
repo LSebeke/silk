@@ -39,7 +39,8 @@ class CompendiumPickerWindow extends SvelteApplication<Props> {
 
   protected override _onClose(options: Parameters<SvelteApplication['_onClose']>[0]) {
     // Closed by its X or Foundry's Esc: back to the Source Step.
-    if (!this.#closing) void this.#props.run('picker.cancel').catch(() => undefined);
+    if (!this.#closing)
+      void this.#props.run('picker.cancel', { close: true }).catch(() => undefined);
     super._onClose(options);
   }
 }
