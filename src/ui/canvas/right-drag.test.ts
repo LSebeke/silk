@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { rightDragAction } from './right-drag';
+import de from '../../../public/lang/de.json';
+import en from '../../../public/lang/en.json';
+import { RIGHT_DRAG_GESTURES, rightDragAction } from './right-drag';
+
+const lookup = (lang: object, path: string) =>
+  path.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], lang);
 
 const mods = (m: Partial<{ shiftKey: boolean; ctrlKey: boolean; altKey: boolean }> = {}) => ({
   shiftKey: false,
@@ -74,5 +79,24 @@ describe('right-click start/end (spec 1.1 §A)', () => {
   it('modifiers do not change a menu or a standalone Node', () => {
     expect(rightDragAction('a', 'a', shift)).toEqual({ kind: 'nodeMenu', id: 'a' });
     expect(rightDragAction(undefined, undefined, alt)).toEqual({ kind: 'create', at: 'start' });
+  });
+});
+
+describe('right-drag gesture table (spec 1.1 §A, §E.3: the legend reads it)', () => {
+  it('lists the six §A rows in order, edge menu included', () => {
+    expect(RIGHT_DRAG_GESTURES.map((g) => [g.start, g.end])).toEqual([
+      ['node', 'sameNode'],
+      ['node', 'otherNode'],
+      ['node', 'canvas'],
+      ['canvas', 'canvas'],
+      ['canvas', 'node'],
+      ['edge', 'anywhere'],
+    ]);
+  });
+
+  it('labels every gesture in EN and DE', () => {
+    for (const lang of [en, de])
+      for (const g of RIGHT_DRAG_GESTURES)
+        expect(lookup(lang, g.label), g.label).toBeTypeOf('string');
   });
 });

@@ -33,51 +33,121 @@ export type Modifiers = Pick<KeyLike, 'shiftKey' | 'ctrlKey' | 'altKey'>;
 
 /**
  * The Connection a modifier picks (digit keys, right-drag release; spec §10.3, 1.1 §A),
- * relative to the origin: Shift = incoming, Ctrl = mutual, Alt = free-form outgoing.
- * Undefined = no modifier (the default).
+ * relative to the origin. First held wins.
  */
+export const MODIFIER_CONNECTIONS: readonly {
+  modifier: keyof Modifiers;
+  connection: CreateFromConnection;
+  label: string;
+}[] = [
+  { modifier: 'shiftKey', connection: { direction: 'in' }, label: 'SILK.Canvas.Modifier.shift' },
+  { modifier: 'ctrlKey', connection: { direction: 'mutual' }, label: 'SILK.Canvas.Modifier.ctrl' },
+  {
+    modifier: 'altKey',
+    connection: { type: 'free', direction: 'out' },
+    label: 'SILK.Canvas.Modifier.alt',
+  },
+];
+
+/** Undefined = no modifier (the default). */
 export function modifierConnection(m: Modifiers): CreateFromConnection | undefined {
-  if (m.shiftKey) return { direction: 'in' };
-  if (m.ctrlKey) return { direction: 'mutual' };
-  if (m.altKey) return { type: 'free', direction: 'out' };
-  return undefined;
+  return MODIFIER_CONNECTIONS.find((c) => m[c.modifier])?.connection;
 }
 
-export function canvasKey(
-  e: KeyLike,
-  selected: { node: boolean; edge: boolean },
-): CanvasKeyAction | undefined {
-  const digit = /^(?:Digit|Numpad)([1-9])$/.exec(e.code)?.[1];
-  if (digit && !e.metaKey) {
-    const cls = ELEMENT_CLASSES[Number(digit) - 1];
-    if (!cls?.creatable) return undefined;
-    const connection = modifierConnection(e);
-    return { kind: 'create', class: cls.id, ...(connection ? { connection } : {}) };
-  }
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyZ')
-    return { kind: 'layout', name: 'canvas.undo' };
+export interface Selected {
+  node: boolean;
+  edge: boolean;
+}
+
+/** What must be selected for a key to act. */
+export type KeyCondition = 'always' | 'node' | 'edge' | 'nodeOrEdge';
+
+export const KEY_CONDITION_LABELS: Record<KeyCondition, string> = {
+  always: 'SILK.Canvas.KeyWhen.always',
+  node: 'SILK.Canvas.KeyWhen.node',
+  edge: 'SILK.Canvas.KeyWhen.edge',
+  nodeOrEdge: 'SILK.Canvas.KeyWhen.nodeOrEdge',
+};
+
+const MET: Record<KeyCondition, (s: Selected) => boolean> = {
+  always: () => true,
+  node: (s) => s.node,
+  edge: (s) => s.edge,
+  nodeOrEdge: (s) => s.node || s.edge,
+};
+
+/**
+ * Modifiers a key accepts:
+ * - `none`: no modifier.
+ * - `shiftOk`: Shift or none.
+ * - `primary`: Ctrl or Cmd, without Shift/Alt.
+ * - `connection`: any of Shift/Ctrl/Alt, which pick the Connection (`MODIFIER_CONNECTIONS`); no Cmd.
+ */
+export type KeyModifiers = 'none' | 'shiftOk' | 'primary' | 'connection';
+
+const ACCEPTS: Record<KeyModifiers, (e: KeyLike) => boolean> = {
+  none: (e) => !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey,
+  shiftOk: (e) => !e.ctrlKey && !e.altKey && !e.metaKey,
+  primary: (e) => (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey,
+  connection: (e) => !e.metaKey,
+};
+
+export interface CanvasKeyBinding {
+  /** `KeyboardEvent.code` values. */
+  codes: readonly string[];
+  mods: KeyModifiers;
+  when: KeyCondition;
+  /** For `create`, the action without a modifier (`canvasKey` adds the Connection). */
+  action: CanvasKeyAction;
+  /** i18n key; a `create` row's takes `{class}`. */
+  label: string;
+}
+
+const row = (
+  codes: readonly string[],
+  when: KeyCondition,
+  action: CanvasKeyAction,
+  label: string,
+  mods: KeyModifiers = 'none',
+): CanvasKeyBinding => ({ codes, mods, when, action, label: `SILK.Canvas.Key.${label}` });
+
+/**
+ * The canvas keymap (spec §10.3, 1.1 §E): `canvasKey` and the legend read it.
+ * First match wins. Player Characters have no digit: they are never created.
+ */
+export const CANVAS_KEYS: readonly CanvasKeyBinding[] = [
+  ...ELEMENT_CLASSES.filter((c) => c.creatable).map((c) =>
+    row(
+      [`Digit${c.digit}`, `Numpad${c.digit}`],
+      'always',
+      { kind: 'create', class: c.id },
+      'create',
+      'connection',
+    ),
+  ),
+  row(['KeyZ'], 'always', { kind: 'layout', name: 'canvas.undo' }, 'undo', 'primary'),
   // Search (§10.8): only while the canvas has focus, so not a Foundry keybinding.
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyF')
-    return { kind: 'search' };
-  if (e.ctrlKey || e.altKey || e.metaKey) return undefined;
-  if (e.code === 'F2')
-    return selected.edge
-      ? { kind: 'editConnection' }
-      : selected.node
-        ? { kind: 'rename' }
-        : undefined;
-  if (e.shiftKey) return undefined;
-  if (e.code === 'KeyC' && selected.node) return { kind: 'connect' };
-  if (e.code === 'KeyS' && selected.node) return { kind: 'status' };
-  if (e.code === 'KeyP' && selected.node) return { kind: 'pin' };
-  if (e.code === 'KeyR' && (selected.node || selected.edge)) return { kind: 'reveal' };
-  if ((e.code === 'Delete' || e.code === 'Backspace') && selected.node) return { kind: 'delete' };
-  if (e.code === 'KeyG' && selected.node) return { kind: 'layout', name: 'canvas.group' };
-  if (e.code === 'KeyU' && selected.node) return { kind: 'layout', name: 'canvas.untangle' };
-  if (e.code === 'Tab' && selected.edge)
-    return { kind: 'command', name: 'connection.cycleDirection' };
-  if (e.code === 'KeyQ' && selected.edge) return { kind: 'command', name: 'connection.cycleType' };
-  return undefined;
+  row(['KeyF'], 'always', { kind: 'search' }, 'search', 'primary'),
+  row(['F2'], 'edge', { kind: 'editConnection' }, 'editConnection', 'shiftOk'),
+  row(['F2'], 'node', { kind: 'rename' }, 'rename', 'shiftOk'),
+  row(['KeyC'], 'node', { kind: 'connect' }, 'connect'),
+  row(['KeyS'], 'node', { kind: 'status' }, 'status'),
+  row(['KeyP'], 'node', { kind: 'pin' }, 'pin'),
+  row(['KeyR'], 'nodeOrEdge', { kind: 'reveal' }, 'reveal'),
+  row(['Delete', 'Backspace'], 'node', { kind: 'delete' }, 'delete'),
+  row(['KeyG'], 'node', { kind: 'layout', name: 'canvas.group' }, 'group'),
+  row(['KeyU'], 'node', { kind: 'layout', name: 'canvas.untangle' }, 'untangle'),
+  row(['Tab'], 'edge', { kind: 'command', name: 'connection.cycleDirection' }, 'cycleDirection'),
+  row(['KeyQ'], 'edge', { kind: 'command', name: 'connection.cycleType' }, 'cycleType'),
+];
+
+export function canvasKey(e: KeyLike, selected: Selected): CanvasKeyAction | undefined {
+  const hit = CANVAS_KEYS.find(
+    (b) => b.codes.includes(e.code) && ACCEPTS[b.mods](e) && MET[b.when](selected),
+  );
+  if (hit?.action.kind !== 'create') return hit?.action;
+  const connection = modifierConnection(e);
+  return connection ? { ...hit.action, connection } : hit.action;
 }
 
 /** y/n confirm prompt (§10.3 `s`, `r`): only y confirms; the default is n. */
