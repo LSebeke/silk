@@ -23,7 +23,7 @@ export function canvasCoreCommands(deps: CanvasCommandDeps): Command[] {
     async run({ moves }) {
       const wc = deps.workingCopy();
       // Elements and Visual Groups: frames carry their contents, Nodes join frames (§10.4).
-      const changed = applyMoves(wc.records(), moves);
+      const changed = applyMoves(wc.records(), moves, (id) => deps.state.nodeSize(id));
       if (changed.length) await wc.set(changed);
     },
   };

@@ -6,19 +6,20 @@
 import type { Snapshot } from '../canon';
 import { readConnection } from '../connections/connection';
 import type { Point } from '../elements/element';
-import { NODE_SIZE } from './groups';
+import type { Size } from './groups';
 
-/** New top-left positions for `ids` (elements in `records`). */
+/** New top-left positions for `ids` (elements in `records`), cards sized by `sizeOf`. */
 export async function untangleLayout(
   records: Snapshot,
   ids: readonly string[],
+  sizeOf: (id: string) => Size,
 ): Promise<Map<string, Point>> {
   const { graphlib, layout } = await import('@dagrejs/dagre');
   const graph = new graphlib.Graph({ multigraph: true });
   graph.setGraph({ rankdir: 'LR', nodesep: 40, ranksep: 90 });
   graph.setDefaultEdgeLabel(() => ({}));
   const selected = new Set(ids);
-  for (const id of ids) graph.setNode(id, { ...NODE_SIZE });
+  for (const id of ids) graph.setNode(id, { ...sizeOf(id) });
   for (const record of records.values()) {
     const c = readConnection(record);
     // A mutual Connection's from/to is just an order; it still ranks left to right.
@@ -33,7 +34,8 @@ export async function untangleLayout(
   const laid = new Map(
     ids.map((id) => {
       const node = graph.node(id);
-      return [id, { x: node.x - NODE_SIZE.width / 2, y: node.y - NODE_SIZE.height / 2 }];
+      // dagre gives centres.
+      return [id, { x: node.x - node.width / 2, y: node.y - node.height / 2 }];
     }),
   );
   const mean = (ps: Point[], k: 'x' | 'y') => ps.reduce((s, p) => s + p[k], 0) / ps.length;

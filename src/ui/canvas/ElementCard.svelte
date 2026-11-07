@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
-   * Story Element card (spec §10.2). The zoom level comes from `.lod-*` on the canvas root,
-   * so zooming changes classes once, not per card. Ghosts render faint.
-   * Later tickets add: eye toggle.
+   * Story Element card (spec §10.2, 1.1 §E.1). The zoom level comes from `.lod-*` on the
+   * canvas root, so zooming changes classes once, not per card. Ghosts render faint. The name
+   * wraps and the card grows; layout reads the measured size (Canvas → `measureWith`).
    */
   import { fail } from './actions';
   import { Handle, Position } from '@xyflow/svelte';
@@ -74,8 +74,20 @@
     alt=""
     draggable="false"
   />
+  <!-- Rows (spec 1.1 §E.1): class, wrapped name, controls. The card grows to fit. -->
   <div class="body">
-    <div class="cls">{ctx.localize(classLabelKey(data.class))}</div>
+    <div class="cls-row">
+      <span class="cls">{ctx.localize(classLabelKey(data.class))}</span>
+      {#if data.restoredFrom}
+        <i
+          class="fa-solid fa-clock-rotate-left restored"
+          data-silk-restored={data.restoredFrom}
+          title={ctx
+            .localize('SILK.Lifecycle.RestoredBadge')
+            .replace('{commit}', data.restoredFrom.slice(0, 8))}
+        ></i>
+      {/if}
+    </div>
     {#if naming}
       <input
         class="nodrag nopan name-input"
@@ -88,61 +100,52 @@
     {:else}
       <div class="title" data-silk-node-title>{data.name}</div>
     {/if}
-    <button
-      type="button"
-      class="nodrag nopan eye"
-      class:on={revealed}
-      title={ctx.localize(
-        ctx.available('reveal.element')
-          ? revealed
-            ? 'SILK.Reveal.Unreveal'
-            : 'SILK.Reveal.Reveal'
-          : 'SILK.Reveal.NeedsAdventure',
-      )}
-      onclick={toggleReveal}
-      ondblclick={(e) => e.stopPropagation()}
-      data-silk-eye={revealed ? 'on' : 'off'}
-      ><i class="fa-solid {revealed ? 'fa-eye' : 'fa-eye-slash'}"></i></button
-    >
-    {#if status}
-      <!-- Status chip (§10.2): click asks for the next Status, like `s`. -->
+    <div class="controls">
+      {#if status}
+        <!-- Status chip (§10.2): click asks for the next Status, like `s`. -->
+        <button
+          type="button"
+          class="nodrag nopan status status-{status}"
+          title={ctx.localize('SILK.Canvas.StatusChip').replace('{status}', statusLabel)}
+          onclick={(e) => {
+            e.stopPropagation();
+            statusPrompt.ask(id);
+          }}
+          data-silk-status={status}>{statusLabel}</button
+        >
+      {/if}
+      <span class="spacer"></span>
       <button
         type="button"
-        class="nodrag nopan status status-{status}"
-        title={ctx.localize('SILK.Canvas.StatusChip').replace('{status}', statusLabel)}
+        class="nodrag nopan eye"
+        class:on={revealed}
+        title={ctx.localize(
+          ctx.available('reveal.element')
+            ? revealed
+              ? 'SILK.Reveal.Unreveal'
+              : 'SILK.Reveal.Reveal'
+            : 'SILK.Reveal.NeedsAdventure',
+        )}
+        onclick={toggleReveal}
+        ondblclick={(e) => e.stopPropagation()}
+        data-silk-eye={revealed ? 'on' : 'off'}
+        ><i class="fa-solid {revealed ? 'fa-eye' : 'fa-eye-slash'}"></i></button
+      >
+      <!-- Focus Pin (§10.2, §10.6): always shown in Focus View; like `p`. -->
+      <button
+        type="button"
+        class="nodrag nopan pin"
+        class:pinned={data.pinned}
+        title={ctx.localize(data.pinned ? 'SILK.Focus.Unpin' : 'SILK.Focus.Pin')}
+        aria-pressed={!!data.pinned}
         onclick={(e) => {
           e.stopPropagation();
-          statusPrompt.ask(id);
+          ctx.run(data.pinned ? 'focus.unpin' : 'focus.pin', { ids: [id] }).catch(fail);
         }}
-        data-silk-status={status}>{statusLabel}</button
+        data-silk-pin={data.pinned ? 'pinned' : ''}><i class="fa-solid fa-thumbtack"></i></button
       >
-    {/if}
-    {#if data.restoredFrom}
-      <div
-        class="restored"
-        data-silk-restored={data.restoredFrom}
-        title={ctx
-          .localize('SILK.Lifecycle.RestoredBadge')
-          .replace('{commit}', data.restoredFrom.slice(0, 8))}
-      >
-        <i class="fa-solid fa-clock-rotate-left"></i>
-        {data.restoredFrom.slice(0, 8)}
-      </div>
-    {/if}
+    </div>
   </div>
-  <!-- Focus Pin (§10.2, §10.6): always shown in Focus View; like `p`. -->
-  <button
-    type="button"
-    class="nodrag nopan pin"
-    class:pinned={data.pinned}
-    title={ctx.localize(data.pinned ? 'SILK.Focus.Unpin' : 'SILK.Focus.Pin')}
-    aria-pressed={!!data.pinned}
-    onclick={(e) => {
-      e.stopPropagation();
-      ctx.run(data.pinned ? 'focus.unpin' : 'focus.pin', { ids: [id] }).catch(fail);
-    }}
-    data-silk-pin={data.pinned ? 'pinned' : ''}><i class="fa-solid fa-thumbtack"></i></button
-  >
   {#if data.filtered}
     <!-- Shown despite the filters (Search jump, new Node) until deselected (§10.8). -->
     <div
@@ -213,11 +216,8 @@
     border: 1px solid #fff;
     border-radius: 8px;
   }
-  /* Bottom-left, under the portrait. */
   .pin {
-    position: absolute;
-    bottom: 2px;
-    left: 8px;
+    flex: none;
     width: 18px;
     height: 18px;
     min-height: 0;
@@ -245,8 +245,9 @@
     outline: 2px solid #2b6cb0;
   }
   .restored {
-    font-size: 0.75em;
-    opacity: 0.8;
+    flex: none;
+    font-size: 10px;
+    color: #777;
   }
   .silk-card.ghost {
     opacity: 0.55;
@@ -271,25 +272,44 @@
     gap: 2px;
     min-width: 0;
   }
+  .cls-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+  }
   .cls {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--silk-class);
   }
+  /* Wrapped, no line limit at full zoom (spec 1.1 §E.1). */
   .title {
-    overflow: hidden;
     font-size: 13px;
     font-weight: 700;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
-  /* Top-right corner: a click on the card's centre still selects it. */
+  /* Status left, eye and pin right. */
+  .controls {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    min-height: 18px;
+    margin-top: auto;
+  }
+  .spacer {
+    flex: 1;
+  }
   .eye {
-    position: absolute;
-    top: 3px;
-    right: 4px;
+    flex: none;
     width: 20px;
     height: 18px;
     margin: 0;
@@ -308,9 +328,11 @@
     display: none;
   }
   .status {
-    position: absolute;
-    top: 4px;
-    right: 26px;
+    flex: none;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     width: auto;
     height: auto;
     margin: 0;
@@ -363,9 +385,17 @@
   :global(.lod-title) .cls {
     display: none;
   }
+  /* The lower zoom levels wrap too, at most 3 lines (spec 1.1 §E.1). */
   :global(.lod-title) .title {
+    display: -webkit-box;
+    overflow: hidden;
     font-size: 18px;
-    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+  :global(.lod-title) .controls:not(:has(.pinned)) {
+    display: none;
   }
   /* Zoom level 3: coloured block with title (full card while naming). */
   :global(.lod-block) .silk-card:not(.naming) {
@@ -376,9 +406,12 @@
     display: none;
   }
   :global(.lod-block) .silk-card:not(.naming) .block-title {
-    display: block;
-    max-height: 66px;
+    display: -webkit-box;
     overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
     font-size: 30px;
     font-weight: 700;
     line-height: 1.1;
