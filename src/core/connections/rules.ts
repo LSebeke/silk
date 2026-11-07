@@ -10,6 +10,7 @@ import {
   type BehaviouralType,
   type Connection,
   type ConnectionData,
+  type ConnectionType,
 } from './connection';
 
 const ACTORS: readonly ElementClassId[] = ['person', 'creature', 'playerCharacter'];
@@ -116,4 +117,21 @@ export function duplicateOf(records: Snapshot, data: ConnectionData): Connection
   return connectionsIn(records).find(
     (c) => c.type === data.type && c.from === data.from && c.to === data.to,
   );
+}
+
+/**
+ * The types Connection `c` can take, in cycle order: the valid Behavioural types for its
+ * pair (directed, as stored) that pass `check`, then free-form. Empty if an endpoint is gone.
+ */
+export function typeOptions(records: Snapshot, c: Connection): ConnectionType[] {
+  const from = readElement(records.get(c.from));
+  const to = readElement(records.get(c.to));
+  if (!from || !to) return [];
+  const { id, ...data } = c;
+  return [
+    ...validTypes(from.class, to.class).filter(
+      (type) => check(records, { ...data, type, direction: 'directed' }, id).ok,
+    ),
+    'free',
+  ];
 }

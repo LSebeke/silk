@@ -94,7 +94,7 @@ export function nodeMenu(
   return entries;
 }
 
-/** Spec 1.1 §F.1. Open details stays disabled until `connection.openDetail` is registered. */
+/** Spec 1.1 §F.1. */
 export function edgeMenu(id: string, deps: MenuDeps): MenuEntry[] {
   return [
     command(deps, 'connection.openDetail', { id }, 'SILK.Canvas.EdgeMenu.OpenDetails'),

@@ -311,9 +311,13 @@
   let moveEnd: ReturnType<typeof setTimeout> | undefined;
   let saveView: ReturnType<typeof setTimeout> | undefined;
   let pendingViewport: Viewport | undefined;
-  function onMoveStart() {
+  /**
+   * On a real viewport change, not `onmovestart`: d3-zoom starts on every press, also one on
+   * an edge, and hiding edges then would send its click and double-click (§F.2) to the pane.
+   */
+  function onMove() {
     clearTimeout(moveEnd);
-    if (ctx.detailDrop) moving = true;
+    if (ctx.detailDrop && !moving) moving = true;
   }
   function onMoveEnd(_event: unknown, viewport: Viewport) {
     zoom = viewport.zoom;
@@ -673,8 +677,9 @@
   }
 
   /**
-   * The Connection a right-click lands on: its edge or its label (spec 1.1 §F.1). The label
-   * lives in xyflow's label portal, outside the edge, so `onedgecontextmenu` never sees it.
+   * The Connection a right-click or double-click lands on: its edge or its label (spec 1.1
+   * §F.1, §F.2). The label lives in xyflow's label portal, outside the edge, so xyflow's edge
+   * events never see it.
    */
   function edgeTarget(target: EventTarget | null): string | undefined {
     const el = target as Element | null;
@@ -749,6 +754,14 @@
     if (edge) openEdgeMenu(edge, event);
   }
 
+  /** Double-click on an edge or its label opens its Connection Detail (spec 1.1 §F.2). */
+  function onDoubleClick(event: MouseEvent) {
+    const edge = edgeTarget(event.target);
+    if (!edge) return;
+    event.stopPropagation();
+    void run('connection.openDetail', { id: edge });
+  }
+
   function openEdgeMenu(id: string, event: MouseEvent) {
     pipeline.cancel();
     // Keys (Escape) reach the canvas, not Foundry's close-the-window handler.
@@ -797,6 +810,7 @@
   ondrop={onDrop}
   onpointerdowncapture={onPointerDown}
   oncontextmenucapture={onContextMenu}
+  ondblclickcapture={onDoubleClick}
 >
   <SvelteFlow
     bind:nodes
@@ -814,7 +828,7 @@
     zoomOnDoubleClick={false}
     deleteKey={null}
     colorMode="light"
-    onmovestart={onMoveStart}
+    onmove={onMove}
     onmoveend={onMoveEnd}
     onpaneclick={onPaneClick}
     onnodedragstop={onNodeDragStop}

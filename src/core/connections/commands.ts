@@ -8,9 +8,10 @@ import {
   readConnection,
   type Connection,
   type ConnectionData,
+  type ConnectionDirection,
   type ConnectionType,
 } from './connection';
-import { check, duplicateOf, validTypes } from './rules';
+import { check, duplicateOf, typeOptions } from './rules';
 
 /** Direction relative to `from`: out = from → to (default), in = to → from. */
 export type RelativeDirection = 'out' | 'in' | 'mutual';
@@ -47,13 +48,9 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     return connection;
   }
 
-  const strip = ({ from, to, type, direction, label }: Connection): ConnectionData => ({
-    from,
-    to,
-    type,
-    direction,
-    label,
-  });
+  // Every data field (also `notes`) carries over; only the id goes.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- dropped on purpose
+  const strip = ({ id: _, ...data }: Connection): ConnectionData => data;
 
   const create: Command<ConnectionCreateArgs, { id: string }> = {
     name: 'connection.create',
@@ -93,23 +90,80 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     },
   };
 
+  const setNotes: Command<{ id: string; notes: string }, void> = {
+    name: 'connection.setNotes',
+    title: 'SILK.Commands.connection.setNotes',
+    available: (ctx) => ctx.isGM,
+    async run({ id, notes }) {
+      const c = existing(id);
+      await deps.workingCopy().set([connectionRecord(id, { ...strip(c), notes })]);
+    },
+  };
+
+  /** Ends in id order (A < B). */
+  const ordered = (c: Connection): [string, string] =>
+    c.from < c.to ? [c.from, c.to] : [c.to, c.from];
+
+  /** Free-form only: writes `direction` with endpoints `ends` (default: unchanged). */
+  async function writeDirection(
+    c: Connection,
+    direction: ConnectionDirection,
+    [from, to]: [string, string] = [c.from, c.to],
+  ) {
+    if (c.type !== 'free') return;
+    if (c.direction === direction && c.from === from && c.to === to) return;
+    await deps.workingCopy().set([connectionRecord(c.id, { ...strip(c), direction, from, to })]);
+  }
+
+  /** Writes `type` if `typeOptions` offers it, replacing what it conflicts with. */
+  async function writeType(c: Connection, type: ConnectionType) {
+    const options = typeOptions(deps.workingCopy().records(), c);
+    if (!options.length) throw new Error(`Silk: Connection "${c.id}" has a missing endpoint`);
+    if (!options.includes(type))
+      throw new Error(`Silk: Connection "${c.id}" cannot be ${String(type)}`);
+    if (type === c.type) return;
+    await store(c.id, {
+      ...strip(c),
+      type,
+      direction: type === 'free' ? c.direction : 'directed',
+      label: type === 'free' ? c.label : '',
+    });
+  }
+
+  /** v1.1 §F.2 select. Mutual → directed points in id order (A→B); directed stays as is. */
+  const setDirection: Command<{ id: string; direction: ConnectionDirection }, void> = {
+    name: 'connection.setDirection',
+    title: 'SILK.Commands.connection.setDirection',
+    available: (ctx) => ctx.isGM,
+    async run({ id, direction }) {
+      const c = existing(id);
+      if (direction !== 'directed' && direction !== 'mutual')
+        throw new Error(`Silk: unknown direction "${String(direction)}"`);
+      if (c.direction === direction) return;
+      await writeDirection(c, direction, direction === 'directed' ? ordered(c) : undefined);
+    },
+  };
+
   const cycleDirection: Command<{ id: string }, void> = {
     name: 'connection.cycleDirection',
     title: 'SILK.Commands.connection.cycleDirection',
     available: (ctx) => ctx.isGM,
     async run({ id }) {
       const c = existing(id);
-      if (c.type !== 'free') return;
       // Stateless 3-cycle over id order (A < B): A→B, B→A, mutual, A→B, …
-      const [a, b] = c.from < c.to ? [c.from, c.to] : [c.to, c.from];
-      const next: ConnectionData =
-        c.direction === 'mutual'
-          ? { ...strip(c), from: a, to: b, direction: 'directed' }
-          : c.from === a
-            ? { ...strip(c), from: b, to: a }
-            : { ...strip(c), direction: 'mutual' };
-      await deps.workingCopy().set([connectionRecord(id, next)]);
+      const [a, b] = ordered(c);
+      if (c.direction === 'mutual') await writeDirection(c, 'directed', [a, b]);
+      else if (c.from === a) await writeDirection(c, 'directed', [b, a]);
+      else await writeDirection(c, 'mutual');
     },
+  };
+
+  /** v1.1 §F.2 select: one of `typeOptions`. */
+  const setType: Command<{ id: string; type: ConnectionType }, void> = {
+    name: 'connection.setType',
+    title: 'SILK.Commands.connection.setType',
+    available: (ctx) => ctx.isGM,
+    run: ({ id, type }) => writeType(existing(id), type),
   };
 
   const cycleType: Command<{ id: string }, void> = {
@@ -118,24 +172,9 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     available: (ctx) => ctx.isGM,
     async run({ id }) {
       const c = existing(id);
-      const wc = deps.workingCopy();
-      const from = readElement(wc.get(c.from));
-      const to = readElement(wc.get(c.to));
-      if (!from || !to) throw new Error(`Silk: Connection "${id}" has a missing endpoint`);
-      const options: ConnectionType[] = [
-        ...validTypes(from.class, to.class).filter(
-          (type) => check(wc.records(), { ...strip(c), type, direction: 'directed' }, id).ok,
-        ),
-        'free',
-      ];
-      const type = options[(options.indexOf(c.type) + 1) % options.length] ?? 'free';
-      if (type === c.type) return;
-      await store(id, {
-        ...strip(c),
-        type,
-        direction: type === 'free' ? c.direction : 'directed',
-        label: type === 'free' ? c.label : '',
-      });
+      const options = typeOptions(deps.workingCopy().records(), c);
+      if (!options.length) throw new Error(`Silk: Connection "${id}" has a missing endpoint`);
+      await writeType(c, options[(options.indexOf(c.type) + 1) % options.length] ?? 'free');
     },
   };
 
@@ -163,5 +202,15 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     },
   };
 
-  return [create, setLabel, cycleDirection, cycleType, flip, remove];
+  return [
+    create,
+    setLabel,
+    setNotes,
+    setDirection,
+    cycleDirection,
+    setType,
+    cycleType,
+    flip,
+    remove,
+  ];
 }

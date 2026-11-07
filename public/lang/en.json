@@ -100,7 +100,11 @@
         "cycleDirection": "Cycle Connection direction",
         "cycleType": "Cycle Connection type",
         "flip": "Flip Connection",
-        "delete": "Delete Connection"
+        "delete": "Delete Connection",
+        "openDetail": "Connection Detail",
+        "setNotes": "Edit Connection notes",
+        "setType": "Set Connection type",
+        "setDirection": "Set Connection direction"
       },
       "materialize": {
         "elements": "Materialize",
@@ -478,6 +482,20 @@
       "InfoBlockName": "Info Block name",
       "DeleteInfoBlockTitle": "Delete Info Block",
       "DeleteInfoBlockConfirm": "Delete the Info Block \"{name}\"?"
+    },
+    "ConnectionDetail": {
+      "Title": "Connection Detail",
+      "Label": "Label",
+      "Type": "Type",
+      "Direction": "Direction",
+      "Directed": "Directed",
+      "Mutual": "Mutual",
+      "Reverse": "Reverse",
+      "Notes": "Notes",
+      "NotesHint": "GM only: never shown to players, on Connections pages or in Search.",
+      "DeleteTitle": "Delete Connection",
+      "DeleteConfirm": "Delete the Connection \"{sentence}\"?",
+      "Gone": "This Connection no longer exists."
     },
     "Merge": {
       "Title": "Merge",

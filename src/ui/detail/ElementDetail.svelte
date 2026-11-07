@@ -8,9 +8,8 @@
    * Info Blocks (v1.1 §C.1): add, rename inline, delete with confirmation, edit the text in
    * Foundry's ProseMirror editor, open the page in Foundry, reorder by drag. All commands.
    */
-  import { onDestroy, tick, untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
-  import type { Snapshot } from '../../core/canon';
   import { connectionSentence, connectionsIn } from '../../core/connections';
   import {
     appearanceBlock,
@@ -23,21 +22,20 @@
   import DetailSection from './DetailSection.svelte';
   import DetailShell from './DetailShell.svelte';
   import Eye from './Eye.svelte';
+  import { liveRecords, runner } from './live.svelte';
 
   let props: { ctx: DetailContext; id: string; focus?: string | undefined } = $props();
   const ctx = untrack(() => props.ctx);
   const id = untrack(() => props.id);
   const reveal = ctx.reveal;
 
-  let records = $state.raw<Snapshot>(ctx.workingCopy.records());
-  // The working copy hands out the same (mutated) Map: copy it so `$state.raw` sees a change.
-  const off = ctx.workingCopy.subscribe((r) => (records = new Map(r)));
-  onDestroy(off);
+  const live = liveRecords(ctx);
+  const run = runner(ctx);
 
-  const element = $derived(readElement(records.get(id)));
-  const name = (x: string) => readElement(records.get(x))?.name ?? '';
+  const element = $derived(readElement(live.current.get(id)));
+  const name = (x: string) => readElement(live.current.get(x))?.name ?? '';
   const connections = $derived(
-    connectionsIn(records)
+    connectionsIn(live.current)
       .filter((c) => c.from === id || c.to === id)
       .map((c) => ({ id: c.id, text: connectionSentence(c, name, ctx.format) })),
   );
@@ -65,14 +63,8 @@
   });
   const blocks = $derived(element?.infoBlocks ?? []);
   const canEdit = ctx.available('infoBlock.edit');
+  const canOpenConnection = ctx.available('connection.openDetail');
 
-  async function run(name: string, args: object) {
-    try {
-      await ctx.run(name, args);
-    } catch (error) {
-      ctx.error(error instanceof Error ? error.message : String(error));
-    }
-  }
   const toggle = (kind: 'element' | 'appearance' | 'infoBlock' | 'connection', target: string) =>
     run(`reveal.${kind}`, { id: target, revealed: !ctx.reveal.isRevealed(kind, target) });
   const pick = (entry: MenuEntry) => {
@@ -355,7 +347,17 @@
       {#each connections as c (c.id)}
         <div class="row" data-silk-detail-connection={c.id}>
           {@render eye('connection', c.id)}
-          <span>{c.text}</span>
+          <span class="name">{c.text}</span>
+          {#if canOpenConnection}
+            <!-- v1.1 §F.2: opens its Connection Detail. -->
+            <button
+              type="button"
+              class="icon"
+              title={ctx.title('connection.openDetail')}
+              onclick={() => run('connection.openDetail', { id: c.id })}
+              data-silk-detail-connection-open={c.id}><i class="fa-solid fa-pencil"></i></button
+            >
+          {/if}
         </div>
       {:else}
         <p class="hint">–</p>

@@ -100,7 +100,11 @@
         "cycleDirection": "Verbindungsrichtung wechseln",
         "cycleType": "Verbindungsart wechseln",
         "flip": "Verbindung umkehren",
-        "delete": "Verbindung löschen"
+        "delete": "Verbindung löschen",
+        "openDetail": "Verbindungsdetails",
+        "setNotes": "Notizen der Verbindung bearbeiten",
+        "setType": "Verbindungstyp setzen",
+        "setDirection": "Verbindungsrichtung setzen"
       },
       "materialize": {
         "elements": "Materialisieren",
@@ -478,6 +482,20 @@
       "InfoBlockName": "Name des Info-Blocks",
       "DeleteInfoBlockTitle": "Info-Block löschen",
       "DeleteInfoBlockConfirm": "Den Info-Block „{name}“ löschen?"
+    },
+    "ConnectionDetail": {
+      "Title": "Verbindungsdetails",
+      "Label": "Beschriftung",
+      "Type": "Typ",
+      "Direction": "Richtung",
+      "Directed": "Gerichtet",
+      "Mutual": "Gegenseitig",
+      "Reverse": "Umkehren",
+      "Notes": "Notizen",
+      "NotesHint": "Nur für die Spielleitung: nie für Spieler sichtbar, nicht auf Verbindungsseiten und nicht in der Suche.",
+      "DeleteTitle": "Verbindung löschen",
+      "DeleteConfirm": "Die Verbindung „{sentence}“ löschen?",
+      "Gone": "Diese Verbindung existiert nicht mehr."
     },
     "Merge": {
       "Title": "Zusammenführen",

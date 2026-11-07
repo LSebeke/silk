@@ -14,6 +14,24 @@ function dataOf(s: Snapshot, id: string) {
 }
 
 describe('3-way merge', () => {
+  it('merges Connection Notes per field, like label (v1.1 §F.2); old records have none', () => {
+    const c = (data: JsonObject) =>
+      rec('connection', 'c', { from: 'a', to: 'b', type: 'free', direction: 'directed', ...data });
+    const base = snap(c({ label: 'knows' }));
+    const ours = snap(c({ label: 'trusts' }));
+    const theirs = snap(c({ label: 'knows', notes: '<p>n</p>' }));
+
+    const merge = mergeSnapshots(base, ours, theirs);
+    const { snapshot, unresolved } = resolveMerge(merge, []);
+
+    expect(unresolved).toEqual([]);
+    expect(dataOf(snapshot, 'c')).toMatchObject({ label: 'trusts', notes: '<p>n</p>' });
+    expect(merge.records.get('c')?.fields.map((f) => [f.field, f.auto])).toEqual([
+      ['/label', 'ours'],
+      ['/notes', 'theirs'],
+    ]);
+  });
+
   it('auto-merges one-sided changes from both sides into one record', () => {
     const base = snap(el('a', { name: 'Gareth', status: 'alive' }));
     const ours = snap(el('a', { name: 'Gareth the Bold', status: 'alive' }));
