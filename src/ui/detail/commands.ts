@@ -17,12 +17,11 @@ export function detailUiCommands(getContext: () => DetailContext): Command[] {
           ? ((await ctx.run('infoBlock.create', { elementId: id })) as { id: string }).id
           : undefined;
         const { ElementDetailWindow } = await import('./ElementDetailWindow');
-        const existing = foundry.applications.instances.get(ElementDetailWindow.idFor(id)) as
-          InstanceType<typeof ElementDetailWindow> | undefined;
-        const window = existing ?? new ElementDetailWindow(ctx, id);
-        if (block) window.focusBlock(block);
-        await window.render({ force: true });
-        if (existing) existing.bringToFront();
+        await ElementDetailWindow.open(
+          ElementDetailWindow.idFor(id),
+          () => new ElementDetailWindow(ctx, id),
+          (window) => block && window.focusBlock(block),
+        );
         return block ? { infoBlock: block } : undefined;
       },
     },

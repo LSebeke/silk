@@ -20,6 +20,9 @@
   } from '../../core/elements';
   import { nodeMenu, type MenuEntry } from '../canvas/menu';
   import type { DetailContext } from './context';
+  import DetailSection from './DetailSection.svelte';
+  import DetailShell from './DetailShell.svelte';
+  import Eye from './Eye.svelte';
 
   let props: { ctx: DetailContext; id: string; focus?: string | undefined } = $props();
   const ctx = untrack(() => props.ctx);
@@ -136,47 +139,38 @@
 </script>
 
 {#snippet eye(kind: 'element' | 'appearance' | 'infoBlock' | 'connection', target: string)}
-  {@const on = $reveal && ctx.reveal.isRevealed(kind, target)}
-  <button
-    type="button"
-    class="eye"
-    class:on
-    disabled={!canReveal}
-    title={ctx.localize(
-      canReveal
-        ? on
-          ? 'SILK.Reveal.Unreveal'
-          : 'SILK.Reveal.Reveal'
-        : 'SILK.Reveal.NeedsAdventure',
-    )}
+  <Eye
+    on={$reveal && ctx.reveal.isRevealed(kind, target)}
+    enabled={canReveal}
+    localize={ctx.localize}
     onclick={() => toggle(kind, target)}
-    data-silk-eye={on ? 'on' : 'off'}
-    ><i class="fa-solid {on ? 'fa-eye' : 'fa-eye-slash'}"></i></button
-  >
+  />
 {/snippet}
 
-<div class="silk-detail" data-silk-detail={id} bind:this={root}>
+{#snippet header()}
   {#if element}
-    <header>
-      {@render eye('element', id)}
-      <div>
-        <div class="cls">{ctx.localize(classLabelKey(element.class))}</div>
-        <h2>{element.name}</h2>
-      </div>
-    </header>
+    {@render eye('element', id)}
+    <div>
+      <div class="cls">{ctx.localize(classLabelKey(element.class))}</div>
+      <h2>{element.name}</h2>
+    </div>
+  {/if}
+{/snippet}
+
+<DetailShell data-silk-detail={id} bind:root header={element ? header : undefined}>
+  {#if element}
     {#if !canReveal}
       <p class="hint" data-silk-detail-hint>{ctx.localize('SILK.Reveal.NeedsAdventure')}</p>
     {/if}
     {#if appearance}
-      <section>
+      <DetailSection>
         <div class="row" data-silk-detail-appearance>
           {@render eye('appearance', id)}
           <span>{ctx.localize('SILK.Reveal.Appearance')}</span>
         </div>
-      </section>
+      </DetailSection>
     {/if}
-    <section>
-      <h3>{ctx.localize('SILK.Detail.InfoBlocks')}</h3>
+    <DetailSection title={ctx.localize('SILK.Detail.InfoBlocks')}>
       {#each blocks as block (block._id)}
         <div
           class="block"
@@ -292,9 +286,8 @@
           {/if}
         {/if}
       </div>
-    </section>
-    <section>
-      <h3>{ctx.localize('SILK.Detail.Connections')}</h3>
+    </DetailSection>
+    <DetailSection title={ctx.localize('SILK.Detail.Connections')}>
       {#each connections as c (c.id)}
         <div class="row" data-silk-detail-connection={c.id}>
           {@render eye('connection', c.id)}
@@ -303,43 +296,30 @@
       {:else}
         <p class="hint">–</p>
       {/each}
-    </section>
-    <section class="actions" data-silk-detail-actions>
-      {#each entries as entry (entry.key)}
-        <button
-          type="button"
-          class:danger={entry.danger}
-          disabled={entry.disabled}
-          title={entry.hint ? ctx.localize(entry.hint) : undefined}
-          onclick={() => pick(entry)}
-          data-silk-menu-item={entry.key}>{ctx.localize(entry.label)}</button
-        >
-      {/each}
-    </section>
+    </DetailSection>
+    <DetailSection data-silk-detail-actions>
+      <div class="actions">
+        {#each entries as entry (entry.key)}
+          <button
+            type="button"
+            class:danger={entry.danger}
+            disabled={entry.disabled}
+            title={entry.hint ? ctx.localize(entry.hint) : undefined}
+            onclick={() => pick(entry)}
+            data-silk-menu-item={entry.key}>{ctx.localize(entry.label)}</button
+          >
+        {/each}
+      </div>
+    </DetailSection>
   {:else}
     <p class="hint">{ctx.localize('SILK.Detail.Gone')}</p>
   {/if}
-</div>
+</DetailShell>
 
 <style>
-  .silk-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 4px;
-  }
-  header {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
   h2 {
     margin: 0;
     border: 0;
-  }
-  h3 {
-    margin: 4px 0;
-    font-size: 13px;
   }
   .cls {
     font-size: 10px;
@@ -414,16 +394,6 @@
     border: 1px solid #aaa;
     border-radius: 4px;
     box-shadow: 0 2px 8px #0003;
-  }
-  .eye {
-    flex: none;
-    width: 26px;
-    height: 22px;
-    padding: 0;
-    color: #999;
-  }
-  .eye.on {
-    color: #2b6cb0;
   }
   .hint {
     margin: 0;
