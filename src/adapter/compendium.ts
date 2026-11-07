@@ -1,8 +1,8 @@
 /**
- * Foundry side of the Compendium picker (spec 1.1 §B.2): World actors and Actor packs as a
- * `PickerCatalog`. Filtering by type and language is the core's.
+ * Foundry side of the Compendium picker (spec 1.1 §B.2, §B.2.1): the World docs and packs of a
+ * `PickerKind` as a `PickerCatalog`. Filtering by type and language is the core's.
  */
-import type { ActorType, PickerCatalog, PickerEntry } from '../core/canvas';
+import type { PickerCatalog, PickerEntry, PickerKind } from '../core/canvas';
 
 interface IndexEntry {
   uuid: string;
@@ -11,10 +11,13 @@ interface IndexEntry {
   img?: string;
 }
 
+type WorldDoc = IndexEntry & { flags?: Record<string, unknown> };
+
 /** The slice of `game` the catalog reads. */
 export interface CatalogGame {
   i18n?: { lang: string };
-  actors?: Iterable<IndexEntry & { flags?: Record<string, unknown> }>;
+  actors?: Iterable<WorldDoc>;
+  scenes?: Iterable<WorldDoc>;
   packs?: Iterable<{
     collection: string;
     documentName: string;
@@ -24,27 +27,33 @@ export interface CatalogGame {
   }>;
 }
 
+/** The World collection of each picker document name. */
+const WORLD: Record<PickerKind['documentName'], (game: CatalogGame) => Iterable<WorldDoc>> = {
+  Actor: (game) => game.actors ?? [],
+  Scene: (game) => game.scenes ?? [],
+};
+
 const entry = (e: IndexEntry): PickerEntry => ({
   uuid: e.uuid,
   name: e.name,
-  type: e.type ?? '',
+  ...(e.type ? { type: e.type } : {}),
   ...(e.img ? { img: e.img } : {}),
 });
 
-/** `worldLabel`: the localised source label of World actors. */
+/** `worldLabel`: the localised source label of World docs. */
 export async function readPickerCatalog(
   game: CatalogGame,
-  type: ActorType,
+  kind: PickerKind,
   worldLabel: string,
 ): Promise<PickerCatalog> {
-  const world = [...(game.actors ?? [])]
-    .filter((a) => !(a.flags?.['silk'] as { id?: string } | undefined)?.id)
+  const world = [...WORLD[kind.documentName](game)]
+    .filter((d) => !(d.flags?.['silk'] as { id?: string } | undefined)?.id)
     .map(entry);
-  const actorPacks = [...(game.packs ?? [])].filter(
-    (p) => p.documentName === 'Actor' && p.visible !== false,
+  const kindPacks = [...(game.packs ?? [])].filter(
+    (p) => p.documentName === kind.documentName && p.visible !== false,
   );
   const packs = await Promise.all(
-    actorPacks.map(async (p) => {
+    kindPacks.map(async (p) => {
       const lang = p.metadata.flags?.dsalang;
       const index = await p.getIndex({ fields: ['type', 'img'] });
       return {
@@ -55,5 +64,5 @@ export async function readPickerCatalog(
       };
     }),
   );
-  return { type, lang: game.i18n?.lang ?? 'en', worldLabel, world, packs };
+  return { kind, lang: game.i18n?.lang ?? 'en', worldLabel, world, packs };
 }

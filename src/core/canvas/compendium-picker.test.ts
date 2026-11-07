@@ -10,7 +10,7 @@ import {
 } from './compendium-picker';
 
 const catalog = (over: Partial<PickerCatalog> = {}): PickerCatalog => ({
-  type: 'npc',
+  kind: { documentName: 'Actor', type: 'npc' },
   lang: 'de',
   worldLabel: 'World',
   world: [
@@ -72,7 +72,9 @@ describe('side list', () => {
   });
 
   it('Creature lists creature entries; Player Characters never appear', () => {
-    const picker = createCompendiumPicker(catalog({ type: 'creature' }));
+    const picker = createCompendiumPicker(
+      catalog({ kind: { documentName: 'Actor', type: 'creature' } }),
+    );
     expect(picker.get().sources).toEqual([
       { id: 'all', count: 3 },
       { id: 'world', label: 'World', count: 1 },
@@ -80,6 +82,31 @@ describe('side list', () => {
       { id: 'world.beasts', label: 'Beasts', count: 1 },
     ]);
     expect(picker.get().rows.map((r) => r.name)).not.toContain('Held');
+  });
+
+  it('a kind without a type lists every entry of its sources (Scenes)', () => {
+    const picker = createCompendiumPicker({
+      kind: { documentName: 'Scene' },
+      lang: 'de',
+      worldLabel: 'World',
+      world: [{ uuid: 'Scene.gareth', name: 'Gareth' }],
+      packs: [
+        {
+          id: 'dsa5-core.coremaps',
+          label: 'Karten',
+          lang: 'de',
+          entries: [
+            { uuid: 'Compendium.dsa5-core.coremaps.Scene.a', name: 'Aventurien' },
+            { uuid: 'Compendium.dsa5-core.coremaps.Scene.b', name: 'Bosparan' },
+          ],
+        },
+      ],
+    });
+    expect(picker.get().sources).toEqual([
+      { id: 'all', count: 3 },
+      { id: 'world', label: 'World', count: 1 },
+      { id: 'dsa5-core.coremaps', label: 'Karten', count: 2 },
+    ]);
   });
 });
 
@@ -159,11 +186,13 @@ describe('compendiumSource (the Source Step ↑ choice), driven by picker comman
     let closed = 0;
     const types: string[] = [];
     const source = compendiumSource({
-      actorType: (cls) =>
-        (({ person: 'npc', creature: 'creature' }) as Record<string, string>)[cls],
-      catalog: async (type) => {
-        types.push(type);
-        return catalog({ type });
+      kind: (cls) => {
+        const type = ({ person: 'npc', creature: 'creature' } as Record<string, string>)[cls];
+        return type ? { documentName: 'Actor', type } : undefined;
+      },
+      catalog: async (kind) => {
+        types.push(kind.type ?? '');
+        return catalog({ kind });
       },
       open: async (picker) => {
         opened.push(picker);
