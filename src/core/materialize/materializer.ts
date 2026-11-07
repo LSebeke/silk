@@ -45,7 +45,7 @@ import {
   type LayoutContext,
 } from './layout';
 import { deepMerge } from '../util/objects';
-import { imageWrites } from '../portrait';
+import { imageWrites, type ImageEdit } from '../portrait';
 import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
 export type MaterializeMode = 'immediate' | 'onDemand';
@@ -86,6 +86,8 @@ export interface MaterializerDeps {
    * T12: owned Items move into a new actor).
    */
   afterMaterialize?(id: string): Promise<void>;
+  /** The placed tokens of a linked actor, where they differ (v1.1 §G.3). */
+  tokens?(actorUuid: string, data: Record<string, unknown>): Promise<void>;
 }
 
 export interface Materializer {
@@ -105,7 +107,11 @@ export interface Materializer {
   afterPipeline(id: string): Promise<void>;
   /** `element.rename` hook: name → Foundry. */
   writeName(id: string): Promise<void>;
-  setImage(id: string, img: string): Promise<void>;
+  /**
+   * `element.setImage` (v1.1 §G.3), hood-aware. A Ghost's image goes to the record; a token
+   * edit (actor classes only) Materializes it first.
+   */
+  setImage(id: string, edit: ImageEdit): Promise<void>;
   setFields(id: string, fields: ClassFields): Promise<void>;
   changeClass(id: string, cls: string): Promise<void>;
   /** `appearance`: the Appearance preset (v1.1 §C.2), actor classes without one only. */
@@ -388,18 +394,33 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       await sync(id);
     },
 
-    async setImage(id, img) {
-      const el = element(id);
+    async setImage(id, edit) {
+      let el = element(id);
+      if (edit.token) {
+        if (documentName(el.class) !== 'Actor')
+          throw new Error(`Silk: ${el.class} elements have no token`);
+        if (!el.uuid) {
+          if (edit.img !== undefined) await write(id, { img: edit.img || undefined });
+          await ensureMaterialized(id);
+          el = element(id);
+        }
+      }
+      const img = edit.img;
       const cover = el.uuid ? requireDocs(id).main.flags.silk.cover : undefined;
       if (!el.uuid || (documentName(el.class) === 'JournalEntry' && !cover)) {
         // Ghost, or a Note (no Cover page): Silk holds the image.
-        await write(id, { img: img || undefined });
+        if (img !== undefined) await write(id, { img: img || undefined });
         return;
       }
       const { main } = requireDocs(id);
-      if (cover) await docs.updatePage(main.uuid, cover, { src: img || null });
-      // Hood-aware (§8): while hooded the new image waits until Appearance is Revealed.
-      else await docs.update(main.uuid, imageWrites(main, img).doc);
+      if (cover) {
+        if (img !== undefined) await docs.updatePage(main.uuid, cover, { src: img || null });
+      } else {
+        // Hood-aware (§8, v1.1 §G.3): the Portrait module decides what is shown.
+        const writes = imageWrites(main, edit, el.img);
+        if (Object.keys(writes.doc).length) await docs.update(main.uuid, writes.doc);
+        if (writes.tokens) await deps.tokens?.(main.uuid, writes.tokens);
+      }
       await sync(id);
     },
 
@@ -591,8 +612,8 @@ export function materializeCommands(m: Materializer): Command[] {
     command('materialize.visible', (args: { confirmed?: boolean }) =>
       m.materializeVisible(args.confirmed ?? false),
     ),
-    command('element.setImage', (args: { id: string; img: string }) =>
-      m.setImage(args.id, args.img),
+    command('element.setImage', ({ id, ...edit }: { id: string } & ImageEdit) =>
+      m.setImage(id, edit),
     ),
     command('element.setFields', (args: { id: string; fields: ClassFields }) =>
       m.setFields(args.id, args.fields),
