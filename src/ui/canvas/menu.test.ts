@@ -111,20 +111,30 @@ describe('Node context menu: Add Info Block… (v1.1 §C.1)', () => {
 });
 
 describe('Connection edge context menu', () => {
-  it('Reveal plus the Connection commands', () => {
+  it('Open details, Reveal, the Connection commands (spec 1.1 §F.1)', () => {
     const entries = edgeMenu('c1', deps({ isRevealed: () => true }));
     expect(labels(entries)).toEqual([
+      'SILK.Canvas.EdgeMenu.OpenDetails',
       'SILK.Reveal.Unreveal',
       'T(connection.setLabel)',
-      'T(connection.cycleDirection)',
+      'SILK.Canvas.EdgeMenu.DirectedMutual',
       'T(connection.cycleType)',
-      'T(connection.flip)',
+      'SILK.Canvas.EdgeMenu.Reverse',
       'T(connection.delete)',
     ]);
-    expect(entries[0]).toMatchObject({
+    expect(entries[0]).toMatchObject({ command: 'connection.openDetail', args: { id: 'c1' } });
+    expect(entries[1]).toMatchObject({
       command: 'reveal.connection',
       args: { id: 'c1', revealed: false },
     });
+    expect(entries[3]).toMatchObject({ command: 'connection.cycleDirection', args: { id: 'c1' } });
+    expect(entries[5]).toMatchObject({ command: 'connection.flip', args: { id: 'c1' } });
     expect(entries.at(-1)).toMatchObject({ command: 'connection.delete', args: { ids: ['c1'] } });
+  });
+
+  it('Open details is disabled while Connection Detail is unavailable', () => {
+    const entries = edgeMenu('c1', deps({ available: (n) => n !== 'connection.openDetail' }));
+    expect(entries[0]?.disabled).toBe(true);
+    expect(entries.slice(1).some((e) => e.disabled)).toBe(false);
   });
 });
