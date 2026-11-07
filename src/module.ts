@@ -497,22 +497,26 @@ const adopt = createAdopt({
   },
   // §6/§8: a doc players can already see counts as Revealed. Under main there is no map:
   // the Revealed filter reads ownership, which Adopt leaves unchanged.
-  async markRevealed({ elements, infoBlocks }) {
+  async markRevealed({ elements, infoBlocks, appearance }) {
     const campaigns = getSession().campaigns;
     const campaign = workingCopy().binding ? await campaigns.checkedOutCampaign() : null;
     if (!campaign) return;
     let map = await campaigns.readRevelationMap(campaign.id);
     for (const id of elements) map = setRevealed(map, 'element', id, true);
     for (const id of infoBlocks) map = setRevealed(map, 'infoBlock', id, true);
+    for (const id of appearance) map = setRevealed(map, 'appearance', id, true);
     await campaigns.writeRevelationMap(campaign.id, map);
     // The World mirror (T16 `revealState`) too; ownership already matches, nothing to apply.
     let world = parseRevelationMap((game.settings?.get(MODULE_ID, 'revealState') ?? null) as never);
     for (const id of elements) world = setRevealed(world, 'element', id, true);
     for (const id of infoBlocks) world = setRevealed(world, 'infoBlock', id, true);
+    for (const id of appearance) world = setRevealed(world, 'appearance', id, true);
     await game.settings?.set(MODULE_ID, 'revealState', serializeRevelationMap(world) as object);
     reveal.reload();
     await refreshRevealed();
   },
+  // v1.1 §C.2: a Person/Creature players can't see yet is hooded at Adopt.
+  hood: (id) => reveal.hood(id),
   viewCenter: () => canvasBridge.center?.() ?? { x: 0, y: 0 },
   select: async (ids) => void (await registry.run('canvas.select', { ids })),
   flash: (id) => canvasBridge.flash?.(id),

@@ -23,6 +23,7 @@ import {
   type CreateFromConnection,
 } from '../connections';
 import {
+  appearanceBlock,
   elementClass,
   elementRecord,
   hasAppearanceClass,
@@ -102,7 +103,14 @@ export interface AdoptDeps {
   /** After an adopted element got its doc (owns / lifecycle `afterMaterialize`). */
   afterAdopt?(id: string): Promise<void>;
   /** Record what players can already see as Revealed (Revelation Map, §8). */
-  markRevealed?(parts: { elements: string[]; infoBlocks: string[] }): Promise<void>;
+  markRevealed?(parts: {
+    elements: string[];
+    infoBlocks: string[];
+    /** Person/Creature: its Appearance (unhooded, v1.1 §C.2). */
+    appearance: string[];
+  }): Promise<void>;
+  /** Person/Creature players can't see yet: hood img and tokens, ownership untouched. */
+  hood?(id: string): Promise<void>;
   /** Canvas viewport centre (canvas coordinates). */
   viewCenter(): Point;
   select?(ids: string[]): Promise<void> | void;
@@ -320,7 +328,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
       const connections = connectionsPage(deps.newId(), ctx);
       const notes = playerNotesCategory(deps.newId(), ctx);
       // A Ghost brings its Info Blocks. A fresh Adopt gets no default blocks, except the
-      // Appearance of a Person/Creature, so it starts hooded (v1.1 §C.2).
+      // Appearance of a Person/Creature (v1.1 §C.2; hooded below unless players see it).
       const fresh: InfoBlock[] = hasAppearanceClass(cls)
         ? [
             {
@@ -378,10 +386,18 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     if (cls === 'quest') await docs.registerQuestJournal(doc.uuid, doc.name);
   }
 
-  /** §8: a doc players can already see counts as Revealed (ownership untouched). */
-  async function revealVisible(id: string, doc: DocSnapshot) {
+  /**
+   * §8: a doc players can already see counts as Revealed (ownership untouched), and so does
+   * a Person/Creature's Appearance; one they can't see yet is hooded (v1.1 §C.2).
+   */
+  async function revealVisible(id: string, cls: ElementClassId, doc: DocSnapshot) {
     const ownership = doc.ownership as Record<string, number> | undefined;
-    if (!deps.markRevealed || !playersSee(ownership, deps.foundry.isPlayer, LIMITED)) return;
+    const seen = playersSee(ownership, deps.foundry.isPlayer, LIMITED);
+    if (!seen) {
+      if (hasAppearanceClass(cls)) await deps.hood?.(id);
+      return;
+    }
+    if (!deps.markRevealed) return;
     const infoBlocks =
       doc.documentName === 'JournalEntry'
         ? (element(id)?.infoBlocks ?? [])
@@ -391,7 +407,9 @@ export function createAdopt(deps: AdoptDeps): Adopt {
             })
             .map((b) => b._id)
         : [];
-    await deps.markRevealed({ elements: [id], infoBlocks });
+    const el = element(id);
+    const appearance = el && appearanceBlock(el) ? [id] : [];
+    await deps.markRevealed({ elements: [id], infoBlocks, appearance });
   }
 
   /** owns for every Story Element Item embedded in a Story Element actor (§6 Connections). */
@@ -472,7 +490,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     await inferOwns();
     if (PRESENT.has(cls)) await inferPresentAt(id);
     await deps.afterAdopt?.(id);
-    await revealVisible(id, docs.get(doc.uuid) ?? doc);
+    await revealVisible(id, element(id)?.class ?? cls, docs.get(doc.uuid) ?? doc);
     return id;
   }
 

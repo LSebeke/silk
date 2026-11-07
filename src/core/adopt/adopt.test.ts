@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { DocSnapshot } from '../materialize';
 import { must } from '../materialize/test-setup';
-import { setup } from './test-setup';
+import { HOOD, setup } from './test-setup';
 
 describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Element (spec §6)', () => {
   it('adopts an npc as a Person in place: Silk id flag, Companion Journal with only an Appearance block', async () => {
@@ -136,12 +137,81 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
       pages: [open, secret],
     });
     const { id } = await t.adoptDoc({ uuid: journal.uuid, class: 'location' });
-    expect(t.revealed).toEqual([{ elements: [id], infoBlocks: [open._id] }]);
+    expect(t.revealed).toEqual([{ elements: [id], infoBlocks: [open._id], appearance: [] }]);
     expect(t.doc(id).ownership).toEqual({ default: 0, player1: 2 });
 
     const hidden = t.foundryDoc('Actor', { name: 'Spy', type: 'npc' });
     await t.adoptDoc({ uuid: hidden.uuid });
     expect(t.revealed).toHaveLength(1);
+  });
+
+  it('an actor players cannot see yet is hooded at Adopt; its ownership is unchanged', async () => {
+    const t = setup();
+    const spy = t.foundryDoc('Actor', {
+      name: 'Spy',
+      type: 'npc',
+      img: 'spy.webp',
+      ownership: { default: 0, player1: 0 } as { default: number },
+      prototypeToken: { texture: { src: 'spy-token.webp' } },
+    } as never);
+    const { id } = await t.adoptDoc({ uuid: spy.uuid });
+    const doc = t.doc(id) as DocSnapshot & { prototypeToken: { texture: { src: string } } };
+    expect(doc.img).toBe(HOOD);
+    expect(doc.prototypeToken.texture.src).toBe(HOOD);
+    expect(doc.flags.silk.img).toBe('spy.webp');
+    expect(doc.flags.silk.token).toBe('spy-token.webp');
+    expect(doc.ownership).toEqual({ default: 0, player1: 0 });
+    expect(t.tokens).toContainEqual({
+      actor: spy.uuid,
+      data: expect.objectContaining({ 'texture.src': HOOD }),
+    });
+    // The record keeps the real image.
+    expect(t.element(id).img ?? 'spy.webp').toBe('spy.webp');
+  });
+
+  it('an actor players can already see: its Appearance counts as Revealed too, unhooded', async () => {
+    const t = setup();
+    const ally = t.foundryDoc('Actor', {
+      name: 'Ally',
+      type: 'npc',
+      img: 'ally.webp',
+      ownership: { default: 1 },
+    });
+    const { id } = await t.adoptDoc({ uuid: ally.uuid });
+    expect(t.revealed).toEqual([{ elements: [id], infoBlocks: [], appearance: [id] }]);
+    expect(t.doc(id).img).toBe('ally.webp');
+    expect(t.doc(id).flags.silk.hood).toBeUndefined();
+  });
+
+  it('every Adopt path hoods: bulk folder and the compendium', async () => {
+    const t = setup();
+    const a = t.foundryDoc('Actor', { name: 'A', type: 'npc', img: 'a.webp' });
+    t.folders.set('f', { id: 'f', name: 'F', docs: [a.uuid], children: [] });
+    const { ids } = await t.run<{ ids: string[] }>('adopt.folder', {
+      folderId: 'f',
+      confirmed: true,
+    });
+    expect(t.doc(ids[0] as string).img).toBe(HOOD);
+    t.compendium.set('Compendium.x.Actor.c', {
+      _id: 'c',
+      uuid: 'Compendium.x.Actor.c',
+      documentName: 'Actor',
+      type: 'creature',
+      name: 'Wolf',
+      img: 'wolf.webp',
+      flags: { silk: {} },
+      ownership: { default: 0 },
+    } as DocSnapshot);
+    const { id } = await t.adoptDoc({ uuid: 'Compendium.x.Actor.c' });
+    expect(t.doc(id).img).toBe(HOOD);
+    expect(t.doc(id).flags.silk.img).toBe('wolf.webp');
+  });
+
+  it('an Item is never hooded', async () => {
+    const t = setup();
+    const ring = t.foundryDoc('Item', { name: 'Ring', type: 'equipment', img: 'ring.webp' });
+    const { id } = await t.adoptDoc({ uuid: ring.uuid });
+    expect(t.doc(id).img).toBe('ring.webp');
   });
 });
 

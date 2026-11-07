@@ -26,7 +26,7 @@ import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { Materializer } from '../materialize/materializer';
 import type { DocSnapshot, FoundryDocs, SystemMapping } from '../materialize/port';
 import type { WorkingCopy } from '../working-copy';
-import { OWNERSHIP, isHooded, ownershipWrites, type RevealWrite } from './ownership';
+import { OWNERSHIP, hoodWrites, isHooded, ownershipWrites, type RevealWrite } from './ownership';
 import { applyReveal, touchedElements, type RevealGraph, type RevealTarget } from './rules';
 
 /** Foundry effects outside the docs port. */
@@ -80,6 +80,8 @@ export interface Reveal {
   afterMaterialize(id: string): Promise<void>;
   /** Re-apply one element (a Foundry-side edit undid the hood). */
   repair(id: string): Promise<void>;
+  /** Person/Creature: hood img and tokens, ownership untouched (Adopt, v1.1 §C.2). */
+  hood(id: string): Promise<void>;
   /** Reconcile on load (lifecycle contributor). */
   reconcile(): Promise<void>;
   /**
@@ -341,6 +343,14 @@ export function createReveal(deps: RevealDeps): Reveal {
     async repair(id) {
       const el = read(id);
       if (el) await applyOne(el, state);
+    },
+    // Not queued, like afterMaterialize (Adopt runs outside the queue).
+    async hood(id) {
+      const el = read(id);
+      const found = deps.materializer.docsOf(id);
+      if (!el || !found) return;
+      for (const w of hoodWrites({ element: el, main: found.main, map: state, hood: deps.hood() }))
+        await write(w);
     },
     reconcile: () =>
       serial(async () => {

@@ -130,8 +130,23 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
   return writes;
 }
 
-function appearanceWrites(input: OwnershipInput, revealed: boolean): RevealWrite[] {
-  const { element: el, main, map } = input;
+/**
+ * The hood alone, ownership untouched (Adopt of an actor players can't see yet, v1.1 §C.2):
+ * img and token textures as for an element whose Appearance is not Revealed.
+ */
+export function hoodWrites(
+  input: Pick<OwnershipInput, 'element' | 'main' | 'map' | 'hood'>,
+): RevealWrite[] {
+  if (!hasAppearanceClass(input.element.class)) return [];
+  return appearanceWrites(input, isRevealed(input.map, 'element', input.element.id), false);
+}
+
+function appearanceWrites(
+  input: Pick<OwnershipInput, 'element' | 'main' | 'map' | 'hood'>,
+  revealed: boolean,
+  appearance = isRevealed(input.map, 'appearance', input.element.id),
+): RevealWrite[] {
+  const { element: el, main } = input;
   const guarded = !!appearanceBlock(el);
   const hood = guarded ? input.hood : (elementClass(el.class)?.icon ?? input.hood);
   const writes: RevealWrite[] = [];
@@ -142,7 +157,7 @@ function appearanceWrites(input: OwnershipInput, revealed: boolean): RevealWrite
   /** Real image and token texture, wherever they are now. */
   const realImg = el.img ?? (hooded ? flags.img : main.img) ?? '';
   const realToken = (protoSrc === flags.hood ? flags.token : protoSrc) ?? realImg;
-  const showReal = guarded && isRevealed(map, 'appearance', el.id) && revealed;
+  const showReal = guarded && appearance && revealed;
   const display = revealed ? DISPLAY.HOVER : DISPLAY.OWNER;
 
   const data: Record<string, unknown> = {};
