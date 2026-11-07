@@ -1,19 +1,24 @@
 /**
- * Compendium picker (spec 1.1 §B.2): the Source Step's ↑ choice. A search over World actors
- * and Actor packs of the class's type, with a side list of sources. Pure: the adapter reads
- * Foundry into a `PickerCatalog`, the UI renders `get()` and forwards keys.
+ * Compendium picker (spec 1.1 §B.2, §B.2.1): the Source Step's ↑ choice. A search over World
+ * docs and packs of the class's `PickerKind` (Person: Actor `npc`), with a side list of sources.
+ * Pure: the adapter reads Foundry into a `PickerCatalog`, the UI renders `get()` and forwards keys.
  */
 import type { Command } from '../commands/registry';
 import type { ElementClassId } from '../elements/classes';
 import type { SourcePick, SourceProvider } from './pipeline';
 
-/** A Foundry Actor subtype, as the Game System names it (DSA5 `npc`, `creature`, `character`). */
-export type ActorType = 'npc' | 'creature' | 'character' | (string & {});
+/** The Foundry documents a picker offers: a document name, optionally narrowed to a subtype. */
+export interface PickerKind {
+  documentName: 'Actor' | 'Scene';
+  /** The subtype entries must have (Actor `npc`); undefined = every entry. */
+  type?: string;
+}
 
 export interface PickerEntry {
   uuid: string;
   name: string;
-  type: ActorType;
+  /** The document's subtype, if it has one. */
+  type?: string;
   img?: string;
 }
 
@@ -27,15 +32,15 @@ export interface PickerPack {
 }
 
 export interface PickerCatalog {
-  /** The Actor subtype of the class (Person `npc`, Creature `creature`). */
-  type: ActorType;
+  /** What the class picks (Person: Actor `npc`, Creature: Actor `creature`). */
+  kind: PickerKind;
   /** `game.i18n.lang`. */
   lang: string;
-  /** Localised "World": the source label of World actors. */
+  /** Localised "World": the source label of World docs. */
   worldLabel: string;
-  /** World actors that are not Story Elements. */
+  /** World docs of the kind's document name that are not Story Elements. */
   world: PickerEntry[];
-  /** Actor packs. */
+  /** Packs of the kind's document name. */
   packs: PickerPack[];
 }
 
@@ -81,10 +86,10 @@ export interface CompendiumPicker {
 }
 
 export interface CompendiumProviderDeps {
-  /** The Actor subtype a class picks from; undefined = not for this class. */
-  actorType(cls: ElementClassId): ActorType | undefined;
-  /** Reads World actors and Actor packs (adapter). */
-  catalog(type: ActorType): Promise<PickerCatalog>;
+  /** What a class picks; undefined = not for this class. */
+  kind(cls: ElementClassId): PickerKind | undefined;
+  /** Reads the World docs and packs of a kind (adapter). */
+  catalog(kind: PickerKind): Promise<PickerCatalog>;
   /** Shows the picker window; resolves with the function that closes it. */
   open(picker: CompendiumPicker): Promise<() => void>;
 }
@@ -117,10 +122,10 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
   };
 
   return {
-    unavailable: (cls) => (deps.actorType(cls) ? undefined : 'SILK.Source.NotForClass'),
+    unavailable: (cls) => (deps.kind(cls) ? undefined : 'SILK.Source.NotForClass'),
     pick({ class: cls, signal }) {
-      const type = deps.actorType(cls);
-      if (!type || signal.aborted) return Promise.resolve(undefined);
+      const kind = deps.kind(cls);
+      if (!kind || signal.aborted) return Promise.resolve(undefined);
       return new Promise<SourcePick | undefined>((resolve, reject) => {
         let done = false;
         let close: (() => void) | undefined;
@@ -135,7 +140,7 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
         const onAbort = () => finish(undefined);
         signal.addEventListener('abort', onAbort, { once: true });
         const opening = (async () => {
-          const picker = createCompendiumPicker(await deps.catalog(type));
+          const picker = createCompendiumPicker(await deps.catalog(kind));
           if (done) return undefined;
           close = await deps.open(picker);
           if (done) {
@@ -204,7 +209,9 @@ const packShown = (pack: PickerPack, lang: string) => !pack.lang || pack.lang ==
 const byName = (a: PickerRow, b: PickerRow) => a.name.localeCompare(b.name);
 
 function rowsOf(catalog: PickerCatalog) {
-  const ofType = (entries: PickerEntry[]) => entries.filter((e) => e.type === catalog.type);
+  const { type } = catalog.kind;
+  const ofType = (entries: PickerEntry[]) =>
+    type === undefined ? entries : entries.filter((e) => e.type === type);
   const row = (e: PickerEntry, source: PickerSourceId, label: string): PickerRow => ({
     uuid: e.uuid,
     name: e.name,

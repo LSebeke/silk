@@ -4,7 +4,6 @@
  * module's own GM menu does, renders it, and takes the first NPC Actor the GM creates
  * while it is open (`createActor`). The import is guarded: a failure greys the choice.
  */
-import type { ActorType } from '../core/canvas/compendium-picker';
 import type { SourcePick, SourceProvider, SourceRequest } from '../core/canvas/pipeline';
 import type { Dsa5ActorType } from './dsa5';
 
@@ -22,7 +21,7 @@ export interface GeneratorApp {
 export interface CreatedActor {
   uuid: string;
   name: string;
-  type: ActorType;
+  type: string;
   /** Already a Silk doc (flagged at create): Materialize, not the generator, made it. */
   silk?: boolean;
 }
@@ -118,7 +117,7 @@ export function createNscZucht(deps: NscZuchtDeps): NscZucht {
 interface FoundryActor {
   uuid: string;
   name: string;
-  type: ActorType;
+  type: string;
   flags?: { silk?: { id?: unknown } };
 }
 
