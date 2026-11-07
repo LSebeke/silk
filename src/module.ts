@@ -30,7 +30,7 @@ import {
   setRevelationMapApplier,
   startSession,
 } from './adapter/session';
-import { hoodedImage, registerSettings } from './adapter/settings';
+import { registerSettings } from './adapter/settings';
 import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
@@ -85,6 +85,7 @@ import {
 import { createMerges, mergeCommands, routeMainMoved, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createPlayerNotes, playerNoteCommands } from './core/player-notes';
+import { hoodImage } from './core/portrait';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasBridge } from './ui/canvas/bridge';
@@ -383,7 +384,7 @@ const reveal = createReveal({
       )),
   },
   adventure: adventureCheckedOut,
-  hood: () => hoodedImage(game.settings?.get(MODULE_ID, 'hoodedImage')),
+  hood: () => hoodImage(game.settings?.get(MODULE_ID, 'hoodedImage')),
   stage: foundryRevealStage(),
   localize,
   refreshPages: (ids) => connectionsPages.refresh(ids),

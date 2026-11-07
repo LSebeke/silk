@@ -45,6 +45,7 @@ import {
   type LayoutContext,
 } from './layout';
 import { deepMerge } from '../util/objects';
+import { imageWrites } from '../portrait';
 import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
 export type MaterializeMode = 'immediate' | 'onDemand';
@@ -396,11 +397,9 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
         return;
       }
       const { main } = requireDocs(id);
-      const { hood } = main.flags.silk;
       if (cover) await docs.updatePage(main.uuid, cover, { src: img || null });
-      // Hooded (§8): the new image waits in the flag until Appearance is Revealed.
-      else if (hood && main.img === hood) await docs.update(main.uuid, { 'flags.silk.img': img });
-      else await docs.update(main.uuid, { img });
+      // Hood-aware (§8): while hooded the new image waits until Appearance is Revealed.
+      else await docs.update(main.uuid, imageWrites(main, img).doc);
       await sync(id);
     },
 

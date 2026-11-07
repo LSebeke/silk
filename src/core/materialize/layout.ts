@@ -5,6 +5,7 @@
 import { elementClass, type ElementClassId } from '../elements/classes';
 import type { ElementData, InfoBlock, PlayerNote, StoryElement } from '../elements/element';
 import { statusOf, statusesOf, storedStatus } from '../elements/status';
+import { realPortrait } from '../portrait/portrait';
 import {
   OWNERSHIP_NONE,
   type CategoryData,
@@ -297,9 +298,8 @@ export function readBack(
 ): Partial<ElementData> {
   const out: Partial<ElementData> = { name: main.name };
   if (main.documentName !== 'JournalEntry') {
-    // Hooded until Appearance is Revealed (§8): the real image waits in the flag.
-    const { hood, img } = main.flags.silk;
-    out.img = (hood && main.img === hood ? img : main.img) || undefined;
+    // The real image, also while hooded (§8).
+    out.img = realPortrait(main).img || undefined;
     const fields = system.fromSystem(cls, main.system);
     out.fields = Object.keys(fields).length ? fields : undefined;
     if (cls === 'person' || cls === 'creature') {

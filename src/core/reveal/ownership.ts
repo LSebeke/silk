@@ -10,15 +10,14 @@
  * | Connection | Connections page OBSERVER on the first | same |
  *
  * Actor/Item: the Companion Journal is OBSERVER once a block, Connection or Player Note
- * is Revealed. Person/Creature: hooded image + token texture until Appearance is Revealed
- * (real ones wait in `flags.silk.img` / `flags.silk.token`), token `displayName` OWNER
- * before the element Reveal, HOVER after. Without an Appearance block (deleted, v1.1 §C.2)
- * the class icon stands in for the hood, permanently.
+ * is Revealed. Person/Creature: the hood until Appearance is Revealed (the Portrait module
+ * owns real vs shown), token `displayName` OWNER before the element Reveal, HOVER after.
  */
 import { isRevealed, type RevelationMap } from '../campaigns';
-import { appearanceBlock, elementClass, hasAppearanceClass, type StoryElement } from '../elements';
+import { appearanceBlock, hasAppearanceClass, type StoryElement } from '../elements';
 import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { DocSnapshot, SystemMapping } from '../materialize/port';
+import { hoodOf, showWrites, type PortraitDoc, type Shown } from '../portrait';
 
 export const OWNERSHIP = { NONE: 0, LIMITED: 1, OBSERVER: 2, OWNER: 3 } as const;
 /** `CONST.TOKEN_DISPLAY_MODES`. */
@@ -47,19 +46,8 @@ export interface OwnershipInput {
   system: SystemMapping;
 }
 
-interface TokenSource {
-  texture?: { src?: string | null };
-  displayName?: number;
-}
-
 const level = (o: { ownership?: { default?: number } } | undefined) =>
   o?.ownership?.default ?? OWNERSHIP.NONE;
-
-/** `flags.silk.img` holds the real image while `img` shows the hood. */
-export function isHooded(main: Pick<DocSnapshot, 'img' | 'flags'>): boolean {
-  const { hood } = main.flags.silk;
-  return !!hood && main.img === hood;
-}
 
 export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
   const { element: el, main, companion, map } = input;
@@ -147,47 +135,21 @@ function appearanceWrites(
   appearance = isRevealed(input.map, 'appearance', input.element.id),
 ): RevealWrite[] {
   const { element: el, main } = input;
-  const guarded = !!appearanceBlock(el);
-  const hood = guarded ? input.hood : (elementClass(el.class)?.icon ?? input.hood);
-  const writes: RevealWrite[] = [];
-  const flags = main.flags.silk;
-  const proto = (main as unknown as { prototypeToken?: TokenSource }).prototypeToken ?? {};
-  const hooded = isHooded(main);
-  const protoSrc = proto.texture?.src ?? undefined;
-  /** Real image and token texture, wherever they are now. */
-  const realImg = el.img ?? (hooded ? flags.img : main.img) ?? '';
-  const realToken = (protoSrc === flags.hood ? flags.token : protoSrc) ?? realImg;
-  const showReal = guarded && appearance && revealed;
+  const doc = main as PortraitDoc & { prototypeToken?: { displayName?: number } };
+  const showReal = !!appearanceBlock(el) && appearance && revealed;
+  const shown: Shown = showReal ? 'real' : { hood: hoodOf(el, input.hood) };
+  const portrait = showWrites(doc, shown, el.img);
   const display = revealed ? DISPLAY.HOVER : DISPLAY.OWNER;
 
-  const data: Record<string, unknown> = {};
-  if (showReal) {
-    if (flags.hood) {
-      Object.assign(data, {
-        img: realImg,
-        'prototypeToken.texture.src': realToken,
-        'flags.silk.-=img': null,
-        'flags.silk.-=token': null,
-        'flags.silk.-=hood': null,
-      });
-    }
-  } else if (!hooded || flags.img !== realImg || protoSrc !== hood || flags.hood !== hood) {
-    Object.assign(data, {
-      img: hood,
-      'prototypeToken.texture.src': hood,
-      'flags.silk.img': realImg,
-      'flags.silk.token': realToken,
-      'flags.silk.hood': hood,
-    });
-  }
-  if (proto.displayName !== display) data['prototypeToken.displayName'] = display;
+  const data = { ...portrait.doc };
+  if (doc.prototypeToken?.displayName !== display) data['prototypeToken.displayName'] = display;
+  const writes: RevealWrite[] = [];
   if (Object.keys(data).length) writes.push({ op: 'update', uuid: main.uuid, data });
   // Placed tokens follow on every apply (the adapter skips unchanged ones).
-  const texture = showReal ? realToken : hood;
   writes.push({
     op: 'tokens',
     uuid: main.uuid,
-    data: { 'texture.src': texture, displayName: display },
+    data: { ...portrait.tokens, displayName: display },
   });
   return writes;
 }

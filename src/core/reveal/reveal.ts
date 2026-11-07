@@ -26,7 +26,8 @@ import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { Materializer } from '../materialize/materializer';
 import type { DocSnapshot, FoundryDocs, SystemMapping } from '../materialize/port';
 import type { WorkingCopy } from '../working-copy';
-import { OWNERSHIP, hoodWrites, isHooded, ownershipWrites, type RevealWrite } from './ownership';
+import { isHooded } from '../portrait';
+import { OWNERSHIP, hoodWrites, ownershipWrites, type RevealWrite } from './ownership';
 import { applyReveal, touchedElements, type RevealGraph, type RevealTarget } from './rules';
 
 /** Foundry effects outside the docs port. */
