@@ -111,9 +111,12 @@ const canvasState = createCanvasState();
 const nscZucht = foundryNscZucht((key) => localize(key));
 /** Spec 1.1 §B.2: World actors and Actor packs of the class's DSA5 type. */
 const compendium = compendiumSource({
-  actorType: (cls) => (isActorSourceClass(cls) ? dsa5Mapping.docType(cls) : undefined),
-  catalog: (type) =>
-    readPickerCatalog(game as unknown as CatalogGame, type, localize('SILK.Picker.World')),
+  kind: (cls) => {
+    const type = isActorSourceClass(cls) ? dsa5Mapping.docType(cls) : undefined;
+    return type ? { documentName: 'Actor', type } : undefined;
+  },
+  catalog: (kind) =>
+    readPickerCatalog(game as unknown as CatalogGame, kind, localize('SILK.Picker.World')),
   async open(picker) {
     const { openCompendiumPicker } = await import('./ui/canvas/CompendiumPickerWindow');
     return openCompendiumPicker(picker, {
