@@ -1,0 +1,15 @@
+/** Plain-object helpers. Pure. */
+
+export type PlainObject = Record<string, unknown>;
+
+/** A plain object: not null, not an array. */
+export const isObject = (v: unknown): v is PlainObject =>
+  !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Deep merge of `over` into a copy of `base` (objects merge, the rest replaces). */
+export function deepMerge(base: PlainObject, over: PlainObject): PlainObject {
+  const out: PlainObject = { ...base };
+  for (const [key, value] of Object.entries(over))
+    out[key] = isObject(value) && isObject(out[key]) ? deepMerge(out[key], value) : value;
+  return out;
+}

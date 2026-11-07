@@ -1,12 +1,12 @@
 /** Compendium picker window (spec 1.1 §B.2). Loaded lazily by the Source Step's ↑ choice. */
-import type { CompendiumPicker as Picker, SourcePick } from '../../core/canvas';
+import type { CompendiumPicker as Picker } from '../../core/canvas';
 import { SvelteApplication } from '../SvelteApplication.svelte';
 import CompendiumPicker from './CompendiumPicker.svelte';
 
 type Props = {
   picker: Picker;
   localize: (key: string) => string;
-  done: (pick: SourcePick | undefined) => void;
+  run: (name: string, args?: object) => Promise<unknown>;
 };
 
 class CompendiumPickerWindow extends SvelteApplication<Props> {
@@ -20,47 +20,36 @@ class CompendiumPickerWindow extends SvelteApplication<Props> {
   protected readonly component = CompendiumPicker;
 
   readonly #props: Props;
-  #settle: (pick: SourcePick | undefined) => void;
+  /** Closed by Silk (pick, cancel, aborted creation), not by the user. */
+  #closing = false;
 
-  constructor(picker: Picker, localize: (key: string) => string, settle: Props['done']) {
+  constructor(props: Props) {
     super({});
-    this.#settle = settle;
-    this.#props = {
-      picker,
-      localize,
-      done: (pick) => {
-        this.#finish(pick);
-        void this.close();
-      },
-    };
-  }
-
-  #finish(pick: SourcePick | undefined) {
-    const settle = this.#settle;
-    this.#settle = () => undefined;
-    settle(pick);
+    this.#props = props;
   }
 
   protected getProps() {
     return this.#props;
   }
 
+  dismiss() {
+    this.#closing = true;
+    void this.close();
+  }
+
   protected override _onClose(options: Parameters<SvelteApplication['_onClose']>[0]) {
     // Closed by its X or Foundry's Esc: back to the Source Step.
-    this.#finish(undefined);
+    if (!this.#closing) void this.#props.run('picker.cancel').catch(() => undefined);
     super._onClose(options);
   }
 }
 
-/** Shows the picker; resolves with the pick, or undefined when closed. `signal` closes it. */
-export function openCompendiumPicker(
+/** Shows the picker; resolves with the function that closes it. */
+export async function openCompendiumPicker(
   picker: Picker,
-  signal: AbortSignal,
-  localize: (key: string) => string,
-): Promise<SourcePick | undefined> {
-  return new Promise((resolve) => {
-    const app = new CompendiumPickerWindow(picker, localize, resolve);
-    signal.addEventListener('abort', () => void app.close(), { once: true });
-    void app.render({ force: true });
-  });
+  options: Omit<Props, 'picker'>,
+): Promise<() => void> {
+  const app = new CompendiumPickerWindow({ picker, ...options });
+  void app.render({ force: true });
+  return () => app.dismiss();
 }

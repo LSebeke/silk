@@ -30,6 +30,18 @@
       }
     },
     "Commands": {
+      "pipeline": {
+        "search": "Klassenauswahl durchsuchen",
+        "pickClass": "Klasse wählen",
+        "pickSource": "Quelle wählen",
+        "cancel": "Erstellung abbrechen"
+      },
+      "picker": {
+        "search": "Kompendium-Auswahl durchsuchen",
+        "source": "Quelle der Auswahl wählen",
+        "pick": "Kompendium-Eintrag wählen",
+        "cancel": "Kompendium-Auswahl schließen"
+      },
       "canvas": {
         "open": "Weltleinwand öffnen",
         "moveNodes": "Knoten verschieben",
@@ -399,7 +411,8 @@
       "Gone": "Dieses Element existiert nicht mehr.",
       "AddInfoBlock": "+ Info-Block",
       "AddInfoBlockMenu": "Info-Block hinzufügen…",
-      "AddAppearance": "+ Aussehen",
+      "AddPresets": "Weitere Info-Block-Vorlagen",
+      "AddAppearance": "Aussehen",
       "AddAppearanceHint": "Fügt den Aussehen-Block hinzu: das Bild bleibt verhüllt, bis er enthüllt ist.",
       "InfoBlockName": "Name des Info-Blocks",
       "DeleteInfoBlockTitle": "Info-Block löschen",

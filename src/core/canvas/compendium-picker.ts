@@ -3,14 +3,17 @@
  * and Actor packs of the class's type, with a side list of sources. Pure: the adapter reads
  * Foundry into a `PickerCatalog`, the UI renders `get()` and forwards keys.
  */
+import type { Command } from '../commands/registry';
 import type { ElementClassId } from '../elements/classes';
 import type { SourcePick, SourceProvider } from './pipeline';
+
+/** A Foundry Actor subtype, as the Game System names it (DSA5 `npc`, `creature`, `character`). */
+export type ActorType = 'npc' | 'creature' | 'character' | (string & {});
 
 export interface PickerEntry {
   uuid: string;
   name: string;
-  /** Actor subtype (DSA5 `npc`, `creature`, `character`). */
-  type: string;
+  type: ActorType;
   img?: string;
 }
 
@@ -25,9 +28,11 @@ export interface PickerPack {
 
 export interface PickerCatalog {
   /** The Actor subtype of the class (Person `npc`, Creature `creature`). */
-  type: string;
+  type: ActorType;
   /** `game.i18n.lang`. */
   lang: string;
+  /** Localised "World": the source label of World actors. */
+  worldLabel: string;
   /** World actors that are not Story Elements. */
   world: PickerEntry[];
   /** Actor packs. */
@@ -36,7 +41,7 @@ export interface PickerCatalog {
 
 export type PickerSourceId = 'all' | 'world' | (string & {});
 
-/** A side-list entry; packs carry their label, All/World are localised by the UI. */
+/** A side-list entry; World and packs carry their label, All is localised by the UI. */
 export interface PickerSource {
   id: PickerSourceId;
   label?: string;
@@ -48,9 +53,9 @@ export interface PickerRow {
   name: string;
   img?: string;
   /** `world` or the pack id. */
-  source: string;
-  /** Pack label; World rows have none. */
-  label?: string;
+  source: PickerSourceId;
+  /** Source label: the pack's, or the localised World. */
+  label: string;
 }
 
 export interface PickerState {
@@ -77,28 +82,120 @@ export interface CompendiumPicker {
 
 export interface CompendiumProviderDeps {
   /** The Actor subtype a class picks from; undefined = not for this class. */
-  actorType(cls: ElementClassId): string | undefined;
+  actorType(cls: ElementClassId): ActorType | undefined;
   /** Reads World actors and Actor packs (adapter). */
-  catalog(type: string): Promise<PickerCatalog>;
-  /**
-   * Shows the picker window. Resolves with the pick, or undefined when closed (`Esc`);
-   * closes itself when `signal` aborts.
-   */
-  open(picker: CompendiumPicker, signal: AbortSignal): Promise<SourcePick | undefined>;
+  catalog(type: ActorType): Promise<PickerCatalog>;
+  /** Shows the picker window; resolves with the function that closes it. */
+  open(picker: CompendiumPicker): Promise<() => void>;
 }
 
-/** The Source Step's Compendium choice (`CreationPipelineDeps.sources.compendium`). */
-export function compendiumProvider(deps: CompendiumProviderDeps): SourceProvider {
+/**
+ * The Source Step's Compendium choice (`CreationPipelineDeps.sources.compendium`). While it is
+ * open, the picker commands (`pickerCommands`) drive it: search, source, pick, cancel.
+ */
+export interface CompendiumSource extends SourceProvider {
+  /** The open picker, once its window is up; undefined when none is open. */
+  ready(): Promise<CompendiumPicker | undefined>;
+  /** Picks row `uuid` (default: the active one) and closes. False = no such row. */
+  choose(uuid?: string): Promise<boolean>;
+  /** Closes without a pick: back to the Source Step. */
+  cancel(): Promise<void>;
+}
+
+interface PickerSession {
+  picker: CompendiumPicker;
+  finish(pick: SourcePick | undefined): void;
+}
+
+export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource {
+  /** Resolves with the open session once its window is up (undefined = none). */
+  let session: Promise<PickerSession | undefined> = Promise.resolve(undefined);
+  const current = async () => {
+    const open = await session;
+    if (!open) throw new Error('Silk: the compendium picker is not open');
+    return open;
+  };
+
   return {
     unavailable: (cls) => (deps.actorType(cls) ? undefined : 'SILK.Source.NotForClass'),
-    async pick({ class: cls, signal }) {
+    pick({ class: cls, signal }) {
       const type = deps.actorType(cls);
-      if (!type) return undefined;
-      const picker = createCompendiumPicker(await deps.catalog(type));
-      if (signal.aborted) return undefined;
-      return deps.open(picker, signal);
+      if (!type || signal.aborted) return Promise.resolve(undefined);
+      return new Promise<SourcePick | undefined>((resolve, reject) => {
+        let done = false;
+        let close: (() => void) | undefined;
+        const finish = (pick: SourcePick | undefined) => {
+          if (done) return;
+          done = true;
+          session = Promise.resolve(undefined);
+          signal.removeEventListener('abort', onAbort);
+          close?.();
+          resolve(pick);
+        };
+        const onAbort = () => finish(undefined);
+        signal.addEventListener('abort', onAbort, { once: true });
+        const opening = (async () => {
+          const picker = createCompendiumPicker(await deps.catalog(type));
+          if (done) return undefined;
+          close = await deps.open(picker);
+          if (done) {
+            close();
+            return undefined;
+          }
+          return { picker, finish };
+        })();
+        session = opening.catch(() => undefined);
+        opening.catch((error: unknown) => {
+          done = true;
+          session = Promise.resolve(undefined);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        });
+      });
+    },
+    ready: async () => (await session)?.picker,
+    async choose(uuid) {
+      const { picker, finish } = await current();
+      if (uuid !== undefined) {
+        const index = picker.get().rows.findIndex((r) => r.uuid === uuid);
+        if (index < 0) return false;
+        picker.activate(index);
+      }
+      const pick = picker.pick();
+      if (!pick) return false;
+      finish(pick);
+      return true;
+    },
+    async cancel() {
+      (await session)?.finish(undefined);
     },
   };
+}
+
+/** Picker commands (spec 1.1 §B.2, ADR 0003): the window's search bar, side list and rows. */
+export function pickerCommands(source: CompendiumSource): Command[] {
+  const picker = async () => {
+    const open = await source.ready();
+    if (!open) throw new Error('Silk: the compendium picker is not open');
+    return open;
+  };
+  const command = <A>(name: string, run: (args: A) => Promise<unknown>): Command<A> => ({
+    name,
+    title: `SILK.Commands.${name}`,
+    available: (ctx) => ctx.isGM,
+    run,
+  });
+  return [
+    command('picker.search', async ({ query }: { query: string }) =>
+      (await picker()).setQuery(String(query ?? '')),
+    ),
+    command('picker.source', async ({ id }: { id: PickerSourceId }) =>
+      (await picker()).setSource(id),
+    ),
+    command('picker.pick', async ({ uuid }: { uuid?: string }) => ({
+      picked: await source.choose(uuid),
+    })),
+    command('picker.cancel', () => source.cancel()),
+  ];
 }
 
 /** DSA5's rule (`hooks/sidebar.js`): a pack in another language is hidden; no flag = shown. */
@@ -108,14 +205,14 @@ const byName = (a: PickerRow, b: PickerRow) => a.name.localeCompare(b.name);
 
 function rowsOf(catalog: PickerCatalog) {
   const ofType = (entries: PickerEntry[]) => entries.filter((e) => e.type === catalog.type);
-  const row = (e: PickerEntry, source: string, label?: string): PickerRow => ({
+  const row = (e: PickerEntry, source: PickerSourceId, label: string): PickerRow => ({
     uuid: e.uuid,
     name: e.name,
     ...(e.img ? { img: e.img } : {}),
     source,
-    ...(label ? { label } : {}),
+    label,
   });
-  const world = ofType(catalog.world).map((e) => row(e, 'world'));
+  const world = ofType(catalog.world).map((e) => row(e, 'world', catalog.worldLabel));
   const packs = catalog.packs
     .filter((p) => packShown(p, catalog.lang))
     .map((p) => ({ pack: p, rows: ofType(p.entries).map((e) => row(e, p.id, p.label)) }))
@@ -123,7 +220,7 @@ function rowsOf(catalog: PickerCatalog) {
   const all = [...world, ...packs.flatMap((p) => p.rows)].sort(byName);
   const sources: PickerSource[] = [
     { id: 'all', count: all.length },
-    { id: 'world', count: world.length },
+    { id: 'world', label: catalog.worldLabel, count: world.length },
     ...packs.map((p) => ({ id: p.pack.id, label: p.pack.label, count: p.rows.length })),
   ];
   return { all, sources };
@@ -180,9 +277,12 @@ export function createCompendiumPicker(catalog: PickerCatalog): CompendiumPicker
     pick() {
       const row = state.rows[active];
       if (!row) return undefined;
-      return row.source === 'world'
-        ? { adopt: { uuid: row.uuid }, name: row.name }
-        : { source: { kind: 'compendium', uuid: row.uuid }, name: row.name };
+      if (row.source === 'world') return { adopt: { uuid: row.uuid }, name: row.name };
+      return {
+        source: { kind: 'compendium', uuid: row.uuid },
+        name: row.name,
+        ...(row.img ? { img: row.img } : {}),
+      };
     },
   };
 }

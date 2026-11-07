@@ -44,6 +44,7 @@ import {
   type DocPlan,
   type LayoutContext,
 } from './layout';
+import { deepMerge } from '../util/objects';
 import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
 export type MaterializeMode = 'immediate' | 'onDemand';
@@ -134,17 +135,6 @@ export interface Materializer {
 }
 
 const FOLDER_DOC = (cls: ElementClassId) => documentName(cls);
-
-type Json = Record<string, unknown>;
-const isObject = (v: unknown): v is Json => !!v && typeof v === 'object' && !Array.isArray(v);
-
-/** Deep merge of `over` into a copy of `base` (objects merge, the rest replaces). */
-function mergeSystem(base: Json, over: Json): Json {
-  const out: Json = { ...base };
-  for (const [key, value] of Object.entries(over))
-    out[key] = isObject(value) && isObject(out[key]) ? mergeSystem(out[key], value) : value;
-  return out;
-}
 
 export function createMaterializer(deps: MaterializerDeps): Materializer {
   const { docs, system } = deps;
@@ -270,7 +260,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       flags: { ...data.flags, silk: blank.flags.silk },
       // Edits made while a Ghost win over the entry's.
       system: fields
-        ? mergeSystem(data.system ?? {}, system.toSystem(el.class, { ...fields }))
+        ? deepMerge(data.system ?? {}, system.toSystem(el.class, { ...fields }))
         : (data.system ?? {}),
     };
     const type = data.type ?? blank.type;
@@ -634,8 +624,9 @@ export function materializeCommands(m: Materializer): Command[] {
       m.editInfoBlock(args),
     ),
     command('infoBlock.delete', (args: { id: string }) => m.deleteInfoBlock(args.id)),
-    command('infoBlock.move', (args: { id: string; sort: number }) =>
-      m.moveInfoBlock(args.id, args.sort),
+    // `index`: 0-based among the element's Info Blocks (v1.1 §D).
+    command('infoBlock.move', (args: { id: string; index: number }) =>
+      m.moveInfoBlock(args.id, args.index),
     ),
     command('infoBlock.open', (args: { id: string }) => m.openInfoBlock(args.id)),
   ];

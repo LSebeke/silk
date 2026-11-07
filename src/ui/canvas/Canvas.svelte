@@ -4,6 +4,7 @@
    * this component only maps Svelte Flow events to commands and pipeline calls.
    * Never set `onlyRenderVisibleElements`: it makes fast panning worse (§10.2).
    */
+  import { fail } from './actions';
   import {
     SvelteFlow,
     Background,
@@ -17,7 +18,7 @@
   import { cameraMove, FOCUS_SEEDS, type CameraReason } from '../../core/canvas/focus';
   import { TWEEN_MS } from '../../core/canvas/tween';
   import type { PipelineOrigin } from '../../core/canvas';
-  import type { RelativeDirection } from '../../core/connections';
+  import type { CreateFromConnection, RelativeDirection } from '../../core/connections';
   import {
     ELEMENT_CLASSES,
     hasStatus,
@@ -78,7 +79,6 @@
   let moving = $state(false);
   const lod = $derived(lodForZoom(zoom));
 
-  const fail = (error: unknown) => console.error(error);
   const run = (name: string, args?: object) => ctx.run(name, args).catch(fail);
 
   // Status toggle, y/n confirm with default n (§10.3 `s`, card chip).
@@ -335,7 +335,9 @@
 
   // --- Connections (T7) ---
 
-  const local = (event: { clientX: number; clientY: number }) => {
+  /** A pointer position in client (viewport) pixels. */
+  type ScreenPoint = Pick<MouseEvent, 'clientX' | 'clientY'>;
+  const local = (event: ScreenPoint) => {
     const rect = root?.getBoundingClientRect();
     return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) };
   };
@@ -348,14 +350,20 @@
   function createAt(origin: PipelineOrigin, cls: ElementClassId) {
     pipeline.create({ ...origin, anchor: anchorAt(origin.at) }, cls).catch(fail);
   }
-  const nodeAt = (event: { clientX: number; clientY: number }) =>
+  const nodeAt = (event: ScreenPoint) =>
     (root?.ownerDocument ?? document)
       .elementFromPoint(event.clientX, event.clientY)
       ?.closest<HTMLElement>('[data-silk-node]')?.dataset['silkNode'];
 
   /** Connect two existing Nodes, then open the Connection editor (§10.3). */
-  async function connect(from: string, to: string, direction: RelativeDirection = 'out') {
-    const { id } = (await ctx.run('connection.create', { from, to, direction })) as { id: string };
+  async function connect(
+    from: string,
+    to: string,
+    connection: CreateFromConnection = { direction: 'out' },
+  ) {
+    const { id } = (await ctx.run('connection.create', { from, to, ...connection })) as {
+      id: string;
+    };
     pipeline.editConnection(id);
   }
 
@@ -455,8 +463,8 @@
       if (!choice) return;
       event.preventDefault();
       event.stopPropagation();
-      if (choice === 'cancel') pipeline.cancel();
-      else pipeline.pickSource(choice).catch(fail);
+      if (choice === 'cancel') void run('pipeline.cancel');
+      else void run('pipeline.pickSource', { kind: choice });
       return;
     }
     if ($pipeline.step !== 'idle') return;
@@ -563,7 +571,7 @@
 
   /** Palette drag, right-drag: the Node under the pointer highlights as the connect target. */
   let dropEl: HTMLElement | undefined;
-  function dropTarget(event: { clientX: number; clientY: number }, except?: string) {
+  function dropTarget(event: ScreenPoint, except?: string) {
     let el = (root?.ownerDocument ?? document)
       .elementFromPoint(event.clientX, event.clientY)
       ?.closest<HTMLElement>('[data-silk-node]');
@@ -622,7 +630,7 @@
    * Node context menu (§8 Controls, §10.3): actions, plus a class box to the right of them
    * that creates a connected Node.
    */
-  function openNodeMenu(id: string, event: { clientX: number; clientY: number }) {
+  function openNodeMenu(id: string, event: ScreenPoint) {
     const el = readElement(workingCopy.get(id));
     if (!el) return;
     const at = local(event);
@@ -639,8 +647,7 @@
   /** Below this many px the press is a click, not a drag (no rubber band). */
   const DRAG_MIN = 4;
   let rightDrag = $state<
-    | { start: string | undefined; from: { clientX: number; clientY: number }; to?: Point }
-    | undefined
+    { start: string | undefined; from: ScreenPoint; to?: Point } | undefined
   >();
   /** Rubber band, window-local: from the press point to the cursor. */
   const band = $derived.by(() => {
@@ -694,23 +701,19 @@
     win.addEventListener('blur', stop);
   }
 
-  function finishRightDrag(
-    start: string | undefined,
-    from: { clientX: number; clientY: number },
-    end: PointerEvent,
-  ) {
+  function finishRightDrag(start: string | undefined, from: ScreenPoint, end: PointerEvent) {
     const action = rightDragAction(start, nodeAt(end), end);
     root?.focus();
     if (action.kind === 'nodeMenu') return openNodeMenu(action.id, end);
     if (action.kind === 'connect') {
-      connect(action.from, action.to, action.direction).catch(fail);
+      connect(action.from, action.to, action.connection).catch(fail);
       return;
     }
     const point = action.at === 'end' ? end : from;
     pipeline.open({
       at: flow.screenToFlowPosition({ x: point.clientX, y: point.clientY }),
       anchor: local(point),
-      ...(action.from ? { from: action.from, connection: { direction: action.direction } } : {}),
+      ...(action.from ? { from: action.from, connection: action.connection } : {}),
     });
   }
 

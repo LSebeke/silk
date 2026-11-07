@@ -12,6 +12,7 @@
  * skip the class box with `create()`. A Connection made on its own opens step 3 directly.
  * Pure: runs commands through the injected `run`.
  */
+import type { Command } from '../commands/registry';
 import { ELEMENT_CLASSES, type ElementClass, type ElementClassId } from '../elements/classes';
 import type { ElementCreateArgs, ElementCreateResult } from '../elements/commands';
 import type { Point } from '../elements/element';
@@ -91,7 +92,8 @@ export interface SourceRequest {
  * `adopt` instead (a Compendium World actor, 1.1 §B.2 Outcome): the doc is Adopted (§6).
  */
 export type SourcePick =
-  | { source: Exclude<ElementSource, { kind: 'blank' }>; name: string }
+  /** `img`: the source's portrait, stored on the Ghost (shown before Materialize). */
+  | { source: Exclude<ElementSource, { kind: 'blank' }>; name: string; img?: string }
   | { adopt: { uuid: string }; name: string };
 
 export type SourceProviders = Partial<Record<Exclude<SourceKind, 'blank'>, SourceProvider>>;
@@ -125,10 +127,10 @@ export interface CreationPipeline {
    */
   pickSource(kind: SourceKind): Promise<string | undefined>;
   /**
-   * In the class box or the Source Step, where `element.create` runs before the name is
-   * typed: immediate Materialize waits for the end of the pipeline.
+   * True in the class box and the Source Step, where `element.create` runs before the name is
+   * typed: immediate Materialize is deferred to the end of the pipeline.
    */
-  picking(): boolean;
+  deferringMaterialize(): boolean;
   submitName(name: string): Promise<void>;
   /** Open the Connection editor on an existing Connection (made on its own, `F2`). */
   editConnection(id: string): void;
@@ -232,7 +234,7 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
       return undefined;
     }
     if ('adopt' in pick) return adoptFromSource(current, pick.adopt.uuid);
-    return createFromSource(current, pick.source, pick.name);
+    return createFromSource(current, pick.source, pick.name, pick.img);
   }
 
   /** World pick: `adopt.doc` with the Source Step's origin; connected like a creation. */
@@ -260,10 +262,11 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     current: Extract<PipelineStep, { step: 'source' }>,
     source: ElementSource,
     name?: string,
+    img?: string,
   ) {
     sourceCreating = true;
     try {
-      return await createElement(current, current.class, source, name);
+      return await createElement(current, current.class, source, name, img);
     } finally {
       sourceCreating = false;
     }
@@ -274,12 +277,14 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     id: ElementClassId,
     source?: ElementSource,
     name = deps.label(id),
+    img?: string,
   ) {
     defaultName = name;
     const args: ElementCreateArgs = { class: id, name, at };
     if (from) args.from = from;
     if (connection) args.connection = connection;
     if (source) args.source = source;
+    if (img) args.img = img;
     const result = (await deps.run('element.create', args)) as ElementCreateResult;
     connectionId = result.connectionId;
     renaming = false;
@@ -346,7 +351,7 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     options,
     pickClass,
     pickSource,
-    picking: () => step.step === 'classBox' || step.step === 'source',
+    deferringMaterialize: () => step.step === 'classBox' || step.step === 'source',
     async pickFirst() {
       const first = options()[0];
       return first && pickClass(first.id);
@@ -372,4 +377,39 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
       return () => listeners.delete(listener);
     },
   };
+}
+
+/**
+ * The class box and the Source Step as commands (ADR 0003): the UI and the API drive the
+ * pipeline the same way. The name and label steps write through `element.rename` /
+ * `connection.setLabel` already.
+ */
+export function pipelineCommands(pipeline: CreationPipeline): Command[] {
+  const command = <A>(name: string, run: (args: A) => Promise<unknown>): Command<A> => ({
+    name,
+    title: `SILK.Commands.${name}`,
+    available: (ctx) => ctx.isGM,
+    run,
+  });
+  const created = (id: string | undefined) => (id ? { id } : {});
+  return [
+    command('pipeline.search', async ({ query }: { query: string }) =>
+      pipeline.setQuery(String(query ?? '')),
+    ),
+    // No class: the first option (Enter in the class box).
+    command('pipeline.pickClass', async (args: { class?: ElementClassId }) =>
+      created(await (args.class ? pipeline.pickClass(args.class) : pipeline.pickFirst())),
+    ),
+    command('pipeline.pickSource', async ({ kind }: { kind: SourceKind }) => {
+      const result = pipeline.pickSource(kind);
+      // A provider window (picker, generator) is open: its own commands or hooks finish it.
+      const now = pipeline.get();
+      if (now.step === 'source' && now.pending === kind) {
+        result.catch((error: unknown) => console.error(error));
+        return { pending: kind };
+      }
+      return created(await result);
+    }),
+    command('pipeline.cancel', async () => pipeline.cancel()),
+  ];
 }

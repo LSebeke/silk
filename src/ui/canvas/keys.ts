@@ -28,6 +28,21 @@ export interface KeyLike {
   metaKey: boolean;
 }
 
+/** Held modifiers of a key or pointer event. */
+export type Modifiers = Pick<KeyLike, 'shiftKey' | 'ctrlKey' | 'altKey'>;
+
+/**
+ * The Connection a modifier picks (digit keys, right-drag release; spec §10.3, 1.1 §A),
+ * relative to the origin: Shift = incoming, Ctrl = mutual, Alt = free-form outgoing.
+ * Undefined = no modifier (the default).
+ */
+export function modifierConnection(m: Modifiers): CreateFromConnection | undefined {
+  if (m.shiftKey) return { direction: 'in' };
+  if (m.ctrlKey) return { direction: 'mutual' };
+  if (m.altKey) return { type: 'free', direction: 'out' };
+  return undefined;
+}
+
 export function canvasKey(
   e: KeyLike,
   selected: { node: boolean; edge: boolean },
@@ -36,13 +51,7 @@ export function canvasKey(
   if (digit && !e.metaKey) {
     const cls = ELEMENT_CLASSES[Number(digit) - 1];
     if (!cls?.creatable) return undefined;
-    const connection: CreateFromConnection | undefined = e.shiftKey
-      ? { direction: 'in' }
-      : e.ctrlKey
-        ? { direction: 'mutual' }
-        : e.altKey
-          ? { type: 'free', direction: 'out' }
-          : undefined;
+    const connection = modifierConnection(e);
     return { kind: 'create', class: cls.id, ...(connection ? { connection } : {}) };
   }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyZ')

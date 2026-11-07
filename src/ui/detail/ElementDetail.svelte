@@ -86,6 +86,8 @@
     if (block && blocks.some((b) => b._id === block)) void focusName(block);
   });
 
+  /** The preset menu on "+ Info Block" is open. */
+  let presets = $state(false);
   async function addBlock(preset?: 'appearance') {
     try {
       const args = preset ? { elementId: id, appearance: true } : { elementId: id };
@@ -128,8 +130,8 @@
     const moved = dragging;
     dragging = over = undefined;
     if (!moved || moved === target) return;
-    const sort = blocks.findIndex((b) => b._id === target);
-    if (sort >= 0) void run('infoBlock.move', { id: moved, sort });
+    const index = blocks.findIndex((b) => b._id === target);
+    if (index >= 0) void run('infoBlock.move', { id: moved, index });
   }
 </script>
 
@@ -253,23 +255,43 @@
           {/if}
         </div>
       {/each}
-      <button
-        type="button"
-        class="add"
-        disabled={!canEdit}
-        onclick={() => addBlock()}
-        data-silk-detail-add-block>{ctx.localize('SILK.Detail.AddInfoBlock')}</button
-      >
-      {#if appearancePreset}
+      <div class="add-group" data-silk-detail-add>
         <button
           type="button"
           class="add"
           disabled={!canEdit}
-          title={ctx.localize('SILK.Detail.AddAppearanceHint')}
-          onclick={() => addBlock('appearance')}
-          data-silk-detail-add-appearance>{ctx.localize('SILK.Detail.AddAppearance')}</button
+          onclick={() => addBlock()}
+          data-silk-detail-add-block>{ctx.localize('SILK.Detail.AddInfoBlock')}</button
         >
-      {/if}
+        {#if appearancePreset}
+          <!-- v1.1 §C.2: the "+ Info Block" control offers the Appearance preset. -->
+          <button
+            type="button"
+            class="add caret"
+            disabled={!canEdit}
+            aria-haspopup="menu"
+            aria-expanded={presets}
+            aria-label={ctx.localize('SILK.Detail.AddPresets')}
+            title={ctx.localize('SILK.Detail.AddPresets')}
+            onclick={() => (presets = !presets)}
+            data-silk-detail-add-menu>▾</button
+          >
+          {#if presets}
+            <div class="presets" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                title={ctx.localize('SILK.Detail.AddAppearanceHint')}
+                onclick={() => {
+                  presets = false;
+                  void addBlock('appearance');
+                }}
+                data-silk-detail-add-appearance>{ctx.localize('SILK.Detail.AddAppearance')}</button
+              >
+            </div>
+          {/if}
+        {/if}
+      </div>
     </section>
     <section>
       <h3>{ctx.localize('SILK.Detail.Connections')}</h3>
@@ -369,6 +391,29 @@
     width: auto;
     align-self: flex-start;
     padding: 0 8px;
+  }
+  .add-group {
+    position: relative;
+    display: flex;
+    align-self: flex-start;
+    gap: 2px;
+  }
+  .add.caret {
+    padding: 0 4px;
+  }
+  .presets {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    min-width: 140px;
+    padding: 2px;
+    background: #fff;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px #0003;
   }
   .eye {
     flex: none;

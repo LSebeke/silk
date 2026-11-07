@@ -55,9 +55,6 @@ interface TokenSource {
 const level = (o: { ownership?: { default?: number } } | undefined) =>
   o?.ownership?.default ?? OWNERSHIP.NONE;
 
-/** The class hides the image from players (spec §8): behind the hood, or the class icon. */
-export const hasAppearance = hasAppearanceClass;
-
 /** `flags.silk.img` holds the real image while `img` shows the hood. */
 export function isHooded(main: Pick<DocSnapshot, 'img' | 'flags'>): boolean {
   const { hood } = main.flags.silk;
@@ -122,7 +119,8 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
         blocks.some((b) => blockOn(b._id)) || anyConnection || notes.some((n) => noteOn(n._id));
       docLevel(companion, on(any));
     }
-    if (hasAppearance(el.class)) writes.push(...appearanceWrites(input, revealed));
+    // The class hides the image from players (spec §8): behind the hood, or the class icon.
+    if (hasAppearanceClass(el.class)) writes.push(...appearanceWrites(input, revealed));
   }
   if (holder) {
     for (const b of blocks) pageLevel(holder, b._id, on(blockOn(b._id)));

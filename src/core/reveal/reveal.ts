@@ -21,12 +21,12 @@ import {
 } from '../campaigns';
 import { readConnection } from '../connections/connection';
 import { connectionsIn } from '../connections/rules';
-import { appearanceBlock, readElement, type StoryElement } from '../elements';
+import { appearanceBlock, hasAppearanceClass, readElement, type StoryElement } from '../elements';
 import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { Materializer } from '../materialize/materializer';
 import type { DocSnapshot, FoundryDocs, SystemMapping } from '../materialize/port';
 import type { WorkingCopy } from '../working-copy';
-import { OWNERSHIP, hasAppearance, isHooded, ownershipWrites, type RevealWrite } from './ownership';
+import { OWNERSHIP, isHooded, ownershipWrites, type RevealWrite } from './ownership';
 import { applyReveal, touchedElements, type RevealGraph, type RevealTarget } from './rules';
 
 /** Foundry effects outside the docs port. */
@@ -256,7 +256,7 @@ export function createReveal(deps: RevealDeps): Reveal {
         );
       if (g.hasAppearance(el.id))
         map = setRevealed(map, 'appearance', el.id, revealed && !isHooded(found.main));
-      else if (hasAppearance(el.class)) map = setRevealed(map, 'appearance', el.id, false);
+      else if (hasAppearanceClass(el.class)) map = setRevealed(map, 'appearance', el.id, false);
     }
     return withConnectionEnds(map);
   }
@@ -383,7 +383,7 @@ export function createReveal(deps: RevealDeps): Reveal {
       const guards = new Map<string, string | undefined>();
       const guardOf = (id: string) => {
         const el = readElement(wc.get(id));
-        return el && hasAppearance(el.class) ? appearanceBlock(el)?._id : undefined;
+        return el ? appearanceBlock(el)?._id : undefined;
       };
       for (const id of wc.records().keys()) guards.set(id, guardOf(id));
       return wc.watch((change) => {

@@ -5,7 +5,7 @@
  */
 import type { CanonRecord, JsonObject } from '../canon';
 import type { ElementClassId } from './classes';
-import type { ElementSource } from './sources';
+import { isActorSourceClass, type ElementSource } from './sources';
 
 export interface Point {
   x: number;
@@ -92,8 +92,8 @@ export function readElement(record: CanonRecord | undefined): StoryElement | und
   return { ...data, position: data.position ?? { x: 0, y: 0 }, id: record.id };
 }
 
-/** Person and Creature have an Appearance (spec §8), as long as its block exists. */
-export const hasAppearanceClass = (cls: string) => cls === 'person' || cls === 'creature';
+/** Person and Creature (the Actor-source classes) have an Appearance (spec §8), as long as its block exists. */
+export const hasAppearanceClass = (cls: string) => isActorSourceClass(cls);
 
 /** The element's Appearance block (v1.1 §C.2): marked by its flag, not by its name. */
 export function appearanceBlock(

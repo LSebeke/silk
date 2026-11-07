@@ -25,9 +25,11 @@ import {
 import {
   elementClass,
   elementRecord,
+  hasAppearanceClass,
   readElement,
   type ElementClassId,
   type ElementData,
+  type InfoBlock,
   type Point,
   type StoryElement,
 } from '../elements';
@@ -317,8 +319,19 @@ export function createAdopt(deps: AdoptDeps): Adopt {
       const companionId = deps.newId();
       const connections = connectionsPage(deps.newId(), ctx);
       const notes = playerNotesCategory(deps.newId(), ctx);
-      // A Ghost brings its Info Blocks; a fresh Adopt starts empty (no default blocks).
-      const blocks: PageData[] = (ghost?.infoBlocks ?? []).map((b, i) =>
+      // A Ghost brings its Info Blocks. A fresh Adopt gets no default blocks, except the
+      // Appearance of a Person/Creature, so it starts hooded (v1.1 §C.2).
+      const fresh: InfoBlock[] = hasAppearanceClass(cls)
+        ? [
+            {
+              _id: deps.newId(),
+              name: deps.localize('SILK.InfoBlock.Appearance'),
+              text: '',
+              appearance: true,
+            },
+          ]
+        : [];
+      const blocks: PageData[] = (ghost?.infoBlocks ?? fresh).map((b, i) =>
         blockPage(b, (i + 1) * SORT_STEP),
       );
       const companion = sheet?.companion

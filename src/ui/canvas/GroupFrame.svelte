@@ -3,6 +3,7 @@
    * Visual Group frame (spec §10.4). Double-click the title to rename; × dissolves the group
    * (contents move to the parent frame). Size comes from the record (Node `width`/`height`).
    */
+  import { fail } from './actions';
   import { getContext } from 'svelte';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
   import type { GroupNodeData } from './flow-model';
@@ -11,8 +12,6 @@
 
   const ctx = getContext<CanvasContext>(CANVAS_CONTEXT);
   let editing = $state(false);
-
-  const fail = (error: unknown) => console.error(error);
 
   function submit(value: string) {
     if (!editing) return;

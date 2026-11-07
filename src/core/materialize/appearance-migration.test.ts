@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { elementRecord } from '../elements';
+import { appearanceMigration } from './appearance-migration';
 import { page, setup, type TestElement } from './test-setup';
 
 /** A Silk 1.0 element: its Appearance block carries no flag. */
@@ -60,5 +61,23 @@ describe('Appearance migration on load (v1.1 §C.3)', () => {
     await t.registry.run('infoBlock.create', { elementId: id, name: 'Appearance' });
     await t.lifecycle.reconcile();
     expect(flagged(t.element(id))).toEqual([]);
+  });
+
+  it('a Materialized element whose journal is missing stays pending; the next load migrates it', async () => {
+    const t = setup();
+    const id = await t.create('creature', 'Wolf');
+    await t.registry.run('materialize.elements', { ids: [id] });
+    await unflag(t, id);
+    // A load where the doc is not found (yet): nothing can be written.
+    const blind = appearanceMigration({
+      workingCopy: () => t.workingCopy,
+      docs: t.docs,
+      materializer: { docsOf: () => undefined, sync: (x) => t.materializer.sync(x) },
+      localize: (key) => key.split('.').pop() ?? key,
+    });
+    await blind.reconcile?.();
+    expect(flagged(t.element(id))).toEqual([]);
+    await t.lifecycle.reconcile();
+    expect(flagged(t.element(id))).toEqual(['Appearance']);
   });
 });

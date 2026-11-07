@@ -1,7 +1,11 @@
 <script lang="ts">
-  /** Creation Pipeline step 1 (spec §10.3): searchable class selection box at the spot. */
+  /**
+   * Creation Pipeline step 1 (spec §10.3): searchable class selection box at the spot.
+   * Search, pick and cancel run as `pipeline.*` commands (ADR 0003).
+   */
   import { getContext } from 'svelte';
   import { classLabelKey, type ElementClassId } from '../../core/elements';
+  import { fail, focus } from './actions';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
 
   const ctx = getContext<CanvasContext>(CANVAS_CONTEXT);
@@ -9,21 +13,18 @@
   const box = $derived($pipeline.step === 'classBox' ? $pipeline : undefined);
   const options = $derived(box ? pipeline.options() : []);
 
-  const fail = (error: unknown) => console.error(error);
-  const pick = (id: ElementClassId) => pipeline.pickClass(id).catch(fail);
+  /** No class: the first option (Enter). */
+  const pick = (cls?: ElementClassId) =>
+    ctx.run('pipeline.pickClass', cls ? { class: cls } : {}).catch(fail);
 
   function onKeydown(event: KeyboardEvent) {
     event.stopPropagation();
-    if (event.key === 'Escape') pipeline.cancel();
+    if (event.key === 'Escape') ctx.run('pipeline.cancel').catch(fail);
     else if (event.key === 'Enter') {
       event.preventDefault();
-      pipeline.pickFirst().catch(fail);
+      void pick();
     }
   }
-
-  const focus = (el: HTMLInputElement) => {
-    queueMicrotask(() => el.focus());
-  };
 </script>
 
 {#if box}
@@ -39,7 +40,7 @@
       type="search"
       value={box.query}
       placeholder={ctx.localize('SILK.Canvas.ClassSearch')}
-      oninput={(e) => pipeline.setQuery(e.currentTarget.value)}
+      oninput={(e) => ctx.run('pipeline.search', { query: e.currentTarget.value }).catch(fail)}
       onkeydown={onKeydown}
       use:focus
       data-silk-class-search

@@ -4,6 +4,7 @@
    * Parallel Connections bend apart by `data.offset`. Hosts the Connection editor (pipeline
    * step 3, §10.3) in its label.
    */
+  import { fail } from './actions';
   import { BaseEdge, EdgeLabel, useStore, type EdgeProps, type InternalNode } from '@xyflow/svelte';
   import { getContext } from 'svelte';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
@@ -57,7 +58,6 @@
     };
   });
 
-  const fail = (error: unknown) => console.error(error);
   const run = (name: string) => ctx.run(name, { id }).catch(fail);
 
   function onKeydown(event: KeyboardEvent & { currentTarget: HTMLElement }) {

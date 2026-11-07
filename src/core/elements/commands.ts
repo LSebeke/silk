@@ -21,6 +21,8 @@ export interface ElementCreateArgs {
   connection?: { type?: string; direction?: string; label?: string };
   /** What it starts from (spec 1.1 §B.1, §D); default blank. Non-blank is stored on the element. */
   source?: ElementSource;
+  /** Image path (a compendium pick's portrait, shown on the Ghost until Materialize). */
+  img?: string;
 }
 
 export interface ElementCreateResult {
@@ -67,6 +69,7 @@ export function elementCommands(deps: ElementCommandDeps): Command[] {
         name: args.name.trim(),
         position: { x: args.at?.x ?? 0, y: args.at?.y ?? 0 },
         ...(source && source.kind !== 'blank' ? { source } : {}),
+        ...(typeof args.img === 'string' && args.img ? { img: args.img } : {}),
       };
       await deps.workingCopy().set([elementRecord(id, data)]);
       let result: ElementCreateResult = { id };

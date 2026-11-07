@@ -30,6 +30,18 @@
       }
     },
     "Commands": {
+      "pipeline": {
+        "search": "Search the class box",
+        "pickClass": "Pick a class",
+        "pickSource": "Pick a source",
+        "cancel": "Cancel the creation"
+      },
+      "picker": {
+        "search": "Search the Compendium picker",
+        "source": "Pick a picker source",
+        "pick": "Pick a Compendium entry",
+        "cancel": "Close the Compendium picker"
+      },
       "canvas": {
         "open": "Open the World Canvas",
         "moveNodes": "Move Nodes",
@@ -399,7 +411,8 @@
       "Gone": "This element no longer exists.",
       "AddInfoBlock": "+ Info Block",
       "AddInfoBlockMenu": "Add Info Block…",
-      "AddAppearance": "+ Appearance",
+      "AddPresets": "More Info Block presets",
+      "AddAppearance": "Appearance",
       "AddAppearanceHint": "Adds the Appearance block: the image stays hooded until it is Revealed.",
       "InfoBlockName": "Info Block name",
       "DeleteInfoBlockTitle": "Delete Info Block",

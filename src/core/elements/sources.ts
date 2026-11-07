@@ -40,6 +40,14 @@ export function sourceKinds(cls: ElementClassId): readonly SourceKind[] | undefi
   return SOURCE_KINDS[cls];
 }
 
+/**
+ * Person and Creature: classes whose source is an Actor (Compendium Actor packs, NSC Zucht).
+ * The one place that names them; their Appearance (§8) and picker type derive from it.
+ */
+export function isActorSourceClass(cls: string): boolean {
+  return !!SOURCE_KINDS[cls as ElementClassId]?.includes('compendium');
+}
+
 /** Blank works for every class (the default); the others only where the class offers them. */
 export function classTakesSource(cls: ElementClassId, kind: SourceKind): boolean {
   return kind === 'blank' || !!sourceKinds(cls)?.includes(kind);
