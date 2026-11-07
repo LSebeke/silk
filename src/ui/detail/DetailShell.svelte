@@ -23,7 +23,7 @@
   {#if header}
     <header>{@render header()}</header>
   {/if}
-  <div class="body">{@render children()}</div>
+  <div class="body" data-silk-detail-body>{@render children()}</div>
 </div>
 
 <style>
@@ -34,7 +34,8 @@
     box-sizing: border-box;
     height: 100%;
     min-height: 0;
-    padding: 4px;
+    /* §G.1; every detail window (Connection Detail, image editor) gets it. */
+    padding: 4px 16px;
   }
   header {
     display: flex;
