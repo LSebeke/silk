@@ -1,5 +1,6 @@
 /** Silk settings (spec §13). Registered on `init` by the adapter. */
 import { MODULE_ID } from '../constants';
+import { HOODED_DEFAULT } from '../core/portrait';
 
 export interface SettingData {
   scope: 'world' | 'client';
@@ -13,15 +14,6 @@ export interface SettingData {
 }
 
 export type RegisterSetting = (namespace: typeof MODULE_ID, key: string, data: SettingData) => void;
-
-/** v1.1 §C.4: Foundry core's icon replaces the image Silk 1.0 shipped. */
-export const HOODED_DEFAULT = 'icons/svg/mystery-man-black.svg';
-/** Silk 1.0's shipped hooded image, removed in 1.1. */
-const HOODED_1_0 = `modules/${MODULE_ID}/assets/hooded.svg`;
-
-/** The world setting `hoodedImage` as used: a saved 1.0 default falls back to the core icon. */
-export const hoodedImage = (value: string | undefined) =>
-  !value || value === HOODED_1_0 ? HOODED_DEFAULT : value;
 
 const label = (key: string) => ({
   name: `SILK.Settings.${key}.Name`,

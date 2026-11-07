@@ -203,7 +203,42 @@
       "Palette": "Palette",
       "PaletteHint": "Klasse auf die Leinwand oder auf einen Knoten ziehen.",
       "Filtered": "gefiltert",
-      "FilteredTitle": "Von den Filtern verborgen; sichtbar bis zur Abwahl."
+      "FilteredTitle": "Von den Filtern verborgen; sichtbar bis zur Abwahl.",
+      "Key": {
+        "create": "{class} erstellen; mit dem gewählten Knoten verbunden, falls vorhanden",
+        "undo": "Layout rückgängig",
+        "search": "Suche",
+        "editConnection": "Text bearbeiten",
+        "rename": "Umbenennen",
+        "connect": "Verbinden",
+        "status": "Status umschalten (y/n)",
+        "pin": "Focus Pin setzen/entfernen",
+        "reveal": "Aufdecken (y/n)",
+        "delete": "Löschen",
+        "group": "Gruppieren",
+        "untangle": "Entwirren",
+        "cycleDirection": "Richtung wechseln",
+        "cycleType": "Art wechseln"
+      },
+      "KeyWhen": {
+        "always": "",
+        "node": "bei gewähltem Knoten",
+        "edge": "bei gewählter Verbindung",
+        "nodeOrEdge": "bei gewähltem Knoten oder gewählter Verbindung"
+      },
+      "Modifier": {
+        "shift": "Umschalt: eingehend",
+        "ctrl": "Strg: gegenseitig",
+        "alt": "Alt: frei, ausgehend"
+      },
+      "Gesture": {
+        "node-sameNode": "Rechtsklick auf Knoten: Kontextmenü",
+        "node-otherNode": "Rechts ziehen Knoten → Knoten: verbinden",
+        "node-canvas": "Rechts ziehen Knoten → Leinwand: neuer verbundener Knoten",
+        "canvas-canvas": "Rechtsklick auf Leinwand: neuer Knoten",
+        "canvas-node": "Rechts ziehen Leinwand → Knoten: neuer, damit verbundener Knoten",
+        "edge-anywhere": "Rechtsklick auf Verbindung: Kontextmenü"
+      }
     },
     "Connection": {
       "Type": {
