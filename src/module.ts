@@ -14,7 +14,7 @@ import { dsa5Mapping, dsa5Sections } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { activeScene, registerFocusHooks } from './adapter/focus';
 import { createFoundryDocs } from './adapter/foundry-docs';
-import { registerKeybindings } from './adapter/keybindings';
+import { liveKeybindings, registerKeybindings } from './adapter/keybindings';
 import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { foundryNscZucht } from './adapter/nsc-zucht';
@@ -90,6 +90,7 @@ import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasBridge } from './ui/canvas/bridge';
 import { canvasUiCommands } from './ui/canvas/commands';
+import { createLegendState, legendCommands } from './ui/canvas/legend';
 import type { CanvasContext } from './ui/canvas/context';
 import { devUiCommands } from './ui/dev/commands';
 import { createMergeUi } from './ui/merge/ui';
@@ -577,6 +578,12 @@ const startAdopt = createAdoptStarter({
   localize: format,
 });
 
+// Canvas legend (1.1 §E.3): open state is the client setting `legendOpen`.
+const legend = createLegendState({
+  get: () => game.settings?.get(MODULE_ID, 'legendOpen') ?? true,
+  set: async (open) => game.settings?.set(MODULE_ID, 'legendOpen', open),
+});
+
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
   available: (name) => registry.isAvailable(name),
@@ -594,6 +601,13 @@ const canvasContext = (): CanvasContext => ({
   localize,
   title,
   reveal,
+  legend,
+  keybindings: () =>
+    liveKeybindings(
+      registry,
+      (action) => (game.keybindings?.get(MODULE_ID, action) ?? []) as never,
+      (code) => foundry.helpers.interaction.KeyboardManager.getKeycodeDisplayString(code),
+    ),
   warn: (message) => void ui.notifications?.warn(message),
   adopt: (uuid, options) =>
     startAdopt(uuid, options).catch((error: unknown) => {
@@ -631,6 +645,7 @@ for (const command of [
   ...focusCommands(focus),
   ...searchCommands(canvasSearch),
   ...canvasUiCommands(canvasContext, playerCanvasEntry),
+  ...legendCommands(legend),
   ...playerCanvasCommands({
     view: playerView,
     openDoc: (node) =>

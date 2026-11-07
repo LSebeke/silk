@@ -94,6 +94,28 @@ describe('right-drag gesture table (spec 1.1 §A, §E.3: the legend reads it)', 
     ]);
   });
 
+  it('every Node/canvas row is what rightDragAction does, and they cover every press/release', () => {
+    // Start and end of a drag as rightDragAction sees them: a Node id or the canvas.
+    const starts = { node: 'a', canvas: undefined } as const;
+    const ends = { sameNode: 'a', otherNode: 'b', node: 'b', canvas: undefined } as const;
+    const covered = new Set<string>();
+    for (const g of RIGHT_DRAG_GESTURES) {
+      if (g.start === 'edge' || g.end === 'anywhere') {
+        expect(g.result).toBe('edgeMenu');
+        continue;
+      }
+      const start = starts[g.start];
+      const end = ends[g.end];
+      expect(rightDragAction(start, end, plain).kind, `${g.start}-${g.end}`).toBe(g.result);
+      covered.add(`${String(start)}-${String(end)}`);
+    }
+    for (const start of ['a', undefined])
+      for (const end of start ? ['a', 'b', undefined] : ['b', undefined])
+        expect(covered, `${String(start)}-${String(end)}`).toContain(
+          `${String(start)}-${String(end)}`,
+        );
+  });
+
   it('labels every gesture in EN and DE', () => {
     for (const lang of [en, de])
       for (const g of RIGHT_DRAG_GESTURES)

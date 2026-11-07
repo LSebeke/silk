@@ -39,6 +39,7 @@
   import Palette from './Palette.svelte';
   import SearchBox from './SearchBox.svelte';
   import GroupFrame from './GroupFrame.svelte';
+  import Legend from './Legend.svelte';
   import { canvasBridge } from './bridge';
   import { CANVAS_CONTEXT, PALETTE_MIME, type CanvasContext } from './context';
   import { toFlowEdges, type ConnectionEdge as FlowEdge } from './flow-edges';
@@ -50,6 +51,7 @@
     type GroupNode,
   } from './flow-model';
   import { canvasKey, confirmKey, sourceKey } from './keys';
+  import { deleteSelection } from './delete-selection';
   import { rightDragAction } from './right-drag';
   import { STATUS_PROMPT, type StatusPrompt } from './status-prompt';
 
@@ -520,10 +522,16 @@
         if (edge) pipeline.editConnection(edge.id);
         break;
       case 'delete':
-        void run('element.delete', { ids: canvasState.get().selection });
+        deleteSelection(ctx.run, {
+          elements: canvasState.get().selection.filter((id) => readElement(workingCopy.get(id))),
+          connections: edges.filter((e) => e.selected).map((e) => e.id),
+        }).catch(fail);
         break;
       case 'command':
         if (edge) void run(action.name, { id: edge.id });
+        break;
+      case 'legend':
+        void run('legend.toggle');
         break;
       case 'layout':
         // Ctrl+Z with nothing to undo is a no-op (not an error).
@@ -861,6 +869,7 @@
     </div>
   {/if}
   <FilterBar {ctx} result={filtered} />
+  <Legend {ctx} />
   <div class="silk-canvas-tools">
     <button
       type="button"

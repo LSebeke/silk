@@ -157,6 +157,9 @@
       },
       "playerCanvas": {
         "openDoc": "Open the doc"
+      },
+      "legend": {
+        "toggle": "Show/hide the canvas legend"
       }
     },
     "Source": {
@@ -220,11 +223,12 @@
         "status": "Toggle Status (y/n)",
         "pin": "Pin/unpin Focus",
         "reveal": "Reveal (y/n)",
-        "delete": "Delete",
+        "delete": "Delete (Nodes: with confirmation, plus the selected Connections)",
         "group": "Group",
         "untangle": "Untangle",
         "cycleDirection": "Cycle direction",
-        "cycleType": "Cycle type"
+        "cycleType": "Cycle type",
+        "legend": "Show/hide this legend"
       },
       "KeyWhen": {
         "always": "",
@@ -602,6 +606,15 @@
     "PlayerCanvas": {
       "Title": "Player Canvas",
       "Empty": "Nothing has been revealed yet."
+    },
+    "Legend": {
+      "Title": "Controls",
+      "Toggle": "Legend (?)",
+      "Keys": "Keys",
+      "Mouse": "Mouse",
+      "Modifiers": "Modifiers (digits, right-drag release)",
+      "Foundry": "Foundry keybindings",
+      "None": "None"
     }
   }
 }

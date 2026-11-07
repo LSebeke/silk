@@ -157,6 +157,9 @@
       },
       "playerCanvas": {
         "openDoc": "Dokument öffnen"
+      },
+      "legend": {
+        "toggle": "Canvas-Legende ein-/ausblenden"
       }
     },
     "Source": {
@@ -220,11 +223,12 @@
         "status": "Status umschalten (y/n)",
         "pin": "Focus Pin setzen/entfernen",
         "reveal": "Aufdecken (y/n)",
-        "delete": "Löschen",
+        "delete": "Löschen (Knoten: mit Rückfrage, samt markierten Verbindungen)",
         "group": "Gruppieren",
         "untangle": "Entwirren",
         "cycleDirection": "Richtung wechseln",
-        "cycleType": "Art wechseln"
+        "cycleType": "Art wechseln",
+        "legend": "Diese Legende ein-/ausblenden"
       },
       "KeyWhen": {
         "always": "",
@@ -602,6 +606,15 @@
     "PlayerCanvas": {
       "Title": "Spieler-Leinwand",
       "Empty": "Noch nichts enthüllt."
+    },
+    "Legend": {
+      "Title": "Steuerung",
+      "Toggle": "Legende (?)",
+      "Keys": "Tasten",
+      "Mouse": "Maus",
+      "Modifiers": "Modifikatoren (Ziffern, Loslassen beim Rechtsziehen)",
+      "Foundry": "Foundry-Tastenbelegung",
+      "None": "Keine"
     }
   }
 }

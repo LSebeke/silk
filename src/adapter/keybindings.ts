@@ -29,3 +29,29 @@ export function registerKeybindings(registry: CommandRegistry, register: Registe
     });
   }
 }
+
+/** A Silk keybinding as bound now (the legend, 1.1 §E.3): title i18n key, display chords. */
+export interface LiveKeybinding {
+  title: string;
+  keys: string[];
+}
+
+/**
+ * Silk's keybindings with their current chords (`game.keybindings.get`), so rebinds show.
+ * `keyName`: Foundry's `KeyboardManager.getKeycodeDisplayString`.
+ */
+export function liveKeybindings(
+  registry: CommandRegistry,
+  current: (action: string) => readonly KeyChord[],
+  keyName: (code: string) => string,
+): LiveKeybinding[] {
+  return registry
+    .list()
+    .filter((command) => command.keys?.length)
+    .map((command) => ({
+      title: command.title,
+      keys: current(command.name).map((chord) =>
+        [...(chord.modifiers ?? []), chord.key].map(keyName).join('+'),
+      ),
+    }));
+}

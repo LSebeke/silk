@@ -77,6 +77,8 @@ export const SETTINGS: Record<string, SettingData> = {
     type: Boolean,
     default: true,
   },
+  /** Internal: canvas legend open, per client (1.1 §E.3); toggled by `legend.toggle`. */
+  legendOpen: { scope: 'client', config: false, type: Boolean, default: true },
   /** Internal: Player Canvas pan/zoom, per client (§9). */
   playerViewState: { scope: 'client', config: false, type: Object, default: {} },
   /** Internal: window position and detached state per window (§2). */
