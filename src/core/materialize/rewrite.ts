@@ -146,7 +146,7 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
     if (sheetChanged && sheet?.documentName === 'Actor')
       await writeItems(found.main.uuid, readSheet(before.get(id))?.doc.items, sheet.doc.items);
     await materializer.writeName(el.id);
-    await materializer.setImage(el.id, el.img ?? '');
+    await materializer.setImage(el.id, { img: el.img ?? '' });
     if (el.fields) await materializer.setFields(el.id, el.fields);
     await writeBlocks(el);
     await writeNotes(el);

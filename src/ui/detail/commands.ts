@@ -3,6 +3,7 @@
  * "Add Info Block…") it first runs `infoBlock.create` and focuses the new block's name.
  */
 import type { Command } from '../../core/commands/registry';
+import { hasAppearanceClass, readElement } from '../../core/elements';
 import type { DetailContext } from './context';
 
 export function detailUiCommands(getContext: () => DetailContext): Command[] {
@@ -23,6 +24,23 @@ export function detailUiCommands(getContext: () => DetailContext): Command[] {
           (window) => block && window.focusBlock(block),
         );
         return block ? { infoBlock: block } : undefined;
+      },
+    },
+    {
+      // v1.1 §G.3: Silk's editor, not Foundry's TokenConfig (which would write over a hood).
+      name: 'element.openImageEditor',
+      title: 'SILK.Commands.element.openImageEditor',
+      available: (ctx) => ctx.isGM,
+      async run({ id }: { id: string }) {
+        const ctx = getContext();
+        const element = readElement(ctx.workingCopy.get(id));
+        if (!element || !hasAppearanceClass(element.class))
+          throw new Error(`Silk: "${id}" has no image & token editor`);
+        const { ImageEditorWindow } = await import('./ImageEditorWindow');
+        await ImageEditorWindow.open(
+          ImageEditorWindow.idFor(id),
+          () => new ImageEditorWindow(ctx, id),
+        );
       },
     },
   ];

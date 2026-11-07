@@ -1,11 +1,12 @@
 /**
  * Portrait (glossary): the image a Story Element shows, sheet image and token. Owns real
- * vs shown for actors/items (spec §8 Appearance, v1.1 §C.2, §C.4) and every write to `img`,
- * the prototype/placed token texture and `flags.silk.img` / `flags.silk.token` /
- * `flags.silk.hood`. Pure: a doc as it is → the update data. Journal Covers are not here.
+ * vs shown for actors/items (spec §8 Appearance, v1.1 §C.2, §C.4, §G.3) and every write to
+ * `img`, the prototype/placed token texture and ring and `flags.silk.img` / `token` /
+ * `pose` / `hood`. Pure: a doc as it is → the update data. Journal Covers are not here.
  *
  * Hooded: `img` and the token textures show `flags.silk.hood` (the world's hooded image, or
- * the class icon once the Appearance block is deleted); the real ones wait in the flags.
+ * the class icon once the Appearance block is deleted), centred; the real image, token
+ * texture and pose wait in the flags. The ring is not hidden: it always applies at once.
  */
 import { elementClass } from '../elements/classes';
 import { appearanceBlock, type StoryElement } from '../elements/element';
@@ -20,11 +21,70 @@ export interface Portrait {
 /** What players see: the real Portrait, or a hood image in its place. */
 export type Shown = 'real' | { hood: string };
 
+/**
+ * Where the token sits in its frame (v1.1 §G.3): the texture anchor (v14 has no offset) and
+ * one scale, the ring subject scale while the ring is on, else the texture scale.
+ */
+export interface Pose {
+  anchorX: number;
+  anchorY: number;
+  scale: number;
+}
+
+/** Token ring colours; `null`: the world ring style decides. */
+export interface RingColors {
+  ring: string | null;
+  background: string | null;
+}
+
+export interface Ring {
+  enabled: boolean;
+  colors: RingColors;
+}
+
+/** Everything the image & token editor shows: the real look, hooded or not. */
+export interface Look extends Portrait {
+  /** Players see the hood; edits to the image, token and pose wait for the Reveal. */
+  hooded: boolean;
+  /** The token uses the sheet image. */
+  sameAsImage: boolean;
+  ring: Ring;
+  pose: Pose;
+}
+
+/** `element.setImage` (v1.1 §D): what to change; the rest stays. */
+export interface ImageEdit {
+  img?: string;
+  token?: {
+    src?: string;
+    sameAsImage?: boolean;
+    ring?: { enabled?: boolean; colors?: Partial<RingColors> };
+    anchor?: { x: number; y: number };
+    scale?: number;
+  };
+}
+
+/** A token's (prototype or placed) data, as far as the Portrait uses it. */
+interface TokenData {
+  texture?: {
+    src?: string | null;
+    anchorX?: number;
+    anchorY?: number;
+    scaleX?: number;
+    scaleY?: number;
+  };
+  ring?: {
+    enabled?: boolean;
+    colors?: { ring?: string | null; background?: string | null };
+    subject?: { scale?: number };
+  };
+}
+
 /** The slice of an actor/item doc a Portrait lives in. */
 export interface PortraitDoc {
   img?: string | null;
-  prototypeToken?: { texture?: { src?: string | null } };
-  flags: { silk: Pick<SilkDocFlags, 'img' | 'token' | 'hood'> };
+  prototypeToken?: TokenData;
+  flags: { silk: Pick<SilkDocFlags, 'img' | 'token' | 'hood' | 'pose'> };
 }
 
 /**
@@ -40,6 +100,21 @@ export interface PortraitWrites {
 export const HOODED_DEFAULT = 'icons/svg/mystery-man-black.svg';
 /** Silk 1.0's shipped hooded image, removed in 1.1. */
 const HOODED_1_0 = 'modules/silk/assets/hooded.svg';
+
+/** Foundry's token defaults (common/documents/token.mjs). Also the editor's Reset. */
+export const CENTRED: Pose = { anchorX: 0.5, anchorY: 0.5, scale: 1 };
+/** `ring.subject.scale` minimum in Foundry's schema. */
+const MIN_RING_SCALE = 0.5;
+const TOKEN_DEFAULTS: Record<string, unknown> = {
+  'texture.anchorX': 0.5,
+  'texture.anchorY': 0.5,
+  'texture.scaleX': 1,
+  'texture.scaleY': 1,
+  'ring.enabled': false,
+  'ring.colors.ring': null,
+  'ring.colors.background': null,
+  'ring.subject.scale': 1,
+};
 
 /** The world setting `hoodedImage` as used: empty or a saved 1.0 default → the core icon. */
 export const hoodImage = (setting: string | undefined): string =>
@@ -65,21 +140,39 @@ export function realPortrait(doc: PortraitDoc, recordImg?: string): Portrait {
   return { img, token };
 }
 
+/** The real look, wherever it is now (the image & token editor, v1.1 §G.3). */
+export function lookOf(doc: PortraitDoc, recordImg?: string): Look {
+  const real = realPortrait(doc, recordImg);
+  return {
+    ...real,
+    sameAsImage: real.token === real.img,
+    hooded: isHooded(doc),
+    ring: ringOf(doc.prototypeToken),
+    pose: realPose(doc),
+  };
+}
+
 /** Makes `doc` show `shown`. No-op doc writes are left out. */
 export function showWrites(doc: PortraitDoc, shown: Shown, recordImg?: string): PortraitWrites {
   const flags = doc.flags.silk;
   const real = realPortrait(doc, recordImg);
+  const pose = realPose(doc);
+  const ring = ringOf(doc.prototypeToken).enabled;
+  // Placed tokens get the pose only where it matters: a real pose that is not centred.
+  const placed = (p: Pose) => (samePose(pose, CENTRED) ? {} : poseData(p, ring, doc));
   if (shown === 'real') {
     const data = flags.hood
       ? {
           img: real.img,
           'prototypeToken.texture.src': real.token,
+          ...proto(doc, poseData(pose, ring, doc)),
           'flags.silk.-=img': null,
           'flags.silk.-=token': null,
           'flags.silk.-=hood': null,
+          ...(flags.pose ? { 'flags.silk.-=pose': null } : {}),
         }
       : {};
-    return { doc: data, tokens: { 'texture.src': real.token } };
+    return { doc: data, tokens: { 'texture.src': real.token, ...placed(pose) } };
   }
   const { hood } = shown;
   const done =
@@ -96,14 +189,128 @@ export function showWrites(doc: PortraitDoc, shown: Shown, recordImg?: string): 
         'flags.silk.token': real.token,
         'flags.silk.hood': hood,
       };
-  return { doc: data, tokens: { 'texture.src': hood } };
+  return {
+    doc: { ...data, ...hiddenPose(doc, pose, ring) },
+    tokens: { 'texture.src': hood, ...placed(CENTRED) },
+  };
 }
 
-/** A new real sheet image. Hooded: it waits in the flag until the hood comes off. */
-export function imageWrites(doc: PortraitDoc, img: string): PortraitWrites {
-  return { doc: isHooded(doc) ? { 'flags.silk.img': img } : { img } };
+/**
+ * `element.setImage` on an actor/item doc (v1.1 §G.3). Hooded: the image, token texture and
+ * pose wait in the flags, players keep seeing the hood; the ring applies at once. `tokens`
+ * only when the edit touches the token.
+ */
+export function imageWrites(doc: PortraitDoc, edit: ImageEdit, recordImg?: string): PortraitWrites {
+  const hooded = isHooded(doc);
+  const flags = doc.flags.silk;
+  const look = lookOf(doc, recordImg);
+  const img = edit.img ?? look.img;
+  const data: Record<string, unknown> = {};
+  if (edit.img !== undefined && edit.img !== (hooded ? flags.img : doc.img))
+    data[hooded ? 'flags.silk.img' : 'img'] = edit.img;
+  const t = edit.token;
+  if (!t) return { doc: data };
+
+  const ring: Ring = {
+    enabled: t.ring?.enabled ?? look.ring.enabled,
+    colors: { ...look.ring.colors, ...t.ring?.colors },
+  };
+  const pose: Pose = {
+    anchorX: t.anchor?.x ?? look.pose.anchorX,
+    anchorY: t.anchor?.y ?? look.pose.anchorY,
+    scale: t.scale ?? look.pose.scale,
+  };
+  const same = t.sameAsImage ?? (t.src === undefined && look.sameAsImage);
+  const src = same ? img : (t.src ?? look.token);
+  const ringKeys = ringData(ring);
+
+  if (hooded) {
+    if (src !== flags.token) data['flags.silk.token'] = src;
+    Object.assign(data, proto(doc, ringKeys), hiddenPose(doc, pose, ring.enabled));
+    return { doc: data, tokens: { ...ringKeys, ...poseData(CENTRED, ring.enabled, doc) } };
+  }
+  const token = { 'texture.src': src, ...ringKeys, ...poseData(pose, ring.enabled, doc) };
+  return { doc: { ...data, ...proto(doc, token) }, tokens: token };
 }
 
 /** A Foundry update `changed` touches the Portrait (a hand edit may undo the hood). */
 export const touchesPortrait = (changed: Record<string, unknown>): boolean =>
   'img' in changed || 'prototypeToken' in changed;
+
+function ringOf(token: TokenData | undefined): Ring {
+  const colors = token?.ring?.colors;
+  return {
+    enabled: !!token?.ring?.enabled,
+    colors: { ring: colors?.ring ?? null, background: colors?.background ?? null },
+  };
+}
+
+/** The pose the prototype token shows now. */
+function shownPose(token: TokenData | undefined): Pose {
+  const texture = token?.texture;
+  return {
+    anchorX: texture?.anchorX ?? CENTRED.anchorX,
+    anchorY: texture?.anchorY ?? CENTRED.anchorY,
+    scale: token?.ring?.enabled
+      ? (token.ring.subject?.scale ?? CENTRED.scale)
+      : Math.abs(texture?.scaleX ?? CENTRED.scale),
+  };
+}
+
+const samePose = (a: Pose, b: Pose) =>
+  a.anchorX === b.anchorX && a.anchorY === b.anchorY && a.scale === b.scale;
+
+/**
+ * The real pose. Under a hood the token shows centred and the real one waits in the flag; a
+ * hooded token that is not centred was posed by hand, and that pose is the real one.
+ */
+function realPose(doc: PortraitDoc): Pose {
+  const shown = shownPose(doc.prototypeToken);
+  const { hood, pose } = doc.flags.silk;
+  return hood && pose && samePose(shown, CENTRED) ? { ...pose } : shown;
+}
+
+/** Token update data for `pose` (keeps a mirrored texture mirrored). */
+function poseData(pose: Pose, ring: boolean, doc: PortraitDoc): Record<string, unknown> {
+  const texture = doc.prototypeToken?.texture;
+  const sign = (n: number | undefined) => (n !== undefined && n < 0 ? -1 : 1);
+  const scale = ring ? 1 : pose.scale;
+  return {
+    'texture.anchorX': pose.anchorX,
+    'texture.anchorY': pose.anchorY,
+    'texture.scaleX': sign(texture?.scaleX) * scale,
+    'texture.scaleY': sign(texture?.scaleY) * scale,
+    ...(ring ? { 'ring.subject.scale': Math.max(MIN_RING_SCALE, pose.scale) } : {}),
+  };
+}
+
+const ringData = (ring: Ring): Record<string, unknown> => ({
+  'ring.enabled': ring.enabled,
+  'ring.colors.ring': ring.colors.ring,
+  'ring.colors.background': ring.colors.background,
+});
+
+/** While hooded: the prototype token centred, the real pose in the flag. */
+function hiddenPose(doc: PortraitDoc, pose: Pose, ring: boolean): Record<string, unknown> {
+  const flag = doc.flags.silk.pose;
+  const data = proto(doc, poseData(CENTRED, ring, doc));
+  if (samePose(pose, CENTRED)) {
+    if (flag) data['flags.silk.-=pose'] = null;
+  } else if (!flag || !samePose(flag, pose)) data['flags.silk.pose'] = { ...pose };
+  return data;
+}
+
+/** Token data as prototype token update keys, leaving out what the prototype already has. */
+function proto(doc: PortraitDoc, token: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(token)) {
+    const current = key
+      .split('.')
+      .reduce<unknown>(
+        (o, k) => (o as Record<string, unknown> | undefined)?.[k],
+        doc.prototypeToken,
+      );
+    if ((current ?? TOKEN_DEFAULTS[key]) !== value) out[`prototypeToken.${key}`] = value;
+  }
+  return out;
+}

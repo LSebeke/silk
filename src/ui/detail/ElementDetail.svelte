@@ -49,6 +49,10 @@
   const appearance = $derived(!!element && !!appearanceBlock(element));
   /** An actor class without one: "+ Info Block" offers the Appearance preset. */
   const appearancePreset = $derived(!!element && hasAppearanceClass(element.class) && !appearance);
+  /** Person/Creature: the Image & token button (v1.1 §G.3). */
+  const imageEditor = $derived(
+    !!element && hasAppearanceClass(element.class) && ctx.available('element.openImageEditor'),
+  );
   const entries = $derived.by(() => {
     void $reveal;
     if (!element) return [];
@@ -88,6 +92,16 @@
     const block = props.focus;
     if (block && blocks.some((b) => b._id === block)) void focusName(block);
   });
+
+  // v1.1 §G.1: the pencil beside the name renames inline; Enter/blur save, Esc cancels.
+  const canRename = ctx.available('element.rename');
+  let naming = $state(false);
+  function saveName(value: string) {
+    if (!naming) return;
+    naming = false;
+    const next = value.trim();
+    if (next && next !== element?.name) void run('element.rename', { id, name: next });
+  }
 
   /** The preset menu on "+ Info Block" is open. */
   let presets = $state(false);
@@ -150,9 +164,44 @@
 {#snippet header()}
   {#if element}
     {@render eye('element', id)}
-    <div>
+    <div class="title">
       <div class="cls">{ctx.localize(classLabelKey(element.class))}</div>
-      <h2>{element.name}</h2>
+      {#if naming}
+        <input
+          type="text"
+          class="name-input"
+          value={element.name}
+          aria-label={ctx.title('element.rename')}
+          {@attach (input) => {
+            input.focus();
+            input.select();
+          }}
+          onkeydown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+            else if (e.key === 'Escape') {
+              // Before Foundry's Escape (closes the window) and the blur save.
+              e.preventDefault();
+              e.stopPropagation();
+              naming = false;
+            }
+          }}
+          onblur={(e) => saveName(e.currentTarget.value)}
+          data-silk-detail-name-input
+        />
+      {:else}
+        <div class="row">
+          <h2>{element.name}</h2>
+          {#if canRename}
+            <button
+              type="button"
+              class="icon"
+              title={ctx.title('element.rename')}
+              onclick={() => (naming = true)}
+              data-silk-detail-rename><i class="fa-solid fa-pencil"></i></button
+            >
+          {/if}
+        </div>
+      {/if}
     </div>
   {/if}
 {/snippet}
@@ -162,11 +211,26 @@
     {#if !canReveal}
       <p class="hint" data-silk-detail-hint>{ctx.localize('SILK.Reveal.NeedsAdventure')}</p>
     {/if}
-    {#if appearance}
+    {#if appearance || imageEditor}
       <DetailSection>
-        <div class="row" data-silk-detail-appearance>
-          {@render eye('appearance', id)}
-          <span>{ctx.localize('SILK.Reveal.Appearance')}</span>
+        <div class="row">
+          {#if appearance}
+            <span class="row appearance" data-silk-detail-appearance>
+              {@render eye('appearance', id)}
+              <span>{ctx.localize('SILK.Reveal.Appearance')}</span>
+            </span>
+          {/if}
+          {#if imageEditor}
+            <!-- v1.1 §G.3: Silk's editor, hood-aware (not Foundry's TokenConfig). -->
+            <button
+              type="button"
+              class="image"
+              onclick={() => run('element.openImageEditor', { id })}
+              data-silk-detail-image-editor
+              ><i class="fa-solid fa-image"></i>
+              {ctx.title('element.openImageEditor')}</button
+            >
+          {/if}
         </div>
       </DetailSection>
     {/if}
@@ -321,6 +385,13 @@
     margin: 0;
     border: 0;
   }
+  .title {
+    flex: 1;
+    min-width: 0;
+  }
+  .name-input {
+    width: 100%;
+  }
   .cls {
     font-size: 10px;
     font-weight: 700;
@@ -330,6 +401,14 @@
     display: flex;
     gap: 6px;
     align-items: center;
+  }
+  .appearance {
+    flex: 1;
+  }
+  .image {
+    width: auto;
+    margin-left: auto;
+    padding: 0 8px;
   }
   .block {
     display: flex;

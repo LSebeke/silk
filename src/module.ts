@@ -20,7 +20,7 @@ import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
 import { foundryNscZucht } from './adapter/nsc-zucht';
 import { registerOwnsHooks } from './adapter/owns';
 import { createSocketRelay, registerPlayerNoteHooks, textToHtml } from './adapter/player-notes';
-import { foundryRevealStage, registerRevealHooks } from './adapter/reveal';
+import { foundryRevealStage, registerRevealHooks, updatePlacedTokens } from './adapter/reveal';
 import { foundryOwnershipRevealed } from './adapter/revealed';
 import { createSceneDocs, registerSceneBar, registerSceneHooks } from './adapter/scenes';
 import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
@@ -85,7 +85,7 @@ import {
 import { createMerges, mergeCommands, routeMainMoved, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createPlayerNotes, playerNoteCommands } from './core/player-notes';
-import { hoodImage } from './core/portrait';
+import { hoodImage, lookOf, type PortraitDoc } from './core/portrait';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasBridge } from './ui/canvas/bridge';
@@ -203,6 +203,8 @@ const materializer = createMaterializer({
   deferImmediate: () => pipeline.deferringMaterialize(),
   parentOf: (id) => owns.parentOf(id),
   restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
+  // v1.1 §G.3: the image editor writes the placed tokens of linked actors.
+  tokens: (uuid, data) => updatePlacedTokens(uuid, data, { linked: true }),
   afterMaterialize: async (id) => {
     await owns.afterMaterialize(id);
     await lifecycle.afterMaterialize(id);
@@ -483,6 +485,25 @@ const detailContext = (): DetailContext => ({
       content: `<p>${foundry.utils.escapeHTML(content)}</p>`,
     })),
   editor: mountProseEditor,
+  look(id) {
+    const el = readElement(workingCopy().get(id));
+    if (!el) return undefined;
+    // A Ghost has no doc yet: its record image, no ring, centred.
+    const main = materializer.docsOf(id)?.main ?? { img: el.img, flags: { silk: {} } };
+    return lookOf(main as PortraitDoc, el.img);
+  },
+  pickImage: (current) =>
+    new Promise((resolve) => {
+      const FilePicker = foundry.applications.apps.FilePicker.implementation;
+      const picker = new FilePicker({
+        type: 'image',
+        current,
+        callback: (path: string) => resolve(path),
+      });
+      // Resolves first on a pick (the callback runs before the close).
+      picker.addEventListener('close', () => resolve(undefined), { once: true });
+      void picker.browse();
+    }),
 });
 
 /** T14 Adopt: existing Foundry docs become Story Elements (spec §6 Adopt). */

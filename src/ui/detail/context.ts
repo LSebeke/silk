@@ -1,4 +1,5 @@
 /** What the Element Detail window talks to (spec §8 Controls). Built by `module.ts`. */
+import type { Look } from '../../core/portrait';
 import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
 
@@ -19,4 +20,8 @@ export interface DetailContext {
    * edited HTML. Returns the unmount.
    */
   editor(host: HTMLElement, html: string, save: (html: string) => void): () => void;
+  /** The element's real image, token, ring and pose (v1.1 §G.3), hooded or not. */
+  look(id: string): Look | undefined;
+  /** Foundry's FilePicker for an image; `undefined` when closed without a pick. */
+  pickImage(current: string): Promise<string | undefined>;
 }

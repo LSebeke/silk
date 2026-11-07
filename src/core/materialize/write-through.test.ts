@@ -39,6 +39,45 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     ]);
   });
 
+  it('setImage token (v1.1 §G.3): prototype token and the linked placed tokens', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.setImage', {
+      id,
+      img: 'alrik.webp',
+      token: { sameAsImage: true, ring: { enabled: true }, anchor: { x: 0.4, y: 0.3 } },
+    });
+    const doc = t.doc(id) as ReturnType<typeof t.doc> & {
+      prototypeToken: { texture: { src: string; anchorX: number }; ring: { enabled: boolean } };
+    };
+    expect(doc.img).toBe('alrik.webp');
+    expect(doc.prototypeToken.texture).toMatchObject({ src: 'alrik.webp', anchorX: 0.4 });
+    expect(doc.prototypeToken.ring.enabled).toBe(true);
+    expect(t.tokens).toEqual([
+      { actor: doc.uuid, data: expect.objectContaining({ 'texture.src': 'alrik.webp' }) },
+    ]);
+  });
+
+  it('setImage on a Ghost: the image to the record; a token change Materializes first', async () => {
+    const t = setup();
+    const id = await t.create('creature', 'Wolf');
+    await t.registry.run('element.setImage', { id, img: 'wolf.webp' });
+    expect(t.element(id).uuid).toBeUndefined();
+    await t.registry.run('element.setImage', { id, token: { scale: 1.5 } });
+    expect(t.toasts).toHaveLength(1);
+    const doc = t.doc(id) as ReturnType<typeof t.doc> & {
+      prototypeToken: { texture: { scaleX: number } };
+    };
+    expect(doc.img).toBe('wolf.webp');
+    expect(doc.prototypeToken.texture.scaleX).toBe(1.5);
+  });
+
+  it('setImage token on a class without tokens is rejected', async () => {
+    const t = setup();
+    const id = await t.create('location', 'L');
+    await expect(t.registry.run('element.setImage', { id, token: { scale: 2 } })).rejects.toThrow();
+  });
+
   it('Info Blocks of a Materialized element are pages: create, edit, delete', async () => {
     const t = setup({ mode: 'immediate' });
     const id = await t.create('creature', 'Wolf');

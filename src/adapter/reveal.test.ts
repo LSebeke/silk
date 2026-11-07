@@ -96,4 +96,14 @@ describe('tokenUpdates', () => {
       { _id: 't2', 'texture.src': 'hood', displayName: 40 },
     ]);
   });
+
+  it('linked only (image editor, v1.1 §G.3): unlinked tokens keep their own look', () => {
+    const tokens = [
+      { id: 't1', actorId: 'a', actorLink: true, texture: { src: 'old' } },
+      { id: 't2', actorId: 'a', actorLink: false, texture: { src: 'old' } },
+    ];
+    expect(tokenUpdates(tokens, 'a', { 'texture.src': 'new' }, { linked: true })).toEqual([
+      { _id: 't1', 'texture.src': 'new' },
+    ]);
+  });
 });
