@@ -449,6 +449,8 @@
       return;
     }
     if (event.key === 'Escape' && menu) {
+      // Closes the menu only, not the canvas window (Foundry's Escape).
+      event.stopPropagation();
       menu = undefined;
       pipeline.cancel();
       return;
@@ -663,6 +665,20 @@
     return !el.closest('.svelte-flow__edge, .svelte-flow__edgelabel-renderer, input, textarea');
   }
 
+  /**
+   * The Connection a right-click lands on: its edge or its label (spec 1.1 §F.1). The label
+   * lives in xyflow's label portal, outside the edge, so `onedgecontextmenu` never sees it.
+   */
+  function edgeTarget(target: EventTarget | null): string | undefined {
+    const el = target as Element | null;
+    if (!el?.closest?.('.svelte-flow__pane') || el.closest('[data-silk-connection-editor]'))
+      return undefined;
+    return (
+      el.closest<HTMLElement>('[data-silk-edge]')?.dataset['silkEdge'] ??
+      el.closest<SVGElement>('.svelte-flow__edge')?.dataset['id']
+    );
+  }
+
   function onPointerDown(event: PointerEvent) {
     if (event.button !== 2 || !rightTarget(event.target)) return;
     const win = root?.ownerDocument.defaultView;
@@ -717,17 +733,20 @@
     });
   }
 
-  /** The native menu never shows on the canvas; the press decides (above). */
+  /** The native menu never shows on the canvas; the press decides (above), or the edge menu. */
   function onContextMenu(event: MouseEvent) {
-    if (!rightTarget(event.target)) return;
+    const edge = edgeTarget(event.target);
+    if (!edge && !rightTarget(event.target)) return;
     event.preventDefault();
     event.stopPropagation();
+    if (edge) openEdgeMenu(edge, event);
   }
 
-  function onEdgeContextMenu({ event, edge }: { event: MouseEvent; edge: FlowEdge }) {
-    event.preventDefault();
+  function openEdgeMenu(id: string, event: MouseEvent) {
     pipeline.cancel();
-    menu = { kind: 'edge', id: edge.id, ...local(event), entries: edgeMenu(edge.id, menuDeps()) };
+    // Keys (Escape) reach the canvas, not Foundry's close-the-window handler.
+    root?.focus();
+    menu = { kind: 'edge', id, ...local(event), entries: edgeMenu(id, menuDeps()) };
   }
 
   function onNodeDragStop({ nodes: dragged }: { nodes: (ElementNode | GroupNode)[] }) {
@@ -781,7 +800,6 @@
     nodesConnectable={false}
     panOnDrag={[0, 1]}
     onnodeclick={onNodeClick}
-    onedgecontextmenu={onEdgeContextMenu}
     initialViewport={saved}
     fitView={!saved}
     minZoom={0.05}

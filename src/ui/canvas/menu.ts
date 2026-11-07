@@ -94,13 +94,15 @@ export function nodeMenu(
   return entries;
 }
 
+/** Spec 1.1 §F.1. Open details stays disabled until `connection.openDetail` is registered. */
 export function edgeMenu(id: string, deps: MenuDeps): MenuEntry[] {
   return [
+    command(deps, 'connection.openDetail', { id }, 'SILK.Canvas.EdgeMenu.OpenDetails'),
     toggle(deps, 'connection', id),
     { ...command(deps, 'connection.setLabel', { id }), action: 'editConnection' },
-    command(deps, 'connection.cycleDirection', { id }),
+    command(deps, 'connection.cycleDirection', { id }, 'SILK.Canvas.EdgeMenu.DirectedMutual'),
     command(deps, 'connection.cycleType', { id }),
-    command(deps, 'connection.flip', { id }),
+    command(deps, 'connection.flip', { id }, 'SILK.Canvas.EdgeMenu.Reverse'),
     { ...command(deps, 'connection.delete', { ids: [id] }), danger: true },
   ];
 }

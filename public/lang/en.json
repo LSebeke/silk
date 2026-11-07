@@ -184,6 +184,11 @@
       "None": "No matches"
     },
     "Canvas": {
+      "EdgeMenu": {
+        "OpenDetails": "Open details",
+        "DirectedMutual": "Directed ⇄ Mutual",
+        "Reverse": "Reverse direction"
+      },
       "Title": "World Canvas",
       "ClassSearch": "Class…",
       "NewGroup": "Group",
