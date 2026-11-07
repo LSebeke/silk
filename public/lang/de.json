@@ -102,7 +102,9 @@
         "flip": "Verbindung umkehren",
         "delete": "Verbindung löschen",
         "openDetail": "Verbindungsdetails",
-        "setNotes": "Notizen der Verbindung bearbeiten"
+        "setNotes": "Notizen der Verbindung bearbeiten",
+        "setType": "Verbindungstyp setzen",
+        "setDirection": "Verbindungsrichtung setzen"
       },
       "materialize": {
         "elements": "Materialisieren",

@@ -102,7 +102,9 @@
         "flip": "Flip Connection",
         "delete": "Delete Connection",
         "openDetail": "Connection Detail",
-        "setNotes": "Edit Connection notes"
+        "setNotes": "Edit Connection notes",
+        "setType": "Set Connection type",
+        "setDirection": "Set Connection direction"
       },
       "materialize": {
         "elements": "Materialize",

@@ -187,36 +187,46 @@ describe('editing Connections', () => {
     expect(connection(other)).toMatchObject({ type: 'free' });
   });
 
-  it('connection.cycleType { type } sets one of typeOptions (Connection Detail select)', async () => {
+  it('connection.setType sets one of typeOptions (Connection Detail select)', async () => {
     const { add, create, registry, connection, workingCopy } = setup();
     await add('alrik', 'person');
     await add('fest', 'event');
     const id = await create({ from: 'alrik', to: 'fest', direction: 'mutual', label: 'x' });
     const c = connection(id);
     expect(c && typeOptions(workingCopy.records(), c)).toEqual(['presentAt', 'free']);
-    await registry.run('connection.cycleType', { id, type: 'presentAt' });
+    await registry.run('connection.setType', { id, type: 'presentAt' });
     expect(connection(id)).toMatchObject({ type: 'presentAt', direction: 'directed' });
-    await registry.run('connection.cycleType', { id, type: 'presentAt' });
+    await registry.run('connection.setType', { id, type: 'presentAt' });
     expect(connection(id)?.type).toBe('presentAt');
-    await expect(registry.run('connection.cycleType', { id, type: 'owns' })).rejects.toThrow(
-      /owns/,
-    );
-    await registry.run('connection.cycleType', { id, type: 'free' });
+    await expect(registry.run('connection.setType', { id, type: 'owns' })).rejects.toThrow(/owns/);
+    await registry.run('connection.setType', { id, type: 'free' });
     expect(connection(id)?.type).toBe('free');
   });
 
-  it('connection.cycleDirection { direction } sets directed or mutual', async () => {
+  it('connection.setType replaces conflicting Connections like the cycle', async () => {
+    const { add, create, registry, connections } = setup();
+    await add('realm', 'location');
+    await add('city', 'location');
+    await add('inn', 'location');
+    const up = await create({ from: 'city', to: 'realm', type: 'locatedIn' });
+    const free = await create({ from: 'city', to: 'inn' });
+    await registry.run('connection.setType', { id: free, type: 'locatedIn' });
+    expect(connections()).toEqual([free]);
+    expect(connections()).not.toContain(up);
+  });
+
+  it('connection.setDirection sets directed or mutual', async () => {
     const { add, create, registry, connection } = setup();
     await add('a', 'person');
     await add('b', 'person');
     const id = await create({ from: 'b', to: 'a' });
-    await registry.run('connection.cycleDirection', { id, direction: 'directed' });
+    await registry.run('connection.setDirection', { id, direction: 'directed' });
     expect(connection(id)).toMatchObject({ from: 'b', to: 'a', direction: 'directed' });
-    await registry.run('connection.cycleDirection', { id, direction: 'mutual' });
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
     expect(connection(id)?.direction).toBe('mutual');
-    await registry.run('connection.cycleDirection', { id, direction: 'mutual' });
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
     expect(connection(id)?.direction).toBe('mutual');
-    await registry.run('connection.cycleDirection', { id, direction: 'directed' });
+    await registry.run('connection.setDirection', { id, direction: 'directed' });
     expect(connection(id)).toMatchObject({ from: 'a', to: 'b', direction: 'directed' });
   });
 

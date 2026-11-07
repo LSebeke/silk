@@ -43,9 +43,9 @@
     if (!connection || input.value.trim() === connection.label) return;
     void run('connection.setLabel', { id, label: input.value });
   }
-  const setType = (type: ConnectionType) => run('connection.cycleType', { id, type });
+  const setType = (type: ConnectionType) => run('connection.setType', { id, type });
   const setDirection = (direction: ConnectionDirection) =>
-    run('connection.cycleDirection', { id, direction });
+    run('connection.setDirection', { id, direction });
 
   async function remove() {
     const yes = await ctx.confirm(

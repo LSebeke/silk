@@ -100,49 +100,81 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     },
   };
 
-  /** With `direction` (Connection Detail select, v1.1 §F.2) it cycles to that direction. */
-  const cycleDirection: Command<{ id: string; direction?: ConnectionDirection }, void> = {
-    name: 'connection.cycleDirection',
-    title: 'SILK.Commands.connection.cycleDirection',
+  /** Ends in id order (A < B). */
+  const ordered = (c: Connection): [string, string] =>
+    c.from < c.to ? [c.from, c.to] : [c.to, c.from];
+
+  /** Free-form only: writes `direction` with endpoints `ends` (default: unchanged). */
+  async function writeDirection(
+    c: Connection,
+    direction: ConnectionDirection,
+    [from, to]: [string, string] = [c.from, c.to],
+  ) {
+    if (c.type !== 'free') return;
+    if (c.direction === direction && c.from === from && c.to === to) return;
+    await deps.workingCopy().set([connectionRecord(c.id, { ...strip(c), direction, from, to })]);
+  }
+
+  /** Writes `type` if `typeOptions` offers it, replacing what it conflicts with. */
+  async function writeType(c: Connection, type: ConnectionType) {
+    const options = typeOptions(deps.workingCopy().records(), c);
+    if (!options.length) throw new Error(`Silk: Connection "${c.id}" has a missing endpoint`);
+    if (!options.includes(type))
+      throw new Error(`Silk: Connection "${c.id}" cannot be ${String(type)}`);
+    if (type === c.type) return;
+    await store(c.id, {
+      ...strip(c),
+      type,
+      direction: type === 'free' ? c.direction : 'directed',
+      label: type === 'free' ? c.label : '',
+    });
+  }
+
+  /** v1.1 §F.2 select. Mutual → directed points in id order (A→B); directed stays as is. */
+  const setDirection: Command<{ id: string; direction: ConnectionDirection }, void> = {
+    name: 'connection.setDirection',
+    title: 'SILK.Commands.connection.setDirection',
     available: (ctx) => ctx.isGM,
     async run({ id, direction }) {
       const c = existing(id);
-      if (c.type !== 'free' || c.direction === direction) return;
-      // Stateless 3-cycle over id order (A < B): A→B, B→A, mutual, A→B, …
-      const [a, b] = c.from < c.to ? [c.from, c.to] : [c.to, c.from];
-      const toA: ConnectionData = { ...strip(c), from: a, to: b, direction: 'directed' };
-      const toMutual: ConnectionData = { ...strip(c), direction: 'mutual' };
-      const next =
-        direction === 'mutual'
-          ? toMutual
-          : direction === 'directed' || c.direction === 'mutual'
-            ? toA
-            : c.from === a
-              ? { ...strip(c), from: b, to: a }
-              : toMutual;
-      await deps.workingCopy().set([connectionRecord(id, next)]);
+      if (direction !== 'directed' && direction !== 'mutual')
+        throw new Error(`Silk: unknown direction "${String(direction)}"`);
+      if (c.direction === direction) return;
+      await writeDirection(c, direction, direction === 'directed' ? ordered(c) : undefined);
     },
   };
 
-  /** With `type` (Connection Detail select, v1.1 §F.2) it sets one of `typeOptions`. */
-  const cycleType: Command<{ id: string; type?: ConnectionType }, void> = {
+  const cycleDirection: Command<{ id: string }, void> = {
+    name: 'connection.cycleDirection',
+    title: 'SILK.Commands.connection.cycleDirection',
+    available: (ctx) => ctx.isGM,
+    async run({ id }) {
+      const c = existing(id);
+      // Stateless 3-cycle over id order (A < B): A→B, B→A, mutual, A→B, …
+      const [a, b] = ordered(c);
+      if (c.direction === 'mutual') await writeDirection(c, 'directed', [a, b]);
+      else if (c.from === a) await writeDirection(c, 'directed', [b, a]);
+      else await writeDirection(c, 'mutual');
+    },
+  };
+
+  /** v1.1 §F.2 select: one of `typeOptions`. */
+  const setType: Command<{ id: string; type: ConnectionType }, void> = {
+    name: 'connection.setType',
+    title: 'SILK.Commands.connection.setType',
+    available: (ctx) => ctx.isGM,
+    run: ({ id, type }) => writeType(existing(id), type),
+  };
+
+  const cycleType: Command<{ id: string }, void> = {
     name: 'connection.cycleType',
     title: 'SILK.Commands.connection.cycleType',
     available: (ctx) => ctx.isGM,
-    async run({ id, type: wanted }) {
+    async run({ id }) {
       const c = existing(id);
       const options = typeOptions(deps.workingCopy().records(), c);
       if (!options.length) throw new Error(`Silk: Connection "${id}" has a missing endpoint`);
-      if (wanted !== undefined && !options.includes(wanted))
-        throw new Error(`Silk: Connection "${id}" cannot be ${String(wanted)}`);
-      const type = wanted ?? options[(options.indexOf(c.type) + 1) % options.length] ?? 'free';
-      if (type === c.type) return;
-      await store(id, {
-        ...strip(c),
-        type,
-        direction: type === 'free' ? c.direction : 'directed',
-        label: type === 'free' ? c.label : '',
-      });
+      await writeType(c, options[(options.indexOf(c.type) + 1) % options.length] ?? 'free');
     },
   };
 
@@ -170,5 +202,15 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     },
   };
 
-  return [create, setLabel, setNotes, cycleDirection, cycleType, flip, remove];
+  return [
+    create,
+    setLabel,
+    setNotes,
+    setDirection,
+    cycleDirection,
+    setType,
+    cycleType,
+    flip,
+    remove,
+  ];
 }
