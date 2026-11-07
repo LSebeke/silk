@@ -19,14 +19,22 @@ export interface ConnectionData {
   direction: ConnectionDirection;
   /** Free-form only: verb phrase (directed) or plural predicate (mutual). */
   label: string;
+  /**
+   * GM-only rich text (HTML, v1.1 §F.2). Never in the Player View, on Connections pages or in
+   * Search; merged per field. Absent when empty (old records read as empty).
+   */
+  notes?: string;
 }
 
 export interface Connection extends ConnectionData {
   id: string;
 }
 
+/** Empty notes are left out, so the record keeps its 1.0 shape. */
 export function connectionRecord(id: string, data: ConnectionData): CanonRecord {
-  return { kind: 'connection', id, data: data as unknown as JsonObject };
+  const { notes, ...rest } = data;
+  const stored = notes ? { ...rest, notes } : rest;
+  return { kind: 'connection', id, data: stored as unknown as JsonObject };
 }
 
 /** The Connection in a record, or undefined if the record is not a Connection. */
@@ -39,6 +47,7 @@ export function readConnection(record: CanonRecord | undefined): Connection | un
     type: data.type ?? 'free',
     direction: data.direction ?? 'directed',
     label: data.label ?? '',
+    ...(data.notes ? { notes: data.notes } : {}),
     id: record.id,
   };
 }

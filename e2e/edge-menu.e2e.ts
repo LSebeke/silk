@@ -93,8 +93,7 @@ test('Edge menu (spec 1.1 §F.1): right-click on edge and label, entries', async
     'Reverse direction',
     'Delete Connection',
   ]);
-  // Connection Detail is T51: disabled until its command is registered.
-  await expect(menu.locator('[data-silk-menu-item="connection.openDetail"]')).toBeDisabled();
+  await expect(menu.locator('[data-silk-menu-item="connection.openDetail"]')).toBeEnabled();
 
   // An entry runs its command: Reverse direction swaps the endpoints.
   await menu.locator('[data-silk-menu-item="connection.flip"]').click();
