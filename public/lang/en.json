@@ -200,7 +200,42 @@
       "Palette": "Palette",
       "PaletteHint": "Drag a class onto the canvas or onto a Node.",
       "Filtered": "filtered",
-      "FilteredTitle": "Hidden by the filters; shown until deselected."
+      "FilteredTitle": "Hidden by the filters; shown until deselected.",
+      "Key": {
+        "create": "Create a {class}; connected to the selected Node if any",
+        "undo": "Undo layout",
+        "search": "Search",
+        "editConnection": "Edit the label",
+        "rename": "Rename",
+        "connect": "Connect",
+        "status": "Toggle Status (y/n)",
+        "pin": "Pin/unpin Focus",
+        "reveal": "Reveal (y/n)",
+        "delete": "Delete",
+        "group": "Group",
+        "untangle": "Untangle",
+        "cycleDirection": "Cycle direction",
+        "cycleType": "Cycle type"
+      },
+      "KeyWhen": {
+        "always": "",
+        "node": "on a selected Node",
+        "edge": "on a selected Connection",
+        "nodeOrEdge": "on a selected Node or Connection"
+      },
+      "Modifier": {
+        "shift": "Shift: incoming",
+        "ctrl": "Ctrl: mutual",
+        "alt": "Alt: free-form outgoing"
+      },
+      "Gesture": {
+        "node-sameNode": "Right-click a Node: context menu",
+        "node-otherNode": "Right-drag Node → Node: connect",
+        "node-canvas": "Right-drag Node → canvas: new connected Node",
+        "canvas-canvas": "Right-click the canvas: new Node",
+        "canvas-node": "Right-drag canvas → Node: new Node connected to it",
+        "edge-anywhere": "Right-click a Connection: context menu"
+      }
     },
     "Connection": {
       "Type": {

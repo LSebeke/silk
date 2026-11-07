@@ -12,6 +12,32 @@ export type RightDragAction =
   /** `at`: the drop point (`end`) or the press point (`start`). */
   | { kind: 'create'; at: 'start' | 'end'; from?: string; connection?: CreateFromConnection };
 
+export interface RightDragGesture {
+  start: 'node' | 'canvas' | 'edge';
+  end: 'sameNode' | 'otherNode' | 'node' | 'canvas' | 'anywhere';
+  /** i18n key. */
+  label: string;
+}
+
+const gesture = (start: RightDragGesture['start'], end: RightDragGesture['end']) => ({
+  start,
+  end,
+  label: `SILK.Canvas.Gesture.${start}-${end}`,
+});
+
+/**
+ * The §A table, for the legend (1.1 §E.3). `rightDragAction` decides the Node/canvas rows;
+ * the edge row is the edge's own context menu. Modifiers: `MODIFIER_CONNECTIONS`.
+ */
+export const RIGHT_DRAG_GESTURES: readonly RightDragGesture[] = [
+  gesture('node', 'sameNode'),
+  gesture('node', 'otherNode'),
+  gesture('node', 'canvas'),
+  gesture('canvas', 'canvas'),
+  gesture('canvas', 'node'),
+  gesture('edge', 'anywhere'),
+];
+
 const REVERSE: Record<RelativeDirection, RelativeDirection> = {
   out: 'in',
   in: 'out',

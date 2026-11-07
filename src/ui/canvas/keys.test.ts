@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { canvasKey, confirmKey, sourceKey } from './keys';
+import de from '../../../public/lang/de.json';
+import en from '../../../public/lang/en.json';
+import {
+  CANVAS_KEYS,
+  KEY_CONDITION_LABELS,
+  MODIFIER_CONNECTIONS,
+  canvasKey,
+  confirmKey,
+  sourceKey,
+} from './keys';
+
+const lookup = (lang: object, path: string) =>
+  path.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], lang);
 
 const key = (
   code: string,
@@ -128,5 +140,43 @@ describe('Source Step compass keys (spec 1.1 §B.1)', () => {
     expect(sourceKey(key('KeyA'))).toBeUndefined();
     expect(sourceKey(key('Enter'))).toBeUndefined();
     expect(sourceKey(key('ArrowRight', { ctrlKey: true }))).toBeUndefined();
+  });
+});
+
+describe('canvas keymap table (spec 1.1 §E.3: the legend reads it)', () => {
+  const selections = {
+    always: none,
+    node: { node: true, edge: false },
+    edge: { node: false, edge: true },
+    nodeOrEdge: { node: false, edge: true },
+  } as const;
+  const held = { none: {}, shiftOk: {}, primary: { ctrlKey: true }, connection: {} } as const;
+
+  it('every row is what canvasKey does under its condition, and nothing without it', () => {
+    for (const row of CANVAS_KEYS)
+      for (const code of row.codes) {
+        const e = key(code, held[row.mods]);
+        expect(canvasKey(e, selections[row.when])).toEqual(row.action);
+        if (row.when !== 'always') expect(canvasKey(e, none)).toBeUndefined();
+      }
+  });
+
+  it('lists the §10.3 keys; no digit for Player Characters', () => {
+    const codes = CANVAS_KEYS.flatMap((r) => r.codes);
+    for (const c of ['Digit1', 'Numpad9', 'KeyC', 'Tab', 'KeyQ', 'F2', 'KeyG', 'KeyS', 'KeyR'])
+      expect(codes).toContain(c);
+    for (const c of ['KeyP', 'KeyU', 'KeyF', 'KeyZ', 'Delete', 'Backspace'])
+      expect(codes).toContain(c);
+    expect(codes).not.toContain('Digit3');
+  });
+
+  it('labels every key, condition and modifier in EN and DE', () => {
+    const labels = [
+      ...CANVAS_KEYS.map((r) => r.label),
+      ...Object.values(KEY_CONDITION_LABELS),
+      ...MODIFIER_CONNECTIONS.map((m) => m.label),
+    ];
+    for (const lang of [en, de])
+      for (const l of labels) expect(lookup(lang, l), l).toBeTypeOf('string');
   });
 });
