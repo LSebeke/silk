@@ -54,6 +54,7 @@ export function joinFrameOnCreate(workingCopy: () => WorkingCopy) {
 
 export function layoutCommands(deps: LayoutCommandDeps): Command[] {
   const selectionOr = (ids: string[] | undefined) => ids ?? [...deps.state.get().selection];
+  const sizeOf = (id: string) => deps.state.nodeSize(id);
 
   const group: Command<{ ids?: string[]; label?: string }, { id: string } | undefined> = {
     name: 'canvas.group',
@@ -72,7 +73,7 @@ export function layoutCommands(deps: LayoutCommandDeps): Command[] {
       // The new group sits in the innermost group holding all items.
       const chains = nested.map((id) => ancestorsOf(records, id));
       const parent = chains[0]?.find((g) => chains.every((c) => c.includes(g))) ?? null;
-      const content = union(nested.flatMap((id) => rectOf(records.get(id)) ?? []));
+      const content = union(nested.flatMap((id) => rectOf(records.get(id), sizeOf) ?? []));
       if (!content) return undefined;
       const frame = frameAround(content);
       const id = deps.newId();
@@ -87,7 +88,7 @@ export function layoutCommands(deps: LayoutCommandDeps): Command[] {
         }),
       );
       for (const item of pick(records, nested)) records.set(item.id, withContainer(item, id));
-      const grown = growFrames(records, [id]);
+      const grown = growFrames(records, [id], sizeOf);
       await wc.set(pick(records, [id, ...nested, ...grown]));
       return { id };
     },
@@ -147,13 +148,13 @@ export function layoutCommands(deps: LayoutCommandDeps): Command[] {
         (id) => before.get(id)?.kind === 'element',
       );
       if (ids.length < 2) return;
-      const layout = await untangleLayout(before, ids);
+      const layout = await untangleLayout(before, ids, sizeOf);
       const next = new Map(before);
       for (const record of pick(before, ids)) {
         const { x, y } = layout.get(record.id) ?? { x: 0, y: 0 };
         next.set(record.id, { ...record, data: { ...record.data, position: { x, y } } });
       }
-      const changed = [...ids, ...growFrames(next, ids)];
+      const changed = [...ids, ...growFrames(next, ids, sizeOf)];
       undoStack.push(pick(before, changed));
       deps.tween?.(positionsOf(pick(before, ids)));
       await wc.set(pick(next, changed));
