@@ -86,6 +86,7 @@
         "setFields": "Set class fields",
         "changeClass": "Change class",
         "openSheet": "Open sheet",
+        "openJournal": "Open journal",
         "tag": "Add Tag",
         "untag": "Remove Tag",
         "setStatus": "Set Status",
