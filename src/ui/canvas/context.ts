@@ -8,6 +8,7 @@ import type {
   LayoutTween,
   ViewStateStore,
 } from '../../core/canvas';
+import type { CheckoutSummary } from '../../core/campaigns';
 import type { Point } from '../../core/elements';
 import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
@@ -44,6 +45,8 @@ export interface CanvasContext {
   reveal: Pick<Reveal, 'subscribe' | 'isRevealed'>;
   /** Warning toast. */
   warn(message: string): void;
+  /** Canon chip / unbound empty state (v1.1 §H); `null` while the World has no Canon. */
+  checkoutSummary(): Promise<CheckoutSummary | null>;
 }
 
 /** Svelte context key for `CanvasContext` (cards read it). */

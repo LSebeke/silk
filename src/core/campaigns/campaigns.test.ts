@@ -215,3 +215,18 @@ describe('overview', () => {
     });
   });
 });
+
+describe('checkout summary (canvas Canon chip, v1.1 §H)', () => {
+  it('names the Canon and the checked-out Adventure (null under main)', async () => {
+    const { campaigns } = await boundWorld();
+    expect(await campaigns.checkoutSummary()).toEqual({ canon: 'Aventurien', adventure: null });
+    const { id: campaignId } = await campaigns.create({ name: 'Phileasson' });
+    await campaigns.startAdventure({ name: 'Ch. 1', campaignId });
+    expect(await campaigns.checkoutSummary()).toEqual({ canon: 'Aventurien', adventure: 'Ch. 1' });
+  });
+
+  it('is null for an unbound World', async () => {
+    const { campaigns } = await world();
+    expect(await campaigns.checkoutSummary()).toBeNull();
+  });
+});

@@ -30,7 +30,7 @@ import {
   setRevelationMapApplier,
   startSession,
 } from './adapter/session';
-import { registerSettings } from './adapter/settings';
+import { canonWindowMenu, registerSettings } from './adapter/settings';
 import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
@@ -595,6 +595,7 @@ const canvasContext = (): CanvasContext => ({
   title,
   reveal,
   warn: (message) => void ui.notifications?.warn(message),
+  checkoutSummary: () => getSession().campaigns.checkoutSummary(),
   adopt: (uuid, options) =>
     startAdopt(uuid, options).catch((error: unknown) => {
       ui.notifications?.error(error instanceof Error ? error.message : String(error));
@@ -667,6 +668,11 @@ if (__SILK_DEV__)
 
 Hooks.once('init', () => {
   registerSettings((ns, key, data) => game.settings?.register(ns, key as never, data as never));
+  game.settings?.registerMenu(
+    MODULE_ID,
+    'canonWindow',
+    canonWindowMenu(foundry.applications.api.ApplicationV2, (name) => registry.run(name)) as never,
+  );
   registerKeybindings(registry, (ns, action, data) =>
     game.keybindings?.register(ns, action, data as never),
   );

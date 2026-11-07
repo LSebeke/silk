@@ -27,6 +27,10 @@
       "warnUnmaterializeReveal": {
         "Name": "Warnung beim Entmaterialisieren enthüllter Inhalte",
         "Hint": "Warnen, bevor ein Element entmaterialisiert wird, das Spieler sehen können."
+      },
+      "canonWindow": {
+        "Name": "Kanon",
+        "Hint": "Kanon dieser Welt anlegen oder wählen; Checkout, Abenteuer, Kampagnen."
       }
     },
     "Commands": {
@@ -319,7 +323,9 @@
       "Abandon": "Verwerfen…",
       "AbandonPrompt": "Verwerfen löscht alles, was dieses Abenteuer geändert hat, und setzt die Welt auf main zurück. Dokumente von Elementen, die es auf main nicht gibt, werden gelöscht. Das lässt sich nicht rückgängig machen. Zur Bestätigung den Namen des Abenteuers eingeben:",
       "AbandonConfirm": "Endgültig verwerfen",
-      "Synced": "main wurde in einer anderen Welt geändert; diese Welt wurde aktualisiert."
+      "Synced": "main wurde in einer anderen Welt geändert; diese Welt wurde aktualisiert.",
+      "NoCanon": "Noch kein Kanon",
+      "ChipMain": "main"
     },
     "Notice": {
       "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."

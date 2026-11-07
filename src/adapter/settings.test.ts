@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import de from '../../public/lang/de.json';
 import en from '../../public/lang/en.json';
-import { registerSettings } from './settings';
+import { canonWindowMenu, registerSettings } from './settings';
 
 interface Registered {
   scope: string;
@@ -74,6 +74,29 @@ describe('settings (spec §13)', () => {
           expect(lookup(lang, label), label).toBeTypeOf('string');
       }
     }
+  });
+});
+
+describe('Module Settings menu "Open Canon window" (v1.1 §H)', () => {
+  class Base {
+    render(): Promise<unknown> {
+      throw new Error('Silk: the launcher never renders itself');
+    }
+  }
+
+  it('is GM only, with DE and EN text', () => {
+    const menu = canonWindowMenu(Base, async () => {});
+    expect(menu.restricted).toBe(true);
+    for (const lang of [en, de])
+      for (const key of [menu.name, menu.label, menu.hint])
+        expect(lookup(lang, key), key).toBeTypeOf('string');
+  });
+
+  it('opening it runs canon.openWindow', async () => {
+    const ran: string[] = [];
+    const menu = canonWindowMenu(Base, async (name) => void ran.push(name));
+    await new menu.type().render();
+    expect(ran).toEqual(['canon.openWindow']);
   });
 });
 

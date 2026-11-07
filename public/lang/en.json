@@ -27,6 +27,10 @@
       "warnUnmaterializeReveal": {
         "Name": "Warn on Unmaterialize of Revealed content",
         "Hint": "Warn before Unmaterializing an Element players can see."
+      },
+      "canonWindow": {
+        "Name": "Canon",
+        "Hint": "Create or pick this World's Canon; Checkout, Adventures, Campaigns."
       }
     },
     "Commands": {
@@ -319,7 +323,9 @@
       "Abandon": "Abandon…",
       "AbandonPrompt": "Abandoning drops everything this Adventure changed and resets the World to main. Docs of elements not on main are deleted. This cannot be undone. Type the Adventure name to confirm:",
       "AbandonConfirm": "Abandon for good",
-      "Synced": "Main moved in another World; this World was updated."
+      "Synced": "Main moved in another World; this World was updated.",
+      "NoCanon": "No Canon yet",
+      "ChipMain": "main"
     },
     "Notice": {
       "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
