@@ -16,6 +16,7 @@ import {
   elementRecord,
   generatedActor,
   hasAppearanceClass,
+  sceneSource,
   isGhost,
   nextStatus,
   readElement,
@@ -248,9 +249,10 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
   /**
    * Ghost worlds (1.1 §B.1): a Compendium-sourced element imports its entry now. The entry's
    * data replaces the blank main doc; Silk's id, name, folder, ownership and flags stay.
+   * A Scene source (Location, Event; §B.2.1) is not the main doc: Event Scenes import it.
    */
   async function fromSource(el: StoryElement, plan: DocPlan): Promise<DocPlan> {
-    if (el.source?.kind !== 'compendium') return plan;
+    if (el.source?.kind !== 'compendium' || sceneSource(el.class, el.source)) return plan;
     const data = await docs.importData(el.source.uuid);
     if (!data) {
       deps.notify(deps.localize('SILK.Materialize.CompendiumMissing', { name: el.name }));

@@ -82,6 +82,8 @@ export function toFlowNodes(
     const parent = containerOf(records, element.id);
     const origin = readGroup(parent ? records.get(parent) : undefined)?.position ?? { x: 0, y: 0 };
     const position = at?.(element.id) ?? element.position;
+    // A Scene-sourced card shows the Scene thumb (1.1 §E.1); the journal Cover keeps `img`.
+    const img = element.thumb ?? element.img;
     const node: ElementNode = {
       id: element.id,
       type: 'element',
@@ -92,7 +94,7 @@ export function toFlowNodes(
         class: element.class,
         name: element.name,
         ghost: isGhost(element),
-        ...(element.img ? { img: element.img } : {}),
+        ...(img ? { img } : {}),
         ...(element.status ? { status: element.status } : {}),
         ...(element.restoredFrom ? { restoredFrom: element.restoredFrom } : {}),
         ...(hidden ? { hidden } : {}),

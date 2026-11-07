@@ -17,7 +17,13 @@ import type { JsonObject, Snapshot } from '../canon';
 import { canonicalJson } from '../canon';
 import type { Command } from '../commands/registry';
 import { check, connectionRecord, connectionsIn } from '../connections';
-import { elementRecord, readElement, type ElementData, type StoryElement } from '../elements';
+import {
+  elementRecord,
+  readElement,
+  sceneSource,
+  type ElementData,
+  type StoryElement,
+} from '../elements';
 import type {
   FoundryDocs,
   LifecycleContributor,
@@ -231,7 +237,30 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   const readSnapshot = (record: { kind: string; data: unknown } | undefined) =>
     record?.kind === 'eventScene' ? (record.data as EventSceneData) : undefined;
 
-  /** Materialize: restore the snapshot, else (Events) a fresh Scene from the Preset. */
+  /**
+   * A Scene-sourced element's Scene (1.1 §B.2.1): the pack Scene's import data, config
+   * untouched (no Preset), owned by the element. Undefined (with a toast) if the entry is gone.
+   */
+  async function importedScene(el: StoryElement, uuid: string): Promise<SceneData | undefined> {
+    const data = await docs.importData(uuid);
+    if (!data) {
+      deps.notify(deps.localize('SILK.Materialize.CompendiumMissing', { name: el.name }));
+      return undefined;
+    }
+    const flags = (data.flags ?? {}) as SceneData['flags'];
+    return {
+      ...data,
+      _id: deps.newId(),
+      name: el.name,
+      folder: null,
+      flags: { ...flags, silk: { sceneOf: el.id } },
+    };
+  }
+
+  /**
+   * Materialize: restore the snapshot, else import the Scene source (1.1 §B.2.1), else
+   * (Events) a fresh Scene from the Preset.
+   */
   async function ensureScene(el: StoryElement) {
     if (!SCENE_CLASSES.has(el.class)) return;
     await once(el.id, async () => {
@@ -242,7 +271,10 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
         return;
       }
       const snapshot = readSnapshot(wc().get(eventSceneId(el.id)));
-      if (snapshot) await createFrom(el, { ...snapshot.scene, name: el.name });
+      if (snapshot) return createFrom(el, { ...snapshot.scene, name: el.name });
+      const source = sceneSource(el.class, el.source);
+      const imported = source && (await importedScene(el, source.uuid));
+      if (imported) await createFrom(el, imported);
       else if (el.class === 'event') await createFromPreset(el, presetFor(el));
     });
   }

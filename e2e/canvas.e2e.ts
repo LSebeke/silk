@@ -62,6 +62,12 @@ test('GM creates, names, moves and selects a Ghost on the canvas; view restores'
   await search.fill('loc');
   await expect(gm.locator('[data-silk-class-option]')).toHaveCount(1);
   await search.press('Enter');
+  // Location takes the Source Step (spec 1.1 §B.1): → Blank.
+  await expect(gm.locator('[data-silk-source-step]')).toHaveAttribute(
+    'data-silk-source-step',
+    'location',
+  );
+  await gm.keyboard.press('ArrowRight');
 
   const nameInput = gm.locator('[data-silk-name-input]');
   await expect(nameInput).toBeFocused();
@@ -498,6 +504,106 @@ test('Compendium picker (spec 1.1 §B.2): pack pick is a Ghost world, World pick
   await expect(nameInput).toHaveCount(0);
   const viaApi = (await elements(gm)).filter((r) => r.data['name'] === 'Brin');
   expect(viaApi.map((r) => r.data['source'])).toEqual([{ kind: 'compendium', uuid: brin }]);
+});
+
+test('Scene picker (spec 1.1 §B.2.1): pack Scene imported on Materialize, World Scene Adopted', async ({
+  gm,
+}) => {
+  await resetCanvas(gm);
+  const MAP = 'ui/parchment.jpg';
+  const { packId, map, inn } = await gm.evaluate(async (src) => {
+    const name = 'silk-maps';
+    const existing = game.packs?.get(`world.${name}`);
+    const pack =
+      existing ??
+      (await foundry.documents.collections.CompendiumCollection.createCompendium({
+        type: 'Scene',
+        label: 'Silk Maps',
+        name,
+      } as never));
+    const make = (data: object, options: object = {}) =>
+      CONFIG.Scene.documentClass.create(data as never, options) as unknown as Promise<{
+        uuid: string;
+        id: string;
+      }>;
+    const map = await make(
+      {
+        name: 'Gareth Karte',
+        // v14: the background lives on the Scene's Level.
+        levels: [{ name: 'Level', background: { src } }],
+        grid: { type: 1, size: 140 },
+        walls: [{ c: [0, 0, 100, 0] }],
+      },
+      { pack: pack.collection },
+    );
+    const inn = await make({ name: 'Silk Inn', levels: [{ name: 'Level', background: { src } }] });
+    return { packId: pack.collection, map: map.uuid, inn: inn.id };
+  }, MAP);
+  await openCanvas(gm);
+  const canvas = gm.locator('[data-silk-canvas]');
+  const search = gm.locator('[data-silk-picker-search]');
+  const nameInput = gm.locator('[data-silk-name-input]');
+
+  // Location (digit 4) → compass → ↑: the Scene picker lists the Scene pack.
+  await canvas.focus();
+  await gm.keyboard.press('Digit4');
+  await expect(gm.locator('[data-silk-source-step]')).toHaveAttribute(
+    'data-silk-source-step',
+    'location',
+  );
+  await gm.keyboard.press('ArrowUp');
+  await expect(search).toBeFocused();
+  await expect(gm.locator(`[data-silk-picker-source="${packId}"] .count`)).toHaveText('1');
+  await gm.keyboard.type('gareth');
+  await expect(gm.locator('[data-silk-picker-row]')).toHaveCount(1);
+  await gm.keyboard.press('Enter');
+  await expect(nameInput).toHaveValue('Gareth Karte');
+  await nameInput.fill('Gareth');
+  await nameInput.press('Enter');
+  await expect(nameInput).toHaveCount(0);
+
+  // Ghost: Scene UUID and images stored; the card shows the thumb (else img).
+  const ghost = (await elements(gm)).find((r) => r.data['name'] === 'Gareth');
+  expect(ghost?.data).toMatchObject({
+    class: 'location',
+    img: MAP,
+    source: { kind: 'compendium', uuid: map },
+  });
+  expect(ghost?.data['uuid']).toBeUndefined();
+  const card = String(ghost?.data['thumb'] ?? MAP);
+  await expect(gm.locator(`[data-silk-node="${ghost?.id}"] img.portrait`)).toHaveAttribute(
+    'src',
+    card,
+  );
+
+  // Materialize imports the Scene untouched (walls, grid) as its Overview Scene.
+  await api(gm, 'materialize.elements', { ids: [ghost?.id] });
+  const scene = await gm.evaluate((id) => {
+    const s = game.scenes?.find(
+      (x) => (x.flags as { silk?: { sceneOf?: string } }).silk?.sceneOf === id,
+    ) as unknown as
+      { name: string; walls: { size: number }; grid: { type: number; size: number } } | undefined;
+    return s && { name: s.name, walls: s.walls.size, grid: [s.grid.type, s.grid.size] };
+  }, ghost?.id);
+  expect(scene).toEqual({ name: 'Gareth', walls: 1, grid: [1, 140] });
+
+  // Event (digit 7) → ↑ → World: the World Scene is Adopted as an Event owning it.
+  await canvas.focus();
+  await gm.keyboard.press('Digit7');
+  await gm.keyboard.press('ArrowUp');
+  await expect(search).toBeFocused();
+  await gm.locator('[data-silk-picker-source="world"]').click();
+  await search.fill('Silk Inn');
+  await search.press('Enter');
+  await expect(nameInput).toHaveValue('Silk Inn');
+  await nameInput.press('Enter');
+  const adopted = (await elements(gm)).find((r) => r.data['name'] === 'Silk Inn');
+  expect(adopted?.data).toMatchObject({ class: 'event', adopted: true, img: MAP });
+  const owner = await gm.evaluate(
+    (id) => (game.scenes?.get(id)?.flags as { silk?: { sceneOf?: string } }).silk?.sceneOf,
+    inn,
+  );
+  expect(owner).toBe(adopted?.id);
 });
 
 test('Compendium picker (spec 1.1 §B.2, #87): same-name entries merge; their sources are chosen', async ({

@@ -3,12 +3,17 @@
  * `PickerKind` as a `PickerCatalog`. Filtering by type and language is the core's.
  */
 import type { PickerCatalog, PickerEntry, PickerKind } from '../core/canvas';
+import { sceneBackground } from '../core/event-scenes/port';
 
 interface IndexEntry {
   uuid: string;
   name: string;
   type?: string;
-  img?: string;
+  img?: string | null;
+  /** Scene: Foundry's thumbnail and its Levels' backgrounds (`sceneBackground`). */
+  thumb?: string | null;
+  levels?: Iterable<{ background?: { src?: string | null } | null }> | null;
+  background?: { src?: string | null } | null;
 }
 
 type WorldDoc = IndexEntry & { flags?: Record<string, unknown> };
@@ -55,18 +60,46 @@ function packageTitle(game: CatalogGame, { metadata }: CatalogPack): string | un
   return metadata.packageName ? game.modules?.get(metadata.packageName)?.title : undefined;
 }
 
-/** The World collection of each picker document name. */
-const WORLD: Record<PickerKind['documentName'], (game: CatalogGame) => Iterable<WorldDoc>> = {
-  Actor: (game) => game.actors ?? [],
-  Scene: (game) => game.scenes ?? [],
-};
+interface DocumentKind {
+  world(game: CatalogGame): Iterable<WorldDoc>;
+  /** Index fields a pack is asked for. */
+  fields: string[];
+  entry(e: IndexEntry): PickerEntry;
+}
 
-const entry = (e: IndexEntry): PickerEntry => ({
-  uuid: e.uuid,
-  name: e.name,
-  ...(e.type ? { type: e.type } : {}),
-  ...(e.img ? { img: e.img } : {}),
-});
+const silkFlags = (d: WorldDoc) =>
+  d.flags?.['silk'] as { id?: string; sceneOf?: string } | undefined;
+
+/** Per picker document name: its World docs, index fields and entry shape. */
+const KINDS: Record<PickerKind['documentName'], DocumentKind> = {
+  Actor: {
+    world: (game) => [...(game.actors ?? [])].filter((d) => !silkFlags(d)?.id),
+    fields: ['type', 'img'],
+    entry: (e) => ({
+      uuid: e.uuid,
+      name: e.name,
+      ...(e.type ? { type: e.type } : {}),
+      ...(e.img ? { img: e.img } : {}),
+    }),
+  },
+  // §B.2.1: World Scenes not linked to an element; img = background, thumb = Foundry's.
+  // v14: the background lives on the first Level (`sceneBackground`).
+  Scene: {
+    world: (game) =>
+      [...(game.scenes ?? [])].filter((d) => !silkFlags(d)?.id && !silkFlags(d)?.sceneOf),
+    // `background.src`: packs not yet migrated to v14 Levels.
+    fields: ['thumb', 'levels.background.src', 'background.src'],
+    entry: (e) => {
+      const img = sceneBackground(e);
+      return {
+        uuid: e.uuid,
+        name: e.name,
+        ...(img ? { img } : {}),
+        ...(e.thumb ? { thumb: e.thumb } : {}),
+      };
+    },
+  },
+};
 
 /** `worldLabel`: the localised source label of World docs. */
 export async function readPickerCatalog(
@@ -74,16 +107,15 @@ export async function readPickerCatalog(
   kind: PickerKind,
   worldLabel: string,
 ): Promise<PickerCatalog> {
-  const world = [...WORLD[kind.documentName](game)]
-    .filter((d) => !(d.flags?.['silk'] as { id?: string } | undefined)?.id)
-    .map(entry);
+  const docKind = KINDS[kind.documentName];
+  const world = [...docKind.world(game)].map(docKind.entry);
   const kindPacks = [...(game.packs ?? [])].filter(
     (p) => p.documentName === kind.documentName && p.visible !== false,
   );
   const packs = await Promise.all(
     kindPacks.map(async (p) => {
       const lang = p.metadata.flags?.dsalang;
-      const index = await p.getIndex({ fields: ['type', 'img'] });
+      const index = await p.getIndex({ fields: docKind.fields });
       const path = folders(p);
       const title = packageTitle(game, p);
       return {
@@ -92,9 +124,54 @@ export async function readPickerCatalog(
         ...(path ? { folders: path } : {}),
         ...(title ? { packageTitle: title } : {}),
         ...(lang ? { lang } : {}),
-        entries: [...index].map(entry),
+        entries: [...index].map(docKind.entry),
       };
     }),
   );
   return { kind, lang: game.i18n?.lang ?? 'en', worldLabel, world, packs };
+}
+
+/** The slice of Foundry a Scene thumbnail needs (`foundry.canvas`, `ImageHelper`). */
+export interface ThumbnailHelper {
+  /** The image's size; null if it cannot be loaded. */
+  loadTexture(src: string): Promise<{ width: number; height: number } | null>;
+  createThumbnail(
+    src: string,
+    options: { width: number; height: number; format: string; quality: number },
+  ): Promise<{ thumb: string } | null>;
+}
+
+/** Longest side of a card thumbnail Silk makes (§B.2.1 Images). */
+const THUMB_SIZE = 192;
+
+/**
+ * A Scene's card image when it has no `thumb` (§B.2.1): its background downsampled once to
+ * a WebP data URL, longest side 192 px, quality 0.7. Undefined if the image cannot be loaded.
+ */
+export async function sceneThumbnail(
+  src: string,
+  helper: ThumbnailHelper = foundryThumbnails(),
+): Promise<string | undefined> {
+  const size = await helper.loadTexture(src);
+  if (!size?.width || !size.height) return undefined;
+  const scale = Math.min(1, THUMB_SIZE / Math.max(size.width, size.height));
+  const result = await helper.createThumbnail(src, {
+    width: Math.round(size.width * scale),
+    height: Math.round(size.height * scale),
+    format: 'image/webp',
+    quality: 0.7,
+  });
+  return result?.thumb || undefined;
+}
+
+/** `ThumbnailHelper` over the running Foundry (globals read per call). */
+function foundryThumbnails(): ThumbnailHelper {
+  const api = foundry as unknown as {
+    canvas: { loadTexture(src: string): Promise<{ width: number; height: number } | null> };
+    helpers: { media: { ImageHelper: Pick<ThumbnailHelper, 'createThumbnail'> } };
+  };
+  return {
+    loadTexture: (src) => api.canvas.loadTexture(src),
+    createThumbnail: (src, options) => api.helpers.media.ImageHelper.createThumbnail(src, options),
+  };
 }

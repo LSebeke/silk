@@ -19,7 +19,10 @@ export interface PickerEntry {
   name: string;
   /** The document's subtype, if it has one. */
   type?: string;
+  /** Actor: the portrait. Scene: `background.src` (§B.2.1 Images). */
   img?: string;
+  /** Scene: Foundry's own thumbnail, if it has one. */
+  thumb?: string;
 }
 
 export interface PickerPack {
@@ -62,6 +65,8 @@ export interface PickerRow {
   uuid: string;
   name: string;
   img?: string;
+  /** A Scene's thumbnail: shown instead of `img`. */
+  thumb?: string;
   /** `world` or the pack id. */
   source: PickerSourceId;
   /** Source label: the pack's, or the localised World. */
@@ -109,6 +114,11 @@ export interface CompendiumProviderDeps {
   catalog(kind: PickerKind): Promise<PickerCatalog>;
   /** Shows the picker window; resolves with the function that closes it. */
   open(picker: CompendiumPicker): Promise<() => void>;
+  /**
+   * A Scene pick without a thumb (§B.2.1 Images): a downsampled data URL of its background
+   * (adapter: `ImageHelper.createThumbnail`). Undefined or a failure = no thumb.
+   */
+  thumbnail?(src: string): Promise<string | undefined>;
 }
 
 /**
@@ -132,6 +142,7 @@ export interface CompendiumSource extends SourceProvider {
 
 interface PickerSession {
   picker: CompendiumPicker;
+  kind: PickerKind;
   finish(pick: SourcePick | undefined): void;
 }
 
@@ -143,6 +154,13 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
     if (!open) throw new Error('Silk: the compendium picker is not open');
     return open;
   };
+
+  /** A Scene pick keeps its thumb, else gets one made from its background, once. */
+  async function withThumb(pick: SourcePick): Promise<SourcePick> {
+    if ('adopt' in pick || pick.thumb || !pick.img || !deps.thumbnail) return pick;
+    const thumb = await deps.thumbnail(pick.img).catch(() => undefined);
+    return thumb ? { ...pick, thumb } : pick;
+  }
 
   return {
     unavailable: (cls) => (deps.kind(cls) ? undefined : 'SILK.Source.NotForClass'),
@@ -170,7 +188,7 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
             close();
             return undefined;
           }
-          return { picker, finish };
+          return { picker, kind, finish };
         })();
         session = opening.catch(() => undefined);
         opening.catch((error: unknown) => {
@@ -182,11 +200,11 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
     },
     ready: async () => (await session)?.picker,
     async choose(uuid) {
-      const { picker, finish } = await current();
+      const { picker, kind, finish } = await current();
       const pick = picker.pick(uuid);
       if (!pick) return { picked: false };
       if ('choose' in pick) return pick;
-      finish(pick);
+      finish(kind.documentName === 'Scene' ? await withThumb(pick) : pick);
       return { picked: true };
     },
     async cancel(close) {
@@ -260,7 +278,13 @@ function merge(world: PickerRow[], packs: PickerRow[][]) {
       continue;
     }
     const img = group.find((r) => r.img)?.img;
-    rows.push({ ...first, ...(img ? { img } : {}), count: group.length });
+    const thumb = group.find((r) => r.thumb)?.thumb;
+    rows.push({
+      ...first,
+      ...(img ? { img } : {}),
+      ...(thumb ? { thumb } : {}),
+      count: group.length,
+    });
     members.set(first.uuid, group);
   }
   return { rows: rows.sort(byName), members };
@@ -274,6 +298,7 @@ function rowsOf(catalog: PickerCatalog) {
     uuid: e.uuid,
     name: e.name,
     ...(e.img ? { img: e.img } : {}),
+    ...(e.thumb ? { thumb: e.thumb } : {}),
     source,
     label,
   });
@@ -373,6 +398,7 @@ export function createCompendiumPicker(catalog: PickerCatalog): CompendiumPicker
         source: { kind: 'compendium', uuid: row.uuid },
         name: row.name,
         ...(row.img ? { img: row.img } : {}),
+        ...(row.thumb ? { thumb: row.thumb } : {}),
       };
     },
     back() {
