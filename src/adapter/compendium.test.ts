@@ -73,4 +73,45 @@ describe('readPickerCatalog', () => {
       ],
     });
   });
+
+  it('packs carry their folder ancestry (root first) and package title (§B.2 #88)', async () => {
+    const folder = (name: string, ...ancestors: string[]) => ({
+      name,
+      ancestors: ancestors.map((n) => ({ name: n })),
+    });
+    const pack = (
+      collection: string,
+      packageType: string,
+      packageName: string,
+      f?: ReturnType<typeof folder>,
+    ) => ({
+      collection,
+      documentName: 'Actor',
+      folder: f ?? null,
+      metadata: { label: collection, packageType, packageName },
+      getIndex: async () => [],
+    });
+    const game: CatalogGame = {
+      modules: new Map([['nightblack', { title: 'Nightblack' }]]),
+      system: { title: 'Das Schwarze Auge' },
+      world: { title: 'My World' },
+      packs: [
+        pack('nightblack.karten', 'module', 'nightblack', folder('Nightblack sea', 'Adventures')),
+        pack('dsa5.npcs', 'system', 'dsa5'),
+        pack('world.home', 'world', 'w'),
+        pack('gone.pack', 'module', 'gone'),
+      ],
+    };
+    const { packs } = await readPickerCatalog(game, { documentName: 'Actor' }, 'Welt');
+    expect(packs.map(({ id, folders, packageTitle }) => ({ id, folders, packageTitle }))).toEqual([
+      {
+        id: 'nightblack.karten',
+        folders: ['Adventures', 'Nightblack sea'],
+        packageTitle: 'Nightblack',
+      },
+      { id: 'dsa5.npcs', folders: undefined, packageTitle: 'Das Schwarze Auge' },
+      { id: 'world.home', folders: undefined, packageTitle: 'My World' },
+      { id: 'gone.pack', folders: undefined, packageTitle: undefined },
+    ]);
+  });
 });

@@ -55,8 +55,8 @@ describe('side list', () => {
     expect(picker.get().sources).toEqual([
       { id: 'all', count: 4 },
       { id: 'world', label: 'World', count: 1 },
-      { id: 'dsa5.npcs-de', label: 'NSC', count: 2 },
       { id: 'world.homebrew', label: 'Homebrew', count: 1 },
+      { id: 'dsa5.npcs-de', label: 'NSC', count: 2 },
     ]);
     expect(picker.get().source).toBe('all');
   });
@@ -66,8 +66,8 @@ describe('side list', () => {
     expect(picker.get().sources.map((s) => s.id)).toEqual([
       'all',
       'world',
-      'dsa5.npcs-en',
       'world.homebrew',
+      'dsa5.npcs-en',
     ]);
   });
 
@@ -78,8 +78,8 @@ describe('side list', () => {
     expect(picker.get().sources).toEqual([
       { id: 'all', count: 3 },
       { id: 'world', label: 'World', count: 1 },
-      { id: 'dsa5.npcs-de', label: 'NSC', count: 1 },
       { id: 'world.beasts', label: 'Beasts', count: 1 },
+      { id: 'dsa5.npcs-de', label: 'NSC', count: 1 },
     ]);
     expect(picker.get().rows.map((r) => r.name)).not.toContain('Held');
   });
@@ -107,6 +107,58 @@ describe('side list', () => {
       { id: 'world', label: 'World', count: 1 },
       { id: 'dsa5-core.coremaps', label: 'Karten', count: 2 },
     ]);
+  });
+});
+
+describe('source label (spec 1.1 §B.2, #88)', () => {
+  it('folder ancestry › pack label; package title › pack label without a folder', () => {
+    const picker = createCompendiumPicker(
+      catalog({
+        world: [],
+        packs: [
+          {
+            id: 'm.karten',
+            label: 'Karten',
+            folders: ['Adventures', 'Nightblack sea'],
+            packageTitle: 'Nightblack',
+            entries: [{ uuid: 'Compendium.m.karten.Actor.k', name: 'Kapitän', type: 'npc' }],
+          },
+          {
+            id: 'dsa5.npcs',
+            label: 'NSC',
+            packageTitle: 'DSA5',
+            entries: [{ uuid: 'Compendium.dsa5.npcs.Actor.a', name: 'Alrik', type: 'npc' }],
+          },
+          {
+            id: 'world.zz',
+            label: 'Zz',
+            entries: [{ uuid: 'Compendium.world.zz.Actor.z', name: 'Zord', type: 'npc' }],
+          },
+        ],
+      }),
+    );
+    expect(picker.get().sources.slice(2)).toEqual([
+      { id: 'm.karten', label: 'Adventures › Nightblack sea › Karten', count: 1 },
+      { id: 'dsa5.npcs', label: 'DSA5 › NSC', count: 1 },
+      { id: 'world.zz', label: 'Zz', count: 1 },
+    ]);
+    expect(picker.get().rows.map((r) => r.label)).toEqual([
+      'DSA5 › NSC',
+      'Adventures › Nightblack sea › Karten',
+      'Zz',
+    ]);
+  });
+
+  it('the side list is flat: packs sorted by label after All and World', () => {
+    const picker = createCompendiumPicker(
+      catalog({
+        packs: [
+          { id: 'b', label: 'beta', entries: [{ uuid: 'b.1', name: 'B', type: 'npc' }] },
+          { id: 'a', label: 'Alpha', entries: [{ uuid: 'a.1', name: 'A', type: 'npc' }] },
+        ],
+      }),
+    );
+    expect(picker.get().sources.map((s) => s.id)).toEqual(['all', 'world', 'a', 'b']);
   });
 });
 
@@ -280,5 +332,144 @@ describe('pick image', () => {
       name: 'X',
       img: 'x.webp',
     });
+  });
+});
+
+describe('merged rows (spec 1.1 §B.2, #87)', () => {
+  const twins = (): PickerCatalog =>
+    catalog({
+      world: [{ uuid: 'Actor.alrik', name: 'alrik ', type: 'npc', img: 'w.webp' }],
+      packs: [
+        {
+          id: 'z.pack',
+          label: 'Zeta',
+          entries: [{ uuid: 'Compendium.z.Actor.a', name: 'ALRIK', type: 'npc' }],
+        },
+        {
+          id: 'a.pack',
+          label: 'Alpha',
+          entries: [
+            { uuid: 'Compendium.a.Actor.a', name: 'Alrik', type: 'npc', img: 'a.webp' },
+            { uuid: 'Compendium.a.Actor.b', name: 'Bosper', type: 'npc' },
+          ],
+        },
+      ],
+    });
+
+  it('All merges same-name entries (case-insensitive, trimmed) incl. World actors into one row', () => {
+    const picker = createCompendiumPicker(twins());
+    const [alrik, bosper] = picker.get().rows;
+    expect(picker.get().rows).toHaveLength(2);
+    expect(alrik).toMatchObject({ uuid: 'Actor.alrik', name: 'alrik ', count: 3 });
+    expect(bosper?.count).toBeUndefined();
+    expect(picker.get().sources[0]).toEqual({ id: 'all', count: 4 });
+  });
+
+  it('a single pack or World shows its entries unmerged', () => {
+    const picker = createCompendiumPicker(
+      catalog({
+        world: [
+          { uuid: 'Actor.a1', name: 'Alrik', type: 'npc' },
+          { uuid: 'Actor.a2', name: 'alrik', type: 'npc' },
+        ],
+        packs: [],
+      }),
+    );
+    expect(picker.get().rows).toHaveLength(1);
+    picker.setSource('world');
+    const rows = picker.get().rows;
+    expect(rows.map((r) => r.uuid).sort()).toEqual(['Actor.a1', 'Actor.a2']);
+    expect(rows.map((r) => r.count)).toEqual([undefined, undefined]);
+  });
+
+  it('picking a merged row lists its sources: World first, then packs by label', () => {
+    const picker = createCompendiumPicker(twins());
+    expect(picker.pick()).toEqual({
+      choose: ['Actor.alrik', 'Compendium.a.Actor.a', 'Compendium.z.Actor.a'],
+    });
+    const state = picker.get();
+    expect(state.choosing).toBe('alrik ');
+    expect(state.rows.map((r) => [r.uuid, r.label])).toEqual([
+      ['Actor.alrik', 'World'],
+      ['Compendium.a.Actor.a', 'Alpha'],
+      ['Compendium.z.Actor.a', 'Zeta'],
+    ]);
+    expect(state.active).toBe(0);
+    picker.move(1);
+    expect(picker.pick()).toEqual({
+      source: { kind: 'compendium', uuid: 'Compendium.a.Actor.a' },
+      name: 'Alrik',
+      img: 'a.webp',
+    });
+  });
+
+  it('back (Esc) returns from the source list to the results at the merged row', () => {
+    const picker = createCompendiumPicker(twins());
+    picker.pick();
+    picker.move(2);
+    expect(picker.back()).toBe(true);
+    expect(picker.get().choosing).toBeUndefined();
+    expect(picker.get().active).toBe(0);
+    expect(picker.get().rows).toHaveLength(2);
+    expect(picker.back()).toBe(false);
+  });
+
+  it('a new query or source leaves the source list', () => {
+    const picker = createCompendiumPicker(twins());
+    picker.pick();
+    picker.setQuery('bos');
+    expect(picker.get().choosing).toBeUndefined();
+    expect(picker.get().rows.map((r) => r.name)).toEqual(['Bosper']);
+  });
+
+  it('picker.pick on a merged row returns { choose }; a second picker.pick { uuid } picks one', async () => {
+    const source = compendiumSource({
+      kind: () => ({ documentName: 'Actor', type: 'npc' }),
+      catalog: async () => twins(),
+      open: async () => () => undefined,
+    });
+    const registry = createRegistry(() => ({ isGM: true }));
+    for (const c of pickerCommands(source)) registry.register(c);
+    const signal = new AbortController().signal;
+    const picked = source.pick({ class: 'person', at: { x: 0, y: 0 }, signal });
+    expect(await registry.run('picker.pick', { uuid: 'Actor.alrik' })).toEqual({
+      choose: ['Actor.alrik', 'Compendium.a.Actor.a', 'Compendium.z.Actor.a'],
+    });
+    expect(await registry.run('picker.pick', { uuid: 'Compendium.z.Actor.a' })).toEqual({
+      picked: true,
+    });
+    expect(await picked).toEqual({
+      source: { kind: 'compendium', uuid: 'Compendium.z.Actor.a' },
+      name: 'ALRIK',
+    });
+  });
+
+  it('picker.cancel in the source list goes back to the results; { close } closes', async () => {
+    let closed = 0;
+    let opened: CompendiumPicker | undefined;
+    const source = compendiumSource({
+      kind: () => ({ documentName: 'Actor', type: 'npc' }),
+      catalog: async () => twins(),
+      open: async (picker) => {
+        opened = picker;
+        return () => void closed++;
+      },
+    });
+    const registry = createRegistry(() => ({ isGM: true }));
+    for (const c of pickerCommands(source)) registry.register(c);
+    const signal = new AbortController().signal;
+    const picked = source.pick({ class: 'person', at: { x: 0, y: 0 }, signal });
+    await registry.run('picker.pick', {});
+    expect(await registry.run('picker.cancel', {})).toEqual({ back: true });
+    expect(opened?.get().choosing).toBeUndefined();
+    expect(closed).toBe(0);
+    expect(await registry.run('picker.cancel', {})).toEqual({ back: false });
+    expect(await picked).toBeUndefined();
+    expect(closed).toBe(1);
+
+    const again = source.pick({ class: 'person', at: { x: 0, y: 0 }, signal });
+    await registry.run('picker.pick', {});
+    expect(await registry.run('picker.cancel', { close: true })).toEqual({ back: false });
+    expect(await again).toBeUndefined();
   });
 });

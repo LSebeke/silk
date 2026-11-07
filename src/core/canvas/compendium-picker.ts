@@ -25,7 +25,12 @@ export interface PickerEntry {
 export interface PickerPack {
   /** `pack.collection`. */
   id: string;
+  /** The pack's own label (`metadata.label`); its source label is `sourceLabel(pack)`. */
   label: string;
+  /** The pack's folder ancestry, root first; empty or undefined = no folder. */
+  folders?: string[];
+  /** Title of the module/system/world the pack comes from. */
+  packageTitle?: string;
   /** `metadata.flags.dsalang`, if set. */
   lang?: string;
   entries: PickerEntry[];
@@ -61,6 +66,8 @@ export interface PickerRow {
   source: PickerSourceId;
   /** Source label: the pack's, or the localised World. */
   label: string;
+  /** A merged row (All, §B.2 #87): how many same-name entries it stands for ("×N"). */
+  count?: number;
 }
 
 export interface PickerState {
@@ -70,7 +77,12 @@ export interface PickerState {
   rows: PickerRow[];
   /** Index of the highlighted row. */
   active: number;
+  /** The merged row's name while `rows` is its source list (§B.2 "Choosing a source"). */
+  choosing?: string;
 }
+
+/** A pick: a Source Step pick, or a merged row's entries to choose from (`{ choose }`). */
+export type PickerPick = SourcePick | { choose: string[] };
 
 export interface CompendiumPicker {
   get(): PickerState;
@@ -81,8 +93,13 @@ export interface CompendiumPicker {
   move(delta: number): void;
   /** Highlights a row (mouse). */
   activate(index: number): void;
-  /** Enter: the active row as a Source Step pick. */
-  pick(): SourcePick | undefined;
+  /**
+   * Enter: row `uuid` (default: the active one) as a Source Step pick; a merged row turns the
+   * results into its source list instead. Undefined = no such row.
+   */
+  pick(uuid?: string): PickerPick | undefined;
+  /** Esc in the source list: back to the results. False = not in a source list. */
+  back(): boolean;
 }
 
 export interface CompendiumProviderDeps {
@@ -101,10 +118,16 @@ export interface CompendiumProviderDeps {
 export interface CompendiumSource extends SourceProvider {
   /** The open picker, once its window is up; undefined when none is open. */
   ready(): Promise<CompendiumPicker | undefined>;
-  /** Picks row `uuid` (default: the active one) and closes. False = no such row. */
-  choose(uuid?: string): Promise<boolean>;
-  /** Closes without a pick: back to the Source Step. */
-  cancel(): Promise<void>;
+  /**
+   * Picks row `uuid` (default: the active one) and closes; a merged row opens its source list
+   * (`{ choose }`) and stays open. `picked: false` = no such row.
+   */
+  choose(uuid?: string): Promise<{ picked: boolean } | { choose: string[] }>;
+  /**
+   * Esc: in a merged row's source list, back to the results (`back: true`); otherwise, or with
+   * `close` (the window's X), closes without a pick: back to the Source Step.
+   */
+  cancel(close?: boolean): Promise<{ back: boolean }>;
 }
 
 interface PickerSession {
@@ -160,18 +183,17 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
     ready: async () => (await session)?.picker,
     async choose(uuid) {
       const { picker, finish } = await current();
-      if (uuid !== undefined) {
-        const index = picker.get().rows.findIndex((r) => r.uuid === uuid);
-        if (index < 0) return false;
-        picker.activate(index);
-      }
-      const pick = picker.pick();
-      if (!pick) return false;
+      const pick = picker.pick(uuid);
+      if (!pick) return { picked: false };
+      if ('choose' in pick) return pick;
       finish(pick);
-      return true;
+      return { picked: true };
     },
-    async cancel() {
-      (await session)?.finish(undefined);
+    async cancel(close) {
+      const open = await session;
+      if (!close && open?.picker.back()) return { back: true };
+      open?.finish(undefined);
+      return { back: false };
     },
   };
 }
@@ -196,17 +218,53 @@ export function pickerCommands(source: CompendiumSource): Command[] {
     command('picker.source', async ({ id }: { id: PickerSourceId }) =>
       (await picker()).setSource(id),
     ),
-    command('picker.pick', async ({ uuid }: { uuid?: string }) => ({
-      picked: await source.choose(uuid),
-    })),
-    command('picker.cancel', () => source.cancel()),
+    command('picker.pick', ({ uuid }: { uuid?: string }) => source.choose(uuid)),
+    command('picker.cancel', ({ close }: { close?: boolean }) => source.cancel(close === true)),
   ];
 }
 
 /** DSA5's rule (`hooks/sidebar.js`): a pack in another language is hidden; no flag = shown. */
 const packShown = (pack: PickerPack, lang: string) => !pack.lang || pack.lang === lang;
 
+/**
+ * A pack's source label (§B.2 #88): its folder ancestry, then its label, joined by ` › `; a pack
+ * without a folder is prefixed with its package title instead.
+ */
+function sourceLabel(pack: PickerPack): string {
+  const prefix = pack.folders?.length ? pack.folders : pack.packageTitle ? [pack.packageTitle] : [];
+  return [...prefix, pack.label].join(' › ');
+}
+
 const byName = (a: PickerRow, b: PickerRow) => a.name.localeCompare(b.name);
+
+/** Same name for merging: case-insensitive, trimmed. */
+const nameKey = (name: string) => name.trim().toLowerCase();
+
+/**
+ * All's rows (§B.2 #87): same-name entries become one row with a count. Each merged row's
+ * entries, World first then packs in the given (label) order, are its source list, keyed by the
+ * row's uuid.
+ */
+function merge(world: PickerRow[], packs: PickerRow[][]) {
+  const groups = new Map<string, PickerRow[]>();
+  for (const r of [world, ...packs].flat()) {
+    const key = nameKey(r.name);
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  const rows: PickerRow[] = [];
+  const members = new Map<string, PickerRow[]>();
+  for (const group of groups.values()) {
+    const [first] = group as [PickerRow, ...PickerRow[]];
+    if (group.length === 1) {
+      rows.push(first);
+      continue;
+    }
+    const img = group.find((r) => r.img)?.img;
+    rows.push({ ...first, ...(img ? { img } : {}), count: group.length });
+    members.set(first.uuid, group);
+  }
+  return { rows: rows.sort(byName), members };
+}
 
 function rowsOf(catalog: PickerCatalog) {
   const { type } = catalog.kind;
@@ -222,28 +280,45 @@ function rowsOf(catalog: PickerCatalog) {
   const world = ofType(catalog.world).map((e) => row(e, 'world', catalog.worldLabel));
   const packs = catalog.packs
     .filter((p) => packShown(p, catalog.lang))
-    .map((p) => ({ pack: p, rows: ofType(p.entries).map((e) => row(e, p.id, p.label)) }))
-    .filter((p) => p.rows.length);
-  const all = [...world, ...packs.flatMap((p) => p.rows)].sort(byName);
+    .map((p) => {
+      const label = sourceLabel(p);
+      return { id: p.id, label, rows: ofType(p.entries).map((e) => row(e, p.id, label)) };
+    })
+    .filter((p) => p.rows.length)
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const unmerged = [...world, ...packs.flatMap((p) => p.rows)].sort(byName);
   const sources: PickerSource[] = [
-    { id: 'all', count: all.length },
+    { id: 'all', count: unmerged.length },
     { id: 'world', label: catalog.worldLabel, count: world.length },
-    ...packs.map((p) => ({ id: p.pack.id, label: p.pack.label, count: p.rows.length })),
+    ...packs.map((p) => ({ id: p.id, label: p.label, count: p.rows.length })),
   ];
-  return { all, sources };
+  return {
+    unmerged,
+    merged: merge(
+      world,
+      packs.map((p) => p.rows),
+    ),
+    sources,
+  };
 }
 
 export function createCompendiumPicker(catalog: PickerCatalog): CompendiumPicker {
-  const { all, sources } = rowsOf(catalog);
+  const { unmerged, merged, sources } = rowsOf(catalog);
   let source: PickerSourceId = 'all';
   let query = '';
   let active = 0;
+  /** The merged row whose source list is shown, and the results' active index to return to. */
+  let choosing: { row: PickerRow; back: number } | undefined;
   let state = compute();
   const subscribers = new Set<(state: PickerState) => void>();
 
   function compute(): PickerState {
+    if (choosing) {
+      const rows = merged.members.get(choosing.row.uuid) ?? [];
+      return { sources, source, query, rows, active, choosing: choosing.row.name };
+    }
     const q = query.trim().toLowerCase();
-    const rows = all.filter(
+    const rows = (source === 'all' ? merged.rows : unmerged).filter(
       (r) => (source === 'all' || r.source === source) && (!q || r.name.toLowerCase().includes(q)),
     );
     return { sources, source, query, rows, active };
@@ -265,11 +340,13 @@ export function createCompendiumPicker(catalog: PickerCatalog): CompendiumPicker
     },
     setQuery(next) {
       query = next;
+      choosing = undefined;
       active = 0;
       update();
     },
     setSource(id) {
       source = id;
+      choosing = undefined;
       active = 0;
       update();
     },
@@ -281,15 +358,29 @@ export function createCompendiumPicker(catalog: PickerCatalog): CompendiumPicker
       active = clamp(index);
       update();
     },
-    pick() {
-      const row = state.rows[active];
+    pick(uuid) {
+      const index = uuid === undefined ? active : state.rows.findIndex((r) => r.uuid === uuid);
+      const row = state.rows[index];
       if (!row) return undefined;
+      if (row.count && !choosing) {
+        choosing = { row, back: index };
+        active = 0;
+        update();
+        return { choose: state.rows.map((r) => r.uuid) };
+      }
       if (row.source === 'world') return { adopt: { uuid: row.uuid }, name: row.name };
       return {
         source: { kind: 'compendium', uuid: row.uuid },
         name: row.name,
         ...(row.img ? { img: row.img } : {}),
       };
+    },
+    back() {
+      if (!choosing) return false;
+      active = choosing.back;
+      choosing = undefined;
+      update();
+      return true;
     },
   };
 }
