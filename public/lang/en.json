@@ -91,7 +91,8 @@
         "setStatus": "Set Status",
         "toggleStatus": "Toggle Status",
         "delete": "Delete Element",
-        "openDetail": "Element Detail"
+        "openDetail": "Element Detail",
+        "openImageEditor": "Image & token"
       },
       "connection": {
         "create": "Connect",
@@ -438,6 +439,23 @@
       "TheConnection": "this Connection",
       "Confirm": "Reveal {name} to the players?",
       "UnrevealConfirm": "Hide {name} from the players again?"
+    },
+    "ImageEditor": {
+      "Title": "Image & token",
+      "SheetImage": "Sheet image",
+      "TokenImage": "Token image",
+      "SameAsImage": "Same as sheet image",
+      "Choose": "Choose…",
+      "Ring": "Token ring",
+      "RingEnabled": "Ring on",
+      "RingColor": "Ring colour",
+      "BackgroundColor": "Background colour",
+      "WorldDefault": "World ring style",
+      "Position": "Position",
+      "PositionHint": "Drag to position the token, scroll to scale it",
+      "Scale": "Scale",
+      "Reset": "Reset",
+      "HoodedHint": "Hooded: players see the hood until the Appearance is Revealed. Image, token and position apply then; the ring applies at once."
     },
     "Detail": {
       "Title": "Element Detail",

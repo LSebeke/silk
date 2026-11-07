@@ -91,7 +91,8 @@
         "setStatus": "Status setzen",
         "toggleStatus": "Status umschalten",
         "delete": "Element löschen",
-        "openDetail": "Element-Details"
+        "openDetail": "Element-Details",
+        "openImageEditor": "Bild & Token"
       },
       "connection": {
         "create": "Verbinden",
@@ -438,6 +439,23 @@
       "TheConnection": "diese Verbindung",
       "Confirm": "{name} den Spielern aufdecken?",
       "UnrevealConfirm": "{name} wieder vor den Spielern verbergen?"
+    },
+    "ImageEditor": {
+      "Title": "Bild & Token",
+      "SheetImage": "Bogenbild",
+      "TokenImage": "Tokenbild",
+      "SameAsImage": "Wie das Bogenbild",
+      "Choose": "Wählen…",
+      "Ring": "Tokenring",
+      "RingEnabled": "Ring an",
+      "RingColor": "Ringfarbe",
+      "BackgroundColor": "Hintergrundfarbe",
+      "WorldDefault": "Ringstil der Welt",
+      "Position": "Position",
+      "PositionHint": "Ziehen verschiebt den Token, Scrollen skaliert ihn",
+      "Scale": "Skalierung",
+      "Reset": "Zurücksetzen",
+      "HoodedHint": "Verhüllt: Die Spieler sehen die Hülle, bis das Aussehen enthüllt ist. Bild, Token und Position gelten dann; der Ring gilt sofort."
     },
     "Detail": {
       "Title": "Element-Details",

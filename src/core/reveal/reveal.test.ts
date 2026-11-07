@@ -240,6 +240,29 @@ describe('Appearance (Person/Creature)', () => {
     await t.run('reveal.appearance', { id });
     expect(t.doc(id).img).toBe('dragon.webp');
   });
+
+  it('image editor while hooded (v1.1 §G.3): token and pose wait for Reveal, ring at once', async () => {
+    const t = setup();
+    const id = await materialized(t, 'creature', 'Drache');
+    type Doc = ReturnType<typeof t.doc> & {
+      prototypeToken: {
+        texture: { src: string; anchorX?: number };
+        ring: { enabled: boolean };
+      };
+    };
+    await t.registry.run('element.setImage', {
+      id,
+      token: { src: 'dragon-token.webp', ring: { enabled: true }, anchor: { x: 0.3, y: 0.5 } },
+    });
+    const hooded = t.doc(id) as Doc;
+    expect(hooded.prototypeToken.texture.src).toBe(HOOD);
+    expect(hooded.prototypeToken.texture.anchorX ?? 0.5).toBe(0.5);
+    expect(hooded.prototypeToken.ring.enabled).toBe(true);
+    await t.run('reveal.appearance', { id });
+    const shown = t.doc(id) as Doc;
+    expect(shown.prototypeToken.texture).toMatchObject({ src: 'dragon-token.webp', anchorX: 0.3 });
+    expect(shown.flags.silk.pose).toBeUndefined();
+  });
 });
 
 describe('Appearance by flag, deleted and re-added (v1.1 §C.2)', () => {

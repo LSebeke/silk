@@ -33,6 +33,8 @@ export interface SilkDocFlags {
   img?: string;
   token?: string;
   hood?: string;
+  /** The real token position and scale while hooded (v1.1 §G.3); the hood shows centred. */
+  pose?: { anchorX: number; anchorY: number; scale: number };
   /** On a Player Note page: its authoring Campaign (§9). */
   campaign?: string;
   /** On an Info Block page: it is the Appearance block (v1.1 §C.2). */

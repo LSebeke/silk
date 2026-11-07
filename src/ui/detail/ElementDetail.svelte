@@ -49,6 +49,10 @@
   const appearance = $derived(!!element && !!appearanceBlock(element));
   /** An actor class without one: "+ Info Block" offers the Appearance preset. */
   const appearancePreset = $derived(!!element && hasAppearanceClass(element.class) && !appearance);
+  /** Person/Creature: the Image & token button (v1.1 §G.3). */
+  const imageEditor = $derived(
+    !!element && hasAppearanceClass(element.class) && ctx.available('element.openImageEditor'),
+  );
   const entries = $derived.by(() => {
     void $reveal;
     if (!element) return [];
@@ -162,11 +166,26 @@
     {#if !canReveal}
       <p class="hint" data-silk-detail-hint>{ctx.localize('SILK.Reveal.NeedsAdventure')}</p>
     {/if}
-    {#if appearance}
+    {#if appearance || imageEditor}
       <DetailSection>
-        <div class="row" data-silk-detail-appearance>
-          {@render eye('appearance', id)}
-          <span>{ctx.localize('SILK.Reveal.Appearance')}</span>
+        <div class="row">
+          {#if appearance}
+            <span class="row appearance" data-silk-detail-appearance>
+              {@render eye('appearance', id)}
+              <span>{ctx.localize('SILK.Reveal.Appearance')}</span>
+            </span>
+          {/if}
+          {#if imageEditor}
+            <!-- v1.1 §G.3: Silk's editor, hood-aware (not Foundry's TokenConfig). -->
+            <button
+              type="button"
+              class="image"
+              onclick={() => run('element.openImageEditor', { id })}
+              data-silk-detail-image-editor
+              ><i class="fa-solid fa-image"></i>
+              {ctx.title('element.openImageEditor')}</button
+            >
+          {/if}
         </div>
       </DetailSection>
     {/if}
@@ -330,6 +349,14 @@
     display: flex;
     gap: 6px;
     align-items: center;
+  }
+  .appearance {
+    flex: 1;
+  }
+  .image {
+    width: auto;
+    margin-left: auto;
+    padding: 0 8px;
   }
   .block {
     display: flex;
