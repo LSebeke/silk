@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import de from '../../public/lang/de.json';
 import en from '../../public/lang/en.json';
-import { hoodedImage, registerSettings } from './settings';
+import { registerSettings } from './settings';
 
 interface Registered {
   scope: string;
@@ -55,12 +55,6 @@ describe('settings (spec §13)', () => {
       'viewState',
       'windowState',
     ]);
-  });
-
-  it('hooded image (v1.1 §C.4): the core icon by default; the removed 1.0 image falls back to it', () => {
-    expect(hoodedImage(undefined)).toBe('icons/svg/mystery-man-black.svg');
-    expect(hoodedImage('modules/silk/assets/hooded.svg')).toBe('icons/svg/mystery-man-black.svg');
-    expect(hoodedImage('worlds/w/hood.webp')).toBe('worlds/w/hood.webp');
   });
 
   it('offers immediate and on-demand Materialize modes', () => {

@@ -3,6 +3,7 @@
  * buttons on journal and actor/item sheets, and flow-back of hand edits that undo the hood.
  */
 import { MODULE_ID } from '../constants';
+import { touchesPortrait } from '../core/portrait';
 import type { Reveal, RevealStage } from '../core/reveal';
 import { SILK_WRITE, isSilkWrite } from './working-copy-journal';
 
@@ -118,8 +119,7 @@ export function registerRevealHooks(
   // A hand edit of the image or token while hooded: re-apply the hood (§8 Appearance).
   deps.on('updateActor', (doc, changed, options) => {
     if (!deps.isActiveGM() || isSilkWrite(options)) return;
-    const c = changed as Record<string, unknown>;
-    if (!('img' in c) && !('prototypeToken' in c)) return;
+    if (!touchesPortrait(changed as Record<string, unknown>)) return;
     const id = deps.elementIdOf(doc as { flags?: unknown });
     if (id) reveal.repair(id).catch(fail);
   });
