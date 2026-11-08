@@ -88,6 +88,7 @@
         "create": "Create Element",
         "rename": "Rename Element",
         "setImage": "Set image",
+        "restoreImages": "Restore imported images",
         "setFields": "Set class fields",
         "changeClass": "Change class",
         "openSheet": "Open sheet",
@@ -487,6 +488,8 @@
       "PositionHint": "Drag to position the token, scroll to scale it",
       "Scale": "Scale",
       "Reset": "Reset",
+      "Restore": "Restore imported images",
+      "RestoreHint": "Back to the images and token look the actor was imported with. Hooded, they apply at the Reveal.",
       "HoodedHint": "Hooded: players see the hood until the Appearance is Revealed. Image, token and position apply then; the ring and Lock rotation apply at once."
     },
     "Detail": {

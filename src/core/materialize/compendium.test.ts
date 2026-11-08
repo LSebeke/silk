@@ -66,6 +66,55 @@ describe('Compendium source', () => {
     expect(t.element(id)).toMatchObject({ name: 'Grauwolf', img: 'packs/wolf.webp' });
   });
 
+  it('keeps the entry look as the original (v1.1 §G.3.1), even after a Ghost image edit', async () => {
+    const t = setup({ mode: 'onDemand' });
+    withPack(t);
+    const entry = t.docs.compendium.get(WOLF) as Record<string, unknown>;
+    entry.prototypeToken = { texture: { src: 'packs/wolf-token.webp' }, ring: { enabled: true } };
+    const id = await createFromPack(t);
+    await t.registry.run('element.setImage', { id, img: 'mine.webp' });
+    await t.registry.run('materialize.elements', { ids: [id] });
+    expect(t.doc(id).img).toBe('mine.webp');
+    expect(t.doc(id).flags.silk.original).toEqual({
+      img: 'packs/wolf.webp',
+      texture: { src: 'packs/wolf-token.webp' },
+      ring: { enabled: true },
+    });
+  });
+
+  it('element.restoreImages (v1.1 §G.3.1): the entry look back, everywhere', async () => {
+    const t = setup({ mode: 'onDemand' });
+    withPack(t);
+    const entry = t.docs.compendium.get(WOLF) as Record<string, unknown>;
+    entry.prototypeToken = { texture: { src: 'packs/wolf-token.webp', fit: 'cover' } };
+    const id = await createFromPack(t);
+    await t.registry.run('materialize.elements', { ids: [id] });
+    expect(t.materializer.look(id)?.restorable).toBe(true);
+    await t.registry.run('element.setImage', {
+      id,
+      img: 'mine.webp',
+      token: { sameAsImage: true, anchor: { x: 0.3, y: 0.3 } },
+    });
+    await t.registry.run('element.restoreImages', { id });
+    const doc = t.doc(id) as ReturnType<typeof t.doc> & { prototypeToken: { texture: object } };
+    expect(doc.img).toBe('packs/wolf.webp');
+    expect(doc.prototypeToken.texture).toMatchObject({
+      src: 'packs/wolf-token.webp',
+      fit: 'cover',
+      anchorX: 0.5,
+    });
+    expect(doc.flags.silk.pose).toBeUndefined();
+    expect(t.element(id).img).toBe('packs/wolf.webp');
+    expect(t.tokens.at(-1)?.data).toMatchObject({ 'texture.src': 'packs/wolf-token.webp' });
+  });
+
+  it('element.restoreImages is rejected without imported images', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('person', 'Alrik');
+    expect(t.materializer.look(id)?.restorable).toBe(false);
+    await expect(t.registry.run('element.restoreImages', { id })).rejects.toThrow();
+  });
+
   it('immediate: imported once the pipeline ends', async () => {
     const t = setup({ mode: 'immediate' });
     withPack(t);

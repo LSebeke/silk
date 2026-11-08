@@ -159,6 +159,12 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
     const doc = t.doc(id) as DocSnapshot & { prototypeToken: { texture: { src: string } } };
     expect(doc.img).toBe(HOOD);
     expect(doc.prototypeToken.texture.src).toBe(HOOD);
+    // v1.1 §G.3.1: the look as adopted, kept before the hood.
+    expect(doc.flags.silk.original).toEqual({
+      img: 'spy.webp',
+      texture: { src: 'spy-token.webp' },
+      ring: {},
+    });
     expect(doc.flags.silk.img).toBe('spy.webp');
     expect(doc.flags.silk.token).toBe('spy-token.webp');
     expect(doc.ownership).toEqual({ default: 0, player1: 0 });

@@ -7,11 +7,17 @@ import {
   imageWrites,
   isHooded,
   lookOf,
+  originalLook,
   realPortrait,
+  restoreWrites,
   showWrites,
   touchesPortrait,
   type PortraitDoc,
+  type PortraitWrites,
 } from './portrait';
+import { applyUpdate } from '../materialize/memory-docs';
+import { writeLook } from './subject';
+import { testLookStage } from './test-stage';
 
 const HOOD = 'icons/svg/mystery-man-black.svg';
 
@@ -83,6 +89,11 @@ describe('Portrait: showing', () => {
       'flags.silk.img': 'alrik.webp',
       'flags.silk.token': 'alrik-token.webp',
       'flags.silk.hood': HOOD,
+      // What the hood overwrites (v1.1 §G.3.1).
+      'flags.silk.unhooded': {
+        texture: { fit: 'contain', anchorX: 0.5, anchorY: 0.5 },
+        subject: { scale: 1, texture: null },
+      },
     });
     expect(w.tokens).toMatchObject({ 'texture.src': HOOD, 'texture.anchorX': 0.5 });
     // No ring: no subject file; a stale one of Silk's would be cleared.
@@ -237,6 +248,7 @@ describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
       lockRotation: false,
       order: 'ring',
       sizeFactor: 1,
+      restorable: false,
     });
   });
 
@@ -528,3 +540,141 @@ describe('Portrait: round 2 migration (v1.1 §G.3.2)', () => {
     expect(showWrites(doc, 'real', undefined, 0.8).tokens).not.toHaveProperty(['texture.scaleX']);
   });
 });
+
+describe('Portrait: imported images (v1.1 §G.3.1)', () => {
+  it('the original look: image, prototype texture and ring, as imported', () => {
+    const doc = {
+      img: 'wolf.webp',
+      prototypeToken: {
+        texture: { src: 'wolf-token.webp', fit: 'cover', scaleX: 0.8, scaleY: 0.8 },
+        ring: {
+          enabled: true,
+          colors: { ring: null, background: null },
+          subject: { scale: 1.2, texture: 'wolf-subject.webp' },
+        },
+      },
+    };
+    expect(originalLook(doc)).toEqual({
+      img: 'wolf.webp',
+      texture: { src: 'wolf-token.webp', fit: 'cover', scaleX: 0.8, scaleY: 0.8 },
+      ring: {
+        enabled: true,
+        colors: { ring: null, background: null },
+        subject: { scale: 1.2, texture: 'wolf-subject.webp' },
+      },
+    });
+    expect(originalLook({ img: 'x.webp' })).toEqual({ img: 'x.webp', texture: {}, ring: {} });
+  });
+
+  it('the hood stores everything it overwrites; Reveal restores it exactly', async () => {
+    const wolf = imported();
+    const before = structuredClone(wolf);
+    await look(wolf, showWrites(wolf, { hood: HOOD }));
+    expect(wolf.img).toBe(HOOD);
+    expect(wolf.prototypeToken?.texture).toMatchObject({ src: HOOD, fit: 'contain', anchorY: 0.5 });
+    expect(wolf.prototypeToken?.ring?.subject?.texture).not.toBe('wolf-subject.webp');
+    // Applied again (every reconcile): nothing changes.
+    expect(showWrites(wolf, { hood: HOOD }).doc).toEqual({});
+    await look(wolf, showWrites(wolf, 'real'));
+    expect(wolf).toEqual(before);
+  });
+
+  it('Silk never changes an imported look on its own: its placed tokens keep theirs', () => {
+    expect(showWrites(imported(), 'real')).toEqual({ doc: {} });
+  });
+
+  it('an imported ringed actor with fit cover is not a round 2 look (no migration)', () => {
+    const wolf = imported();
+    wolf.prototypeToken = { ...wolf.prototypeToken, ring: { enabled: true } };
+    expect(showWrites(wolf, 'real', undefined, 0.8)).toEqual({ doc: {} });
+  });
+
+  it('Restore: the originals back on the sheet, prototype and placed tokens; Silk look cleared', async () => {
+    const wolf = imported();
+    const before = structuredClone(wolf);
+    await look(
+      wolf,
+      imageWrites(wolf, {
+        img: 'mine.webp',
+        token: { sameAsImage: true, anchor: { x: 0.3, y: 0.4 }, scale: 2, order: 'illustration' },
+      }),
+    );
+    expect(wolf.flags.silk).toMatchObject({ order: 'illustration', subject: expect.anything() });
+    const w = restoreWrites(wolf);
+    await look(wolf, w);
+    expect(wolf).toEqual(before);
+    // Placed tokens get the originals but keep their size factor (#168).
+    expect(w.tokens).toMatchObject({
+      'texture.src': 'wolf-token.webp',
+      'texture.fit': 'cover',
+      'texture.anchorY': 0.8,
+      'ring.subject.scale': 1.2,
+      'ring.subject.texture': 'wolf-subject.webp',
+    });
+    expect(w.tokens).not.toHaveProperty(['texture.scaleX']);
+  });
+
+  it('Restore while hooded: the originals become the real look; the hood stays until Reveal', async () => {
+    const wolf = imported();
+    const before = structuredClone(wolf);
+    await look(wolf, showWrites(wolf, { hood: HOOD }));
+    await look(
+      wolf,
+      imageWrites(wolf, { img: 'mine.webp', token: { anchor: { x: 0.3, y: 0.4 } } }),
+    );
+    await look(wolf, restoreWrites(wolf));
+    expect(wolf.img).toBe(HOOD);
+    expect(wolf.prototypeToken?.texture?.src).toBe(HOOD);
+    expect(wolf.flags.silk).toMatchObject({ img: 'wolf.webp', token: 'wolf-token.webp' });
+    await look(wolf, showWrites(wolf, 'real'));
+    expect(wolf).toEqual(before);
+  });
+
+  it('Restore while hooded drops the pose the hood had stored', async () => {
+    const wolf = imported();
+    wolf.flags.silk.pose = { anchorX: 0.3, anchorY: 0.4, scale: 2 };
+    await look(wolf, showWrites(wolf, { hood: HOOD }));
+    expect(wolf.flags.silk.unhooded?.pose).toBeDefined();
+    await look(wolf, restoreWrites(wolf));
+    expect(wolf.flags.silk.unhooded).not.toHaveProperty('pose');
+    expect(wolf.flags.silk.pose).toBeUndefined();
+  });
+});
+
+/** An imported, ringed actor with its own fit, anchor and subject. */
+const imported = (): PortraitDoc => ({
+  img: 'wolf.webp',
+  prototypeToken: {
+    texture: { src: 'wolf-token.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.8 },
+    ring: {
+      enabled: true,
+      colors: { ring: null, background: null },
+      subject: { scale: 1.2, texture: 'wolf-subject.webp' },
+    },
+  },
+  flags: {
+    silk: {
+      original: {
+        img: 'wolf.webp',
+        texture: { src: 'wolf-token.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.8 },
+        ring: {
+          enabled: true,
+          colors: { ring: null, background: null },
+          subject: { scale: 1.2, texture: 'wolf-subject.webp' },
+        },
+      },
+    },
+  },
+});
+
+/** Writes `writes` into `doc` as Foundry would (dotted keys, `-=` deletes). */
+async function look(doc: PortraitDoc, writes: PortraitWrites) {
+  const { stage } = testLookStage();
+  await writeLook(
+    stage,
+    async (_uuid, data) => applyUpdate(doc as unknown as Record<string, unknown>, data),
+    'Actor.wolf',
+    doc,
+    writes,
+  );
+}

@@ -57,6 +57,12 @@ describe('Generator pick binds the created Actor (spec 1.1 §B.3, §D)', () => {
     const id = await createFrom(t, await generated(t));
     expect(t.element(id).img).toBe('tokens/ulf.webp');
     expect(t.docs.docs.size).toBe(2);
+    // v1.1 §G.3.1: no compendium source, so the flag is the only copy.
+    expect(t.doc(id).flags.silk.original).toEqual({
+      img: 'tokens/ulf.webp',
+      texture: {},
+      ring: {},
+    });
   });
 
   it('a rename in the name step writes through to the bound Actor', async () => {
