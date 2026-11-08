@@ -3,7 +3,7 @@
  * on its label, the edge menu and Element Detail; label, type, direction, Reverse, Notes and
  * Delete write through commands.
  */
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
@@ -150,4 +150,43 @@ test('Connection Detail edits label, direction, Reverse, Notes; Delete confirms'
   await expect.poll(() => record(gm, id)).toBeUndefined();
   await expect(detail).toHaveCount(0);
   expect(await record(gm, a)).toBeDefined();
+});
+
+/** Scrolling elements inside a detail window other than its body (v1.1 §G.1: none). */
+const nestedScrollers = (detail: Locator) =>
+  detail.evaluate((root) => {
+    const body = root.querySelector('[data-silk-detail-body]');
+    return [...root.querySelectorAll('*')]
+      .filter(
+        (el) =>
+          el !== body &&
+          el.scrollHeight > el.clientHeight + 1 &&
+          ['auto', 'scroll'].includes(getComputedStyle(el).overflowY),
+      )
+      .map((el) => el.className);
+  });
+
+test('Notes grow with their content; the pencil is always visible (v1.1 §G.1)', async ({ gm }) => {
+  const { id } = await setup(gm);
+  await closePopups(gm);
+  const long = Array.from({ length: 40 }, (_, i) => `<p>Line ${i}</p>`).join('');
+  await api(gm, 'connection.setNotes', { id, notes: long });
+  await api(gm, 'connection.openDetail', { id });
+  const detail = gm.locator(`[data-silk-connection-detail="${id}"]`);
+  const notes = detail.locator('[data-silk-connection-detail-notes]');
+  await expect(notes).toContainText('Line 39');
+
+  // Read-only: as tall as the text, no inner scroll.
+  const tall = (el: Element) => el.scrollHeight <= el.clientHeight + 1 && el.clientHeight > 300;
+  expect(await nestedScrollers(detail)).toEqual([]);
+  expect(await notes.locator('.editor-content').evaluate(tall)).toBe(true);
+
+  // The pencil shows without hover and opens the editor, which grows too.
+  await gm.mouse.move(0, 0);
+  const pencil = notes.locator('prose-mirror button.toggle');
+  await expect(pencil).toBeVisible();
+  await pencil.click();
+  await expect(notes.locator('.ProseMirror')).toBeVisible();
+  expect(await nestedScrollers(detail)).toEqual([]);
+  expect(await notes.locator('.ProseMirror').evaluate(tall)).toBe(true);
 });

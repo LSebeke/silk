@@ -9,7 +9,6 @@
    * Foundry's ProseMirror editor, open the page in Foundry, reorder by drag. All commands.
    */
   import { tick, untrack } from 'svelte';
-  import type { Attachment } from 'svelte/attachments';
   import { connectionSentence, connectionsIn } from '../../core/connections';
   import {
     appearanceBlock,
@@ -22,6 +21,7 @@
   import DetailSection from './DetailSection.svelte';
   import DetailShell from './DetailShell.svelte';
   import Eye from './Eye.svelte';
+  import RichText from './RichText.svelte';
   import { liveRecords, runner } from './live.svelte';
 
   let props: { ctx: DetailContext; id: string; focus?: string | undefined } = $props();
@@ -120,17 +120,6 @@
     );
     if (yes) await run('infoBlock.delete', { id: block._id });
   }
-  /**
-   * Mounts the editor once per `{#key}` (the block's text: its own save or a Foundry edit),
-   * not on other record changes, which would close an editor that is open.
-   */
-  const editor =
-    (block: { _id: string; text: string }): Attachment<HTMLElement> =>
-    (host) =>
-      untrack(() => {
-        const { _id: id, text: html } = block;
-        return ctx.editor(host, html, (text) => void run('infoBlock.edit', { id, text }));
-      });
 
   // Drag reorder (page `sort`), among Info Blocks only.
   let dragging = $state<string>();
@@ -295,13 +284,14 @@
             >
           </div>
           {#if canEdit}
-            {#key block.text}
-              <div
-                class="text"
+            <div class="text">
+              <RichText
+                mount={ctx.editor}
+                html={block.text}
+                save={(text) => void run('infoBlock.edit', { id: block._id, text })}
                 data-silk-detail-block-text={block._id}
-                {@attach untrack(() => editor(block))}
-              ></div>
-            {/key}
+              />
+            </div>
           {/if}
         </div>
       {/each}
@@ -438,15 +428,6 @@
   }
   .text {
     margin-left: 22px;
-  }
-  /* Room for Foundry's hover edit button, also when the block is empty. */
-  .text :global(prose-mirror) {
-    position: relative;
-    min-height: 32px;
-  }
-  /* Open: a fixed height for the toolbar and the editable area. */
-  .text :global(prose-mirror.active) {
-    height: 220px;
   }
   .add {
     width: auto;

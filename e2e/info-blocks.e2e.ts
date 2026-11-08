@@ -88,7 +88,9 @@ test('Info Blocks: add from the Node menu, rename, edit text, reorder, delete, o
   );
   const [description, secrets, rumours] = blockIds as [string, string, string];
   const text = detail.locator(`[data-silk-detail-block-text="${description}"]`);
-  await text.locator('prose-mirror').hover();
+  // v1.1 §G.1: the pencil shows without hover.
+  await gm.mouse.move(0, 0);
+  await expect(text.locator('prose-mirror button.toggle')).toBeVisible();
   await text.locator('prose-mirror button.toggle').click();
   await text.locator('.ProseMirror').click();
   await gm.keyboard.type('Salzig');

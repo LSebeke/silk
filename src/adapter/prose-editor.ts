@@ -1,6 +1,7 @@
 /**
- * Foundry's ProseMirror editor for Info Block text in Element Detail (v1.1 §C.1): a toggled
- * `<prose-mirror>` showing the enriched HTML; its save hands the edited HTML on.
+ * Foundry's ProseMirror editor for Silk rich text (Info Blocks, Connection Notes; v1.1 §C.1,
+ * §G.1): a toggled `<prose-mirror>` showing the enriched HTML, sized to its content (Foundry's
+ * `content-sized`: no inner scroll, read-only or open); its save hands the edited HTML on.
  */
 export function mountProseEditor(
   host: HTMLElement,
@@ -17,6 +18,7 @@ export function mountProseEditor(
       enriched,
       toggled: true,
     });
+    el.classList.add('content-sized');
     el.addEventListener('change', () => {
       if (el.value !== html) save(el.value ?? '');
     });

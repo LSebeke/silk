@@ -5,7 +5,6 @@
    * rich text in Foundry's ProseMirror editor) and Delete with a confirmation. All commands.
    */
   import { untrack } from 'svelte';
-  import type { Attachment } from 'svelte/attachments';
   import {
     connectionSentence,
     readConnection,
@@ -18,6 +17,7 @@
   import DetailSection from './DetailSection.svelte';
   import DetailShell from './DetailShell.svelte';
   import Eye from './Eye.svelte';
+  import RichText from './RichText.svelte';
   import { liveRecords, runner } from './live.svelte';
 
   let props: { ctx: DetailContext; id: string; close?: () => void } = $props();
@@ -56,17 +56,6 @@
     await run('connection.delete', { ids: [id] });
     props.close?.();
   }
-
-  /**
-   * Mounts the editor once per `{#key}` (the notes: its own save or a merge), not on other
-   * record changes, which would close an editor that is open.
-   */
-  const editor =
-    (html: string): Attachment<HTMLElement> =>
-    (host) =>
-      untrack(() =>
-        ctx.editor(host, html, (notes) => void run('connection.setNotes', { id, notes })),
-      );
 </script>
 
 {#snippet endpoint(end: string, role: 'from' | 'to')}
@@ -170,13 +159,12 @@
     <DetailSection title={ctx.localize('SILK.ConnectionDetail.Notes')}>
       <p class="hint">{ctx.localize('SILK.ConnectionDetail.NotesHint')}</p>
       {#if ctx.available('connection.setNotes')}
-        {#key connection.notes ?? ''}
-          <div
-            class="notes"
-            data-silk-connection-detail-notes
-            {@attach untrack(() => editor(connection?.notes ?? ''))}
-          ></div>
-        {/key}
+        <RichText
+          mount={ctx.editor}
+          html={connection.notes ?? ''}
+          save={(notes) => void run('connection.setNotes', { id, notes })}
+          data-silk-connection-detail-notes
+        />
       {/if}
     </DetailSection>
     <DetailSection>
@@ -235,14 +223,6 @@
   }
   .delete {
     align-self: flex-start;
-  }
-  /* Room for Foundry's hover edit button, also when the notes are empty. */
-  .notes :global(prose-mirror) {
-    position: relative;
-    min-height: 48px;
-  }
-  .notes :global(prose-mirror.active) {
-    height: 220px;
   }
   .hint {
     margin: 0;
