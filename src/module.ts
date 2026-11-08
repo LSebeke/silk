@@ -85,7 +85,7 @@ import {
 import { createMerges, mergeCommands, routeMainMoved, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createPlayerNotes, playerNoteCommands } from './core/player-notes';
-import { hoodImage } from './core/portrait';
+import { hoodImage, type LookStage } from './core/portrait';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasBridge } from './ui/canvas/bridge';
@@ -102,7 +102,9 @@ import type { PlayerCanvasContext } from './ui/player-canvas/context';
 import { createPlayerViewPublisher, parsePlayerView } from './core/player-view';
 import { openPlayerDoc, resolvePlayerNode, type PlayerDoc } from './adapter/player-docs';
 import { pickImage } from './adapter/file-picker';
-import { installTokenFrame, loadRingPreview } from './adapter/token-frame';
+import { foundryRingStyle } from './adapter/ring-style';
+import { createSubjectFiles, drawSubject } from './adapter/subject-file';
+import { createFilePickerAssets, foundryFilePicker } from './adapter/canon-files';
 import './ui/silk.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
@@ -182,6 +184,20 @@ afterCreate.push((element) => canvasSearch.afterCreate(element));
 const layoutTween = createLayoutTween();
 
 const foundryDocs = createFoundryDocs(foundryApi());
+/** The world's token ring style (v1.1 §G.3): editor preview and subject edges. */
+const ringStyle = foundryRingStyle();
+let subjectAssets: ReturnType<typeof createFilePickerAssets> | undefined;
+/** Look writes (v1.1 §G.3): every placed token, linked and unlinked (#166); subject files. */
+const lookStage: LookStage = {
+  updateTokens: updatePlacedTokens,
+  ringEdges: (size) => ringStyle.edges(size),
+  renderSubject: createSubjectFiles({
+    draw: drawSubject,
+    write: (path, bytes) =>
+      (subjectAssets ??= createFilePickerAssets(foundryFilePicker())).write(path, bytes),
+    worldId: () => game.world?.id ?? 'world',
+  }),
+};
 /** T12 owns ↔ inventory; created below, after the materializer it uses. */
 // eslint-disable-next-line prefer-const -- the materializer's deps reach it lazily
 let owns: Owns;
@@ -206,8 +222,7 @@ const materializer = createMaterializer({
   deferImmediate: () => pipeline.deferringMaterialize(),
   parentOf: (id) => owns.parentOf(id),
   restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
-  // v1.1 §G.3 (#166): every placed token of the actor, linked and unlinked.
-  tokens: updatePlacedTokens,
+  look: lookStage,
   afterMaterialize: async (id) => {
     await owns.afterMaterialize(id);
     await lifecycle.afterMaterialize(id);
@@ -396,7 +411,7 @@ const reveal = createReveal({
   },
   adventure: adventureCheckedOut,
   hood: () => hoodImage(game.settings?.get(MODULE_ID, 'hoodedImage')),
-  stage: foundryRevealStage(),
+  stage: foundryRevealStage(lookStage),
   localize,
   refreshPages: (ids) => connectionsPages.refresh(ids),
 });
@@ -490,7 +505,7 @@ const detailContext = (): DetailContext => ({
   editor: mountProseEditor,
   look: (id) => materializer.look(id),
   pickImage,
-  ringPreview: loadRingPreview,
+  ringPreview: () => ringStyle.preview(),
 });
 
 /** T14 Adopt: existing Foundry docs become Story Elements (spec §6 Adopt). */
@@ -673,8 +688,6 @@ if (__SILK_DEV__)
     registry.register(command);
 
 Hooks.once('init', () => {
-  // v1.1 §G.3: the ring of a Silk actor's token in front, the image cropped to it.
-  installTokenFrame((doc) => !!doc?.actor?.flags?.silk?.id);
   registerSettings((ns, key, data) => game.settings?.register(ns, key as never, data as never));
   game.settings?.registerMenu(
     MODULE_ID,

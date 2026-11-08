@@ -107,4 +107,17 @@ describe('tokenUpdates', () => {
       { _id: 't2', 'texture.src': 'new' },
     ]);
   });
+
+  it('a ring colour (a Foundry Color on the token) equal to the CSS string is no change', () => {
+    // Foundry's Color: a Number that serialises to its CSS string.
+    const color = Object.assign(new Number(0xff0000), { toJSON: () => '#ff0000' });
+    const tokens = [
+      { id: 't1', actorId: 'a', ring: { colors: { ring: color, background: null } } },
+    ];
+    const data = { 'ring.colors.ring': '#ff0000', 'ring.colors.background': null };
+    expect(tokenUpdates(tokens, 'a', data)).toEqual([]);
+    expect(tokenUpdates(tokens, 'a', { 'ring.colors.ring': '#00ff00' })).toHaveLength(1);
+    // An unset value (undefined) is null.
+    expect(tokenUpdates(tokens, 'a', { 'ring.subject.texture': null })).toEqual([]);
+  });
 });

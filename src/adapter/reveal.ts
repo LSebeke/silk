@@ -4,6 +4,7 @@
  */
 import { MODULE_ID } from '../constants';
 import { touchesPortrait } from '../core/portrait';
+import type { LookStage } from '../core/portrait';
 import type { Reveal, RevealStage } from '../core/reveal';
 import { SILK_WRITE, isSilkWrite } from './working-copy-journal';
 
@@ -14,6 +15,12 @@ interface TokenLike {
 
 const getPath = (obj: unknown, path: string): unknown =>
   path.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], obj);
+
+/** A token value as its source data has it: a Foundry Color as its CSS string, unset as null. */
+const plain = (value: unknown): unknown =>
+  value && typeof value === 'object' && 'toJSON' in value
+    ? (value as { toJSON(): unknown }).toJSON()
+    : (value ?? null);
 
 /**
  * Update data for the actor's placed tokens, linked and unlinked, that differ from `data`
@@ -27,7 +34,7 @@ export function tokenUpdates(
   const out: Record<string, unknown>[] = [];
   for (const token of tokens) {
     if (token.actorId !== actorId || !token.id) continue;
-    if (Object.entries(data).every(([k, v]) => getPath(token, k) === v)) continue;
+    if (Object.entries(data).every(([k, v]) => plain(getPath(token, k)) === (v ?? null))) continue;
     out.push({ _id: token.id, ...data });
   }
   return out;
@@ -52,9 +59,9 @@ export async function updatePlacedTokens(
   }
 }
 
-export function foundryRevealStage(): RevealStage {
+export function foundryRevealStage(look: LookStage): RevealStage {
   return {
-    updateTokens: (actorUuid, data) => updatePlacedTokens(actorUuid, data),
+    ...look,
     async show({ uuid, image, title }) {
       const Journal = foundry.documents.collections.Journal as unknown as {
         show(doc: unknown, options: object): Promise<unknown>;

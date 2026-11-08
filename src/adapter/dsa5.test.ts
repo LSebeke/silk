@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { dsa5Sections } from './dsa5';
+import { dsa5Mapping, dsa5Sections } from './dsa5';
+
+describe('DSA5 size factor (v1.1 §G.3, #168)', () => {
+  const factor = (value?: string) =>
+    dsa5Mapping.sizeFactor(value ? { status: { size: { value } } } : {});
+
+  it('tiny and small shrink the token; average and up keep scale 1 (DSA5 grows width)', () => {
+    expect([factor('tiny'), factor('small'), factor('average'), factor('big')]).toEqual([
+      0.5, 0.8, 1, 1,
+    ]);
+    expect(factor()).toBe(1);
+    expect(factor('huge?')).toBe(1);
+  });
+});
 
 describe('DSA5 sheet section labels (spec §2, §11.4)', () => {
   const npc = { documentName: 'Actor', type: 'npc' };

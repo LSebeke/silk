@@ -12,13 +12,11 @@ export function setup(opts: { adventure?: boolean } = {}) {
   const maps = new Map<string, RevelationMap>();
   let campaign: string | null = opts.adventure === false ? null : 'camp1';
   let world: RevelationMap = emptyRevelationMap();
-  const tokens: { actor: string; data: Record<string, unknown> }[] = [];
   const shown: { uuid?: string; image?: string; title?: string }[] = [];
   const pageRefreshes: string[][] = [];
+  const { tokens } = t;
   const stage: RevealStage = {
-    async updateTokens(actor, data) {
-      tokens.push({ actor, data });
-    },
+    ...t.look,
     async show(target) {
       shown.push(target);
     },

@@ -17,7 +17,7 @@ import { isRevealed, type RevelationMap } from '../campaigns';
 import { appearanceBlock, hasAppearanceClass, type StoryElement } from '../elements';
 import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { DocSnapshot, SystemMapping } from '../materialize/port';
-import { hoodOf, showWrites, type PortraitDoc, type Shown } from '../portrait';
+import { hoodOf, showWrites, type PortraitDoc, type PortraitWrites, type Shown } from '../portrait';
 
 export const OWNERSHIP = { NONE: 0, LIMITED: 1, OBSERVER: 2, OWNER: 3 } as const;
 /** `CONST.TOKEN_DISPLAY_MODES`. */
@@ -31,8 +31,8 @@ export const PLAYER_NOTE_LEVEL = OWNERSHIP.OWNER;
 export type RevealWrite =
   | { op: 'update'; uuid: string; data: Record<string, unknown> }
   | { op: 'page'; uuid: string; pageId: string; data: Record<string, unknown> }
-  /** Every placed token of the actor (all Scenes). */
-  | { op: 'tokens'; uuid: string; data: Record<string, unknown> };
+  /** A look write: the actor, its ring subject file and every placed token (all Scenes). */
+  | { op: 'look'; uuid: string; doc: PortraitDoc; writes: PortraitWrites };
 
 export interface OwnershipInput {
   element: StoryElement;
@@ -123,14 +123,14 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
  * img and token textures as for an element whose Appearance is not Revealed.
  */
 export function hoodWrites(
-  input: Pick<OwnershipInput, 'element' | 'main' | 'map' | 'hood'>,
+  input: Pick<OwnershipInput, 'element' | 'main' | 'map' | 'hood' | 'system'>,
 ): RevealWrite[] {
   if (!hasAppearanceClass(input.element.class)) return [];
   return appearanceWrites(input, isRevealed(input.map, 'element', input.element.id), false);
 }
 
 function appearanceWrites(
-  input: Pick<OwnershipInput, 'element' | 'main' | 'map' | 'hood'>,
+  input: Pick<OwnershipInput, 'element' | 'main' | 'map' | 'hood' | 'system'>,
   revealed: boolean,
   appearance = isRevealed(input.map, 'appearance', input.element.id),
 ): RevealWrite[] {
@@ -138,18 +138,12 @@ function appearanceWrites(
   const doc = main as PortraitDoc & { prototypeToken?: { displayName?: number } };
   const showReal = !!appearanceBlock(el) && appearance && revealed;
   const shown: Shown = showReal ? 'real' : { hood: hoodOf(el, input.hood) };
-  const portrait = showWrites(doc, shown, el.img);
+  const portrait = showWrites(doc, shown, el.img, input.system.sizeFactor(main.system));
   const display = revealed ? DISPLAY.HOVER : DISPLAY.OWNER;
 
   const data = { ...portrait.doc };
   if (doc.prototypeToken?.displayName !== display) data['prototypeToken.displayName'] = display;
-  const writes: RevealWrite[] = [];
-  if (Object.keys(data).length) writes.push({ op: 'update', uuid: main.uuid, data });
   // Placed tokens follow on every apply (the adapter skips unchanged ones).
-  writes.push({
-    op: 'tokens',
-    uuid: main.uuid,
-    data: { ...portrait.tokens, displayName: display },
-  });
-  return writes;
+  const tokens = { ...portrait.tokens, displayName: display };
+  return [{ op: 'look', uuid: main.uuid, doc, writes: { ...portrait, doc: data, tokens } }];
 }

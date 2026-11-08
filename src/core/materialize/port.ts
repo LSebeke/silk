@@ -33,8 +33,21 @@ export interface SilkDocFlags {
   img?: string;
   token?: string;
   hood?: string;
-  /** The real token position and scale while hooded (v1.1 §G.3); the hood shows centred. */
+  /**
+   * The real token position and scale (v1.1 §G.3), when not centred; the token itself shows
+   * the hood centred, or the pose baked into the subject file.
+   */
   pose?: { anchorX: number; anchorY: number; scale: number };
+  /**
+   * The subject file Silk wrote to `ring.subject.texture` (v1.1 §G.3) and what it was
+   * rendered from: image, pose and the ring style's edges (a changed style rebuilds it).
+   */
+  subject?: {
+    file: string;
+    src: string;
+    pose: { anchorX: number; anchorY: number; scale: number };
+    edges: { inner: number; outer: number };
+  };
   /** On a Player Note page: its authoring Campaign (§9). */
   campaign?: string;
   /** On an Info Block page: it is the Appearance block (v1.1 §C.2). */
@@ -157,6 +170,11 @@ export interface SystemMapping {
   questStatusUpdate(questKey: string, status: number): Record<string, unknown>;
   /** The Actor status effect id meaning dead (§7 Dead). */
   deadEffect: string;
+  /**
+   * The token texture scale the system gives an actor of this `system` data (its size
+   * factor, v1.1 §G.3 #168); 1 when it gives none.
+   */
+  sizeFactor(system: unknown): number;
   /** Update data setting the quest title on its page. */
   questTitleUpdate(questKey: string, title: string): Record<string, unknown>;
   /**

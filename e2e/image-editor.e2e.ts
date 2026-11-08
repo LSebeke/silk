@@ -1,7 +1,7 @@
 /**
  * Image & token editor against real Foundry (v1.1 §G.3): opened from Element Detail, hooded
- * Person: the ring and Lock rotation apply at once, the hood fits inside the ring, the position
- * waits in `flags.silk.pose`, Reset clears it.
+ * Person: the ring and Lock rotation apply at once, the hood goes through the subject crop (an
+ * uploaded subject file, #171), the position waits in `flags.silk.pose`, Reset clears it.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate over untyped Foundry docs */
 import type { Page } from '@playwright/test';
@@ -40,6 +40,7 @@ const actor = (page: Page, id: string) =>
       anchorX: t.texture.anchorX as number,
       scaleX: t.texture.scaleX as number,
       ring: t.ring.enabled as boolean,
+      subject: t.ring.subject.texture as string | null,
       lockRotation: t.lockRotation as boolean,
       pose: doc.flags.silk?.pose as object | undefined,
       hood: doc.flags.silk?.hood as string | undefined,
@@ -65,8 +66,13 @@ test('Image & token editor: hooded Person, ring at once, position waits, Reset',
 
   await editor.locator('[data-silk-image-ring-enabled]').check();
   await expect.poll(async () => (await actor(gm, id)).ring).toBe(true);
-  // The hood shrinks to fit inside the ring (#133).
-  await expect.poll(async () => (await actor(gm, id)).scaleX).toBe(0.7);
+  // The hood goes through the subject crop: its own file; the texture keeps its scale (#168).
+  await expect
+    .poll(async () => (await actor(gm, id)).subject)
+    .toMatch(/^silk\/[^/]+\/tokens\/[^/]+-[0-9a-f]{16}\.webp$/);
+  const hoodSubject = (await actor(gm, id)).subject as string;
+  expect(await gm.evaluate(async (p) => (await fetch(p)).ok, hoodSubject)).toBe(true);
+  expect((await actor(gm, id)).scaleX).toBe(1);
   // The preview shows the world ring style (#135).
   await expect(editor.locator('[data-silk-image-preview-ring]')).toBeVisible();
 
@@ -87,8 +93,8 @@ test('Image & token editor: hooded Person, ring at once, position waits, Reset',
   await expect.poll(async () => (await actor(gm, id)).pose).toBeTruthy();
   const posed = await actor(gm, id);
   expect(posed.pose).toMatchObject({ scale: 2 });
-  // Players keep seeing the hood, centred.
-  expect(posed).toMatchObject({ img: hood, src: hood, anchorX: 0.5, scaleX: 0.7 });
+  // Players keep seeing the hood, centred: the same hood subject.
+  expect(posed).toMatchObject({ img: hood, src: hood, anchorX: 0.5, subject: hoodSubject });
 
   await editor.locator('[data-silk-image-reset]').click();
   await expect.poll(async () => (await actor(gm, id)).pose).toBeUndefined();

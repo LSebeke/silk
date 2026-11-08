@@ -47,7 +47,15 @@ import {
 } from './layout';
 import { blockPageText, restorePortrait } from './appearance-page';
 import { deepMerge } from '../util/objects';
-import { imageWrites, lookOf, type ImageEdit, type Look, type PortraitDoc } from '../portrait';
+import {
+  imageWrites,
+  lookOf,
+  writeLook,
+  type ImageEdit,
+  type Look,
+  type LookStage,
+  type PortraitDoc,
+} from '../portrait';
 import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
 export type MaterializeMode = 'immediate' | 'onDemand';
@@ -88,8 +96,8 @@ export interface MaterializerDeps {
    * T12: owned Items move into a new actor).
    */
   afterMaterialize?(id: string): Promise<void>;
-  /** Every placed token of the actor (linked and unlinked), where they differ (v1.1 §G.3). */
-  tokens?(actorUuid: string, data: Record<string, unknown>): Promise<void>;
+  /** Placed tokens and ring subject files of a look write (v1.1 §G.3). */
+  look?: LookStage;
 }
 
 export interface Materializer {
@@ -435,9 +443,10 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
         if (img !== undefined) await docs.updatePage(main.uuid, cover, { src: img || null });
       } else {
         // Hood-aware (§8, v1.1 §G.3): the Portrait module decides what is shown.
-        const writes = imageWrites(main, edit, el.img);
-        if (Object.keys(writes.doc).length) await docs.update(main.uuid, writes.doc);
-        if (writes.tokens) await deps.tokens?.(main.uuid, writes.tokens);
+        const writes = imageWrites(main, edit, el.img, system.sizeFactor(main.system));
+        if (deps.look)
+          await writeLook(deps.look, (u, d) => docs.update(u, d), main.uuid, main, writes);
+        else if (Object.keys(writes.doc).length) await docs.update(main.uuid, writes.doc);
       }
       await sync(id);
     },
@@ -447,7 +456,11 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       if (!el) return undefined;
       // A Ghost has no doc yet: its record image, no ring, centred.
       const main = (el.uuid && docsOf(id)?.main) || { img: el.img, flags: { silk: {} } };
-      return lookOf(main as PortraitDoc, el.img);
+      return lookOf(
+        main as PortraitDoc,
+        el.img,
+        system.sizeFactor((main as { system?: unknown }).system),
+      );
     },
 
     async setFields(id, fields) {
