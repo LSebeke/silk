@@ -258,10 +258,47 @@ describe('Appearance (Person/Creature)', () => {
     expect(hooded.prototypeToken.texture.src).toBe(HOOD);
     expect(hooded.prototypeToken.texture.anchorX ?? 0.5).toBe(0.5);
     expect(hooded.prototypeToken.ring.enabled).toBe(true);
+    // The hood went through the subject crop (#171).
+    expect(t.subjects.map((s) => s.spec.src)).toEqual([HOOD]);
     await t.run('reveal.appearance', { id });
     const shown = t.doc(id) as Doc;
-    expect(shown.prototypeToken.texture).toMatchObject({ src: 'dragon-token.webp', anchorX: 0.3 });
-    expect(shown.flags.silk.pose).toBeUndefined();
+    expect(shown.prototypeToken.texture.src).toBe('dragon-token.webp');
+    expect(shown.prototypeToken.texture.anchorX ?? 0.5).toBe(0.5);
+    expect(t.subjects.at(-1)?.spec).toMatchObject({
+      src: 'dragon-token.webp',
+      pose: { anchorX: 0.3, anchorY: 0.5, scale: 1 },
+    });
+    expect(shown.flags.silk.pose).toEqual({ anchorX: 0.3, anchorY: 0.5, scale: 1 });
+  });
+
+  it('GM load migrates a round 2 look (v1.1 §G.3.2): subject file, size factor back', async () => {
+    const t = setup();
+    const id = await materialized(t, 'creature', 'Ratte');
+    await t.run('reveal.element', { id });
+    await t.run('reveal.appearance', { id });
+    const uuid = t.doc(id).uuid;
+    await t.docs.update(uuid, {
+      'system.status.size.value': 'small',
+      'prototypeToken.ring.enabled': true,
+      'prototypeToken.texture.fit': 'cover',
+      'prototypeToken.texture.anchorX': 0.4,
+      'prototypeToken.texture.scaleX': 1.5,
+      'prototypeToken.texture.scaleY': 1.5,
+    });
+    const before = t.subjects.length;
+    await t.lifecycle.reconcile();
+    type Doc = ReturnType<typeof t.doc> & {
+      prototypeToken: { texture: Record<string, unknown>; ring: { subject: { texture: string } } };
+    };
+    const doc = t.doc(id) as Doc;
+    expect(t.subjects.slice(before).map((s) => s.spec.pose)).toEqual([
+      { anchorX: 0.4, anchorY: 0.5, scale: 1.5 },
+    ]);
+    expect(doc.prototypeToken.texture).toMatchObject({ fit: 'contain', scaleX: 0.8, scaleY: 0.8 });
+    expect(doc.prototypeToken.ring.subject.texture).toBe(t.subjects.at(-1)?.file);
+    // Done once: the next load keeps the file.
+    await t.lifecycle.reconcile();
+    expect(t.subjects).toHaveLength(before + 1);
   });
 });
 

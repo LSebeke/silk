@@ -1,5 +1,5 @@
 /** What the Element Detail window talks to (spec §8 Controls). Built by `module.ts`. */
-import type { RingPreview } from '../../adapter/token-frame';
+import type { RingPreview } from '../../adapter/ring-style';
 import type { Look } from '../../core/portrait';
 import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';

@@ -15,7 +15,17 @@ export type Dsa5MerchantType = 'none' | 'merchant' | 'loot' | 'epic';
 /** The slice of actor `system` Silk reads/writes. */
 export interface Dsa5ActorSystem {
   merchant?: { merchantType?: Dsa5MerchantType };
+  status?: { size?: { value?: string } };
 }
+
+/** `DSA5.tokenSizeCategories` (config-dsa5.js). */
+const TOKEN_SIZES: Record<string, number> = {
+  tiny: 0.5,
+  small: 0.8,
+  average: 1,
+  big: 2,
+  giant: 4,
+};
 
 /** Quest status 0 open / 1 done / 2 failed; audience 0 Party / 1 players / 2 GM. */
 export interface Dsa5Quest {
@@ -78,6 +88,12 @@ export const dsa5Mapping: SystemMapping = {
   }),
   /** First of `DSA5.statusEffects`; set via `actor.addCondition('dead')` (§7 Dead). */
   deadEffect: 'dead',
+  sizeFactor(system) {
+    const size = (system as Dsa5ActorSystem | undefined)?.status?.size?.value;
+    const factor = size ? TOKEN_SIZES[size] : undefined;
+    // `DSA5_Utility.calcTokenSize`: below 1 the scale, above it width/height (scale 1).
+    return factor && factor < 1 ? factor : 1;
+  },
   questTitleUpdate: (questKey, title) => ({ [`system.quests.${questKey}.title`]: title }),
   questVisibility(questKey, pageSystem, visible, blocks) {
     const quest = (pageSystem as Dsa5QuestlogSystem | undefined)?.quests?.[questKey];

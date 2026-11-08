@@ -39,7 +39,7 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     ]);
   });
 
-  it('setImage token (v1.1 §G.3): prototype token and the placed tokens', async () => {
+  it('setImage token (v1.1 §G.3): prototype, subject file and the placed tokens', async () => {
     const t = setup({ mode: 'immediate' });
     const id = await t.create('person', 'Alrik');
     await t.registry.run('element.setImage', {
@@ -48,13 +48,29 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
       token: { sameAsImage: true, ring: { enabled: true }, anchor: { x: 0.4, y: 0.3 } },
     });
     const doc = t.doc(id) as ReturnType<typeof t.doc> & {
-      prototypeToken: { texture: { src: string; anchorX: number }; ring: { enabled: boolean } };
+      prototypeToken: {
+        texture: { src: string };
+        ring: { enabled: boolean; subject: { texture: string } };
+      };
     };
     expect(doc.img).toBe('alrik.webp');
-    expect(doc.prototypeToken.texture).toMatchObject({ src: 'alrik.webp', anchorX: 0.4 });
+    // The pose is baked into the subject file; the texture stays the uncropped image.
+    expect(doc.prototypeToken.texture).toEqual({ src: 'alrik.webp' });
     expect(doc.prototypeToken.ring.enabled).toBe(true);
+    const [subject] = t.subjects;
+    expect(subject?.spec).toMatchObject({
+      src: 'alrik.webp',
+      pose: { anchorX: 0.4, anchorY: 0.3, scale: 1 },
+    });
+    expect(doc.prototypeToken.ring.subject.texture).toBe(subject?.file);
     expect(t.tokens).toEqual([
-      { actor: doc.uuid, data: expect.objectContaining({ 'texture.src': 'alrik.webp' }) },
+      {
+        actor: doc.uuid,
+        data: expect.objectContaining({
+          'texture.src': 'alrik.webp',
+          'ring.subject.texture': subject?.file,
+        }),
+      },
     ]);
   });
 
@@ -80,11 +96,9 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     expect(t.element(id).uuid).toBeUndefined();
     await t.registry.run('element.setImage', { id, token: { scale: 1.5 } });
     expect(t.toasts).toHaveLength(1);
-    const doc = t.doc(id) as ReturnType<typeof t.doc> & {
-      prototypeToken: { texture: { scaleX: number } };
-    };
+    const doc = t.doc(id);
     expect(doc.img).toBe('wolf.webp');
-    expect(doc.prototypeToken.texture.scaleX).toBe(1.5);
+    expect(doc.flags.silk.pose).toEqual({ anchorX: 0.5, anchorY: 0.5, scale: 1.5 });
   });
 
   it('setImage on a Ghost: a sheet image with the token same as it stays in the record', async () => {

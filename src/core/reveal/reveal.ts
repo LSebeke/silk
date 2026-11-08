@@ -26,14 +26,12 @@ import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { Materializer } from '../materialize/materializer';
 import type { DocSnapshot, FoundryDocs, SystemMapping } from '../materialize/port';
 import type { WorkingCopy } from '../working-copy';
-import { isHooded } from '../portrait';
+import { isHooded, writeLook, type LookStage } from '../portrait';
 import { OWNERSHIP, hoodWrites, ownershipWrites, type RevealWrite } from './ownership';
 import { applyReveal, touchedElements, type RevealGraph, type RevealTarget } from './rules';
 
 /** Foundry effects outside the docs port. */
-export interface RevealStage {
-  /** Updates every placed token of the actor (all Scenes) where it differs. */
-  updateTokens(actorUuid: string, data: Record<string, unknown>): Promise<void>;
+export interface RevealStage extends LookStage {
   /** Forced `Journal.show` of a journal/page (`uuid`), or a shared image. */
   show(target: { uuid?: string; image?: string; title?: string }): Promise<void>;
 }
@@ -164,7 +162,7 @@ export function createReveal(deps: RevealDeps): Reveal {
   async function write(w: RevealWrite) {
     if (w.op === 'update') await deps.docs.update(w.uuid, w.data);
     else if (w.op === 'page') await deps.docs.updatePage(w.uuid, w.pageId, w.data);
-    else await deps.stage.updateTokens(w.uuid, w.data);
+    else await writeLook(deps.stage, (u, d) => deps.docs.update(u, d), w.uuid, w.doc, w.writes);
   }
 
   /** Makes the element's docs match `map`. */
@@ -350,7 +348,13 @@ export function createReveal(deps: RevealDeps): Reveal {
       const el = read(id);
       const found = deps.materializer.docsOf(id);
       if (!el || !found) return;
-      for (const w of hoodWrites({ element: el, main: found.main, map: state, hood: deps.hood() }))
+      for (const w of hoodWrites({
+        element: el,
+        main: found.main,
+        map: state,
+        hood: deps.hood(),
+        system: deps.system,
+      }))
         await write(w);
     },
     reconcile: () =>

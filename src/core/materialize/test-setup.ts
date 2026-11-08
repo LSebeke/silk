@@ -5,6 +5,7 @@ import { createRegistry } from '../commands/registry';
 import { connectionCommands } from '../connections';
 import { elementCommands, readElement, type InfoBlock, type StoryElement } from '../elements';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
+import { testLookStage } from '../portrait/test-stage';
 import { appearanceMigration } from './appearance-migration';
 import { createLifecycle, lifecycleCommands, type DeleteAnswer, type Lifecycle } from './lifecycle';
 import { createMaterializer, materializeCommands, type MaterializeMode } from './materializer';
@@ -47,8 +48,8 @@ export function setup(
   const docs = createMemoryDocs();
   const registry = createRegistry(() => ({ isGM: true }));
   const toasts: string[] = [];
-  /** Linked placed-token writes (`tokens` dep). */
-  const tokens: { actor: string; data: Record<string, unknown> }[] = [];
+  /** Placed-token writes and subject files (`look` dep). */
+  const { stage: look, tokens, subjects } = testLookStage();
   const confirms: number[] = [];
   let mode: MaterializeMode = opts.mode ?? 'onDemand';
   let n = 0;
@@ -68,7 +69,7 @@ export function setup(
     },
     visibleIds: () => opts.visible ?? [...workingCopy.records().keys()],
     selection: () => selection,
-    tokens: async (actor, data) => void tokens.push({ actor, data }),
+    look,
     restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
     afterMaterialize: async (id) => {
       await lifecycle.afterMaterialize(id);
@@ -160,6 +161,8 @@ export function setup(
     commit: (hash: string) => (lastCommit = { hash, snapshot: new Map(workingCopy.records()) }),
     toasts,
     tokens,
+    subjects,
+    look,
     confirms,
     create,
     element,

@@ -20,6 +20,7 @@ import { must } from '../materialize/test-setup';
 import { createOwns, type Owns } from '../owns';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
 import { emptyRevelationMap } from '../campaigns';
+import { testLookStage } from '../portrait/test-stage';
 import { createReveal } from '../reveal';
 import { HOOD } from '../reveal/test-setup';
 import { adoptCommands, createAdopt, type AdoptFolder, type UseForAnswer } from './adopt';
@@ -100,7 +101,7 @@ export function setup() {
   const folders = new Map<string, AdoptFolder>();
   const compendium = new Map<string, DocSnapshot>();
   const revealed: { elements: string[]; infoBlocks: string[]; appearance: string[] }[] = [];
-  const tokens: { actor: string; data: Record<string, unknown> }[] = [];
+  const { stage: look, tokens } = testLookStage();
   let world = emptyRevelationMap();
   const reveal = createReveal({
     workingCopy: () => workingCopy,
@@ -116,7 +117,7 @@ export function setup() {
     adventure: () => false,
     hood: () => HOOD,
     stage: {
-      updateTokens: async (actor, data) => void tokens.push({ actor, data }),
+      ...look,
       show: async () => {},
     },
     localize,

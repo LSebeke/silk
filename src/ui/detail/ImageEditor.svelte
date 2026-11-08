@@ -3,18 +3,20 @@
    * Image & token editor (v1.1 §G.3): sheet image, token image, ring, Lock rotation and the
    * token's position in a preview of the final token (drag: anchor, wheel or slider: scale).
    * Every change runs `element.setImage`, which is hood-aware and Ghost-aware. The preview
-   * uses the same token geometry as the writes (core/portrait), with the world's ring style:
-   * background colour, the image cropped to the ring's inner circle, the ring frame.
+   * draws the subject with the same geometry as the subject file (core/portrait), with the
+   * world's ring style: background colour, the subject cut to the ring's inner edge, the ring
+   * frame; all at the actor's size factor in its grid square (#168).
    */
   import { onDestroy, untrack } from 'svelte';
-  import type { RingPreview, SheetRect } from '../../adapter/token-frame';
+  import { DEFAULT_EDGES, type RingPreview, type SheetRect } from '../../adapter/ring-style';
   import { readElement } from '../../core/elements';
   import {
     CENTRED,
     clampPose,
     dragPose,
     SCALE,
-    tokenGeometry,
+    subjectBox,
+    subjectCrop,
     type ImageEdit,
     type Pose,
   } from '../../core/portrait';
@@ -28,7 +30,7 @@
   const id = untrack(() => props.id);
   const t = (key: string) => ctx.localize(`SILK.ImageEditor.${key}`);
 
-  /** Preview diameter (px). */
+  /** Preview grid square (px). */
   const SIZE = 180;
 
   const live = liveRecords(ctx);
@@ -50,10 +52,14 @@
   let draft = $state.raw<Pose | undefined>();
   const pose = $derived(draft ?? look?.pose ?? CENTRED);
   const ring = $derived(look?.ring ?? { enabled: false, colors: { ring: null, background: null } });
+  /** The token's side (px): the size factor of the grid square (#168). */
+  const tokenPx = $derived(SIZE * (look?.sizeFactor ?? 1));
 
   /** The world's ring style (#135); `undefined` until loaded or without one. */
   let style = $state.raw<RingPreview | undefined>();
   void ctx.ringPreview().then((s) => (style = s));
+  /** The subject's crop radius with the ring on (the same as the file's); none without. */
+  const crop = $derived(ring.enabled ? subjectCrop(style?.edges ?? DEFAULT_EDGES) : undefined);
   /** The token image's width / height, once loaded. */
   let aspect = $state(1);
 
@@ -90,9 +96,9 @@
   }
   function move(e: PointerEvent) {
     if (!drag) return;
-    const dx = (e.clientX - drag.x) / SIZE;
-    const dy = (e.clientY - drag.y) / SIZE;
-    draft = dragPose(drag.from, dx, dy, ring.enabled, aspect);
+    const dx = (e.clientX - drag.x) / tokenPx;
+    const dy = (e.clientY - drag.y) / tokenPx;
+    draft = dragPose(drag.from, dx, dy, crop, aspect);
   }
   function up() {
     if (!drag) return;
@@ -105,13 +111,12 @@
   function wheel(e: WheelEvent) {
     e.preventDefault();
     const scale = pose.scale * (e.deltaY < 0 ? 1.05 : 1 / 1.05);
-    draft = clampPose({ ...pose, scale }, ring.enabled, aspect);
+    draft = clampPose({ ...pose, scale }, crop, aspect);
     clearTimeout(wheelTimer);
     wheelTimer = setTimeout(() => draft && void writePose(draft), 300);
   }
   onDestroy(() => clearTimeout(wheelTimer));
-  const slide = (value: string) =>
-    clampPose({ ...pose, scale: Number(value) }, ring.enabled, aspect);
+  const slide = (value: string) => clampPose({ ...pose, scale: Number(value) }, crop, aspect);
 
   function reset() {
     void commit({
@@ -123,11 +128,12 @@
     });
   }
 
-  const box = $derived(tokenGeometry(pose, ring.enabled, { aspect }).box);
-  /** CSS drawing one spritesheet frame at the preview size. */
+  const subject = $derived(subjectBox(pose, crop, aspect));
+  const box = $derived(subject.box);
+  /** CSS drawing one spritesheet frame at the token size. */
   function sprite(rect: SheetRect | undefined) {
     if (!style || !rect) return undefined;
-    const k = SIZE / rect.w;
+    const k = tokenPx / rect.w;
     return [
       `background-image: url("${style.src}")`,
       `background-size: ${style.sheet.w * k}px ${style.sheet.h * k}px`,
@@ -139,7 +145,7 @@
   /** The colour band as a radial gradient (radius 1 = 50% of the frame). */
   const band = $derived(
     style && ringColor
-      ? `radial-gradient(circle closest-side, transparent ${style.band.start * 100}%, ${ringColor} ${style.band.start * 100}%, ${ringColor} ${style.band.end * 100}%, transparent ${style.band.end * 100}%)`
+      ? `radial-gradient(circle closest-side, transparent ${style.edges.inner * 100}%, ${ringColor} ${style.edges.inner * 100}%, ${ringColor} ${style.edges.outer * 100}%, transparent ${style.edges.outer * 100}%)`
       : undefined,
   );
 </script>
@@ -233,8 +239,6 @@
     <DetailSection title={t('Position')} data-silk-image-position>
       <div
         class="frame"
-        class:ring={ring.enabled}
-        class:styled={ring.enabled && style}
         style:width="{SIZE}px"
         style:height="{SIZE}px"
         style:--ring={ringColor ?? 'currentColor'}
@@ -250,44 +254,53 @@
         onwheel={wheel}
         data-silk-image-preview
       >
-        {#if ring.enabled}
-          <div class="layer" style={sprite(style?.background)} data-silk-image-preview-background>
-            {#if backgroundColor}
-              <div
-                class="layer tint"
-                style:background={backgroundColor}
-                style:clip-path="circle({(style?.band.end ?? 1) * 50}% at 50% 50%)"
-              ></div>
-            {/if}
-          </div>
-        {/if}
         <div
-          class="layer"
-          style:clip-path={ring.enabled
-            ? `circle(${(style?.crop ?? 0.85) * 50}% at 50% 50%)`
-            : undefined}
+          class="token"
+          class:ring={ring.enabled}
+          class:styled={ring.enabled && style}
+          style:width="{tokenPx}px"
+          style:height="{tokenPx}px"
+          data-silk-image-preview-token
         >
-          <img
-            src={look.token || undefined}
-            alt=""
-            draggable="false"
-            onload={(e) => {
-              const img = e.currentTarget as HTMLImageElement;
-              aspect = img.naturalWidth / (img.naturalHeight || 1) || 1;
-            }}
-            style:left="{box.left * SIZE}px"
-            style:top="{box.top * SIZE}px"
-            style:width="{box.width * SIZE}px"
-            style:height="{box.height * SIZE}px"
-          />
-        </div>
-        {#if ring.enabled && style}
-          <div class="layer" style={sprite(style.ring)} data-silk-image-preview-ring>
-            {#if band}
-              <div class="layer tint" style:background={band}></div>
-            {/if}
+          {#if ring.enabled}
+            <div class="layer" style={sprite(style?.background)} data-silk-image-preview-background>
+              {#if backgroundColor}
+                <div
+                  class="layer tint"
+                  style:background={backgroundColor}
+                  style:clip-path="circle({(style?.edges.outer ?? 1) * 50}% at 50% 50%)"
+                ></div>
+              {/if}
+            </div>
+          {/if}
+          <div
+            class="layer"
+            style:clip-path={subject.circle !== undefined
+              ? `circle(${subject.circle * 100}% at 50% 50%)`
+              : undefined}
+          >
+            <img
+              src={look.token || undefined}
+              alt=""
+              draggable="false"
+              onload={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                aspect = img.naturalWidth / (img.naturalHeight || 1) || 1;
+              }}
+              style:left="{box.left * tokenPx}px"
+              style:top="{box.top * tokenPx}px"
+              style:width="{box.width * tokenPx}px"
+              style:height="{box.height * tokenPx}px"
+            />
           </div>
-        {/if}
+          {#if ring.enabled && style}
+            <div class="layer" style={sprite(style.ring)} data-silk-image-preview-ring>
+              {#if band}
+                <div class="layer tint" style:background={band}></div>
+              {/if}
+            </div>
+          {/if}
+        </div>
       </div>
       <label class="row">
         <span class="label">{t('Scale')}</span>
@@ -365,12 +378,20 @@
     touch-action: none;
     border: 2px dashed #888;
   }
-  .frame.ring {
-    border-radius: 50%;
-    border: 6px solid var(--ring);
+  .token {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    overflow: hidden;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
-  .frame.styled {
-    border: 0;
+  .token.ring {
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 6px var(--ring);
+  }
+  .token.styled {
+    box-shadow: none;
   }
   .frame:active {
     cursor: grabbing;
@@ -384,7 +405,7 @@
     border-radius: 50%;
     mix-blend-mode: multiply;
   }
-  .frame img {
+  .token img {
     position: absolute;
     max-width: none;
     border: 0;
