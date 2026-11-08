@@ -2,7 +2,7 @@
  * Showing the hood (spec §8, v1.1 §C.2, §G.3.1): `img` and every token show the hood; the
  * real image, token and pose wait in the flags, and what the hood overwrites is kept as
  * Unhooded (glossary), the prototype's on the actor and each placed token's on itself, so
- * Reveal restores all of it exactly. Pure.
+ * Reveal restores all of it exactly. The hood always shows the ring (#182). Pure.
  */
 import type { HoodSnapshot, Unhooded } from './flags';
 import { CENTRED } from './geometry';
@@ -11,22 +11,31 @@ import {
   orderOf,
   realPortrait,
   realPose,
+  realRing,
   ringOf,
   type LookSource,
   type PortraitDoc,
   type PortraitWrites,
   type TokenData,
 } from './portrait';
-import { hoodSubject, hoodTokenData, poseFlag, prototypeUpdate } from './writes';
+import {
+  hoodSubject,
+  hoodTokenData,
+  poseFlag,
+  prototypeUpdate,
+  ringData,
+  ringFlag,
+} from './writes';
 
 /**
- * What the hood is about to overwrite on `token` (prototype or placed). `withSrc`: the
- * image too (a placed token's own; the actor's real one waits in `flags.silk.token`).
+ * What the hood is about to overwrite on `token` (prototype or placed). `own`: the image and
+ * ring too (a placed token's own; the actor's real ones wait in `flags.silk.token` / `.ring`).
  */
-export function hoodSnapshot(token: TokenData | undefined, withSrc = true): HoodSnapshot {
+export function hoodSnapshot(token: TokenData | undefined, own = true): HoodSnapshot {
   return {
+    ...(own ? { ring: ringOf(token) } : {}),
     texture: {
-      ...(withSrc ? { src: token?.texture?.src ?? null } : {}),
+      ...(own ? { src: token?.texture?.src ?? null } : {}),
       fit: token?.texture?.fit ?? 'contain',
       anchorX: token?.texture?.anchorX ?? CENTRED.anchorX,
       anchorY: token?.texture?.anchorY ?? CENTRED.anchorY,
@@ -38,11 +47,12 @@ export function hoodSnapshot(token: TokenData | undefined, withSrc = true): Hood
   };
 }
 
-/** A snapshot as token update keys (unprefixed); its `src` only if it has one. */
+/** A snapshot as token update keys (unprefixed); its `src` and ring only if it has them. */
 export function snapshotData(snapshot: HoodSnapshot): Record<string, unknown> {
   const { src, fit, anchorX, anchorY } = snapshot.texture;
   return {
     ...(src ? { 'texture.src': src } : {}),
+    ...(snapshot.ring ? ringData(snapshot.ring) : {}),
     'texture.fit': fit,
     'texture.anchorX': anchorX,
     'texture.anchorY': anchorY,
@@ -76,7 +86,7 @@ export function unhoodedFlag(doc: PortraitDoc, value: Unhooded): Record<string, 
 export function hoodWrites({ doc, recordImg }: LookSource, hood: string): PortraitWrites {
   const flags = doc.flags.silk;
   const real = realPortrait(doc, recordImg);
-  const ringOn = ringOf(doc.prototypeToken).enabled;
+  const ring = realRing(doc);
   const hooded = isHooded(doc);
   const done =
     hooded && flags.img === real.img && flags.token === real.token && flags.hood === hood;
@@ -89,11 +99,16 @@ export function hoodWrites({ doc, recordImg }: LookSource, hood: string): Portra
         'flags.silk.hood': hood,
         ...(hooded ? {} : unhoodedFlag(doc, unhoodedOf(doc))),
       };
-  const token = hoodTokenData(hood, ringOn);
+  const token = hoodTokenData(hood);
   return {
-    doc: { ...data, ...prototypeUpdate(doc, token), ...poseFlag(doc, realPose(doc)) },
+    doc: {
+      ...data,
+      ...ringFlag(doc, ring),
+      ...prototypeUpdate(doc, token),
+      ...poseFlag(doc, realPose(doc)),
+    },
     tokens: token,
     snapshot: 'store',
-    subject: hoodSubject(hood, ringOn, orderOf(doc)),
+    subject: hoodSubject(hood, orderOf(doc)),
   };
 }

@@ -38,11 +38,22 @@ const actor = (over: Partial<PortraitDoc> = {}): PortraitDoc => ({
   ...over,
 });
 
+/** Hooded: the hood in its ring (#182); the real ring (off) waits in the flag. */
 const hooded = (): PortraitDoc =>
   actor({
     img: HOOD,
-    prototypeToken: { texture: { src: HOOD } },
-    flags: { silk: { img: 'alrik.webp', token: 'alrik-token.webp', hood: HOOD } },
+    prototypeToken: {
+      texture: { src: HOOD },
+      ring: { enabled: true, colors: { ring: null, background: null } },
+    },
+    flags: {
+      silk: {
+        img: 'alrik.webp',
+        token: 'alrik-token.webp',
+        hood: HOOD,
+        ring: { enabled: false, colors: { ring: null, background: null } },
+      },
+    },
   });
 
 describe('Portrait: real vs shown', () => {
@@ -99,15 +110,17 @@ describe('Portrait: showing', () => {
       'flags.silk.img': 'alrik.webp',
       'flags.silk.token': 'alrik-token.webp',
       'flags.silk.hood': HOOD,
-      // What the hood overwrites (v1.1 §G.3.1).
+      // What the hood overwrites (v1.1 §G.3.1); the real ring waits (#182).
       'flags.silk.unhooded': {
         texture: { fit: 'contain', anchorX: 0.5, anchorY: 0.5 },
         subject: { scale: 1, texture: null },
       },
+      'flags.silk.ring': { enabled: false, colors: { ring: null, background: null } },
+      'prototypeToken.ring.enabled': true,
     });
     expect(w.tokens).toMatchObject({ 'texture.src': HOOD, 'texture.anchorX': 0.5 });
-    // No ring: no subject file; a stale one of Silk's would be cleared.
-    expect(w.subject).toBeNull();
+    // Real ring off, yet the hood is ringed: its own subject file.
+    expect(w.subject).toMatchObject({ src: HOOD });
   });
 
   it('hooding an already hooded actor writes nothing to the doc', () => {
@@ -128,6 +141,56 @@ describe('Portrait: showing', () => {
       order: 'ring',
     });
     expect(w.tokens).not.toHaveProperty(['texture.scaleX']);
+  });
+
+  it('the hood always shows the ring, world style and default colours; the real ring waits (#182)', () => {
+    const doc = actor({
+      prototypeToken: {
+        texture: { src: 't.webp' },
+        ring: { enabled: false, colors: { ring: '#ff0000', background: '#00ff00' } },
+      },
+    });
+    const w = showWrites(of(doc), { hood: HOOD });
+    expect(w.doc).toMatchObject({
+      'prototypeToken.ring.enabled': true,
+      'prototypeToken.ring.colors.ring': null,
+      'prototypeToken.ring.colors.background': null,
+      'flags.silk.ring': { enabled: false, colors: { ring: '#ff0000', background: '#00ff00' } },
+    });
+    expect(w.tokens).toMatchObject({
+      'texture.src': HOOD,
+      'ring.enabled': true,
+      'ring.colors.ring': null,
+      'ring.colors.background': null,
+    });
+    expect(w.subject).toEqual({
+      src: HOOD,
+      pose: { anchorX: 0.5, anchorY: 0.5, scale: 0.7 },
+      order: 'ring',
+    });
+  });
+
+  it('Reveal: the real ring back on the prototype and placed tokens (#182)', async () => {
+    const doc = actor({
+      prototypeToken: {
+        texture: { src: 'alrik-token.webp' },
+        ring: { colors: { ring: '#ff0000' } },
+      },
+    });
+    const before = structuredClone(doc);
+    const placed: PlacedToken[] = [
+      {
+        texture: { src: 'alrik-token.webp' },
+        ring: { enabled: false, colors: { ring: '#ff0000' } },
+      },
+    ];
+    await look(doc, showWrites(of(doc), { hood: HOOD }), placed);
+    expect(placed[0]?.ring?.enabled).toBe(true);
+    await look(doc, showWrites(of(doc), 'real'), placed);
+    expect(doc.prototypeToken?.ring).toMatchObject({ enabled: false, colors: { ring: '#ff0000' } });
+    expect(doc.flags.silk).not.toHaveProperty('ring');
+    expect(doc.img).toBe(before.img);
+    expect(placed[0]?.ring).toMatchObject({ enabled: false, colors: { ring: '#ff0000' } });
   });
 
   it('a new hood (Appearance deleted) replaces the old one', () => {
@@ -155,16 +218,18 @@ describe('Portrait: showing', () => {
     expect(w.doc).toEqual({
       img: 'alrik.webp',
       'prototypeToken.texture.src': 'alrik-token.webp',
+      'prototypeToken.ring.enabled': false,
       'flags.silk.-=img': null,
       'flags.silk.-=token': null,
       'flags.silk.-=hood': null,
+      'flags.silk.-=ring': null,
     });
     expect(w.tokens).toMatchObject({ 'texture.src': 'alrik-token.webp' });
   });
 
   it('Reveal with the ring: the real subject, posed', () => {
     const doc = hooded();
-    doc.prototypeToken = { texture: { src: HOOD }, ring: { enabled: true } };
+    doc.flags.silk.ring = { enabled: true, colors: { ring: null, background: null } };
     doc.flags.silk.pose = { anchorX: 0.3, anchorY: 0.4, scale: 1.5 };
     expect(showWrites(of(doc), 'real').subject).toEqual({
       src: 'alrik-token.webp',
@@ -376,6 +441,30 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     }
   });
 
+  it('Lock rotation alone writes only lockRotation: no look edit, no subject file (#181)', () => {
+    for (const doc of [imported(), hooded()]) {
+      const w = imageWrites(of(doc), { token: { lockRotation: true } });
+      expect(w).toEqual({
+        doc: { 'prototypeToken.lockRotation': true },
+        tokens: { lockRotation: true },
+      });
+    }
+  });
+
+  it('Lock rotation on a hooded imported actor: Reveal still restores its original look (#181)', async () => {
+    const wolf = imported();
+    const before = structuredClone(wolf);
+    const placed: PlacedToken[] = [{ texture: { src: 'wolf-2.webp' } }];
+    await look(wolf, showWrites(of(wolf), { hood: HOOD }), placed);
+    await look(wolf, imageWrites(of(wolf), { token: { lockRotation: true } }), placed);
+    await look(wolf, showWrites(of(wolf), 'real'), placed);
+    expect(wolf).toEqual({
+      ...before,
+      prototypeToken: { ...before.prototypeToken, lockRotation: true },
+    });
+    expect(placed[0]).toMatchObject({ texture: { src: 'wolf-2.webp' }, lockRotation: true });
+  });
+
   it('same as sheet image: the token follows a new sheet image', () => {
     const w = imageWrites(of(actor()), { img: 'new.webp', token: { sameAsImage: true } });
     expect(w.doc).toEqual({ img: 'new.webp', 'prototypeToken.texture.src': 'new.webp' });
@@ -403,7 +492,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     });
   });
 
-  it('hooded: token image and pose wait in the flags; the ring and the hood subject at once', () => {
+  it('hooded: token image, ring and pose wait in the flags; the hood subject at once', () => {
     const w = imageWrites(of(hooded()), {
       token: {
         src: 'own.webp',
@@ -415,7 +504,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     expect(w.doc).toEqual({
       'flags.silk.token': 'own.webp',
       'flags.silk.pose': { anchorX: 0.3, anchorY: 0.4, scale: 1.25 },
-      'prototypeToken.ring.enabled': true,
+      'flags.silk.ring': { enabled: true, colors: { ring: null, background: null } },
     });
     expect(w.tokens).toMatchObject({ 'ring.enabled': true, 'texture.anchorX': 0.5 });
     expect(w.tokens).toMatchObject({ 'texture.src': HOOD });
@@ -423,6 +512,22 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
       src: HOOD,
       pose: { anchorX: 0.5, anchorY: 0.5, scale: 0.7 },
       order: 'ring',
+    });
+  });
+
+  it('hooded: ring settings wait for the Reveal; the hood keeps its ring (#182)', async () => {
+    const doc = hooded();
+    const w = imageWrites(of(doc), {
+      token: { ring: { enabled: false, colors: { ring: '#ff0000' } } },
+    });
+    expect(w.doc).toEqual({
+      'flags.silk.ring': { enabled: false, colors: { ring: '#ff0000', background: null } },
+    });
+    expect(w.tokens).toMatchObject({ 'ring.enabled': true, 'ring.colors.ring': null });
+    await look(doc, w);
+    expect(lookOf(of(doc)).ring).toEqual({
+      enabled: false,
+      colors: { ring: '#ff0000', background: null },
     });
   });
 
@@ -466,9 +571,8 @@ describe('Portrait: draw order (v1.1 §G.3, #170)', () => {
     expect(w.subject?.order).toBe('illustration');
   });
 
-  it('the hood goes through the same draw order (its own file)', () => {
+  it('the hood goes through the same draw order (its own file), whatever the real ring', () => {
     const doc = hooded();
-    doc.prototypeToken = { texture: { src: HOOD }, ring: { enabled: true } };
     doc.flags.silk.order = 'illustration';
     expect(showWrites(of(doc), { hood: HOOD }).subject?.order).toBe('illustration');
     expect(imageWrites(of(doc), { token: { scale: 2 } }).subject?.order).toBe('illustration');
@@ -476,7 +580,7 @@ describe('Portrait: draw order (v1.1 §G.3, #170)', () => {
 
   it("Reveal: the real subject in the actor's order", () => {
     const doc = hooded();
-    doc.prototypeToken = { texture: { src: HOOD }, ring: { enabled: true } };
+    doc.flags.silk.ring = { enabled: true, colors: { ring: null, background: null } };
     doc.flags.silk.order = 'illustration';
     expect(showWrites(of(doc), 'real').subject?.order).toBe('illustration');
   });
@@ -646,11 +750,19 @@ describe('Portrait: imported images (v1.1 §G.3.1)', () => {
     const placed: PlacedToken[] = [
       {
         texture: { src: 'wolf-2.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.8, scaleX: 0.8 },
-        ring: { enabled: true, subject: { scale: 1.2, texture: 'wolf-subject.webp' } },
+        ring: {
+          enabled: true,
+          colors: { ring: null, background: null },
+          subject: { scale: 1.2, texture: 'wolf-subject.webp' },
+        },
       },
       {
         texture: { src: 'wolf-3.webp', fit: 'contain', anchorX: 0.5, anchorY: 0.5 },
-        ring: { enabled: true, subject: { scale: 1, texture: null } },
+        ring: {
+          enabled: false,
+          colors: { ring: '#ff0000', background: null },
+          subject: { scale: 1, texture: null },
+        },
       },
     ];
     const before = structuredClone(placed);

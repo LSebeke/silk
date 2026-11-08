@@ -10,8 +10,8 @@
  * `migration.ts` (round 2), `placed.ts` (each placed token).
  *
  * Hooded: `img` and the token textures show `flags.silk.hood` (the world's hooded image, or
- * the class icon once the Appearance block is deleted), centred; the real image, token
- * texture and pose wait in the flags. The ring is not hidden: it always applies at once.
+ * the class icon once the Appearance block is deleted), centred in its ring (world style,
+ * default colours, #182); the real image, token texture, ring and pose wait in the flags.
  * The texture scale is the actor's size factor and never Silk's (#168).
  */
 import { elementClass } from '../elements/classes';
@@ -184,7 +184,7 @@ export function lookOf({ doc, recordImg, sizeFactor }: LookSource): Look {
     ...real,
     sameAsImage: real.token === real.img,
     hooded: isHooded(doc),
-    ring: ringOf(doc.prototypeToken),
+    ring: realRing(doc),
     pose: realPose(doc),
     lockRotation: !!doc.prototypeToken?.lockRotation,
     order: orderOf(doc),
@@ -204,6 +204,12 @@ export function ringOf(token: TokenData | undefined): Ring {
     enabled: !!token?.ring?.enabled,
     colors: { ring: colors?.ring ?? null, background: colors?.background ?? null },
   };
+}
+
+/** The real ring: in the flag while hooded (#182), else the prototype's. */
+export function realRing(doc: PortraitDoc): Ring {
+  const { ring } = doc.flags.silk;
+  return ring && isHooded(doc) ? structuredClone(ring) : ringOf(doc.prototypeToken);
 }
 
 /**
