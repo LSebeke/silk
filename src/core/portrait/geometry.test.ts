@@ -33,11 +33,18 @@ describe('Token geometry: the hood (#133)', () => {
 
 describe('Token geometry: the preview', () => {
   it('ring: a wide image covers the frame, its height fills it', () => {
-    expect(tokenGeometry(centred, true, { aspect: 2 }).box).toEqual({ left: -0.5, top: 0, width: 2, height: 1 });
+    expect(tokenGeometry(centred, true, { aspect: 2 }).box).toEqual({
+      left: -0.5,
+      top: 0,
+      width: 2,
+      height: 1,
+    });
   });
 
   it('no ring: a tall image is contained, scaled and placed by the anchor', () => {
-    expect(tokenGeometry({ anchorX: 0.5, anchorY: 0.25, scale: 2 }, false, { aspect: 0.5 }).box).toEqual({
+    expect(
+      tokenGeometry({ anchorX: 0.5, anchorY: 0.25, scale: 2 }, false, { aspect: 0.5 }).box,
+    ).toEqual({
       left: 0,
       top: 0,
       width: 1,

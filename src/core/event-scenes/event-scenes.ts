@@ -32,8 +32,8 @@ import type {
 } from '../materialize';
 import type { WorkingCopy } from '../working-copy';
 import type { EmbeddedOps, SceneData, SceneDocs, SceneSnapshot } from './port';
-import { DEFAULT_PRESET, isPreset, presetScene, type ScenePreset } from './presets';
-import { boxOf, planBox } from './token-box';
+import { DEFAULT_PRESET, isPreset, NO_PRESET, presetScene, type ScenePreset } from './presets';
+import { boxOf, boxSlot, ensureBox, migrateBox, type BoxPlan } from './token-box';
 
 export interface EventScenesDeps {
   workingCopy(): WorkingCopy;
@@ -197,7 +197,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
     const id = await scenes.create({ ...data, folder: await folder(), ownership: { default: 0 } });
     await setLink(el, id);
     if (el.class === 'event') {
-      await placeInBox(id, false);
+      await writeBox(id, ensureBox);
       await tokensFollowConnections(el);
     }
   }
@@ -248,7 +248,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
       _id: deps.newId(),
       name: el.name,
       folder: null,
-      flags: { ...flags, silk: { sceneOf: el.id, preset: 'none' } },
+      flags: { ...flags, silk: { sceneOf: el.id, preset: NO_PRESET } },
     };
   }
 
@@ -263,7 +263,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
       if (existing) {
         await setLink(el, existing._id);
         if (el.class === 'event') {
-          await placeInBox(existing._id, false);
+          await writeBox(existing._id, ensureBox);
           await tokensFollowConnections(el);
         }
         return;
@@ -302,27 +302,32 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   async function addToken(sceneId: string, actorId: string) {
     const scene = scenes.get(sceneId);
     if (!scene || scene.tokens.some((t) => t.actorId === actorId)) return;
-    const slot = await placeInBox(sceneId, true);
+    const slot = (await writeBox(sceneId, boxSlot))?.slot;
     if (slot) await scenes.createTokens(sceneId, [{ actorId, ...slot, hidden: true }]);
   }
 
   /**
-   * Makes the Scene's Token Box (1.1 §I), grown and the padding raised as needed; with
-   * `place`, the slot for one more token.
+   * Writes the Token Box plan (1.1 §I) for the Scene: `ensureBox` (the box, made as needed),
+   * `boxSlot` (also a slot for one more token, the box grown as needed) or `migrateBox`.
    */
-  async function placeInBox(sceneId: string, place: boolean) {
+  async function writeBox<P extends BoxPlan>(
+    sceneId: string,
+    plan: (scene: SceneSnapshot, opts: { newId(): string; label: string }) => P | undefined,
+  ): Promise<P | undefined> {
     const scene = scenes.get(sceneId);
     if (!scene) return undefined;
-    const label = deps.localize('SILK.EventScene.Box');
-    const plan = planBox(scene, { newId: deps.newId, label, place });
-    if (plan.padding !== undefined) await scenes.setPadding(sceneId, plan.padding);
-    if (plan.box)
+    const p = plan(scene, { newId: deps.newId, label: deps.localize('SILK.EventScene.Box') });
+    if (!p) return undefined;
+    if (p.padding !== undefined) await scenes.setPadding(sceneId, p.padding);
+    if (p.create || p.update)
       await scenes.syncEmbedded(sceneId, 'drawings', {
-        create: plan.create ? [plan.box] : [],
-        update: plan.create ? [] : [plan.box],
+        create: p.create ? [p.create] : [],
+        update: p.update ? [p.update] : [],
         delete: [],
       });
-    return plan.slot;
+    if (p.tokens?.length)
+      await scenes.syncEmbedded(sceneId, 'tokens', { create: [], update: p.tokens, delete: [] });
+    return p;
   }
 
   async function removeTokens(sceneId: string, actorId: string) {
@@ -492,7 +497,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
     },
 
     async reconcile() {
-      await migratePresets();
+      await migrateScenes();
       for (const record of [...wc().records().values()]) {
         const el = readElement(record);
         if (!el?.uuid || !SCENE_CLASSES.has(el.class)) continue;
@@ -508,15 +513,18 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   };
 
   /**
-   * Load-time migration (1.1 §I): a Silk Scene without `flags.silk.preset` gets `narrative`
-   * if it has a box, else its element's Preset, else `none`.
+   * Load-time migrations (1.1 §I): v1's Narrative box moves into the padding (`migrateBox`);
+   * a Silk Scene without `flags.silk.preset` gets `narrative` if it has a box, else its
+   * element's Preset, else `none`.
    */
-  async function migratePresets() {
+  async function migrateScenes() {
     for (const scene of scenes.scenes()) {
       const silk = scene.flags.silk;
-      if (!silk?.sceneOf || silk.preset) continue;
+      if (!silk?.sceneOf) continue;
+      await writeBox(scene._id, migrateBox);
+      if (silk.preset) continue;
       const recorded = element(silk.sceneOf)?.fields?.scenePreset;
-      const preset = boxOf(scene) ? 'narrative' : isPreset(recorded) ? recorded : 'none';
+      const preset = boxOf(scene) ? 'narrative' : isPreset(recorded) ? recorded : NO_PRESET;
       await scenes.update(scene._id, { 'flags.silk.preset': preset });
     }
   }

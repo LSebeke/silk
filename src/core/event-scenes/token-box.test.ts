@@ -134,15 +134,42 @@ describe('Token Box (spec 1.1 §I)', () => {
     const t = setup();
     const ambush = await t.create('event', 'Ambush');
     const box = theBox(must(t.scenes.all.get(t.scene(ambush)._id)));
-    Object.assign(box, { x: 0, y: 0, shape: { ...box.shape, width: 300, height: 200 } });
-    await present(t, ambush, 3);
-    expect(rect(theBox(t.scene(ambush)))).toEqual([0, 0, 300, 200]);
-    // Two cells: the third token wraps onto the first.
+    Object.assign(box, { x: 200, y: 200, shape: { ...box.shape, width: 300, height: 200 } });
+    await present(t, ambush, 2);
+    expect(rect(theBox(t.scene(ambush)))).toEqual([200, 200, 300, 200]);
     expect(at(t.scene(ambush).tokens)).toEqual([
-      [150, 50, true],
-      [50, 50, true],
-      [150, 50, true],
+      [350, 250, true],
+      [250, 250, true],
     ]);
+  });
+
+  it('a full box the GM moved grows a row above, its bottom-right kept: never stacks', async () => {
+    const t = setup();
+    const ambush = await t.create('event', 'Ambush');
+    const box = theBox(must(t.scenes.all.get(t.scene(ambush)._id)));
+    Object.assign(box, { x: 200, y: 200, shape: { ...box.shape, width: 300, height: 200 } });
+    await present(t, ambush, 3);
+    const grown = theBox(t.scene(ambush));
+    expect(rect(grown)).toEqual([200, 100, 300, 300]);
+    // Still the GM's box: Silk does not take it over.
+    expect(grown.flags.silk).toMatchObject({ rect: { x: 700, y: 500 } });
+    expect(at(t.scene(ambush).tokens)).toEqual([
+      [350, 250, true],
+      [250, 250, true],
+      [350, 150, true],
+    ]);
+  });
+
+  it('past padding 0.5 the box keeps adding rows: never stacks', async () => {
+    const t = setup();
+    withSmallMap(t);
+    const keep = await fromMap(t);
+    await present(t, keep, 7);
+    expect(t.scene(keep).padding).toBe(0.5);
+    // 3 per row → 3 rows.
+    expect(rect(theBox(t.scene(keep)))).toEqual([0, 0, 400, 400]);
+    const spots = at(t.scene(keep).tokens).map(([x, y]) => `${x},${y}`);
+    expect(new Set(spots).size).toBe(7);
   });
 
   it('a Location Overview Scene has no box', async () => {
@@ -179,5 +206,32 @@ describe('Scene Preset migration on load (spec 1.1 §I)', () => {
     expect(t.scene(ambush).flags.silk?.preset).toBe('narrative');
     expect(t.scene(fight).flags.silk?.preset).toBe('battle');
     expect(t.scene(keep).flags.silk?.preset).toBe('none');
+  });
+
+  it('v1’s Narrative box (its v1 rect, no `rect` flag) moves into the padding with its tokens', async () => {
+    const t = setup();
+    const ambush = await t.create('event', 'Ambush');
+    await present(t, ambush, 2);
+    const live = strip(t, ambush);
+    // As v1 wrote it: fixed rect, v1 look, tokens in its grid from the top left.
+    const box = theBox(live);
+    Object.assign(box, { x: 100, y: 100, shape: { type: 'r', width: 1000, height: 400 } });
+    Object.assign(box, { fillColor: '#000000', locked: true, flags: { silk: { box: true } } });
+    live.tokens.forEach((tk, i) => Object.assign(tk, { x: 150 + i * 100, y: 150 }));
+    live.tokens.push({ _id: 'outside000000001', actorId: null, x: 2000, y: 2000, hidden: false });
+    await t.lifecycle.reconcile();
+    const moved = theBox(t.scene(ambush));
+    expect(rect(moved)).toEqual([600, 500, 300, 200]);
+    expect(moved).toMatchObject({ fillColor: '#ffffff', locked: false, text: 'Box' });
+    expect(moved.flags.silk).toMatchObject({ rect: { x: 600, y: 500 } });
+    expect(at(t.scene(ambush).tokens)).toEqual([
+      [750, 550, true],
+      [650, 550, true],
+      [2000, 2000, false],
+    ]);
+    expect(t.scene(ambush).flags.silk?.preset).toBe('narrative');
+    // Done once: a second load changes nothing.
+    await t.lifecycle.reconcile();
+    expect(rect(theBox(t.scene(ambush)))).toEqual([600, 500, 300, 200]);
   });
 });
