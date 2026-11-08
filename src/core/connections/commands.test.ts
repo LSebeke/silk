@@ -149,27 +149,18 @@ describe('editing Connections', () => {
     await expect(registry.run('connection.setLabel', { id: 'x', label: '' })).rejects.toThrow(/x/);
   });
 
-  it('connection.cycleDirection cycles A→B, B→A, mutual on free-form Connections', async () => {
-    const { add, create, registry, connection } = setup();
-    await add('a', 'person');
-    await add('b', 'person');
-    const id = await create({ from: 'a', to: 'b' });
-    const seen: string[] = [];
-    for (let i = 0; i < 3; i++) {
-      await registry.run('connection.cycleDirection', { id });
-      const c = connection(id);
-      seen.push(c?.direction === 'mutual' ? 'mutual' : `${c?.from}→${c?.to}`);
-    }
-    expect(seen).toEqual(['b→a', 'mutual', 'a→b']);
+  it('connection.cycleDirection is removed (v1.1 §D): Tab runs setDirection, Shift+Tab flip', () => {
+    const { registry } = setup();
+    expect(registry.get('connection.cycleDirection')).toBeUndefined();
   });
 
-  it('connection.cycleDirection leaves a Behavioural direction alone', async () => {
+  it('connection.setDirection leaves a Behavioural direction alone', async () => {
     const { add, create, registry, connection } = setup();
     await add('alrik', 'person');
     await add('sword', 'item');
     const id = await create({ from: 'alrik', to: 'sword', type: 'owns' });
-    await registry.run('connection.cycleDirection', { id });
-    expect(connection(id)).toMatchObject({ from: 'alrik', to: 'sword' });
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
+    expect(connection(id)).toMatchObject({ from: 'alrik', to: 'sword', direction: 'directed' });
   });
 
   it('connection.cycleType steps through the valid types, then free-form', async () => {
@@ -303,7 +294,7 @@ describe('Connection Notes (v1.1 §F.2)', () => {
     const id = await create({ from: 'a', to: 'b', label: 'knows' });
     await registry.run('connection.setNotes', { id, notes: '<p>n</p>' });
     await registry.run('connection.setLabel', { id, label: 'trusts' });
-    await registry.run('connection.cycleDirection', { id });
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
     await registry.run('connection.flip', { id });
     await registry.run('connection.cycleType', { id });
     expect(connection(id)?.notes).toBe('<p>n</p>');

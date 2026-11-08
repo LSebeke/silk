@@ -34,7 +34,12 @@ describe('canvas legend (spec 1.1 §E.3)', () => {
     });
     expect(rows).toContainEqual({
       keys: ['Tab'],
-      label: 'SILK.Canvas.Key.cycleDirection',
+      label: 'SILK.Canvas.Key.toggleDirection',
+      when: 'SILK.Canvas.KeyWhen.edge',
+    });
+    expect(rows).toContainEqual({
+      keys: ['Shift+Tab'],
+      label: 'SILK.Canvas.Key.flip',
       when: 'SILK.Canvas.KeyWhen.edge',
     });
     expect(rows).toContainEqual({ keys: ['?'], label: 'SILK.Canvas.Key.legend' });

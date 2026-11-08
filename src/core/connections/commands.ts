@@ -144,20 +144,6 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     },
   };
 
-  const cycleDirection: Command<{ id: string }, void> = {
-    name: 'connection.cycleDirection',
-    title: 'SILK.Commands.connection.cycleDirection',
-    available: (ctx) => ctx.isGM,
-    async run({ id }) {
-      const c = existing(id);
-      // Stateless 3-cycle over id order (A < B): A→B, B→A, mutual, A→B, …
-      const [a, b] = ordered(c);
-      if (c.direction === 'mutual') await writeDirection(c, 'directed', [a, b]);
-      else if (c.from === a) await writeDirection(c, 'directed', [b, a]);
-      else await writeDirection(c, 'mutual');
-    },
-  };
-
   /** v1.1 §F.2 select: one of `typeOptions`. */
   const setType: Command<{ id: string; type: ConnectionType }, void> = {
     name: 'connection.setType',
@@ -202,15 +188,5 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     },
   };
 
-  return [
-    create,
-    setLabel,
-    setNotes,
-    setDirection,
-    cycleDirection,
-    setType,
-    cycleType,
-    flip,
-    remove,
-  ];
+  return [create, setLabel, setNotes, setDirection, setType, cycleType, flip, remove];
 }

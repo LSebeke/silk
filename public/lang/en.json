@@ -103,7 +103,6 @@
       "connection": {
         "create": "Connect",
         "setLabel": "Edit Connection label",
-        "cycleDirection": "Cycle Connection direction",
         "cycleType": "Cycle Connection type",
         "flip": "Flip Connection",
         "delete": "Delete Connection",
@@ -236,7 +235,8 @@
         "delete": "Delete (Nodes: with confirmation, plus the selected Connections)",
         "group": "Group",
         "untangle": "Untangle",
-        "cycleDirection": "Cycle direction",
+        "toggleDirection": "Directed ⇄ mutual",
+        "flip": "Reverse direction",
         "cycleType": "Cycle type",
         "legend": "Show/hide this legend"
       },

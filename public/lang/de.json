@@ -103,7 +103,6 @@
       "connection": {
         "create": "Verbinden",
         "setLabel": "Verbindungstext bearbeiten",
-        "cycleDirection": "Verbindungsrichtung wechseln",
         "cycleType": "Verbindungsart wechseln",
         "flip": "Verbindung umkehren",
         "delete": "Verbindung löschen",
@@ -236,7 +235,8 @@
         "delete": "Löschen (Knoten: mit Rückfrage, samt markierten Verbindungen)",
         "group": "Gruppieren",
         "untangle": "Entwirren",
-        "cycleDirection": "Richtung wechseln",
+        "toggleDirection": "Gerichtet ⇄ gegenseitig",
+        "flip": "Richtung umkehren",
         "cycleType": "Art wechseln",
         "legend": "Diese Legende ein-/ausblenden"
       },

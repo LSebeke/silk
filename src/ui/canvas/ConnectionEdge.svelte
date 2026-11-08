@@ -7,6 +7,7 @@
   import { fail } from './actions';
   import { BaseEdge, EdgeLabel, useStore, type EdgeProps, type InternalNode } from '@xyflow/svelte';
   import { getContext } from 'svelte';
+  import { otherDirection } from '../../core/connections';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
   import { facingAnchor, type Box, type ConnectionEdge } from './flow-edges';
 
@@ -58,7 +59,10 @@
     };
   });
 
-  const run = (name: string) => ctx.run(name, { id }).catch(fail);
+  const run = (name: string, args: object = {}) => ctx.run(name, { id, ...args }).catch(fail);
+  // v1.1 §F.1: Directed ⇄ Mutual; never reverses.
+  const toggleDirection = () =>
+    data && run('connection.setDirection', { direction: otherDirection(data.direction) });
 
   function onKeydown(event: KeyboardEvent & { currentTarget: HTMLElement }) {
     event.stopPropagation();
@@ -70,8 +74,10 @@
       pipeline.submitLabel(input?.value ?? '').catch(fail);
     } else if (event.key === 'Escape') pipeline.cancel();
     else if (event.key === 'Tab') {
+      // v1.1 §F.1: Tab toggles directed ⇄ mutual, Shift+Tab reverses.
       event.preventDefault();
-      void run('connection.cycleDirection');
+      if (event.shiftKey) void run('connection.flip');
+      else void toggleDirection();
     }
   }
 
@@ -122,8 +128,8 @@
           <button
             type="button"
             onmousedown={(e) => e.preventDefault()}
-            onclick={() => run('connection.cycleDirection')}
-            data-silk-cycle-direction
+            onclick={toggleDirection}
+            data-silk-toggle-direction
           >
             {data?.direction === 'mutual' ? '⟷' : '→'}
           </button>
