@@ -39,7 +39,7 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     ]);
   });
 
-  it('setImage token (v1.1 §G.3): prototype token and the linked placed tokens', async () => {
+  it('setImage token (v1.1 §G.3): prototype token and the placed tokens', async () => {
     const t = setup({ mode: 'immediate' });
     const id = await t.create('person', 'Alrik');
     await t.registry.run('element.setImage', {
@@ -56,6 +56,21 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     expect(t.tokens).toEqual([
       { actor: doc.uuid, data: expect.objectContaining({ 'texture.src': 'alrik.webp' }) },
     ]);
+  });
+
+  it('setImage image only, token same as sheet image (#166): the tokens follow', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.setImage', { id, img: 'a.webp', token: { sameAsImage: true } });
+    await t.registry.run('element.setImage', { id, img: 'b.webp' });
+    const doc = t.doc(id) as ReturnType<typeof t.doc> & {
+      prototypeToken: { texture: { src: string } };
+    };
+    expect(doc.prototypeToken.texture.src).toBe('b.webp');
+    expect(t.tokens.at(-1)).toEqual({
+      actor: doc.uuid,
+      data: expect.objectContaining({ 'texture.src': 'b.webp' }),
+    });
   });
 
   it('setImage on a Ghost: the image to the record; a token change Materializes first', async () => {

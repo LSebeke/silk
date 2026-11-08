@@ -193,7 +193,7 @@ export function showWrites(doc: PortraitDoc, shown: Shown, recordImg?: string): 
 /**
  * `element.setImage` on an actor/item doc (v1.1 §G.3). Hooded: the image, token texture and
  * pose wait in the flags, players keep seeing the hood; the ring applies at once. `tokens`
- * only when the edit touches the token.
+ * only when the edit touches the token, or a new image the token follows (#166).
  */
 export function imageWrites(doc: PortraitDoc, edit: ImageEdit, recordImg?: string): PortraitWrites {
   const hooded = isHooded(doc);
@@ -203,7 +203,11 @@ export function imageWrites(doc: PortraitDoc, edit: ImageEdit, recordImg?: strin
   const data: Record<string, unknown> = {};
   if (edit.img !== undefined && edit.img !== (hooded ? flags.img : doc.img))
     data[hooded ? 'flags.silk.img' : 'img'] = edit.img;
-  const t = edit.token;
+  // #166: a token "same as sheet image" follows a new sheet image. The doc, not the record,
+  // says what the token follows: on the merge path the record already has the new image.
+  const onDoc = realPortrait(doc);
+  const follows = onDoc.token === onDoc.img && edit.img !== undefined && edit.img !== onDoc.img;
+  const t = edit.token ?? (follows ? { sameAsImage: true } : undefined);
   if (!t) return { doc: data };
 
   const ring: Ring = {

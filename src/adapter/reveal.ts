@@ -10,26 +10,23 @@ import { SILK_WRITE, isSilkWrite } from './working-copy-journal';
 interface TokenLike {
   id: string | null;
   actorId: string | null;
-  actorLink?: boolean;
 }
 
 const getPath = (obj: unknown, path: string): unknown =>
   path.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], obj);
 
 /**
- * Update data for the actor's placed tokens that differ from `data` (dotted keys). Pure.
- * `linked`: only tokens linked to the actor.
+ * Update data for the actor's placed tokens, linked and unlinked, that differ from `data`
+ * (dotted keys). Pure.
  */
 export function tokenUpdates(
   tokens: Iterable<TokenLike>,
   actorId: string,
   data: Record<string, unknown>,
-  opts: { linked?: boolean } = {},
 ): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
   for (const token of tokens) {
     if (token.actorId !== actorId || !token.id) continue;
-    if (opts.linked && !token.actorLink) continue;
     if (Object.entries(data).every(([k, v]) => getPath(token, k) === v)) continue;
     out.push({ _id: token.id, ...data });
   }
@@ -45,13 +42,12 @@ type Scene = {
 export async function updatePlacedTokens(
   actorUuid: string,
   data: Record<string, unknown>,
-  opts: { linked?: boolean } = {},
 ): Promise<void> {
   const actor = fromUuidSync(actorUuid) as { id?: string; parent?: unknown } | null;
   // Embedded Items have no tokens; only world Actors.
   if (!actor?.id || actor.parent) return;
   for (const scene of (game.scenes ?? []) as unknown as Iterable<Scene>) {
-    const updates = tokenUpdates(scene.tokens, actor.id, data, opts);
+    const updates = tokenUpdates(scene.tokens, actor.id, data);
     if (updates.length) await scene.updateEmbeddedDocuments('Token', updates, { ...SILK_WRITE });
   }
 }
