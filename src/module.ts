@@ -206,8 +206,8 @@ const materializer = createMaterializer({
   deferImmediate: () => pipeline.deferringMaterialize(),
   parentOf: (id) => owns.parentOf(id),
   restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
-  // v1.1 §G.3: the image editor writes the placed tokens of linked actors.
-  tokens: (uuid, data) => updatePlacedTokens(uuid, data, { linked: true }),
+  // v1.1 §G.3 (#166): every placed token of the actor, linked and unlinked.
+  tokens: updatePlacedTokens,
   afterMaterialize: async (id) => {
     await owns.afterMaterialize(id);
     await lifecycle.afterMaterialize(id);

@@ -88,7 +88,7 @@ export interface MaterializerDeps {
    * T12: owned Items move into a new actor).
    */
   afterMaterialize?(id: string): Promise<void>;
-  /** The placed tokens of a linked actor, where they differ (v1.1 §G.3). */
+  /** Every placed token of the actor (linked and unlinked), where they differ (v1.1 §G.3). */
   tokens?(actorUuid: string, data: Record<string, unknown>): Promise<void>;
 }
 

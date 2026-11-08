@@ -97,13 +97,14 @@ describe('tokenUpdates', () => {
     ]);
   });
 
-  it('linked only (image editor, v1.1 §G.3): unlinked tokens keep their own look', () => {
+  it('linked and unlinked tokens alike (v1.1 §G.3, #166)', () => {
     const tokens = [
       { id: 't1', actorId: 'a', actorLink: true, texture: { src: 'old' } },
       { id: 't2', actorId: 'a', actorLink: false, texture: { src: 'old' } },
     ];
-    expect(tokenUpdates(tokens, 'a', { 'texture.src': 'new' }, { linked: true })).toEqual([
+    expect(tokenUpdates(tokens, 'a', { 'texture.src': 'new' })).toEqual([
       { _id: 't1', 'texture.src': 'new' },
+      { _id: 't2', 'texture.src': 'new' },
     ]);
   });
 });

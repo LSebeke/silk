@@ -155,6 +155,34 @@ describe('Portrait: a new real image', () => {
       doc: { 'flags.silk.img': 'new.webp' },
     });
   });
+
+  it('token same as sheet image (#166): prototype and placed tokens follow an image-only edit', () => {
+    const doc = actor({ prototypeToken: { texture: { src: 'alrik.webp' } } });
+    const w = imageWrites(doc, { img: 'new.webp' });
+    expect(w.doc).toEqual({ img: 'new.webp', 'prototypeToken.texture.src': 'new.webp' });
+    expect(w.tokens).toMatchObject({ 'texture.src': 'new.webp' });
+  });
+
+  it('token same as sheet image, hooded: the real token waits in the flag too', () => {
+    const doc = hooded();
+    doc.flags.silk.token = 'alrik.webp';
+    const w = imageWrites(doc, { img: 'new.webp' });
+    expect(w.doc).toMatchObject({ 'flags.silk.img': 'new.webp', 'flags.silk.token': 'new.webp' });
+    expect(w.doc).not.toHaveProperty(['prototypeToken.texture.src']);
+    expect(w.tokens).not.toHaveProperty(['texture.src']);
+  });
+
+  it('merge apply (#166): the record already has the new image; the tokens still follow', () => {
+    const doc = actor({ prototypeToken: { texture: { src: 'alrik.webp' } } });
+    const w = imageWrites(doc, { img: 'new.webp' }, 'new.webp');
+    expect(w.doc).toEqual({ img: 'new.webp', 'prototypeToken.texture.src': 'new.webp' });
+    expect(w.tokens).toMatchObject({ 'texture.src': 'new.webp' });
+  });
+
+  it('an unchanged image (merge apply) leaves the tokens alone (v1.1 §G.3.1)', () => {
+    const doc = actor({ prototypeToken: { texture: { src: 'alrik.webp' } } });
+    expect(imageWrites(doc, { img: 'alrik.webp' })).toEqual({ doc: {} });
+  });
 });
 
 describe('Portrait: hand edits', () => {
