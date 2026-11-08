@@ -79,7 +79,10 @@ describe('rewriting the World to a merge result (spec §11.3)', () => {
     expect(t.doc(wolf).img).toBe('wolf.webp');
     expect(t.companion(wolf).name).toBe('Dire Wolf');
     expect(pageNames(t.companion(wolf))).toEqual(['Appearance', 'Tactics', 'Connections']);
-    expect(page(t.companion(wolf), must(appearance)._id).text?.content).toBe('<p>Huge</p>');
+    // v1.1 §G.4: the Appearance page keeps its portrait on top.
+    expect(page(t.companion(wolf), must(appearance)._id).text?.content).toBe(
+      '<figure data-silk-portrait=""><img src="wolf.webp"></figure><p>Huge</p>',
+    );
     expect(t.companion(wolf).pages.some((p) => p._id === must(description)._id)).toBe(false);
     expect(t.element(wolf)).toMatchObject({ name: 'Dire Wolf', img: 'wolf.webp' });
     expect(t.element(wolf).infoBlocks.map((b) => b.name)).toEqual(['Appearance', 'Tactics']);
