@@ -246,7 +246,8 @@ test('write-through to Foundry, and Foundry edits flow back', async ({ gm, playe
     img: 'icons/svg/aura.svg',
     merchant: 'merchant',
     companion: 'Trader Tom',
-    text: '<p>Tall</p>',
+    // Appearance: the Silk-managed portrait region, then the block's text (v1.1 §G.4).
+    text: '<figure data-silk-portrait><img src="icons/svg/aura.svg"></figure><p>Tall</p>',
     pages: 5,
   });
   expect(new Set(state.extraOwnership)).toEqual(new Set([0]));

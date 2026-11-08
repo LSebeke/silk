@@ -120,28 +120,29 @@ test('Connections: right-drag, digit keys, c, editor, Tab/q, rendering', async (
   await expect(lovesPath).not.toHaveAttribute('marker-end', /url/);
   await gm.keyboard.press('Tab');
   await expect(loves).toHaveAttribute('data-silk-edge-direction', 'directed');
-  await expect(loves).toHaveAttribute('data-silk-edge-from', alrik);
+  // Mutual → directed points A→B in id order (§D `connection.setDirection`), ids are random.
+  const lovesData = (await records(gm, 'connection')).find((r) => r.id === lovesId)?.data;
+  const [first = '', second = ''] = [String(lovesData?.['from']), String(lovesData?.['to'])].sort();
+  await expect(loves).toHaveAttribute('data-silk-edge-from', first);
   await gm.keyboard.press('Shift+Tab');
-  await expect(loves).not.toHaveAttribute('data-silk-edge-from', alrik);
+  await expect(loves).toHaveAttribute('data-silk-edge-from', second);
   await expect(loves).toHaveAttribute('data-silk-edge-direction', 'directed');
 
-  // q cycles type: Person → Item has `owns`, so a free-form Connection becomes owns.
-  // Use `c` to connect Rondra to the Sword, then q.
+  // `c` Rondra → Sword: the default Connection (v1.1 §F.3) is owns.
   await card(gm, 'Rondra').click();
   await gm.keyboard.press('KeyC');
   await expect(gm.locator('[data-silk-connect-hint]')).toBeVisible();
   await card(gm, 'Sword').click();
-  await expect(gm.locator('[data-silk-label-input]')).toBeFocused();
-  await gm.keyboard.press('Escape');
-  const rondraSword = gm.locator('[data-silk-edge][data-silk-edge-type="free"]', {
-    hasNotText: 'loves',
-  });
+  await expect(gm.locator('[data-silk-connection-editor] button').first()).toBeFocused();
+  await gm.keyboard.press('Enter');
+  // Rondra now owns the Sword; the old owner's Connection is replaced (≤1 owner).
+  const rondraSword = gm.locator('[data-silk-edge][data-silk-edge-type="owns"]');
   await expect(rondraSword).toHaveCount(1);
+  await expect(gm.locator(`[data-silk-edge="${owns?.id}"]`)).toHaveCount(0);
+  // q cycles type: owns → free-form.
   await rondraSword.click();
   await gm.keyboard.press('KeyQ');
-  // Rondra now owns the Sword; the old owner's Connection is replaced (≤1 owner).
-  await expect(gm.locator('[data-silk-edge-type="owns"]')).toHaveCount(1);
-  await expect(gm.locator(`[data-silk-edge="${owns?.id}"]`)).toHaveCount(0);
+  await expect(gm.locator('[data-silk-edge-type="owns"]')).toHaveCount(0);
 
   // Parallel Connections between one pair: separate curves, separate labels.
   const rondra = (await records(gm, 'element')).find((r) => r.data['name'] === 'Rondra')?.id;

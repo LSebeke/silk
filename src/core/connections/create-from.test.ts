@@ -46,7 +46,7 @@ describe('element.create from a Node', () => {
     ['location', 'item', 'locatedIn', 'new→origin'],
     ['location', 'event', 'takesPlaceAt', 'new→origin'],
     ['person', 'person', 'free', 'origin→new'],
-    ['item', 'person', 'free', 'origin→new'],
+    ['item', 'person', 'owns', 'new→origin'],
     ['faction', 'quest', 'free', 'origin→new'],
   ])('%s → new %s defaults to %s (%s)', async (originClass, newClass, type, way) => {
     const { make, connection } = setup();
@@ -61,13 +61,21 @@ describe('element.create from a Node', () => {
     });
   });
 
-  it('an explicit direction keeps the default type only when it points the same way', async () => {
+  it('an explicit direction is the asked pair of the default Connection (v1.1 §F.3)', async () => {
     const { make, connection } = setup();
     const gareth = await make('location');
     const inside = await make('item', { from: gareth.id, connection: { direction: 'in' } });
     expect(connection(inside.connectionId)).toMatchObject({ type: 'locatedIn', from: inside.id });
+    // Only the reverse is valid: swapped, not free-form.
     const out = await make('item', { from: gareth.id, connection: { direction: 'out' } });
-    expect(connection(out.connectionId)).toMatchObject({ type: 'free', from: gareth.id });
+    expect(connection(out.connectionId)).toMatchObject({ type: 'locatedIn', from: out.id });
+    // Valid both ways: as asked (right-drag A → canvas puts A inside the new Location).
+    const outer = await make('location', { from: gareth.id, connection: { direction: 'out' } });
+    expect(connection(outer.connectionId)).toMatchObject({
+      type: 'locatedIn',
+      from: gareth.id,
+      to: outer.id,
+    });
     const both = await make('item', { from: gareth.id, connection: { direction: 'mutual' } });
     expect(connection(both.connectionId)).toMatchObject({ type: 'free', direction: 'mutual' });
   });
