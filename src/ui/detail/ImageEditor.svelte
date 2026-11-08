@@ -1,16 +1,27 @@
 <script lang="ts">
   /**
-   * Image & token editor (v1.1 §G.3): sheet image, token image, ring and the token's position
-   * in a round preview (drag: anchor, wheel or slider: scale). Every change runs
-   * `element.setImage`, which is hood-aware: while hooded the image, token and position wait
-   * for the Reveal and only the ring shows at once. A Ghost's token edit Materializes it.
+   * Image & token editor (v1.1 §G.3): sheet image, token image, ring, Lock rotation and the
+   * token's position in a preview of the final token (drag: anchor, wheel or slider: scale).
+   * Every change runs `element.setImage`, which is hood-aware and Ghost-aware. The preview
+   * uses the same token geometry as the writes (core/portrait), with the world's ring style:
+   * background colour, the image cropped to the ring's inner circle, the ring frame.
    */
   import { onDestroy, untrack } from 'svelte';
+  import type { RingPreview, SheetRect } from '../../adapter/token-frame';
   import { readElement } from '../../core/elements';
-  import { CENTRED, type ImageEdit, type Look, type Pose } from '../../core/portrait';
+  import {
+    CENTRED,
+    clampPose,
+    dragPose,
+    imageBox,
+    SCALE,
+    type ImageEdit,
+    type Pose,
+  } from '../../core/portrait';
   import type { DetailContext } from './context';
   import DetailSection from './DetailSection.svelte';
   import DetailShell from './DetailShell.svelte';
+  import { liveRecords, runner } from './live.svelte';
 
   let props: { ctx: DetailContext; id: string } = $props();
   const ctx = untrack(() => props.ctx);
@@ -19,44 +30,42 @@
 
   /** Preview diameter (px). */
   const SIZE = 180;
-  const MIN_SCALE = 0.5;
-  const MAX_SCALE = 3;
 
-  let element = $state.raw(readElement(ctx.workingCopy.get(id)));
-  let look = $state.raw<Look | undefined>(ctx.look(id));
+  const live = liveRecords(ctx);
+  const run = runner(ctx);
+  /** Bumped after each write: a token-only change may leave the record as it was. */
+  let written = $state(0);
+  const element = $derived(readElement(live.current.get(id)));
+  const look = $derived.by(() => {
+    void live.current;
+    void written;
+    return ctx.look(id);
+  });
   /** The checkbox, kept apart from `look`: an own token may be the same file. */
   let same = $state(untrack(() => look?.sameAsImage ?? true));
+  $effect(() => {
+    if (look && !look.sameAsImage) same = false;
+  });
   /** The pose shown while dragging or scrolling, before it is written. */
   let draft = $state.raw<Pose | undefined>();
   const pose = $derived(draft ?? look?.pose ?? CENTRED);
+  const ring = $derived(look?.ring ?? { enabled: false, colors: { ring: null, background: null } });
 
-  const off = ctx.workingCopy.subscribe((records) => {
-    element = readElement(records.get(id));
-    refresh();
-  });
-  onDestroy(off);
-
-  function refresh() {
-    look = ctx.look(id);
-    if (look && !look.sameAsImage) same = false;
-  }
+  /** The world's ring style (#135); `undefined` until loaded or without one. */
+  let style = $state.raw<RingPreview | undefined>();
+  void ctx.ringPreview().then((s) => (style = s));
+  /** The token image's width / height, once loaded. */
+  let aspect = $state(1);
 
   async function commit(edit: ImageEdit) {
-    try {
-      await ctx.run('element.setImage', { id, ...edit });
-    } catch (error) {
-      ctx.error(error instanceof Error ? error.message : String(error));
-    }
+    await run('element.setImage', { id, ...edit });
     draft = undefined;
-    refresh();
+    written++;
   }
 
   async function pickSheet() {
     const img = await ctx.pickImage(look?.img ?? '');
-    if (img === undefined) return;
-    // §G.3 Ghost: a sheet image alone goes to the record, no Materialize.
-    if (!element?.uuid) return commit({ img });
-    return commit(same ? { img, token: { sameAsImage: true } } : { img });
+    if (img !== undefined) await commit(same ? { img, token: { sameAsImage: true } } : { img });
   }
   async function pickToken() {
     const src = await ctx.pickImage(look?.token ?? '');
@@ -66,15 +75,11 @@
     same = on;
     if (on) void commit({ token: { sameAsImage: true } });
   }
-
-  const ring = $derived(look?.ring ?? { enabled: false, colors: { ring: null, background: null } });
   const setColor = (key: 'ring' | 'background', value: string | null) =>
     commit({ token: { ring: { colors: { [key]: value } } } });
 
   const writePose = (p: Pose) =>
     commit({ token: { anchor: { x: p.anchorX, y: p.anchorY }, scale: p.scale } });
-  const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
-  const round = (n: number) => Math.round(n * 1000) / 1000;
 
   // Drag: the image point under the centre is the texture anchor.
   let drag: { x: number; y: number; from: Pose } | undefined;
@@ -85,12 +90,9 @@
   }
   function move(e: PointerEvent) {
     if (!drag) return;
-    const size = SIZE * drag.from.scale;
-    draft = {
-      ...drag.from,
-      anchorX: round(clamp(drag.from.anchorX - (e.clientX - drag.x) / size, 0, 1)),
-      anchorY: round(clamp(drag.from.anchorY - (e.clientY - drag.y) / size, 0, 1)),
-    };
+    const dx = (e.clientX - drag.x) / SIZE;
+    const dy = (e.clientY - drag.y) / SIZE;
+    draft = dragPose(drag.from, dx, dy, ring.enabled, aspect);
   }
   function up() {
     if (!drag) return;
@@ -102,12 +104,14 @@
   let wheelTimer: ReturnType<typeof setTimeout> | undefined;
   function wheel(e: WheelEvent) {
     e.preventDefault();
-    const scale = round(clamp(pose.scale * (e.deltaY < 0 ? 1.05 : 1 / 1.05), MIN_SCALE, MAX_SCALE));
-    draft = { ...pose, scale };
+    const scale = pose.scale * (e.deltaY < 0 ? 1.05 : 1 / 1.05);
+    draft = clampPose({ ...pose, scale }, ring.enabled, aspect);
     clearTimeout(wheelTimer);
     wheelTimer = setTimeout(() => draft && void writePose(draft), 300);
   }
   onDestroy(() => clearTimeout(wheelTimer));
+  const slide = (value: string) =>
+    clampPose({ ...pose, scale: Number(value) }, ring.enabled, aspect);
 
   function reset() {
     void commit({
@@ -119,7 +123,25 @@
     });
   }
 
-  const shown = $derived(SIZE * pose.scale);
+  const box = $derived(imageBox(pose, ring.enabled, aspect));
+  /** CSS drawing one spritesheet frame at the preview size. */
+  function sprite(rect: SheetRect | undefined) {
+    if (!style || !rect) return undefined;
+    const k = SIZE / rect.w;
+    return [
+      `background-image: url("${style.src}")`,
+      `background-size: ${style.sheet.w * k}px ${style.sheet.h * k}px`,
+      `background-position: ${-rect.x * k}px ${-rect.y * k}px`,
+    ].join(';');
+  }
+  const ringColor = $derived(ring.colors.ring ?? style?.colors.ring);
+  const backgroundColor = $derived(ring.colors.background ?? style?.colors.background);
+  /** The colour band as a radial gradient (radius 1 = 50% of the frame). */
+  const band = $derived(
+    style && ringColor
+      ? `radial-gradient(circle closest-side, transparent ${style.band.start * 100}%, ${ringColor} ${style.band.start * 100}%, ${ringColor} ${style.band.end * 100}%, transparent ${style.band.end * 100}%)`
+      : undefined,
+  );
 </script>
 
 {#snippet color(key: 'ring' | 'background', label: string)}
@@ -130,6 +152,7 @@
       value={ring.colors[key] ?? '#ffffff'}
       disabled={!ring.enabled}
       onchange={(e) => setColor(key, e.currentTarget.value)}
+      data-silk-image-color-input
     />
     {#if ring.colors[key]}
       <button
@@ -137,7 +160,8 @@
         class="icon"
         disabled={!ring.enabled}
         title={t('WorldDefault')}
-        onclick={() => setColor(key, null)}><i class="fa-solid fa-xmark"></i></button
+        onclick={() => setColor(key, null)}
+        data-silk-image-color-clear><i class="fa-solid fa-xmark"></i></button
       >
     {:else}
       <span class="hint">{t('WorldDefault')}</span>
@@ -160,7 +184,8 @@
       <div class="row">
         <img class="thumb" src={look.img || undefined} alt="" />
         <span class="path" title={look.img}>{look.img || '–'}</span>
-        <button type="button" onclick={pickSheet}>{t('Choose')}</button>
+        <button type="button" onclick={pickSheet} data-silk-image-sheet-choose>{t('Choose')}</button
+        >
       </div>
     </DetailSection>
     <DetailSection title={t('TokenImage')} data-silk-image-token>
@@ -177,9 +202,20 @@
         <div class="row">
           <img class="thumb" src={look.token || undefined} alt="" />
           <span class="path" title={look.token}>{look.token || '–'}</span>
-          <button type="button" onclick={pickToken}>{t('Choose')}</button>
+          <button type="button" onclick={pickToken} data-silk-image-token-choose
+            >{t('Choose')}</button
+          >
         </div>
       {/if}
+      <label class="row">
+        <input
+          type="checkbox"
+          checked={look.lockRotation}
+          onchange={(e) => commit({ token: { lockRotation: e.currentTarget.checked } })}
+          data-silk-image-lock-rotation
+        />
+        {t('LockRotation')}
+      </label>
     </DetailSection>
     <DetailSection title={t('Ring')} data-silk-image-ring>
       <label class="row">
@@ -198,10 +234,10 @@
       <div
         class="frame"
         class:ring={ring.enabled}
+        class:styled={ring.enabled && style}
         style:width="{SIZE}px"
         style:height="{SIZE}px"
-        style:--ring={ring.colors.ring ?? 'currentColor'}
-        style:background={ring.enabled ? (ring.colors.background ?? undefined) : undefined}
+        style:--ring={ringColor ?? 'currentColor'}
         role="slider"
         tabindex="0"
         aria-label={t('PositionHint')}
@@ -214,26 +250,55 @@
         onwheel={wheel}
         data-silk-image-preview
       >
-        <img
-          src={look.token || undefined}
-          alt=""
-          draggable="false"
-          style:width="{shown}px"
-          style:height="{shown}px"
-          style:left="{SIZE / 2 - pose.anchorX * shown}px"
-          style:top="{SIZE / 2 - pose.anchorY * shown}px"
-        />
+        {#if ring.enabled}
+          <div class="layer" style={sprite(style?.background)} data-silk-image-preview-background>
+            {#if backgroundColor}
+              <div
+                class="layer tint"
+                style:background={backgroundColor}
+                style:clip-path="circle({(style?.band.end ?? 1) * 50}% at 50% 50%)"
+              ></div>
+            {/if}
+          </div>
+        {/if}
+        <div
+          class="layer"
+          style:clip-path={ring.enabled
+            ? `circle(${(style?.crop ?? 0.85) * 50}% at 50% 50%)`
+            : undefined}
+        >
+          <img
+            src={look.token || undefined}
+            alt=""
+            draggable="false"
+            onload={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              aspect = img.naturalWidth / (img.naturalHeight || 1) || 1;
+            }}
+            style:left="{box.left * SIZE}px"
+            style:top="{box.top * SIZE}px"
+            style:width="{box.width * SIZE}px"
+            style:height="{box.height * SIZE}px"
+          />
+        </div>
+        {#if ring.enabled && style}
+          <div class="layer" style={sprite(style.ring)} data-silk-image-preview-ring>
+            {#if band}
+              <div class="layer tint" style:background={band}></div>
+            {/if}
+          </div>
+        {/if}
       </div>
       <label class="row">
         <span class="label">{t('Scale')}</span>
         <input
           type="range"
-          min={MIN_SCALE}
-          max={MAX_SCALE}
-          step="0.05"
+          min={SCALE.min}
+          max={SCALE.max}
+          step={SCALE.step}
           value={pose.scale}
-          oninput={(e) => (draft = { ...pose, scale: Number(e.currentTarget.value) })}
-          onchange={(e) => writePose({ ...pose, scale: Number(e.currentTarget.value) })}
+          oninput={(e) => (draft = slide(e.currentTarget.value))}
+          onchange={(e) => writePose(slide(e.currentTarget.value))}
           data-silk-image-scale
         />
         <span class="value">{pose.scale.toFixed(2)}</span>
@@ -299,18 +364,29 @@
     cursor: grab;
     touch-action: none;
     border: 2px dashed #888;
-    border-radius: 50%;
   }
   .frame.ring {
+    border-radius: 50%;
     border: 6px solid var(--ring);
+  }
+  .frame.styled {
+    border: 0;
   }
   .frame:active {
     cursor: grabbing;
   }
+  .layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .tint {
+    border-radius: 50%;
+    mix-blend-mode: multiply;
+  }
   .frame img {
     position: absolute;
     max-width: none;
-    object-fit: contain;
     border: 0;
     pointer-events: none;
     user-select: none;

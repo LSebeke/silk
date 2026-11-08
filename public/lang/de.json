@@ -476,6 +476,7 @@
       "Choose": "Wählen…",
       "Ring": "Tokenring",
       "RingEnabled": "Ring an",
+      "LockRotation": "Drehung sperren",
       "RingColor": "Ringfarbe",
       "BackgroundColor": "Hintergrundfarbe",
       "WorldDefault": "Ringstil der Welt",
@@ -483,7 +484,7 @@
       "PositionHint": "Ziehen verschiebt den Token, Scrollen skaliert ihn",
       "Scale": "Skalierung",
       "Reset": "Zurücksetzen",
-      "HoodedHint": "Verhüllt: Die Spieler sehen die Hülle, bis das Aussehen enthüllt ist. Bild, Token und Position gelten dann; der Ring gilt sofort."
+      "HoodedHint": "Verhüllt: Die Spieler sehen die Hülle, bis das Aussehen enthüllt ist. Bild, Token und Position gelten dann; Ring und Drehsperre gelten sofort."
     },
     "Detail": {
       "Title": "Element-Details",

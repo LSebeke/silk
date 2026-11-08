@@ -85,7 +85,7 @@ import {
 import { createMerges, mergeCommands, routeMainMoved, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createPlayerNotes, playerNoteCommands } from './core/player-notes';
-import { hoodImage, lookOf, type PortraitDoc } from './core/portrait';
+import { hoodImage } from './core/portrait';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasBridge } from './ui/canvas/bridge';
@@ -101,6 +101,8 @@ import { playerCanvasCommands } from './ui/player-canvas/commands';
 import type { PlayerCanvasContext } from './ui/player-canvas/context';
 import { createPlayerViewPublisher, parsePlayerView } from './core/player-view';
 import { openPlayerDoc, resolvePlayerNode, type PlayerDoc } from './adapter/player-docs';
+import { pickImage } from './adapter/file-picker';
+import { installTokenFrame, loadRingPreview } from './adapter/token-frame';
 import './ui/silk.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
@@ -486,25 +488,9 @@ const detailContext = (): DetailContext => ({
       content: `<p>${foundry.utils.escapeHTML(content)}</p>`,
     })),
   editor: mountProseEditor,
-  look(id) {
-    const el = readElement(workingCopy().get(id));
-    if (!el) return undefined;
-    // A Ghost has no doc yet: its record image, no ring, centred.
-    const main = materializer.docsOf(id)?.main ?? { img: el.img, flags: { silk: {} } };
-    return lookOf(main as PortraitDoc, el.img);
-  },
-  pickImage: (current) =>
-    new Promise((resolve) => {
-      const FilePicker = foundry.applications.apps.FilePicker.implementation;
-      const picker = new FilePicker({
-        type: 'image',
-        current,
-        callback: (path: string) => resolve(path),
-      });
-      // Resolves first on a pick (the callback runs before the close).
-      picker.addEventListener('close', () => resolve(undefined), { once: true });
-      void picker.browse();
-    }),
+  look: (id) => materializer.look(id),
+  pickImage,
+  ringPreview: loadRingPreview,
 });
 
 /** T14 Adopt: existing Foundry docs become Story Elements (spec §6 Adopt). */
@@ -686,6 +672,8 @@ if (__SILK_DEV__)
     registry.register(command);
 
 Hooks.once('init', () => {
+  // v1.1 §G.3: the ring of a Silk actor's token in front, the image cropped to it.
+  installTokenFrame((doc) => !!doc?.actor?.flags?.silk?.id);
   registerSettings((ns, key, data) => game.settings?.register(ns, key as never, data as never));
   game.settings?.registerMenu(
     MODULE_ID,

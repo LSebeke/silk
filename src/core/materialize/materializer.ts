@@ -46,7 +46,7 @@ import {
   type LayoutContext,
 } from './layout';
 import { deepMerge } from '../util/objects';
-import { imageWrites, type ImageEdit } from '../portrait';
+import { imageWrites, lookOf, type ImageEdit, type Look, type PortraitDoc } from '../portrait';
 import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
 export type MaterializeMode = 'immediate' | 'onDemand';
@@ -113,6 +113,8 @@ export interface Materializer {
    * edit (actor classes only) Materializes it first.
    */
   setImage(id: string, edit: ImageEdit): Promise<void>;
+  /** The real look for the image & token editor (v1.1 §G.3); a Ghost's is its record image. */
+  look(id: string): Look | undefined;
   setFields(id: string, fields: ClassFields): Promise<void>;
   changeClass(id: string, cls: string): Promise<void>;
   /** `appearance`: the Appearance preset (v1.1 §C.2), actor classes without one only. */
@@ -146,6 +148,13 @@ export interface Materializer {
 }
 
 const FOLDER_DOC = (cls: ElementClassId) => documentName(cls);
+
+/** A Ghost's edit without `sameAsImage`, its only token setting that needs no doc. */
+function ghostEdit({ token, ...edit }: ImageEdit): ImageEdit {
+  const rest = { ...token };
+  delete rest.sameAsImage;
+  return Object.keys(rest).length ? { ...edit, token: rest } : edit;
+}
 
 export function createMaterializer(deps: MaterializerDeps): Materializer {
   const { docs, system } = deps;
@@ -399,8 +408,10 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       await sync(id);
     },
 
-    async setImage(id, edit) {
+    async setImage(id, imageEdit) {
       let el = element(id);
+      // §G.3 Ghost: its token is its sheet image, so "same as sheet image" alone changes nothing.
+      const edit = el.uuid ? imageEdit : ghostEdit(imageEdit);
       if (edit.token) {
         if (documentName(el.class) !== 'Actor')
           throw new Error(`Silk: ${el.class} elements have no token`);
@@ -427,6 +438,14 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
         if (writes.tokens) await deps.tokens?.(main.uuid, writes.tokens);
       }
       await sync(id);
+    },
+
+    look(id) {
+      const el = readElement(deps.workingCopy().get(id));
+      if (!el) return undefined;
+      // A Ghost has no doc yet: its record image, no ring, centred.
+      const main = (el.uuid && docsOf(id)?.main) || { img: el.img, flags: { silk: {} } };
+      return lookOf(main as PortraitDoc, el.img);
     },
 
     async setFields(id, fields) {

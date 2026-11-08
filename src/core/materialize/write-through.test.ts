@@ -72,6 +72,25 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     expect(doc.prototypeToken.texture.scaleX).toBe(1.5);
   });
 
+  it('setImage on a Ghost: a sheet image with the token same as it stays in the record', async () => {
+    const t = setup();
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.setImage', {
+      id,
+      img: 'alrik.webp',
+      token: { sameAsImage: true },
+    });
+    expect(t.element(id)).toMatchObject({ img: 'alrik.webp' });
+    expect(t.element(id).uuid).toBeUndefined();
+    expect(t.toasts).toHaveLength(0);
+    expect(t.materializer.look(id)).toMatchObject({
+      img: 'alrik.webp',
+      token: 'alrik.webp',
+      sameAsImage: true,
+      ring: { enabled: false },
+    });
+  });
+
   it('setImage token on a class without tokens is rejected', async () => {
     const t = setup();
     const id = await t.create('location', 'L');

@@ -1,14 +1,20 @@
 /**
- * Base of every detail window (Element Detail; Connection Detail, v1.1 §F.2): one window
- * per record, `silk-detail` styling, resizable. Its component renders `DetailShell`.
+ * Base of every detail window (Element Detail; Connection Detail, v1.1 §F.2; image & token
+ * editor, §G.3): one window per record, `silk-detail` styling, resizable. Its component
+ * renders `DetailShell` and gets the context and the record id.
  */
 import type { DeepPartial } from 'fvtt-types/utils';
 import { SvelteApplication } from '../SvelteApplication.svelte';
+import type { DetailContext } from './context';
 
-type ApplicationV2 = foundry.applications.api.ApplicationV2;
+export type DetailProps = { ctx: DetailContext; id: string };
+
+type DetailWindowClass<W> = (new (ctx: DetailContext, recordId: string) => W) & {
+  prefix: string;
+};
 
 export abstract class DetailWindow<
-  Props extends Record<string, unknown> = Record<string, unknown>,
+  Props extends DetailProps = DetailProps,
 > extends SvelteApplication<Props> {
   static override DEFAULT_OPTIONS: DeepPartial<foundry.applications.api.ApplicationV2.Configuration> =
     {
@@ -17,17 +23,39 @@ export abstract class DetailWindow<
       position: { width: 420, height: 560 },
     };
 
+  /** Window id prefix: the window of record `id` is `<prefix>-<id>`. */
+  static prefix = 'silk-detail';
+
+  protected readonly ctx: DetailContext;
+  protected readonly recordId: string;
+
+  constructor(ctx: DetailContext, recordId: string) {
+    super({ id: `${(new.target as unknown as { prefix: string }).prefix}-${recordId}` });
+    this.ctx = ctx;
+    this.recordId = recordId;
+  }
+
+  /** Props beyond `ctx` and `id`. */
+  protected moreProps(): Omit<Props, keyof DetailProps> {
+    return {} as Omit<Props, keyof DetailProps>;
+  }
+
+  protected getProps(): Props {
+    return { ctx: this.ctx, id: this.recordId, ...this.moreProps() } as Props;
+  }
+
   /**
-   * Opens the detail window with `id`, or brings the open one to front. `prepare` runs on
-   * it (new or existing) before the render.
+   * Opens the window of record `id`, or brings the open one to front. `prepare` runs on it
+   * (new or existing) before the render.
    */
-  static async open<W extends ApplicationV2>(
+  static async show<W extends DetailWindow>(
+    this: DetailWindowClass<W>,
+    ctx: DetailContext,
     id: string,
-    create: () => W,
     prepare?: (window: W) => void,
   ): Promise<W> {
-    const existing = foundry.applications.instances.get(id) as W | undefined;
-    const window = existing ?? create();
+    const existing = foundry.applications.instances.get(`${this.prefix}-${id}`) as W | undefined;
+    const window = existing ?? new this(ctx, id);
     prepare?.(window);
     await window.render({ force: true });
     if (existing) existing.bringToFront();

@@ -1,4 +1,5 @@
 /** What the Element Detail window talks to (spec §8 Controls). Built by `module.ts`. */
+import type { RingPreview } from '../../adapter/token-frame';
 import type { Look } from '../../core/portrait';
 import type { Reveal } from '../../core/reveal';
 import type { WorkingCopy } from '../../core/working-copy';
@@ -24,4 +25,6 @@ export interface DetailContext {
   look(id: string): Look | undefined;
   /** Foundry's FilePicker for an image; `undefined` when closed without a pick. */
   pickImage(current: string): Promise<string | undefined>;
+  /** The world's ring style for the editor preview (v1.1 §G.3); `undefined` without one. */
+  ringPreview(): Promise<RingPreview | undefined>;
 }

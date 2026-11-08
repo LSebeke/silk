@@ -20,11 +20,7 @@ export function detailUiCommands(getContext: () => DetailContext): Command[] {
           ? ((await ctx.run('infoBlock.create', { elementId: id })) as { id: string }).id
           : undefined;
         const { ElementDetailWindow } = await import('./ElementDetailWindow');
-        await ElementDetailWindow.open(
-          ElementDetailWindow.idFor(id),
-          () => new ElementDetailWindow(ctx, id),
-          (window) => block && window.focusBlock(block),
-        );
+        await ElementDetailWindow.show(ctx, id, (window) => block && window.focusBlock(block));
         return block ? { infoBlock: block } : undefined;
       },
     },
@@ -37,10 +33,7 @@ export function detailUiCommands(getContext: () => DetailContext): Command[] {
         if (!readConnection(ctx.workingCopy.get(id)))
           throw new Error(`Silk: no Connection "${id}"`);
         const { ConnectionDetailWindow } = await import('./ConnectionDetailWindow');
-        await ConnectionDetailWindow.open(
-          ConnectionDetailWindow.idFor(id),
-          () => new ConnectionDetailWindow(ctx, id),
-        );
+        await ConnectionDetailWindow.show(ctx, id);
       },
     },
     {
@@ -54,10 +47,7 @@ export function detailUiCommands(getContext: () => DetailContext): Command[] {
         if (!element || !hasAppearanceClass(element.class))
           throw new Error(`Silk: "${id}" has no image & token editor`);
         const { ImageEditorWindow } = await import('./ImageEditorWindow');
-        await ImageEditorWindow.open(
-          ImageEditorWindow.idFor(id),
-          () => new ImageEditorWindow(ctx, id),
-        );
+        await ImageEditorWindow.show(ctx, id);
       },
     },
   ];
