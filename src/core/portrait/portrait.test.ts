@@ -7,11 +7,15 @@ import {
   imageWrites,
   isHooded,
   lookOf,
+  originalLook,
   realPortrait,
   showWrites,
   touchesPortrait,
   type PortraitDoc,
+  type PortraitWrites,
 } from './portrait';
+import { writeLook } from './subject';
+import { testLookStage } from './test-stage';
 
 const HOOD = 'icons/svg/mystery-man-black.svg';
 
@@ -83,6 +87,11 @@ describe('Portrait: showing', () => {
       'flags.silk.img': 'alrik.webp',
       'flags.silk.token': 'alrik-token.webp',
       'flags.silk.hood': HOOD,
+      // What the hood overwrites (v1.1 §G.3.1).
+      'flags.silk.unhooded': {
+        texture: { fit: 'contain', anchorX: 0.5, anchorY: 0.5 },
+        subject: { scale: 1, texture: null },
+      },
     });
     expect(w.tokens).toMatchObject({ 'texture.src': HOOD, 'texture.anchorX': 0.5 });
     // No ring: no subject file; a stale one of Silk's would be cleared.
@@ -468,3 +477,79 @@ describe('Portrait: round 2 migration (v1.1 §G.3.2)', () => {
     expect(showWrites(doc, 'real', undefined, 0.8).tokens).not.toHaveProperty(['texture.scaleX']);
   });
 });
+
+describe('Portrait: imported images (v1.1 §G.3.1)', () => {
+  it('the original look: image, prototype texture and ring, as imported', () => {
+    const doc = {
+      img: 'wolf.webp',
+      prototypeToken: {
+        texture: { src: 'wolf-token.webp', fit: 'cover', scaleX: 0.8, scaleY: 0.8 },
+        ring: { enabled: true, subject: { scale: 1.2, texture: 'wolf-subject.webp' } },
+      },
+    };
+    expect(originalLook(doc)).toEqual({
+      img: 'wolf.webp',
+      texture: { src: 'wolf-token.webp', fit: 'cover', scaleX: 0.8, scaleY: 0.8 },
+      ring: { enabled: true, subject: { scale: 1.2, texture: 'wolf-subject.webp' } },
+    });
+    expect(originalLook({ img: 'x.webp' })).toEqual({ img: 'x.webp', texture: {}, ring: {} });
+  });
+
+  it('the hood stores everything it overwrites; Reveal restores it exactly', async () => {
+    const wolf = imported();
+    const before = structuredClone(wolf);
+    await look(wolf, showWrites(wolf, { hood: HOOD }));
+    expect(wolf.img).toBe(HOOD);
+    expect(wolf.prototypeToken?.texture).toMatchObject({ src: HOOD, fit: 'contain', anchorY: 0.5 });
+    expect(wolf.prototypeToken?.ring?.subject?.texture).not.toBe('wolf-subject.webp');
+    // Applied again (every reconcile): nothing changes.
+    expect(showWrites(wolf, { hood: HOOD }).doc).toEqual({});
+    await look(wolf, showWrites(wolf, 'real'));
+    expect(wolf).toEqual(before);
+  });
+
+  it('Silk never changes an imported look on its own: its placed tokens keep theirs', () => {
+    expect(showWrites(imported(), 'real')).toEqual({ doc: {} });
+  });
+
+  it('an imported ringed actor with fit cover is not a round 2 look (no migration)', () => {
+    const wolf = imported();
+    wolf.prototypeToken = { ...wolf.prototypeToken, ring: { enabled: true } };
+    expect(showWrites(wolf, 'real', undefined, 0.8)).toEqual({ doc: {} });
+  });
+});
+
+/** An imported, ringed actor with its own fit, anchor and subject. */
+const imported = (): PortraitDoc => ({
+  img: 'wolf.webp',
+  prototypeToken: {
+    texture: { src: 'wolf-token.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.8 },
+    ring: { enabled: true, subject: { scale: 1.2, texture: 'wolf-subject.webp' } },
+  },
+  flags: {
+    silk: {
+      original: {
+        img: 'wolf.webp',
+        texture: { src: 'wolf-token.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.8 },
+        ring: { enabled: true, subject: { scale: 1.2, texture: 'wolf-subject.webp' } },
+      },
+    },
+  },
+});
+
+/** Writes `writes` into `doc` as Foundry would (dotted keys, `-=` deletes). */
+async function look(doc: PortraitDoc, writes: PortraitWrites) {
+  const { stage } = testLookStage();
+  await writeLook(stage, async (_uuid, data) => applyUpdate(doc, data), 'Actor.wolf', doc, writes);
+}
+
+function applyUpdate(doc: object, data: Record<string, unknown>) {
+  for (const [key, value] of Object.entries(data)) {
+    const path = key.split('.');
+    const last = path.pop() as string;
+    let at = doc as Record<string, unknown>;
+    for (const k of path) at = (at[k] ??= {}) as Record<string, unknown>;
+    if (last.startsWith('-=')) delete at[last.slice(2)];
+    else at[last] = structuredClone(value);
+  }
+}

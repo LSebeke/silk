@@ -87,7 +87,9 @@ export interface TokenData {
 export interface PortraitDoc {
   img?: string | null;
   prototypeToken?: TokenData;
-  flags: { silk: Pick<SilkDocFlags, 'img' | 'token' | 'hood' | 'pose' | 'subject'> };
+  flags: {
+    silk: Pick<SilkDocFlags, 'img' | 'token' | 'hood' | 'pose' | 'subject' | 'original' | 'unhooded'>;
+  };
 }
 
 /** The ring subject a write needs (v1.1 §G.3): the image and its pose, cut to the ring. */
@@ -183,7 +185,6 @@ export function showWrites(
   const ring = ringOf(doc.prototypeToken).enabled;
   const migrate = migration(doc, sizeFactor);
   if (shown === 'real') {
-    if (!hasSilkLook(doc)) return { doc: {}, tokens: { 'texture.src': real.token } };
     const restore = flags.hood
       ? {
           img: real.img,
@@ -192,6 +193,10 @@ export function showWrites(
           'flags.silk.-=hood': null,
         }
       : {};
+    if (flags.hood && flags.unhooded) return unhood(doc, flags.unhooded, real, restore);
+    // v1.1 §G.3.1: an imported look is never changed on its own, its tokens neither.
+    if (!hasSilkLook(doc))
+      return flags.original ? { doc: {} } : { doc: {}, tokens: { 'texture.src': real.token } };
     const token = { 'texture.src': real.token, ...tokenData(pose, ring), ...migrate };
     return {
       doc: { ...restore, ...proto(doc, token), ...poseFlag(doc, pose) },
@@ -209,6 +214,7 @@ export function showWrites(
         'flags.silk.img': real.img,
         'flags.silk.token': real.token,
         'flags.silk.hood': hood,
+        ...(isHooded(doc) ? {} : { 'flags.silk.unhooded': unhoodedOf(doc) }),
       };
   const token = { 'texture.src': hood, ...tokenData(hoodPose(ring), ring), ...migrate };
   return {
@@ -263,6 +269,8 @@ export function imageWrites(
 
   if (hooded) {
     if (src !== flags.token) data['flags.silk.token'] = src;
+    // A token edit (the editor) makes the real look Silk's: Reveal builds it, no restore.
+    if (edit.token && flags.unhooded) data['flags.silk.-=unhooded'] = null;
     const token = { ...keys, ...tokenData(hoodPose(on), on) };
     return {
       doc: { ...data, ...proto(doc, token), ...poseFlag(doc, pose) },
@@ -276,6 +284,71 @@ export function imageWrites(
     tokens: token,
     subject: on ? { src, pose } : null,
   };
+}
+
+/** `flags.silk.unhooded`: what the hood overwrote (v1.1 §G.3.1). */
+type Unhooded = NonNullable<SilkDocFlags['unhooded']>;
+
+/** The prototype keys the hood is about to overwrite, and Silk's flags it replaces. */
+function unhoodedOf(doc: PortraitDoc): Unhooded {
+  const token = doc.prototypeToken;
+  const { pose, subject } = doc.flags.silk;
+  return {
+    texture: {
+      fit: token?.texture?.fit ?? 'contain',
+      anchorX: token?.texture?.anchorX ?? CENTRED.anchorX,
+      anchorY: token?.texture?.anchorY ?? CENTRED.anchorY,
+    },
+    subject: {
+      scale: token?.ring?.subject?.scale ?? 1,
+      texture: token?.ring?.subject?.texture ?? null,
+    },
+    ...(pose ? { pose: { ...pose } } : {}),
+    ...(subject ? { silkSubject: structuredClone(subject) } : {}),
+  };
+}
+
+/** Reveal of a hood that stored what it overwrote: all of it back, exactly. */
+function unhood(
+  doc: PortraitDoc,
+  under: Unhooded,
+  real: Portrait,
+  restore: Record<string, unknown>,
+): PortraitWrites {
+  const { pose, subject } = doc.flags.silk;
+  const token = {
+    'texture.src': real.token,
+    'texture.fit': under.texture.fit,
+    'texture.anchorX': under.texture.anchorX,
+    'texture.anchorY': under.texture.anchorY,
+    'ring.subject.scale': under.subject.scale,
+    'ring.subject.texture': under.subject.texture,
+  };
+  const flag = (key: string, value: unknown, now: unknown) =>
+    value !== undefined
+      ? { [`flags.silk.${key}`]: value }
+      : now !== undefined
+        ? { [`flags.silk.-=${key}`]: null }
+        : {};
+  return {
+    doc: {
+      ...restore,
+      ...proto(doc, token),
+      ...flag('pose', under.pose, pose),
+      ...flag('subject', under.silkSubject, subject),
+      'flags.silk.-=unhooded': null,
+    },
+    tokens: token,
+  };
+}
+
+/** `flags.silk.original`: an imported actor's look (v1.1 §G.3.1). */
+export type OriginalLook = NonNullable<SilkDocFlags['original']>;
+
+/** The look to keep as `flags.silk.original` when `doc` is imported (v1.1 §G.3.1). */
+export function originalLook(doc: Pick<PortraitDoc, 'img' | 'prototypeToken'>): OriginalLook {
+  const { texture = {}, ring = {} } = structuredClone(doc.prototypeToken ?? {});
+  return { ...(doc.img ? { img: doc.img } : {}), texture, ring };
 }
 
 /** A Foundry update `changed` touches the Portrait (a hand edit may undo the hood). */
@@ -297,7 +370,8 @@ function ringOf(token: TokenData | undefined): Ring {
 const isRound2Look = (doc: PortraitDoc): boolean =>
   !!doc.prototypeToken?.ring?.enabled &&
   doc.prototypeToken.texture?.fit === 'cover' &&
-  !doc.flags.silk.subject;
+  !doc.flags.silk.subject &&
+  !doc.flags.silk.original;
 
 /** Silk wrote this actor's look: a hood, a pose, a subject file, or round 2's look. */
 function hasSilkLook(doc: PortraitDoc): boolean {

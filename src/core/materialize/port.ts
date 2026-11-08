@@ -48,6 +48,21 @@ export interface SilkDocFlags {
     pose: { anchorX: number; anchorY: number; scale: number };
     edges: { inner: number; outer: number };
   };
+  /**
+   * An imported actor's look as it came in (Adopt, Compendium pick, NSC Zucht; v1.1 §G.3.1,
+   * a fifth exception to v1 §2): `img`, the prototype's `texture` and `ring`.
+   */
+  original?: { img?: string; texture: Record<string, unknown>; ring: Record<string, unknown> };
+  /**
+   * What showing the hood overwrote on the prototype (v1.1 §G.3.1): Reveal writes it back
+   * exactly. Dropped by a token edit while hooded (the real look is then Silk's).
+   */
+  unhooded?: {
+    texture: { fit: string; anchorX: number; anchorY: number };
+    subject: { scale: number; texture: string | null };
+    pose?: { anchorX: number; anchorY: number; scale: number };
+    silkSubject?: SilkDocFlags['subject'];
+  };
   /** On a Player Note page: its authoring Campaign (§9). */
   campaign?: string;
   /** On an Info Block page: it is the Appearance block (v1.1 §C.2). */
