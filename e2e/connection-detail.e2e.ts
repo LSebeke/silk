@@ -71,7 +71,7 @@ async function setup(gm: Page) {
 test('Connection Detail opens by double-click on edge and label, menu, Element Detail', async ({
   gm,
 }) => {
-  const { a, id } = await setup(gm);
+  const { a, b, id } = await setup(gm);
   await closePopups(gm);
   await api(gm, 'canvas.open');
   const label = gm.locator(`[data-silk-edge="${id}"]`);
@@ -109,7 +109,7 @@ test('Connection Detail opens by double-click on edge and label, menu, Element D
 
   // An endpoint opens its Element Detail.
   await detail.locator('[data-silk-connection-detail-end="to"]').click();
-  await expect(gm.locator('[data-silk-detail]').filter({ hasText: 'Rondra' })).toBeVisible();
+  await expect(gm.locator(`[data-silk-detail="${b}"]`)).toBeVisible();
 });
 
 test('Connection Detail edits label, direction, Reverse, Notes; Delete confirms', async ({

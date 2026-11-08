@@ -120,9 +120,12 @@ test('Connections: right-drag, digit keys, c, editor, Tab/q, rendering', async (
   await expect(lovesPath).not.toHaveAttribute('marker-end', /url/);
   await gm.keyboard.press('Tab');
   await expect(loves).toHaveAttribute('data-silk-edge-direction', 'directed');
-  await expect(loves).toHaveAttribute('data-silk-edge-from', alrik);
+  // Mutual → directed points A→B in id order (§D `connection.setDirection`), ids are random.
+  const lovesData = (await records(gm, 'connection')).find((r) => r.id === lovesId)?.data;
+  const [first = '', second = ''] = [String(lovesData?.['from']), String(lovesData?.['to'])].sort();
+  await expect(loves).toHaveAttribute('data-silk-edge-from', first);
   await gm.keyboard.press('Shift+Tab');
-  await expect(loves).not.toHaveAttribute('data-silk-edge-from', alrik);
+  await expect(loves).toHaveAttribute('data-silk-edge-from', second);
   await expect(loves).toHaveAttribute('data-silk-edge-direction', 'directed');
 
   // q cycles type: Person → Item has `owns`, so a free-form Connection becomes owns.

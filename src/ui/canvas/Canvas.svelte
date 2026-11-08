@@ -1103,6 +1103,11 @@
     border: 1px solid #c9bfa8;
     border-radius: 8px;
     transform: translate(-50%, -50%);
+    /* Over the canvas centre: Nodes and edges beneath stay reachable; only the button catches. */
+    pointer-events: none;
+  }
+  .silk-no-canon button {
+    pointer-events: auto;
   }
   .silk-rubber-band {
     position: absolute;
