@@ -223,7 +223,7 @@ describe('Appearance (Person/Creature)', () => {
     expect(t.level(page(t.companion(id), blockId(t, id, 'Appearance')))).toBe(OBSERVER);
     expect(t.tokens.at(-1)).toEqual({
       actor: doc.uuid,
-      data: { 'texture.src': 'alrik.webp', displayName: 30 },
+      data: expect.objectContaining({ 'texture.src': 'alrik.webp', displayName: 30 }),
     });
     await t.run('reveal.infoBlock', { id: blockId(t, id, 'Appearance'), revealed: false });
     expect(t.doc(id).img).toBe(HOOD);

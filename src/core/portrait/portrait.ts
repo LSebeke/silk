@@ -11,6 +11,7 @@
 import { elementClass } from '../elements/classes';
 import { appearanceBlock, type StoryElement } from '../elements/element';
 import type { SilkDocFlags } from '../materialize/port';
+import { CENTRED, hoodPose, tokenGeometry, type Mirror, type Pose } from './geometry';
 
 /** The real Portrait: sheet image and prototype token texture. */
 export interface Portrait {
@@ -20,16 +21,6 @@ export interface Portrait {
 
 /** What players see: the real Portrait, or a hood image in its place. */
 export type Shown = 'real' | { hood: string };
-
-/**
- * Where the token sits in its frame (v1.1 §G.3): the texture anchor (v14 has no offset) and
- * one scale, the ring subject scale while the ring is on, else the texture scale.
- */
-export interface Pose {
-  anchorX: number;
-  anchorY: number;
-  scale: number;
-}
 
 /** Token ring colours; `null`: the world ring style decides. */
 export interface RingColors {
@@ -50,6 +41,8 @@ export interface Look extends Portrait {
   sameAsImage: boolean;
   ring: Ring;
   pose: Pose;
+  /** Foundry's `lockRotation` (#136). */
+  lockRotation: boolean;
 }
 
 /** `element.setImage` (v1.1 §D): what to change; the rest stays. */
@@ -61,6 +54,7 @@ export interface ImageEdit {
     ring?: { enabled?: boolean; colors?: Partial<RingColors> };
     anchor?: { x: number; y: number };
     scale?: number;
+    lockRotation?: boolean;
   };
 }
 
@@ -72,7 +66,9 @@ interface TokenData {
     anchorY?: number;
     scaleX?: number;
     scaleY?: number;
+    fit?: string;
   };
+  lockRotation?: boolean;
   ring?: {
     enabled?: boolean;
     colors?: { ring?: string | null; background?: string | null };
@@ -101,11 +97,9 @@ export const HOODED_DEFAULT = 'icons/svg/mystery-man-black.svg';
 /** Silk 1.0's shipped hooded image, removed in 1.1. */
 const HOODED_1_0 = 'modules/silk/assets/hooded.svg';
 
-/** Foundry's token defaults (common/documents/token.mjs). Also the editor's Reset. */
-export const CENTRED: Pose = { anchorX: 0.5, anchorY: 0.5, scale: 1 };
-/** `ring.subject.scale` minimum in Foundry's schema. */
-const MIN_RING_SCALE = 0.5;
+/** Foundry's token defaults (common/documents/token.mjs). */
 const TOKEN_DEFAULTS: Record<string, unknown> = {
+  'texture.fit': 'contain',
   'texture.anchorX': 0.5,
   'texture.anchorY': 0.5,
   'texture.scaleX': 1,
@@ -114,6 +108,7 @@ const TOKEN_DEFAULTS: Record<string, unknown> = {
   'ring.colors.ring': null,
   'ring.colors.background': null,
   'ring.subject.scale': 1,
+  lockRotation: false,
 };
 
 /** The world setting `hoodedImage` as used: empty or a saved 1.0 default → the core icon. */
@@ -149,6 +144,7 @@ export function lookOf(doc: PortraitDoc, recordImg?: string): Look {
     hooded: isHooded(doc),
     ring: ringOf(doc.prototypeToken),
     pose: realPose(doc),
+    lockRotation: !!doc.prototypeToken?.lockRotation,
   };
 }
 
@@ -158,8 +154,6 @@ export function showWrites(doc: PortraitDoc, shown: Shown, recordImg?: string): 
   const real = realPortrait(doc, recordImg);
   const pose = realPose(doc);
   const ring = ringOf(doc.prototypeToken).enabled;
-  // Placed tokens get the pose only where it matters: a real pose that is not centred.
-  const placed = (p: Pose) => (samePose(pose, CENTRED) ? {} : poseData(p, ring, doc));
   if (shown === 'real') {
     const data = flags.hood
       ? {
@@ -172,7 +166,7 @@ export function showWrites(doc: PortraitDoc, shown: Shown, recordImg?: string): 
           ...(flags.pose ? { 'flags.silk.-=pose': null } : {}),
         }
       : {};
-    return { doc: data, tokens: { 'texture.src': real.token, ...placed(pose) } };
+    return { doc: data, tokens: { 'texture.src': real.token, ...poseData(pose, ring, doc) } };
   }
   const { hood } = shown;
   const done =
@@ -191,7 +185,7 @@ export function showWrites(doc: PortraitDoc, shown: Shown, recordImg?: string): 
       };
   return {
     doc: { ...data, ...hiddenPose(doc, pose, ring) },
-    tokens: { 'texture.src': hood, ...placed(CENTRED) },
+    tokens: { 'texture.src': hood, ...poseData(hoodPose(ring), ring, doc) },
   };
 }
 
@@ -222,12 +216,18 @@ export function imageWrites(doc: PortraitDoc, edit: ImageEdit, recordImg?: strin
   };
   const same = t.sameAsImage ?? (t.src === undefined && look.sameAsImage);
   const src = same ? img : (t.src ?? look.token);
-  const ringKeys = ringData(ring);
+  const ringKeys = {
+    ...ringData(ring),
+    ...(t.lockRotation !== undefined ? { lockRotation: t.lockRotation } : {}),
+  };
 
   if (hooded) {
     if (src !== flags.token) data['flags.silk.token'] = src;
     Object.assign(data, proto(doc, ringKeys), hiddenPose(doc, pose, ring.enabled));
-    return { doc: data, tokens: { ...ringKeys, ...poseData(CENTRED, ring.enabled, doc) } };
+    return {
+      doc: data,
+      tokens: { ...ringKeys, ...poseData(hoodPose(ring.enabled), ring.enabled, doc) },
+    };
   }
   const token = { 'texture.src': src, ...ringKeys, ...poseData(pose, ring.enabled, doc) };
   return { doc: { ...data, ...proto(doc, token) }, tokens: token };
@@ -251,9 +251,7 @@ function shownPose(token: TokenData | undefined): Pose {
   return {
     anchorX: texture?.anchorX ?? CENTRED.anchorX,
     anchorY: texture?.anchorY ?? CENTRED.anchorY,
-    scale: token?.ring?.enabled
-      ? (token.ring.subject?.scale ?? CENTRED.scale)
-      : Math.abs(texture?.scaleX ?? CENTRED.scale),
+    scale: Math.abs(texture?.scaleX ?? CENTRED.scale),
   };
 }
 
@@ -261,27 +259,23 @@ const samePose = (a: Pose, b: Pose) =>
   a.anchorX === b.anchorX && a.anchorY === b.anchorY && a.scale === b.scale;
 
 /**
- * The real pose. Under a hood the token shows centred and the real one waits in the flag; a
- * hooded token that is not centred was posed by hand, and that pose is the real one.
+ * The real pose. Under a hood the token shows the hood pose and the real one waits in the
+ * flag; a hooded token posed otherwise was posed by hand, and that pose is the real one.
  */
 function realPose(doc: PortraitDoc): Pose {
   const shown = shownPose(doc.prototypeToken);
   const { hood, pose } = doc.flags.silk;
-  return hood && pose && samePose(shown, CENTRED) ? { ...pose } : shown;
+  const hoodShown = hoodPose(!!doc.prototypeToken?.ring?.enabled);
+  // Without a flag the real pose is centred (only a posed token stores one).
+  return hood && samePose(shown, hoodShown) ? { ...(pose ?? CENTRED) } : shown;
 }
 
 /** Token update data for `pose` (keeps a mirrored texture mirrored). */
 function poseData(pose: Pose, ring: boolean, doc: PortraitDoc): Record<string, unknown> {
   const texture = doc.prototypeToken?.texture;
   const sign = (n: number | undefined) => (n !== undefined && n < 0 ? -1 : 1);
-  const scale = ring ? 1 : pose.scale;
-  return {
-    'texture.anchorX': pose.anchorX,
-    'texture.anchorY': pose.anchorY,
-    'texture.scaleX': sign(texture?.scaleX) * scale,
-    'texture.scaleY': sign(texture?.scaleY) * scale,
-    ...(ring ? { 'ring.subject.scale': Math.max(MIN_RING_SCALE, pose.scale) } : {}),
-  };
+  const mirror: Mirror = { x: sign(texture?.scaleX), y: sign(texture?.scaleY) };
+  return tokenGeometry(pose, ring, mirror);
 }
 
 const ringData = (ring: Ring): Record<string, unknown> => ({
@@ -293,7 +287,7 @@ const ringData = (ring: Ring): Record<string, unknown> => ({
 /** While hooded: the prototype token centred, the real pose in the flag. */
 function hiddenPose(doc: PortraitDoc, pose: Pose, ring: boolean): Record<string, unknown> {
   const flag = doc.flags.silk.pose;
-  const data = proto(doc, poseData(CENTRED, ring, doc));
+  const data = proto(doc, poseData(hoodPose(ring), ring, doc));
   if (samePose(pose, CENTRED)) {
     if (flag) data['flags.silk.-=pose'] = null;
   } else if (!flag || !samePose(flag, pose)) data['flags.silk.pose'] = { ...pose };

@@ -476,6 +476,7 @@
       "Choose": "Choose…",
       "Ring": "Token ring",
       "RingEnabled": "Ring on",
+      "LockRotation": "Lock rotation",
       "RingColor": "Ring colour",
       "BackgroundColor": "Background colour",
       "WorldDefault": "World ring style",
@@ -483,7 +484,7 @@
       "PositionHint": "Drag to position the token, scroll to scale it",
       "Scale": "Scale",
       "Reset": "Reset",
-      "HoodedHint": "Hooded: players see the hood until the Appearance is Revealed. Image, token and position apply then; the ring applies at once."
+      "HoodedHint": "Hooded: players see the hood until the Appearance is Revealed. Image, token and position apply then; the ring and Lock rotation apply at once."
     },
     "Detail": {
       "Title": "Element Detail",

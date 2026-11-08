@@ -76,23 +76,34 @@ describe('Portrait: the hood', () => {
 
 describe('Portrait: showing', () => {
   it('hooding moves the real Portrait into the flags; placed tokens show the hood', () => {
-    expect(showWrites(actor(), { hood: HOOD })).toEqual({
-      doc: {
-        img: HOOD,
-        'prototypeToken.texture.src': HOOD,
-        'flags.silk.img': 'alrik.webp',
-        'flags.silk.token': 'alrik-token.webp',
-        'flags.silk.hood': HOOD,
-      },
-      tokens: { 'texture.src': HOOD },
+    const w = showWrites(actor(), { hood: HOOD });
+    expect(w.doc).toEqual({
+      img: HOOD,
+      'prototypeToken.texture.src': HOOD,
+      'flags.silk.img': 'alrik.webp',
+      'flags.silk.token': 'alrik-token.webp',
+      'flags.silk.hood': HOOD,
     });
+    expect(w.tokens).toMatchObject({ 'texture.src': HOOD, 'texture.scaleX': 1 });
   });
 
   it('hooding an already hooded actor writes nothing to the doc', () => {
-    expect(showWrites(hooded(), { hood: HOOD })).toEqual({
-      doc: {},
-      tokens: { 'texture.src': HOOD },
+    const w = showWrites(hooded(), { hood: HOOD });
+    expect(w.doc).toEqual({});
+    expect(w.tokens).toMatchObject({ 'texture.src': HOOD });
+  });
+
+  it('with the ring, the hood is centred at 0.7 so it fits inside the ring (#133)', () => {
+    const doc = actor({ prototypeToken: { texture: { src: 't.webp' }, ring: { enabled: true } } });
+    const w = showWrites(doc, { hood: HOOD });
+    expect(w.doc).toMatchObject({
+      'prototypeToken.texture.src': HOOD,
+      'prototypeToken.texture.fit': 'cover',
+      'prototypeToken.texture.scaleX': 0.7,
+      'prototypeToken.texture.scaleY': 0.7,
     });
+    expect(w.doc).not.toHaveProperty('flags.silk.pose');
+    expect(w.tokens).toMatchObject({ 'texture.src': HOOD, 'texture.scaleX': 0.7 });
   });
 
   it('a new hood (Appearance deleted) replaces the old one', () => {
@@ -116,23 +127,21 @@ describe('Portrait: showing', () => {
   });
 
   it('showing the real Portrait restores it and clears the flags', () => {
-    expect(showWrites(hooded(), 'real')).toEqual({
-      doc: {
-        img: 'alrik.webp',
-        'prototypeToken.texture.src': 'alrik-token.webp',
-        'flags.silk.-=img': null,
-        'flags.silk.-=token': null,
-        'flags.silk.-=hood': null,
-      },
-      tokens: { 'texture.src': 'alrik-token.webp' },
+    const w = showWrites(hooded(), 'real');
+    expect(w.doc).toEqual({
+      img: 'alrik.webp',
+      'prototypeToken.texture.src': 'alrik-token.webp',
+      'flags.silk.-=img': null,
+      'flags.silk.-=token': null,
+      'flags.silk.-=hood': null,
     });
+    expect(w.tokens).toMatchObject({ 'texture.src': 'alrik-token.webp' });
   });
 
   it('showing the real Portrait of an unhooded actor writes nothing to the doc', () => {
-    expect(showWrites(actor(), 'real', 'stale.webp')).toEqual({
-      doc: {},
-      tokens: { 'texture.src': 'alrik-token.webp' },
-    });
+    const w = showWrites(actor(), 'real', 'stale.webp');
+    expect(w.doc).toEqual({});
+    expect(w.tokens).toMatchObject({ 'texture.src': 'alrik-token.webp' });
   });
 });
 
@@ -165,18 +174,16 @@ describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
       hooded: false,
       ring: { enabled: false, colors: { ring: null, background: null } },
       pose: { anchorX: 0.5, anchorY: 0.5, scale: 1 },
+      lockRotation: false,
     });
   });
 
-  it('own token, ring on: the scale is the ring subject scale', () => {
+  it('own token, ring on: the scale is the texture scale', () => {
     const doc = actor({
       prototypeToken: {
-        texture: { src: 'alrik-token.webp', anchorX: 0.4, anchorY: 0.3, scaleX: 1, scaleY: 1 },
-        ring: {
-          enabled: true,
-          colors: { ring: '#ff0000', background: null },
-          subject: { scale: 1.4 },
-        },
+        texture: { src: 'alrik-token.webp', anchorX: 0.4, anchorY: 0.3, scaleX: 1.4, scaleY: 1.4 },
+        lockRotation: true,
+        ring: { enabled: true, colors: { ring: '#ff0000', background: null } },
       },
     });
     expect(lookOf(doc)).toMatchObject({
@@ -184,6 +191,7 @@ describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
       sameAsImage: false,
       ring: { enabled: true, colors: { ring: '#ff0000', background: null } },
       pose: { anchorX: 0.4, anchorY: 0.3, scale: 1.4 },
+      lockRotation: true,
     });
   });
 
@@ -219,20 +227,23 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
       'prototypeToken.texture.src': 'own.webp',
       'prototypeToken.ring.enabled': true,
       'prototypeToken.ring.colors.ring': '#00ff00',
+      'prototypeToken.texture.fit': 'cover',
       'prototypeToken.texture.anchorX': 0.3,
       'prototypeToken.texture.anchorY': 0.4,
-      'prototypeToken.ring.subject.scale': 1.25,
+      'prototypeToken.texture.scaleX': 1.25,
+      'prototypeToken.texture.scaleY': 1.25,
     });
     expect(w.tokens).toEqual({
       'texture.src': 'own.webp',
       'ring.enabled': true,
       'ring.colors.ring': '#00ff00',
       'ring.colors.background': null,
+      'texture.fit': 'cover',
       'texture.anchorX': 0.3,
       'texture.anchorY': 0.4,
-      'texture.scaleX': 1,
-      'texture.scaleY': 1,
-      'ring.subject.scale': 1.25,
+      'texture.scaleX': 1.25,
+      'texture.scaleY': 1.25,
+      'ring.subject.scale': 1,
     });
   });
 
@@ -244,14 +255,26 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     });
   });
 
-  it('turning the ring on keeps the size: the scale moves to the ring subject', () => {
-    const doc = actor({ prototypeToken: { texture: { src: 't.webp', scaleX: 1.5, scaleY: 1.5 } } });
+  it('turning the ring on keeps the scale; the image now covers the ring (#134)', () => {
+    const doc = actor({
+      prototypeToken: {
+        texture: { src: 't.webp', scaleX: 1.5, scaleY: 1.5 },
+        ring: { subject: { scale: 1.5 } },
+      },
+    });
     expect(imageWrites(doc, { token: { ring: { enabled: true } } }).doc).toEqual({
       'prototypeToken.ring.enabled': true,
-      'prototypeToken.texture.scaleX': 1,
-      'prototypeToken.texture.scaleY': 1,
-      'prototypeToken.ring.subject.scale': 1.5,
+      'prototypeToken.texture.fit': 'cover',
+      'prototypeToken.ring.subject.scale': 1,
     });
+  });
+
+  it('Lock rotation goes to the prototype and the placed tokens, hooded or not (#136)', () => {
+    for (const doc of [actor(), hooded()]) {
+      const w = imageWrites(doc, { token: { lockRotation: true } });
+      expect(w.doc).toMatchObject({ 'prototypeToken.lockRotation': true });
+      expect(w.tokens).toMatchObject({ lockRotation: true });
+    }
   });
 
   it('same as sheet image: the token follows a new sheet image', () => {
@@ -294,13 +317,16 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
       'flags.silk.token': 'own.webp',
       'flags.silk.pose': { anchorX: 0.3, anchorY: 0.4, scale: 1.25 },
       'prototypeToken.ring.enabled': true,
+      'prototypeToken.texture.fit': 'cover',
+      'prototypeToken.texture.scaleX': 0.7,
+      'prototypeToken.texture.scaleY': 0.7,
     });
-    // Players keep seeing the hood, centred.
+    // Players keep seeing the hood, centred, inside the ring.
     expect(w.tokens).toMatchObject({
       'ring.enabled': true,
       'texture.anchorX': 0.5,
       'texture.anchorY': 0.5,
-      'ring.subject.scale': 1,
+      'texture.scaleX': 0.7,
     });
     expect(w.tokens).not.toHaveProperty('texture.src');
   });
@@ -346,6 +372,22 @@ describe('Portrait: the pose under the hood', () => {
       'flags.silk.-=pose': null,
     });
     expect(w.tokens).toMatchObject({ 'texture.src': 'alrik-token.webp', 'texture.anchorX': 0.3 });
+  });
+
+  it('Reveal with the ring: the hood scale goes, the real (centred) pose returns', () => {
+    const doc = actor({ prototypeToken: { texture: { src: 't.webp' }, ring: { enabled: true } } });
+    const hooding = showWrites(doc, { hood: HOOD }).doc;
+    const hoodedDoc = actor({
+      img: HOOD,
+      prototypeToken: { texture: { src: HOOD, scaleX: 0.7, scaleY: 0.7 }, ring: { enabled: true } },
+      flags: { silk: { img: 'alrik.webp', token: 't.webp', hood: HOOD } },
+    });
+    expect(hooding).toMatchObject({ 'prototypeToken.texture.scaleX': 0.7 });
+    expect(lookOf(hoodedDoc).pose).toEqual({ anchorX: 0.5, anchorY: 0.5, scale: 1 });
+    expect(showWrites(hoodedDoc, 'real').doc).toMatchObject({
+      'prototypeToken.texture.scaleX': 1,
+      'prototypeToken.texture.scaleY': 1,
+    });
   });
 
   it('a hooded token posed by hand: that pose is the real one', () => {
