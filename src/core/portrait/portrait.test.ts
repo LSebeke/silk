@@ -101,7 +101,11 @@ describe('Portrait: showing', () => {
     expect(w.doc).toMatchObject({ 'prototypeToken.texture.src': HOOD });
     expect(w.doc).not.toHaveProperty(['prototypeToken.texture.scaleX']);
     expect(w.doc).not.toHaveProperty(['flags.silk.pose']);
-    expect(w.subject).toEqual({ src: HOOD, pose: { anchorX: 0.5, anchorY: 0.5, scale: 0.7 } });
+    expect(w.subject).toEqual({
+      src: HOOD,
+      pose: { anchorX: 0.5, anchorY: 0.5, scale: 0.7 },
+      order: 'ring',
+    });
     expect(w.tokens).not.toHaveProperty(['texture.scaleX']);
   });
 
@@ -144,6 +148,7 @@ describe('Portrait: showing', () => {
     expect(showWrites(doc, 'real').subject).toEqual({
       src: 'alrik-token.webp',
       pose: { anchorX: 0.3, anchorY: 0.4, scale: 1.5 },
+      order: 'ring',
     });
   });
 
@@ -186,6 +191,7 @@ describe('Portrait: a new real image', () => {
     expect(imageWrites(doc, { img: 'new.webp' }).subject).toEqual({
       src: 'new.webp',
       pose: { anchorX: 0.5, anchorY: 0.5, scale: 1 },
+      order: 'ring',
     });
   });
 
@@ -229,6 +235,7 @@ describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
       ring: { enabled: false, colors: { ring: null, background: null } },
       pose: { anchorX: 0.5, anchorY: 0.5, scale: 1 },
       lockRotation: false,
+      order: 'ring',
       sizeFactor: 1,
     });
   });
@@ -299,6 +306,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     expect(w.subject).toEqual({
       src: 'own.webp',
       pose: { anchorX: 0.3, anchorY: 0.4, scale: 1.25 },
+      order: 'ring',
     });
   });
 
@@ -313,10 +321,10 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     expect(w.subject).toBeNull();
   });
 
-  it('the scale is kept within 1 to 8, whoever calls (#137)', () => {
+  it('the scale is kept within 0.5 to 8, whoever calls (#137, #167)', () => {
     const doc = actor({ prototypeToken: { texture: { src: 't.webp' }, ring: { enabled: true } } });
     expect(imageWrites(doc, { token: { scale: 20 } }).subject?.pose.scale).toBe(8);
-    expect(imageWrites(doc, { token: { scale: 0.1 } }).subject?.pose.scale).toBe(1);
+    expect(imageWrites(doc, { token: { scale: 0.1 } }).subject?.pose.scale).toBe(0.5);
   });
 
   it('turning the ring on: the subject scale back to 1, the texture centred', () => {
@@ -387,7 +395,11 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     });
     expect(w.tokens).toMatchObject({ 'ring.enabled': true, 'texture.anchorX': 0.5 });
     expect(w.tokens).not.toHaveProperty(['texture.src']);
-    expect(w.subject).toEqual({ src: HOOD, pose: { anchorX: 0.5, anchorY: 0.5, scale: 0.7 } });
+    expect(w.subject).toEqual({
+      src: HOOD,
+      pose: { anchorX: 0.5, anchorY: 0.5, scale: 0.7 },
+      order: 'ring',
+    });
   });
 
   it('hooded, posed back to centre: the flag goes', () => {
@@ -396,6 +408,53 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     expect(imageWrites(doc, { token: { anchor: { x: 0.5, y: 0.5 } } }).doc).toEqual({
       'flags.silk.-=pose': null,
     });
+  });
+});
+
+describe('Portrait: draw order (v1.1 §G.3, #170)', () => {
+  const ringed = () =>
+    actor({ prototypeToken: { texture: { src: 't.webp' }, ring: { enabled: true } } });
+
+  it('Illustration in front: kept per actor; the subject is cut for it', () => {
+    const w = imageWrites(ringed(), { token: { order: 'illustration' } });
+    expect(w.doc).toEqual({ 'flags.silk.order': 'illustration' });
+    expect(w.subject).toEqual({
+      src: 't.webp',
+      pose: { anchorX: 0.5, anchorY: 0.5, scale: 1 },
+      order: 'illustration',
+    });
+  });
+
+  it('the editor shows it; Ring in front (the default) clears the flag', () => {
+    const doc = ringed();
+    doc.flags.silk.order = 'illustration';
+    expect(lookOf(doc).order).toBe('illustration');
+    const w = imageWrites(doc, { token: { order: 'ring' } });
+    expect(w.doc).toEqual({ 'flags.silk.-=order': null });
+    expect(w.subject?.order).toBe('ring');
+  });
+
+  it('an edit that leaves the order keeps it', () => {
+    const doc = ringed();
+    doc.flags.silk.order = 'illustration';
+    const w = imageWrites(doc, { token: { scale: 2 } });
+    expect(w.doc).not.toHaveProperty(['flags.silk.-=order']);
+    expect(w.subject?.order).toBe('illustration');
+  });
+
+  it('the hood goes through the same draw order (its own file)', () => {
+    const doc = hooded();
+    doc.prototypeToken = { texture: { src: HOOD }, ring: { enabled: true } };
+    doc.flags.silk.order = 'illustration';
+    expect(showWrites(doc, { hood: HOOD }).subject?.order).toBe('illustration');
+    expect(imageWrites(doc, { token: { scale: 2 } }).subject?.order).toBe('illustration');
+  });
+
+  it("Reveal: the real subject in the actor's order", () => {
+    const doc = hooded();
+    doc.prototypeToken = { texture: { src: HOOD }, ring: { enabled: true } };
+    doc.flags.silk.order = 'illustration';
+    expect(showWrites(doc, 'real').subject?.order).toBe('illustration');
   });
 });
 
@@ -454,6 +513,7 @@ describe('Portrait: round 2 migration (v1.1 §G.3.2)', () => {
     expect(w.subject).toEqual({
       src: 'alrik-token.webp',
       pose: { anchorX: 0.4, anchorY: 0.5, scale: 1.5 },
+      order: 'ring',
     });
   });
 
