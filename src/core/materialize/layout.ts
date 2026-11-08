@@ -5,6 +5,7 @@
 import { elementClass, type ElementClassId } from '../elements/classes';
 import type { ElementData, InfoBlock, PlayerNote, StoryElement } from '../elements/element';
 import { statusOf, statusesOf, storedStatus } from '../elements/status';
+import { portraitUpdate, withoutPortrait } from '../portrait/figure';
 import { realPortrait } from '../portrait/portrait';
 import {
   OWNERSHIP_NONE,
@@ -285,6 +286,22 @@ export const notePage = (note: PlayerNote, category: string, sort: number): Page
 export const blockJournal = (main: DocSnapshot, companion: DocSnapshot | undefined) =>
   main.documentName === 'JournalEntry' ? main : companion;
 
+/** An actor's Appearance page (v1.1 §C.2), in its Companion Journal. */
+export function appearancePage(main: DocSnapshot, companion: DocSnapshot | undefined) {
+  if (main.documentName !== 'Actor' || !companion) return undefined;
+  return infoBlockPages(companion).find((p) => p.flags?.silk?.appearance);
+}
+
+/**
+ * v1.1 §G.4: the Appearance page content that puts the real image back on top, or undefined
+ * when it shows it already.
+ */
+export function appearancePortrait(main: DocSnapshot, companion: DocSnapshot | undefined) {
+  const page = appearancePage(main, companion);
+  const content = page && portraitUpdate(page.text?.content ?? '', realPortrait(main).img);
+  return page && content !== undefined ? { page: page._id, content } : undefined;
+}
+
 /**
  * Element fields as Foundry has them (spec §7: the doc is truth once Materialized).
  * A key present with `undefined` means "the docs own it and it is empty". Fields the docs
@@ -321,7 +338,10 @@ export function readBack(
     out.infoBlocks = infoBlockPages(holder).map((p) => ({
       _id: p._id,
       name: p.name,
-      text: p.text?.content ?? '',
+      // The Appearance page's portrait is Silk's, not the block's text (v1.1 §G.4).
+      text: p.flags?.silk?.appearance
+        ? withoutPortrait(p.text?.content ?? '')
+        : (p.text?.content ?? ''),
       ...(p.flags?.silk?.appearance ? { appearance: true as const } : {}),
     }));
     const notes = playerNotePages(holder).map((p) => {

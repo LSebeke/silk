@@ -283,6 +283,12 @@
               data-silk-detail-block-delete={block._id}><i class="fa-solid fa-trash"></i></button
             >
           </div>
+          {#if block.appearance && element.img}
+            <!-- v1.1 §G.4: the page's Silk-managed portrait, read-only; the editor has only the text. -->
+            <figure class="text portrait" data-silk-detail-portrait={block._id}>
+              <img src={element.img} alt={element.name} />
+            </figure>
+          {/if}
           {#if canEdit}
             <div class="text">
               <RichText
@@ -428,6 +434,17 @@
   }
   .text {
     margin-left: 22px;
+  }
+  .portrait {
+    margin-top: 2px;
+    margin-right: 0;
+    margin-bottom: 2px;
+  }
+  .portrait img {
+    display: block;
+    max-width: 100%;
+    max-height: 240px;
+    border: none;
   }
   .add {
     width: auto;
