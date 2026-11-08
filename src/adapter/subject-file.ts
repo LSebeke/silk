@@ -1,6 +1,6 @@
 /**
  * Ring subject files (v1.1 §G.3 "Files", #171): the image, posed and cut to the ring's edge
- * by the one subject geometry (core/portrait), as WebP in
+ * the draw order picks (#170) by the one subject geometry (core/portrait), as WebP in
  * `Data/silk/<worldId>/tokens/<actorId>-<hash>.webp`, named by content so no cache shows a
  * stale one. Replaced files stay (Foundry has no delete).
  */
@@ -37,7 +37,7 @@ export async function drawSubject(spec: SubjectSpec): Promise<Uint8Array> {
   image.src = spec.src;
   await image.decode();
   const aspect = (image.naturalWidth || 1) / (image.naturalHeight || 1);
-  const { box, circle = 0.5 } = subjectBox(spec.pose, subjectCrop(spec.edges), aspect);
+  const { box, circle = 0.5 } = subjectBox(spec.pose, subjectCrop(spec.edges, spec.order), aspect);
   const n = SUBJECT_PX;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;

@@ -19,8 +19,14 @@ export interface Pose {
   scale: number;
 }
 
-/** The editor's scale range (v1.1 §G.3, #137). */
-export const SCALE = { min: 1, max: 8, step: 0.05 } as const;
+/** The editor's scale range (v1.1 §G.3, #137, #167). */
+export const SCALE = { min: 0.5, max: 8, step: 0.05 } as const;
+
+/**
+ * Draw order (v1.1 §G.3, #170): Foundry always draws the subject over the ring, so the crop
+ * decides which shows in front. Default `ring`.
+ */
+export type Order = 'ring' | 'illustration';
 
 /** Foundry's token defaults (common/documents/token.mjs). Also the editor's Reset. */
 export const CENTRED: Pose = { anchorX: 0.5, anchorY: 0.5, scale: 1 };
@@ -43,8 +49,12 @@ export interface Edges {
   outer: number;
 }
 
-/** The subject's crop radius (fraction of the ring radius): the ring in front (#171). */
-export const subjectCrop = (edges: Edges): number => edges.inner;
+/**
+ * The subject's crop radius (fraction of the ring radius, #171): the ring's inner edge for
+ * Ring in front, its outer edge for Illustration in front (#170).
+ */
+export const subjectCrop = (edges: Edges, order: Order): number =>
+  order === 'illustration' ? edges.outer : edges.inner;
 
 /** A box in the frame (side 1, origin top left). */
 export interface ImageBox {
@@ -106,21 +116,23 @@ function imageSize(scale: number, crop: number | undefined, aspect: number) {
     : { width: side * short, height: side * long };
 }
 
-/** `scale` in the editor range, 1 to 8 (#137). */
+/** `scale` in the editor range, 0.5 to 8 (#137, #167). */
 export const clampScale = (scale: number): number =>
   Math.min(SCALE.max, Math.max(SCALE.min, scale));
 
 /**
- * `pose` with the scale in the editor range and, with the ring, the anchor kept so the
- * image still covers the crop circle's square (no empty edge inside the ring).
+ * `pose` with the scale in the editor range and, with the ring, the anchor kept so the image
+ * still covers the crop circle's square on each axis it is larger than it (no empty edge),
+ * and stays inside that square on each axis it is smaller (below 1; the background fills).
  */
 export function clampPose(pose: Pose, crop: number | undefined, aspect: number): Pose {
   const scale = clampScale(pose.scale);
   // In crop units (the circle's square is 1), so the bounds do not depend on the crop.
   const { width, height } = imageSize(scale, crop === undefined ? undefined : 1, aspect);
   const axis = (anchor: number, size: number) => {
-    const margin = crop !== undefined ? Math.min(0.5, 1 / (2 * size)) : 0;
-    return Math.min(1 - margin, Math.max(margin, anchor));
+    // The image edge meets the square's edge at anchor m or 1 - m.
+    const m = crop !== undefined ? 1 / (2 * size) : 0;
+    return Math.min(Math.max(m, 1 - m), Math.max(Math.min(m, 1 - m), anchor));
   };
   return {
     anchorX: round(axis(pose.anchorX, width)),
