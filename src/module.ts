@@ -632,7 +632,11 @@ for (const command of [
     owns.wrap(connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) })),
   ),
   ...eventSceneCommands(eventScenes),
-  ...canvasCoreCommands({ workingCopy, state: canvasState }),
+  ...canvasCoreCommands({
+    workingCopy,
+    state: canvasState,
+    run: (name, args) => registry.run(name, args),
+  }),
   ...pipelineCommands(pipeline),
   ...pickerCommands(compendium),
   ...layoutCommands({

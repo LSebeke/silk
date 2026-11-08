@@ -50,6 +50,7 @@
         "open": "Weltleinwand öffnen",
         "moveNodes": "Knoten verschieben",
         "select": "Knoten auswählen",
+        "deleteSelection": "Auswahl löschen",
         "group": "Zu Gruppe zusammenfassen",
         "ungroup": "Gruppe auflösen",
         "renameGroup": "Gruppe umbenennen",
@@ -256,7 +257,11 @@
         "node-canvas": "Rechts ziehen Knoten → Leinwand: neuer verbundener Knoten",
         "canvas-canvas": "Rechtsklick auf Leinwand: neuer Knoten",
         "canvas-node": "Rechts ziehen Leinwand → Knoten: neuer, damit verbundener Knoten",
-        "edge-anywhere": "Rechtsklick auf Verbindung: Kontextmenü"
+        "edge-anywhere": "Rechtsklick auf Verbindung oder Beschriftung: Kontextmenü",
+        "leftDrag-node": "Knoten ziehen: verschieben (mit der Auswahl)",
+        "drag-canvas": "Leinwand ziehen (linke oder mittlere Taste): verschieben",
+        "doubleClick-node": "Doppelklick auf Knoten: Element-Details",
+        "doubleClick-edge": "Doppelklick auf Verbindung oder Beschriftung: Verbindungsdetails"
       }
     },
     "Connection": {

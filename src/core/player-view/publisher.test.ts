@@ -11,6 +11,7 @@ function setup() {
   for (const command of canvasCoreCommands({
     workingCopy: () => t.workingCopy,
     state: createCanvasState(),
+    run: (n, a) => t.registry.run(n, a),
   }))
     t.registry.register(command);
   let stored: unknown = {};

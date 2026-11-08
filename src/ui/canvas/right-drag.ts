@@ -1,13 +1,17 @@
 /**
  * Right-click / right-drag on the canvas (spec 1.1 §A): where the press starts and ends
- * decides the result. Pure: start Node, end Node (undefined = canvas), modifiers at release.
+ * decides the result. Pure: the start's pointer target, the end Node (undefined = canvas),
+ * modifiers at release.
  * Connections are relative to the pipeline origin (`from`), as `element.create` expects.
  */
 import type { CreateFromConnection, RelativeDirection } from '../../core/connections';
 import { modifierConnection, type Modifiers } from './keys';
+import { connectionOf, type PointerTarget } from './pointer-target';
 
 export type RightDragAction =
   | { kind: 'nodeMenu'; id: string }
+  /** A press on an edge or its label: that Connection's context menu (§F.1). */
+  | { kind: 'edgeMenu'; id: string }
   | { kind: 'connect'; from: string; to: string; connection: CreateFromConnection }
   /** `at`: the drop point (`end`) or the press point (`start`). */
   | { kind: 'create'; at: 'start' | 'end'; from?: string; connection?: CreateFromConnection };
@@ -15,8 +19,8 @@ export type RightDragAction =
 export interface RightDragGesture {
   start: 'node' | 'canvas' | 'edge';
   end: 'sameNode' | 'otherNode' | 'node' | 'canvas' | 'anywhere';
-  /** What `rightDragAction` returns for it; `edgeMenu`: the edge's own context menu. */
-  result: RightDragAction['kind'] | 'edgeMenu';
+  /** What `rightDragAction` returns for it. `edge`: the edge or its label. */
+  result: RightDragAction['kind'];
   /** i18n key. */
   label: string;
 }
@@ -28,9 +32,8 @@ const gesture = (
 ): RightDragGesture => ({ start, end, result, label: `SILK.Canvas.Gesture.${start}-${end}` });
 
 /**
- * The §A table, for the legend (1.1 §E.3). `rightDragAction` decides the Node/canvas rows
- * (right-drag.test.ts checks each `result` against it); the edge row is the edge's own
- * context menu. Modifiers: `MODIFIER_CONNECTIONS`.
+ * The §A table, for the legend (1.1 §E.3). `rightDragAction` decides every row
+ * (right-drag.test.ts checks each `result` against it). Modifiers: `MODIFIER_CONNECTIONS`.
  */
 export const RIGHT_DRAG_GESTURES: readonly RightDragGesture[] = [
   gesture('node', 'sameNode', 'nodeMenu'),
@@ -48,10 +51,14 @@ const REVERSE: Record<RelativeDirection, RelativeDirection> = {
 };
 
 export function rightDragAction(
-  start: string | undefined,
+  target: PointerTarget,
   end: string | undefined,
   mods: Modifiers,
 ): RightDragAction {
+  // Never the Creation Pipeline from an edge or its label (#138).
+  const edge = connectionOf(target);
+  if (edge) return { kind: 'edgeMenu', id: edge };
+  const start = target.kind === 'node' ? target.id : undefined;
   // From the start of the drag, as the digit keys: default outgoing.
   const connection = modifierConnection(mods) ?? { direction: 'out' };
   if (start && start === end) return { kind: 'nodeMenu', id: start };

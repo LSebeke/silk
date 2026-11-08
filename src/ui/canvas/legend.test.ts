@@ -40,8 +40,12 @@ describe('canvas legend (spec 1.1 §E.3)', () => {
     expect(rows).toContainEqual({ keys: ['?'], label: 'SILK.Canvas.Key.legend' });
   });
 
-  it('Mouse: the §A right-drag rows, then the modifiers', () => {
+  it('Mouse: every pointer gesture: drags, double-clicks, the §A right-drag rows, then the modifiers', () => {
     expect(group('mouse')?.rows.map((r) => r.label)).toEqual([
+      'SILK.Canvas.Gesture.leftDrag-node',
+      'SILK.Canvas.Gesture.drag-canvas',
+      'SILK.Canvas.Gesture.doubleClick-node',
+      'SILK.Canvas.Gesture.doubleClick-edge',
       'SILK.Canvas.Gesture.node-sameNode',
       'SILK.Canvas.Gesture.node-otherNode',
       'SILK.Canvas.Gesture.node-canvas',
@@ -53,7 +57,7 @@ describe('canvas legend (spec 1.1 §E.3)', () => {
       'SILK.Canvas.Modifier.ctrl',
       'SILK.Canvas.Modifier.alt',
     ]);
-    expect(group('mouse')?.rows[6]).toMatchObject({ heading: true });
+    expect(group('mouse')?.rows[10]).toMatchObject({ heading: true });
   });
 
   it('Foundry keybindings: the live bindings as given', () => {

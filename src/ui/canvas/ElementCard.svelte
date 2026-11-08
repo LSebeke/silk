@@ -52,8 +52,7 @@
   };
 </script>
 
-<!-- Double-click opens Element Detail (§8); keyboard users have the context menu. -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- Double-click opens Element Detail (§8): the canvas runs it (pointer-target.ts). -->
 <div
   class="silk-card"
   class:selected
@@ -64,7 +63,6 @@
   data-silk-class={data.class}
   data-silk-ghost={data.ghost ? '' : undefined}
   data-silk-revealed={revealed ? '' : undefined}
-  ondblclick={() => ctx.run('element.openDetail', { id }).catch(fail)}
 >
   <div class="block-title">{data.name}</div>
   <img

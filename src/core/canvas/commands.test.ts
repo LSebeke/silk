@@ -9,7 +9,11 @@ function setup(isGM = true) {
   const workingCopy = createWorkingCopy(createMemoryBackend(), { canWrite: () => true });
   const state = createCanvasState();
   const registry = createRegistry(() => ({ isGM }));
-  for (const command of canvasCoreCommands({ workingCopy: () => workingCopy, state }))
+  for (const command of canvasCoreCommands({
+    workingCopy: () => workingCopy,
+    state,
+    run: (n, a) => registry.run(n, a),
+  }))
     registry.register(command);
   return { registry, workingCopy, state };
 }
@@ -30,6 +34,7 @@ describe('canvas commands', () => {
     for (const c of canvasCoreCommands({
       workingCopy: () => workingCopy,
       state: createCanvasState(),
+      run: (n, a) => registry.run(n, a),
     }))
       registry.register(c);
 
@@ -57,6 +62,7 @@ describe('canvas commands', () => {
     for (const c of canvasCoreCommands({
       workingCopy: () => workingCopy,
       state: createCanvasState(),
+      run: (n, a) => registry.run(n, a),
     }))
       registry.register(c);
     await registry.run('canvas.moveNodes', { moves: [{ id: 'el-a', x: 0, y: 0 }] });
@@ -76,7 +82,7 @@ describe('canvas commands', () => {
 
   it('canvas commands are GM-only', () => {
     const { registry } = setup(false);
-    for (const name of ['canvas.moveNodes', 'canvas.select'])
+    for (const name of ['canvas.moveNodes', 'canvas.select', 'canvas.deleteSelection'])
       expect(registry.isAvailable(name)).toBe(false);
   });
 });

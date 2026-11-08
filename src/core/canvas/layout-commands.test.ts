@@ -15,7 +15,8 @@ function setup(records: CanonRecord[] = []) {
   const registry = createRegistry(() => ({ isGM: true }));
   let n = 0;
   const deps = { workingCopy: () => workingCopy, state };
-  for (const c of canvasCoreCommands(deps)) registry.register(c);
+  for (const c of canvasCoreCommands({ ...deps, run: (n, a) => registry.run(n, a) }))
+    registry.register(c);
   for (const c of layoutCommands({ ...deps, newId: () => `g${++n}`, groupLabel: () => 'Group' }))
     registry.register(c);
   const data = (id: string) => workingCopy.get(id)?.data;
