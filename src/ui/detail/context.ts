@@ -25,6 +25,9 @@ export interface DetailContext {
   look(id: string): Look | undefined;
   /** Foundry's FilePicker for an image; `undefined` when closed without a pick. */
   pickImage(current: string): Promise<string | undefined>;
-  /** The world's ring style for the editor preview (v1.1 §G.3); `undefined` without one. */
-  ringPreview(): Promise<RingPreview | undefined>;
+  /**
+   * The world's ring style for the editor preview of a token `size` grid units wide (v1.1
+   * §G.3), the frame its subject file is cut to; `undefined` without one.
+   */
+  ringPreview(size: number): Promise<RingPreview | undefined>;
 }

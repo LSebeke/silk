@@ -75,6 +75,7 @@ import { createEventScenes, eventSceneCommands } from './core/event-scenes';
 import { historyCommands } from './core/history';
 import {
   appearanceMigration,
+  lookMigration,
   createConnectionsPages,
   createDocRewriter,
   createLifecycle,
@@ -85,7 +86,7 @@ import {
 import { createMerges, mergeCommands, routeMainMoved, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createPlayerNotes, playerNoteCommands } from './core/player-notes';
-import { hoodImage, type LookStage } from './core/portrait';
+import { hoodImage, lookWriter, type LookStage } from './core/portrait';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasBridge } from './ui/canvas/bridge';
@@ -195,7 +196,12 @@ const lookStage: LookStage = {
     draw: drawSubject,
     write: (path, bytes) =>
       (subjectAssets ??= createFilePickerAssets(foundryFilePicker())).write(path, bytes),
-    worldId: () => game.world?.id ?? 'world',
+    worldId: () => {
+      // No silent fallback: a file under another world's folder would be found by none.
+      const id = game.world?.id;
+      if (!id) throw new Error('Silk: no world id for the token subject file');
+      return id;
+    },
   }),
 };
 /** T12 owns ↔ inventory; created below, after the materializer it uses. */
@@ -274,6 +280,17 @@ const lifecycle = createLifecycle({
 // v1.1 §C.3: before Reveal's reconcile, which finds the Appearance by its flag.
 lifecycle.contribute(
   appearanceMigration({ workingCopy, docs: foundryDocs, materializer, localize }),
+);
+// v1.1 §G.3.2: once per World, before Reveal's reconcile rewrites the looks.
+lifecycle.contribute(
+  lookMigration({
+    workingCopy,
+    materializer,
+    system: dsa5Mapping,
+    writeLook: lookWriter(lookStage, (uuid, data) => foundryDocs.update(uuid, data)),
+    done: () => game.settings?.get(MODULE_ID, 'lookMigrated') ?? false,
+    markDone: async () => void (await game.settings?.set(MODULE_ID, 'lookMigrated', true)),
+  }),
 );
 lifecycle.contribute(
   revelationMapCleanup(
@@ -505,7 +522,7 @@ const detailContext = (): DetailContext => ({
   editor: mountProseEditor,
   look: (id) => materializer.look(id),
   pickImage,
-  ringPreview: () => ringStyle.preview(),
+  ringPreview: (size) => ringStyle.preview(size),
 });
 
 /** T14 Adopt: existing Foundry docs become Story Elements (spec §6 Adopt). */

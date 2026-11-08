@@ -10,14 +10,24 @@ import {
   originalLook,
   realPortrait,
   restoreWrites,
+  round2Writes,
   showWrites,
   touchesPortrait,
+  lookWriter,
+  type LookSource,
+  type PlacedToken,
   type PortraitDoc,
   type PortraitWrites,
-} from './portrait';
+} from '.';
 import { applyUpdate } from '../materialize/memory-docs';
-import { writeLook } from './subject';
 import { testLookStage } from './test-stage';
+
+/** The `LookSource` of `doc`. */
+const of = (doc: PortraitDoc, recordImg?: string, sizeFactor = 1): LookSource => ({
+  doc,
+  ...(recordImg !== undefined ? { recordImg } : {}),
+  sizeFactor,
+});
 
 const HOOD = 'icons/svg/mystery-man-black.svg';
 
@@ -82,7 +92,7 @@ describe('Portrait: the hood', () => {
 
 describe('Portrait: showing', () => {
   it('hooding moves the real Portrait into the flags; placed tokens show the hood', () => {
-    const w = showWrites(actor(), { hood: HOOD });
+    const w = showWrites(of(actor()), { hood: HOOD });
     expect(w.doc).toEqual({
       img: HOOD,
       'prototypeToken.texture.src': HOOD,
@@ -101,14 +111,14 @@ describe('Portrait: showing', () => {
   });
 
   it('hooding an already hooded actor writes nothing to the doc', () => {
-    const w = showWrites(hooded(), { hood: HOOD });
+    const w = showWrites(of(hooded()), { hood: HOOD });
     expect(w.doc).toEqual({});
     expect(w.tokens).toMatchObject({ 'texture.src': HOOD });
   });
 
   it('with the ring, the hood goes through the subject crop at 0.7 (#133, #171)', () => {
     const doc = actor({ prototypeToken: { texture: { src: 't.webp' }, ring: { enabled: true } } });
-    const w = showWrites(doc, { hood: HOOD });
+    const w = showWrites(of(doc), { hood: HOOD });
     expect(w.doc).toMatchObject({ 'prototypeToken.texture.src': HOOD });
     expect(w.doc).not.toHaveProperty(['prototypeToken.texture.scaleX']);
     expect(w.doc).not.toHaveProperty(['flags.silk.pose']);
@@ -122,7 +132,7 @@ describe('Portrait: showing', () => {
 
   it('a new hood (Appearance deleted) replaces the old one', () => {
     const icon = 'icons/svg/mystery-man.svg';
-    expect(showWrites(hooded(), { hood: icon }).doc).toEqual({
+    expect(showWrites(of(hooded()), { hood: icon }).doc).toEqual({
       img: icon,
       'prototypeToken.texture.src': icon,
       'flags.silk.img': 'alrik.webp',
@@ -134,14 +144,14 @@ describe('Portrait: showing', () => {
   it('a hand edit of the token while hooded re-hoods, keeping the edit as the real token', () => {
     const doc = hooded();
     doc.prototypeToken = { texture: { src: 'edited.webp' } };
-    expect(showWrites(doc, { hood: HOOD }).doc).toMatchObject({
+    expect(showWrites(of(doc), { hood: HOOD }).doc).toMatchObject({
       'prototypeToken.texture.src': HOOD,
       'flags.silk.token': 'edited.webp',
     });
   });
 
   it('showing the real Portrait restores it and clears the flags', () => {
-    const w = showWrites(hooded(), 'real');
+    const w = showWrites(of(hooded()), 'real');
     expect(w.doc).toEqual({
       img: 'alrik.webp',
       'prototypeToken.texture.src': 'alrik-token.webp',
@@ -156,7 +166,7 @@ describe('Portrait: showing', () => {
     const doc = hooded();
     doc.prototypeToken = { texture: { src: HOOD }, ring: { enabled: true } };
     doc.flags.silk.pose = { anchorX: 0.3, anchorY: 0.4, scale: 1.5 };
-    expect(showWrites(doc, 'real').subject).toEqual({
+    expect(showWrites(of(doc), 'real').subject).toEqual({
       src: 'alrik-token.webp',
       pose: { anchorX: 0.3, anchorY: 0.4, scale: 1.5 },
       order: 'ring',
@@ -170,7 +180,7 @@ describe('Portrait: showing', () => {
         ring: { enabled: false, subject: { texture: 'own-subject.webp' } },
       },
     });
-    expect(showWrites(doc, 'real', 'stale.webp')).toEqual({
+    expect(showWrites(of(doc, 'stale.webp'), 'real')).toEqual({
       doc: {},
       tokens: { 'texture.src': 'alrik-token.webp' },
     });
@@ -179,18 +189,18 @@ describe('Portrait: showing', () => {
 
 describe('Portrait: a new real image', () => {
   it('unhooded: the sheet image', () => {
-    expect(imageWrites(actor(), { img: 'new.webp' })).toEqual({ doc: { img: 'new.webp' } });
+    expect(imageWrites(of(actor()), { img: 'new.webp' })).toEqual({ doc: { img: 'new.webp' } });
   });
 
   it('hooded: waits in the flag; players keep seeing the hood', () => {
-    expect(imageWrites(hooded(), { img: 'new.webp' })).toEqual({
+    expect(imageWrites(of(hooded()), { img: 'new.webp' })).toEqual({
       doc: { 'flags.silk.img': 'new.webp' },
     });
   });
 
   it('token same as sheet image (#166): prototype and placed tokens follow an image-only edit', () => {
     const doc = actor({ prototypeToken: { texture: { src: 'alrik.webp' } } });
-    const w = imageWrites(doc, { img: 'new.webp' });
+    const w = imageWrites(of(doc), { img: 'new.webp' });
     expect(w.doc).toEqual({ img: 'new.webp', 'prototypeToken.texture.src': 'new.webp' });
     expect(w.tokens).toMatchObject({ 'texture.src': 'new.webp' });
   });
@@ -199,7 +209,7 @@ describe('Portrait: a new real image', () => {
     const doc = actor({
       prototypeToken: { texture: { src: 'alrik.webp' }, ring: { enabled: true } },
     });
-    expect(imageWrites(doc, { img: 'new.webp' }).subject).toEqual({
+    expect(imageWrites(of(doc), { img: 'new.webp' }).subject).toEqual({
       src: 'new.webp',
       pose: { anchorX: 0.5, anchorY: 0.5, scale: 1 },
       order: 'ring',
@@ -209,22 +219,23 @@ describe('Portrait: a new real image', () => {
   it('token same as sheet image, hooded: the real token waits in the flag too', () => {
     const doc = hooded();
     doc.flags.silk.token = 'alrik.webp';
-    const w = imageWrites(doc, { img: 'new.webp' });
+    const w = imageWrites(of(doc), { img: 'new.webp' });
     expect(w.doc).toMatchObject({ 'flags.silk.img': 'new.webp', 'flags.silk.token': 'new.webp' });
     expect(w.doc).not.toHaveProperty(['prototypeToken.texture.src']);
-    expect(w.tokens).not.toHaveProperty(['texture.src']);
+    // Placed tokens keep (or get back) the hood.
+    expect(w.tokens).toMatchObject({ 'texture.src': HOOD });
   });
 
   it('merge apply (#166): the record already has the new image; the tokens still follow', () => {
     const doc = actor({ prototypeToken: { texture: { src: 'alrik.webp' } } });
-    const w = imageWrites(doc, { img: 'new.webp' }, 'new.webp');
+    const w = imageWrites(of(doc, 'new.webp'), { img: 'new.webp' });
     expect(w.doc).toEqual({ img: 'new.webp', 'prototypeToken.texture.src': 'new.webp' });
     expect(w.tokens).toMatchObject({ 'texture.src': 'new.webp' });
   });
 
   it('an unchanged image (merge apply) leaves the tokens alone (v1.1 §G.3.1)', () => {
     const doc = actor({ prototypeToken: { texture: { src: 'alrik.webp' } } });
-    expect(imageWrites(doc, { img: 'alrik.webp' })).toEqual({ doc: {} });
+    expect(imageWrites(of(doc), { img: 'alrik.webp' })).toEqual({ doc: {} });
   });
 });
 
@@ -238,7 +249,7 @@ describe('Portrait: hand edits', () => {
 
 describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
   it('defaults: token same as the sheet image, no ring, centred', () => {
-    expect(lookOf(actor({ prototypeToken: {} }))).toEqual({
+    expect(lookOf(of(actor({ prototypeToken: {} })))).toEqual({
       img: 'alrik.webp',
       token: 'alrik.webp',
       sameAsImage: true,
@@ -248,6 +259,7 @@ describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
       lockRotation: false,
       order: 'ring',
       sizeFactor: 1,
+      size: 1,
       restorable: false,
     });
   });
@@ -261,7 +273,7 @@ describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
       },
       flags: { silk: { pose: { anchorX: 0.4, anchorY: 0.3, scale: 1.4 } } },
     });
-    expect(lookOf(doc, undefined, 0.8)).toMatchObject({
+    expect(lookOf(of(doc, undefined, 0.8))).toMatchObject({
       token: 'alrik-token.webp',
       sameAsImage: false,
       ring: { enabled: true, colors: { ring: '#ff0000', background: null } },
@@ -275,13 +287,13 @@ describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
     const doc = actor({
       prototypeToken: { texture: { src: 'x.webp', anchorX: 0.3, scaleX: 0.5, scaleY: 0.5 } },
     });
-    expect(lookOf(doc).pose).toEqual({ anchorX: 0.3, anchorY: 0.5, scale: 1 });
+    expect(lookOf(of(doc)).pose).toEqual({ anchorX: 0.3, anchorY: 0.5, scale: 1 });
   });
 
   it('hooded: the real look waiting in the flags', () => {
     const doc = hooded();
     doc.flags.silk.pose = { anchorX: 0.2, anchorY: 0.6, scale: 1.5 };
-    expect(lookOf(doc)).toMatchObject({
+    expect(lookOf(of(doc))).toMatchObject({
       img: 'alrik.webp',
       token: 'alrik-token.webp',
       pose: { anchorX: 0.2, anchorY: 0.6, scale: 1.5 },
@@ -291,7 +303,7 @@ describe('Portrait: the look the image editor shows (v1.1 §G.3)', () => {
 
 describe('Portrait: token edits (v1.1 §G.3)', () => {
   it('ring on: token image and ring to the prototype and placed tokens; the pose to the subject', () => {
-    const w = imageWrites(actor(), {
+    const w = imageWrites(of(actor()), {
       token: {
         src: 'own.webp',
         ring: { enabled: true, colors: { ring: '#00ff00' } },
@@ -324,7 +336,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
 
   it('ring off: the anchor on the texture, no subject file, the size factor untouched', () => {
     const doc = actor({ prototypeToken: { texture: { src: 't.webp', scaleX: 0.8, scaleY: 0.8 } } });
-    const w = imageWrites(doc, { token: { anchor: { x: 0.3, y: 0.5 }, scale: 1.5 } });
+    const w = imageWrites(of(doc), { token: { anchor: { x: 0.3, y: 0.5 }, scale: 1.5 } });
     expect(w.doc).toEqual({
       'prototypeToken.texture.anchorX': 0.3,
       'flags.silk.pose': { anchorX: 0.3, anchorY: 0.5, scale: 1.5 },
@@ -335,8 +347,8 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
 
   it('the scale is kept within 0.5 to 8, whoever calls (#137, #167)', () => {
     const doc = actor({ prototypeToken: { texture: { src: 't.webp' }, ring: { enabled: true } } });
-    expect(imageWrites(doc, { token: { scale: 20 } }).subject?.pose.scale).toBe(8);
-    expect(imageWrites(doc, { token: { scale: 0.1 } }).subject?.pose.scale).toBe(0.5);
+    expect(imageWrites(of(doc), { token: { scale: 20 } }).subject?.pose.scale).toBe(8);
+    expect(imageWrites(of(doc), { token: { scale: 0.1 } }).subject?.pose.scale).toBe(0.5);
   });
 
   it('turning the ring on: the subject scale back to 1, the texture centred', () => {
@@ -347,7 +359,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
       },
       flags: { silk: { pose: { anchorX: 0.3, anchorY: 0.5, scale: 1 } } },
     });
-    const w = imageWrites(doc, { token: { ring: { enabled: true } } });
+    const w = imageWrites(of(doc), { token: { ring: { enabled: true } } });
     expect(w.doc).toEqual({
       'prototypeToken.ring.enabled': true,
       'prototypeToken.texture.anchorX': 0.5,
@@ -358,14 +370,14 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
 
   it('Lock rotation goes to the prototype and the placed tokens, hooded or not (#136)', () => {
     for (const doc of [actor(), hooded()]) {
-      const w = imageWrites(doc, { token: { lockRotation: true } });
+      const w = imageWrites(of(doc), { token: { lockRotation: true } });
       expect(w.doc).toMatchObject({ 'prototypeToken.lockRotation': true });
       expect(w.tokens).toMatchObject({ lockRotation: true });
     }
   });
 
   it('same as sheet image: the token follows a new sheet image', () => {
-    const w = imageWrites(actor(), { img: 'new.webp', token: { sameAsImage: true } });
+    const w = imageWrites(of(actor()), { img: 'new.webp', token: { sameAsImage: true } });
     expect(w.doc).toEqual({ img: 'new.webp', 'prototypeToken.texture.src': 'new.webp' });
     expect(w.tokens?.['texture.src']).toBe('new.webp');
   });
@@ -383,7 +395,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
       scale: 1,
       ring: { colors: { ring: null, background: null } },
     };
-    expect(imageWrites(doc, { token: reset }).doc).toEqual({
+    expect(imageWrites(of(doc), { token: reset }).doc).toEqual({
       'prototypeToken.ring.colors.ring': null,
       'prototypeToken.texture.anchorX': 0.5,
       'prototypeToken.texture.anchorY': 0.5,
@@ -392,7 +404,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
   });
 
   it('hooded: token image and pose wait in the flags; the ring and the hood subject at once', () => {
-    const w = imageWrites(hooded(), {
+    const w = imageWrites(of(hooded()), {
       token: {
         src: 'own.webp',
         ring: { enabled: true },
@@ -406,7 +418,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
       'prototypeToken.ring.enabled': true,
     });
     expect(w.tokens).toMatchObject({ 'ring.enabled': true, 'texture.anchorX': 0.5 });
-    expect(w.tokens).not.toHaveProperty(['texture.src']);
+    expect(w.tokens).toMatchObject({ 'texture.src': HOOD });
     expect(w.subject).toEqual({
       src: HOOD,
       pose: { anchorX: 0.5, anchorY: 0.5, scale: 0.7 },
@@ -417,7 +429,7 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
   it('hooded, posed back to centre: the flag goes', () => {
     const doc = hooded();
     doc.flags.silk.pose = { anchorX: 0.3, anchorY: 0.4, scale: 1 };
-    expect(imageWrites(doc, { token: { anchor: { x: 0.5, y: 0.5 } } }).doc).toEqual({
+    expect(imageWrites(of(doc), { token: { anchor: { x: 0.5, y: 0.5 } } }).doc).toEqual({
       'flags.silk.-=pose': null,
     });
   });
@@ -428,7 +440,7 @@ describe('Portrait: draw order (v1.1 §G.3, #170)', () => {
     actor({ prototypeToken: { texture: { src: 't.webp' }, ring: { enabled: true } } });
 
   it('Illustration in front: kept per actor; the subject is cut for it', () => {
-    const w = imageWrites(ringed(), { token: { order: 'illustration' } });
+    const w = imageWrites(of(ringed()), { token: { order: 'illustration' } });
     expect(w.doc).toEqual({ 'flags.silk.order': 'illustration' });
     expect(w.subject).toEqual({
       src: 't.webp',
@@ -440,8 +452,8 @@ describe('Portrait: draw order (v1.1 §G.3, #170)', () => {
   it('the editor shows it; Ring in front (the default) clears the flag', () => {
     const doc = ringed();
     doc.flags.silk.order = 'illustration';
-    expect(lookOf(doc).order).toBe('illustration');
-    const w = imageWrites(doc, { token: { order: 'ring' } });
+    expect(lookOf(of(doc)).order).toBe('illustration');
+    const w = imageWrites(of(doc), { token: { order: 'ring' } });
     expect(w.doc).toEqual({ 'flags.silk.-=order': null });
     expect(w.subject?.order).toBe('ring');
   });
@@ -449,7 +461,7 @@ describe('Portrait: draw order (v1.1 §G.3, #170)', () => {
   it('an edit that leaves the order keeps it', () => {
     const doc = ringed();
     doc.flags.silk.order = 'illustration';
-    const w = imageWrites(doc, { token: { scale: 2 } });
+    const w = imageWrites(of(doc), { token: { scale: 2 } });
     expect(w.doc).not.toHaveProperty(['flags.silk.-=order']);
     expect(w.subject?.order).toBe('illustration');
   });
@@ -458,15 +470,15 @@ describe('Portrait: draw order (v1.1 §G.3, #170)', () => {
     const doc = hooded();
     doc.prototypeToken = { texture: { src: HOOD }, ring: { enabled: true } };
     doc.flags.silk.order = 'illustration';
-    expect(showWrites(doc, { hood: HOOD }).subject?.order).toBe('illustration');
-    expect(imageWrites(doc, { token: { scale: 2 } }).subject?.order).toBe('illustration');
+    expect(showWrites(of(doc), { hood: HOOD }).subject?.order).toBe('illustration');
+    expect(imageWrites(of(doc), { token: { scale: 2 } }).subject?.order).toBe('illustration');
   });
 
   it("Reveal: the real subject in the actor's order", () => {
     const doc = hooded();
     doc.prototypeToken = { texture: { src: HOOD }, ring: { enabled: true } };
     doc.flags.silk.order = 'illustration';
-    expect(showWrites(doc, 'real').subject?.order).toBe('illustration');
+    expect(showWrites(of(doc), 'real').subject?.order).toBe('illustration');
   });
 });
 
@@ -475,7 +487,7 @@ describe('Portrait: the pose under the hood', () => {
     const doc = actor({
       prototypeToken: { texture: { src: 'alrik-token.webp', anchorX: 0.3, anchorY: 0.4 } },
     });
-    const w = showWrites(doc, { hood: HOOD });
+    const w = showWrites(of(doc), { hood: HOOD });
     expect(w.doc).toMatchObject({
       'prototypeToken.texture.src': HOOD,
       'prototypeToken.texture.anchorX': 0.5,
@@ -488,7 +500,7 @@ describe('Portrait: the pose under the hood', () => {
   it('Reveal without the ring: the anchor back on the texture, the flag kept', () => {
     const doc = hooded();
     doc.flags.silk.pose = { anchorX: 0.3, anchorY: 0.4, scale: 1.5 };
-    const w = showWrites(doc, 'real');
+    const w = showWrites(of(doc), 'real');
     expect(w.doc).toMatchObject({
       'prototypeToken.texture.anchorX': 0.3,
       'prototypeToken.texture.anchorY': 0.4,
@@ -498,7 +510,7 @@ describe('Portrait: the pose under the hood', () => {
   });
 });
 
-describe('Portrait: round 2 migration (v1.1 §G.3.2)', () => {
+describe('Portrait: round 3 migration of round 2 looks (v1.1 §G.3.2)', () => {
   // Round 2: ring on, fit cover, the pose as texture scale and anchor, no subject file.
   const round2 = () =>
     actor({
@@ -507,29 +519,70 @@ describe('Portrait: round 2 migration (v1.1 §G.3.2)', () => {
         ring: { enabled: true },
       },
     });
+  // Round 2, ring off: fit contain, the pose scale still the texture scale.
+  const round2RingOff = () =>
+    actor({
+      prototypeToken: {
+        texture: { src: 'alrik-token.webp', fit: 'contain', anchorX: 0.4, scaleX: 2, scaleY: 2 },
+      },
+    });
 
-  it('the pose is read from the texture', () => {
-    expect(lookOf(round2()).pose).toEqual({ anchorX: 0.4, anchorY: 0.5, scale: 1.5 });
-  });
-
-  it('the next look write builds the subject and puts the size factor back', () => {
-    const w = showWrites(round2(), 'real', undefined, 0.8);
-    expect(w.doc).toMatchObject({
+  it('ring on: the subject built, the pose to its flag; prototype scale 1, placed tokens the size factor', () => {
+    const w = round2Writes(of(round2(), undefined, 0.8));
+    expect(w?.doc).toMatchObject({
       'prototypeToken.texture.fit': 'contain',
       'prototypeToken.texture.anchorX': 0.5,
-      'prototypeToken.texture.scaleX': -0.8,
-      'prototypeToken.texture.scaleY': 0.8,
+      'prototypeToken.texture.scaleX': -1,
+      'prototypeToken.texture.scaleY': 1,
       'flags.silk.pose': { anchorX: 0.4, anchorY: 0.5, scale: 1.5 },
     });
-    expect(w.tokens).toMatchObject({ 'texture.scaleX': -0.8, 'texture.scaleY': 0.8 });
-    expect(w.subject).toEqual({
+    expect(w?.tokens).toMatchObject({ 'texture.scaleX': -0.8, 'texture.scaleY': 0.8 });
+    expect(w?.subject).toEqual({
       src: 'alrik-token.webp',
       pose: { anchorX: 0.4, anchorY: 0.5, scale: 1.5 },
       order: 'ring',
     });
   });
 
-  it('a migrated look (subject file) is left as it is', () => {
+  it('ring off: detected by its texture scale; the pose recovered before the scale is reset', () => {
+    const w = round2Writes(of(round2RingOff(), undefined, 0.5));
+    expect(w?.doc).toMatchObject({
+      'prototypeToken.texture.scaleX': 1,
+      'prototypeToken.texture.scaleY': 1,
+      'flags.silk.pose': { anchorX: 0.4, anchorY: 0.5, scale: 2 },
+    });
+    expect(w?.tokens).toMatchObject({
+      'texture.anchorX': 0.4,
+      'texture.scaleX': 0.5,
+      'texture.scaleY': 0.5,
+    });
+    expect(w?.subject).toBeNull();
+  });
+
+  it('hooded: the hood goes through its subject; the real pose stays in its flag', () => {
+    const doc = round2();
+    doc.img = HOOD;
+    doc.prototypeToken = {
+      texture: { src: HOOD, fit: 'cover', scaleX: 0.7, scaleY: 0.7 },
+      ring: { enabled: true },
+    };
+    doc.flags.silk = {
+      img: 'alrik.webp',
+      token: 'alrik-token.webp',
+      hood: HOOD,
+      pose: { anchorX: 0.3, anchorY: 0.5, scale: 2 },
+    };
+    const w = round2Writes(of(doc, undefined, 1));
+    expect(w?.doc).toMatchObject({ 'prototypeToken.texture.scaleX': 1 });
+    expect(w?.doc).not.toHaveProperty(['flags.silk.pose']);
+    expect(w?.subject).toEqual({
+      src: HOOD,
+      pose: { anchorX: 0.5, anchorY: 0.5, scale: 0.7 },
+      order: 'ring',
+    });
+  });
+
+  it('a migrated look (subject file) and an imported look are left alone', () => {
     const doc = round2();
     doc.flags.silk.subject = {
       file: 'silk/w/tokens/a-1.webp',
@@ -537,7 +590,15 @@ describe('Portrait: round 2 migration (v1.1 §G.3.2)', () => {
       pose: { anchorX: 0.5, anchorY: 0.5, scale: 1 },
       edges: { inner: 0.6, outer: 0.7 },
     };
-    expect(showWrites(doc, 'real', undefined, 0.8).tokens).not.toHaveProperty(['texture.scaleX']);
+    expect(round2Writes(of(doc))).toBeUndefined();
+    expect(round2Writes(of(imported()))).toBeUndefined();
+    expect(round2Writes(of(actor()))).toBeUndefined();
+  });
+
+  it('Reveal never migrates: that is the one-time sweep', () => {
+    expect(showWrites(of(round2(), undefined, 0.8), 'real').tokens).not.toHaveProperty([
+      'texture.scaleX',
+    ]);
   });
 });
 
@@ -569,24 +630,58 @@ describe('Portrait: imported images (v1.1 §G.3.1)', () => {
   it('the hood stores everything it overwrites; Reveal restores it exactly', async () => {
     const wolf = imported();
     const before = structuredClone(wolf);
-    await look(wolf, showWrites(wolf, { hood: HOOD }));
+    await look(wolf, showWrites(of(wolf), { hood: HOOD }));
     expect(wolf.img).toBe(HOOD);
     expect(wolf.prototypeToken?.texture).toMatchObject({ src: HOOD, fit: 'contain', anchorY: 0.5 });
     expect(wolf.prototypeToken?.ring?.subject?.texture).not.toBe('wolf-subject.webp');
     // Applied again (every reconcile): nothing changes.
-    expect(showWrites(wolf, { hood: HOOD }).doc).toEqual({});
-    await look(wolf, showWrites(wolf, 'real'));
+    expect(showWrites(of(wolf), { hood: HOOD }).doc).toEqual({});
+    await look(wolf, showWrites(of(wolf), 'real'));
     expect(wolf).toEqual(before);
   });
 
+  it('each placed token keeps its own look under the hood; Reveal restores each exactly', async () => {
+    const wolf = imported();
+    // Unlinked tokens with their own (wildcard) images, subject and size factor.
+    const placed: PlacedToken[] = [
+      {
+        texture: { src: 'wolf-2.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.8, scaleX: 0.8 },
+        ring: { enabled: true, subject: { scale: 1.2, texture: 'wolf-subject.webp' } },
+      },
+      {
+        texture: { src: 'wolf-3.webp', fit: 'contain', anchorX: 0.5, anchorY: 0.5 },
+        ring: { enabled: true, subject: { scale: 1, texture: null } },
+      },
+    ];
+    const before = structuredClone(placed);
+    await look(wolf, showWrites(of(wolf), { hood: HOOD }), placed);
+    expect(placed.map((t) => t.texture?.src)).toEqual([HOOD, HOOD]);
+    expect(placed[0]?.flags?.silk?.unhooded?.texture.src).toBe('wolf-2.webp');
+    // Applied again (every reconcile): the snapshots stay what the hood overwrote.
+    await look(wolf, showWrites(of(wolf), { hood: HOOD }), placed);
+    expect(placed[1]?.flags?.silk?.unhooded?.texture.src).toBe('wolf-3.webp');
+    await look(wolf, showWrites(of(wolf), 'real'), placed);
+    expect(placed).toEqual(before.map((t) => ({ ...t, flags: { silk: {} } })));
+  });
+
+  it('a token edit while hooded drops the placed tokens’ snapshots too: Reveal shows Silk’s look', async () => {
+    const wolf = imported();
+    const placed: PlacedToken[] = [{ texture: { src: 'wolf-2.webp' } }];
+    await look(wolf, showWrites(of(wolf), { hood: HOOD }), placed);
+    await look(wolf, imageWrites(of(wolf), { token: { anchor: { x: 0.3, y: 0.4 } } }), placed);
+    expect(placed[0]?.flags?.silk?.unhooded).toBeUndefined();
+    await look(wolf, showWrites(of(wolf), 'real'), placed);
+    expect(placed[0]?.texture?.src).toBe('wolf-token.webp');
+  });
+
   it('Silk never changes an imported look on its own: its placed tokens keep theirs', () => {
-    expect(showWrites(imported(), 'real')).toEqual({ doc: {} });
+    expect(showWrites(of(imported()), 'real')).toEqual({ doc: {} });
   });
 
   it('an imported ringed actor with fit cover is not a round 2 look (no migration)', () => {
     const wolf = imported();
     wolf.prototypeToken = { ...wolf.prototypeToken, ring: { enabled: true } };
-    expect(showWrites(wolf, 'real', undefined, 0.8)).toEqual({ doc: {} });
+    expect(showWrites(of(wolf, undefined, 0.8), 'real')).toEqual({ doc: {} });
   });
 
   it('Restore: the originals back on the sheet, prototype and placed tokens; Silk look cleared', async () => {
@@ -594,13 +689,13 @@ describe('Portrait: imported images (v1.1 §G.3.1)', () => {
     const before = structuredClone(wolf);
     await look(
       wolf,
-      imageWrites(wolf, {
+      imageWrites(of(wolf), {
         img: 'mine.webp',
         token: { sameAsImage: true, anchor: { x: 0.3, y: 0.4 }, scale: 2, order: 'illustration' },
       }),
     );
     expect(wolf.flags.silk).toMatchObject({ order: 'illustration', subject: expect.anything() });
-    const w = restoreWrites(wolf);
+    const w = restoreWrites(of(wolf));
     await look(wolf, w);
     expect(wolf).toEqual(before);
     // Placed tokens get the originals but keep their size factor (#168).
@@ -617,25 +712,40 @@ describe('Portrait: imported images (v1.1 §G.3.1)', () => {
   it('Restore while hooded: the originals become the real look; the hood stays until Reveal', async () => {
     const wolf = imported();
     const before = structuredClone(wolf);
-    await look(wolf, showWrites(wolf, { hood: HOOD }));
+    await look(wolf, showWrites(of(wolf), { hood: HOOD }));
     await look(
       wolf,
-      imageWrites(wolf, { img: 'mine.webp', token: { anchor: { x: 0.3, y: 0.4 } } }),
+      imageWrites(of(wolf), { img: 'mine.webp', token: { anchor: { x: 0.3, y: 0.4 } } }),
     );
-    await look(wolf, restoreWrites(wolf));
+    await look(wolf, restoreWrites(of(wolf)));
     expect(wolf.img).toBe(HOOD);
     expect(wolf.prototypeToken?.texture?.src).toBe(HOOD);
     expect(wolf.flags.silk).toMatchObject({ img: 'wolf.webp', token: 'wolf-token.webp' });
-    await look(wolf, showWrites(wolf, 'real'));
+    await look(wolf, showWrites(of(wolf), 'real'));
     expect(wolf).toEqual(before);
+  });
+
+  it('Restore while hooded: the hood subject is cut for the default order it leaves', () => {
+    const wolf = imported();
+    wolf.img = HOOD;
+    wolf.flags.silk = {
+      ...wolf.flags.silk,
+      img: 'mine.webp',
+      token: 'mine.webp',
+      hood: HOOD,
+      order: 'illustration',
+    };
+    const w = restoreWrites(of(wolf));
+    expect(w.doc).toMatchObject({ 'flags.silk.-=order': null });
+    expect(w.subject).toMatchObject({ src: HOOD, order: 'ring' });
   });
 
   it('Restore while hooded drops the pose the hood had stored', async () => {
     const wolf = imported();
     wolf.flags.silk.pose = { anchorX: 0.3, anchorY: 0.4, scale: 2 };
-    await look(wolf, showWrites(wolf, { hood: HOOD }));
+    await look(wolf, showWrites(of(wolf), { hood: HOOD }));
     expect(wolf.flags.silk.unhooded?.pose).toBeDefined();
-    await look(wolf, restoreWrites(wolf));
+    await look(wolf, restoreWrites(of(wolf)));
     expect(wolf.flags.silk.unhooded).not.toHaveProperty('pose');
     expect(wolf.flags.silk.pose).toBeUndefined();
   });
@@ -667,14 +777,11 @@ const imported = (): PortraitDoc => ({
   },
 });
 
-/** Writes `writes` into `doc` as Foundry would (dotted keys, `-=` deletes). */
-async function look(doc: PortraitDoc, writes: PortraitWrites) {
-  const { stage } = testLookStage();
-  await writeLook(
-    stage,
-    async (_uuid, data) => applyUpdate(doc as unknown as Record<string, unknown>, data),
-    'Actor.wolf',
-    doc,
-    writes,
-  );
+/** Writes `writes` into `doc` and its `placed` tokens as Foundry would (`-=` deletes). */
+async function look(doc: PortraitDoc, writes: PortraitWrites, placed: PlacedToken[] = []) {
+  const { stage, placed: byActor } = testLookStage();
+  byActor.set('Actor.wolf', placed);
+  await lookWriter(stage, async (_uuid, data) =>
+    applyUpdate(doc as unknown as Record<string, unknown>, data),
+  )('Actor.wolf', doc, writes);
 }

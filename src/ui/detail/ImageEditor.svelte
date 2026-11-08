@@ -9,10 +9,11 @@
    * its grid square (#168).
    */
   import { onDestroy, untrack } from 'svelte';
-  import { DEFAULT_EDGES, type RingPreview, type SheetRect } from '../../adapter/ring-style';
+  import type { RingPreview, SheetRect } from '../../adapter/ring-style';
   import { readElement } from '../../core/elements';
   import {
     CENTRED,
+    DEFAULT_EDGES,
     clampPose,
     dragPose,
     SCALE,
@@ -57,9 +58,16 @@
   /** The token's side (px): the size factor of the grid square (#168). */
   const tokenPx = $derived(SIZE * (look?.sizeFactor ?? 1));
 
-  /** The world's ring style (#135); `undefined` until loaded or without one. */
+  /** The token's size in grid units: the ring frame, the same as the subject file's. */
+  const size = $derived(look?.size ?? 1);
+  /** The world's ring style (#135) for that size; `undefined` until loaded or without one. */
   let style = $state.raw<RingPreview | undefined>();
-  void ctx.ringPreview().then((s) => (style = s));
+  $effect(() => {
+    const frame = size;
+    void ctx.ringPreview(frame).then((s) => {
+      if (frame === size) style = s;
+    });
+  });
   const order = $derived<Order>(look?.order ?? 'ring');
   /** The subject's crop radius with the ring on (the same as the file's); none without. */
   const crop = $derived(

@@ -171,6 +171,7 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
     expect(t.tokens).toContainEqual({
       actor: spy.uuid,
       data: expect.objectContaining({ 'texture.src': HOOD }),
+      snapshot: 'store',
     });
     // The record keeps the real image.
     expect(t.element(id).img ?? 'spy.webp').toBe('spy.webp');

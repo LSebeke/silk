@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createRingStyle, DEFAULT_EDGES, ringPreview, type SheetJson } from './ring-style';
+import { DEFAULT_EDGES } from '../core/portrait';
+import { createRingStyle, ringPreview, type SheetJson } from './ring-style';
 
 const sheet: SheetJson = {
   config: { defaultColorBand: { startRadius: 0.6, endRadius: 0.8 }, defaultRingColor: '#400c07' },
@@ -51,7 +52,7 @@ describe('ring style (#135, #171)', () => {
       () => 'https://vtt/t.json',
       async () => (reads++ ? sheet : undefined),
     );
-    expect(await style.preview()).toBeUndefined();
-    expect((await style.preview())?.edges.inner).toBe(0.6);
+    expect(await style.preview(1)).toBeUndefined();
+    expect((await style.preview(1))?.edges.inner).toBe(0.6);
   });
 });

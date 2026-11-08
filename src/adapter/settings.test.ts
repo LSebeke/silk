@@ -39,10 +39,11 @@ describe('settings (spec §13)', () => {
       windowState: { scope: 'client' },
       playerViewState: { scope: 'client' },
       fileBrowseNoticeShown: { scope: 'world', default: false },
+      lookMigrated: { scope: 'world', default: false },
       revealState: { scope: 'world' },
       legendOpen: { scope: 'client', default: true },
     });
-    expect(s.size).toBe(13);
+    expect(s.size).toBe(14);
   });
 
   it('hides internal settings from the config dialog', () => {
@@ -51,6 +52,7 @@ describe('settings (spec §13)', () => {
     expect(hidden.sort()).toEqual([
       'fileBrowseNoticeShown',
       'legendOpen',
+      'lookMigrated',
       'playerView',
       'playerViewState',
       'revealState',
