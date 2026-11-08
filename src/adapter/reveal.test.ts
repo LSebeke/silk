@@ -130,6 +130,7 @@ describe('tokenUpdates', () => {
         _id: 't1',
         'texture.src': 'hood',
         'flags.silk.unhooded': {
+          ring: { enabled: false, colors: { ring: null, background: null } },
           texture: { src: 'wild-2.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.5 },
           subject: { scale: 1, texture: null },
         },

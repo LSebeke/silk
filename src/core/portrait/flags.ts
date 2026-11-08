@@ -3,6 +3,7 @@
  * ids only" that the Portrait owns. Types only; `SilkDocFlags` (materialize/port) extends it.
  */
 import type { Edges, Order, Pose } from './geometry';
+import type { Ring } from './portrait';
 
 /**
  * Subject file (glossary): the file Silk wrote to `ring.subject.texture` and what it was
@@ -43,10 +44,15 @@ export interface OriginalLook {
   ring: TokenRing;
 }
 
-/** What showing the hood overwrites on one token (prototype or placed), to put back exactly. */
+/**
+ * What showing the hood overwrites on one token (prototype or placed), to put back exactly.
+ * `src` and `ring` only for a placed token's own; the actor's wait in `flags.silk.token` and
+ * `flags.silk.ring`.
+ */
 export interface HoodSnapshot {
   texture: { src?: string | null; fit: string; anchorX: number; anchorY: number };
   subject: { scale: number; texture: string | null };
+  ring?: Ring;
 }
 
 /**
@@ -66,6 +72,8 @@ export interface LookFlags {
   img?: string;
   token?: string;
   hood?: string;
+  /** The real ring (on/off, colours) while hooded (#182): the hood always shows the ring. */
+  ring?: Ring;
   /**
    * The real token position and scale (v1.1 §G.3), when not centred; the token itself shows
    * the hood centred, or the pose baked into the subject file.

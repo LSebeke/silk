@@ -12,11 +12,11 @@ import {
   orderOf,
   realPortrait,
   realPose,
-  ringOf,
+  realRing,
   type LookSource,
   type PortraitWrites,
 } from './portrait';
-import { poseFlag, prototypeUpdate } from './writes';
+import { poseFlag, prototypeUpdate, ringData } from './writes';
 
 /** Makes the actor show its real look. No-op doc writes are left out. */
 export function revealWrites(source: LookSource): PortraitWrites {
@@ -39,6 +39,7 @@ function hoodFlagsCleared({ doc, recordImg }: LookSource): Record<string, unknow
     'flags.silk.-=img': null,
     'flags.silk.-=token': null,
     'flags.silk.-=hood': null,
+    ...(doc.flags.silk.ring ? { 'flags.silk.-=ring': null } : {}),
   };
 }
 
@@ -51,8 +52,8 @@ export function silkLookWrites(source: LookSource): PortraitWrites {
   const { doc } = source;
   const real = realPortrait(doc, source.recordImg);
   const pose = realPose(doc);
-  const ringOn = ringOf(doc.prototypeToken).enabled;
-  const token = { 'texture.src': real.token, ...tokenData(pose, ringOn) };
+  const ring = realRing(doc);
+  const token = { 'texture.src': real.token, ...ringData(ring), ...tokenData(pose, ring.enabled) };
   return {
     doc: {
       ...hoodFlagsCleared(source),
@@ -62,7 +63,7 @@ export function silkLookWrites(source: LookSource): PortraitWrites {
     },
     tokens: token,
     snapshot: 'drop',
-    subject: ringOn ? { src: real.token, pose, order: orderOf(doc) } : null,
+    subject: ring.enabled ? { src: real.token, pose, order: orderOf(doc) } : null,
   };
 }
 
@@ -72,6 +73,7 @@ function unhood(source: LookSource, overwritten: Unhooded): PortraitWrites {
   const { pose, subject } = doc.flags.silk;
   const token = {
     ...snapshotData(overwritten),
+    ...ringData(realRing(doc)),
     'texture.src': realPortrait(doc, source.recordImg).token,
   };
   return {

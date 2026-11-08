@@ -8,12 +8,20 @@ import { hoodSnapshot, unhoodedFlag } from './hood';
 import {
   HOODED_DEFAULT,
   isHooded,
+  ringOf,
   type LookSource,
   type PortraitDoc,
   type PortraitWrites,
 } from './portrait';
 import { flatten } from '../util/objects';
-import { TOKEN_DEFAULTS, hoodSubject, hoodTokenData, orderFlag, prototypeUpdate } from './writes';
+import {
+  TOKEN_DEFAULTS,
+  hoodSubject,
+  hoodTokenData,
+  orderFlag,
+  prototypeUpdate,
+  ringFlag,
+} from './writes';
 
 /** The look to keep as `flags.silk.original` when `doc` is imported (v1.1 §G.3.1). */
 export function originalLook(doc: Pick<PortraitDoc, 'img' | 'prototypeToken'>): OriginalLook {
@@ -25,9 +33,12 @@ export function originalLook(doc: Pick<PortraitDoc, 'img' | 'prototypeToken'>): 
 const LOOK_DEFAULTS = Object.fromEntries(
   Object.entries(TOKEN_DEFAULTS).filter(([k]) => k.startsWith('texture.') || k.startsWith('ring.')),
 );
-/** Keys the hood overwrites; the rest of the look applies at once while hooded. */
+/** Keys the hood overwrites (#182: its ring too); the rest of the look applies at once while hooded. */
 const HOODED_KEYS = new Set([
   'texture.src',
+  'ring.enabled',
+  'ring.colors.ring',
+  'ring.colors.background',
   'texture.fit',
   'texture.anchorX',
   'texture.anchorY',
@@ -73,22 +84,22 @@ export function restoreWrites({ doc }: LookSource): PortraitWrites {
     };
   }
   // Hooded: the originals wait as the real look; Reveal restores them like any Unhooded.
-  const ringOn = !!token.ring.enabled;
   const hood = flags.hood ?? HOODED_DEFAULT;
   const hooded = {
     ...without(originalKeys, HOODED_KEYS),
-    ...hoodTokenData(hood, ringOn),
+    ...hoodTokenData(hood),
   };
   return {
     doc: {
       'flags.silk.img': img,
       'flags.silk.token': token.texture.src ?? img,
       ...unhoodedFlag(doc, hoodSnapshot(token, false)),
+      ...ringFlag(doc, ringOf(token)),
       ...prototypeUpdate(doc, hooded),
       ...cleared,
     },
     tokens: without(hooded, SIZE_KEYS),
     snapshot: 'drop',
-    subject: hoodSubject(hood, ringOn, order),
+    subject: hoodSubject(hood, order),
   };
 }

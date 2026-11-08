@@ -2,7 +2,7 @@
  * Building blocks every Portrait write shares: Foundry's token defaults, prototype update
  * keys, the pose / draw order flags, the ring keys and the hood's subject. Pure.
  */
-import { CENTRED, DEFAULT_ORDER, hoodPose, tokenData, type Order, type Pose } from './geometry';
+import { CENTRED, DEFAULT_ORDER, HOOD_POSE, tokenData, type Order, type Pose } from './geometry';
 import type { PortraitDoc, Ring, SubjectRequest } from './portrait';
 
 /** Foundry's token defaults (common/documents/token.mjs). */
@@ -60,12 +60,30 @@ export const ringData = (ring: Ring): Record<string, unknown> => ({
   'ring.colors.background': ring.colors.background,
 });
 
-/** Token keys showing the hood: its image, centred (smaller inside the ring, #133). */
-export const hoodTokenData = (hood: string, ringOn: boolean): Record<string, unknown> => ({
+/** The hood's ring (#182): always on, the world ring style's own colours. */
+export const HOOD_RING: Readonly<Ring> = {
+  enabled: true,
+  colors: { ring: null, background: null },
+};
+
+/** Token keys showing the hood: its image in its ring (#182), centred (the pose is the file's). */
+export const hoodTokenData = (hood: string): Record<string, unknown> => ({
   'texture.src': hood,
-  ...tokenData(hoodPose(ringOn), ringOn),
+  ...ringData(HOOD_RING),
+  ...tokenData(HOOD_POSE, true),
 });
 
-/** The hood's own subject file (v1.1 §G.3): through the actor's draw order; none ring off. */
-export const hoodSubject = (hood: string, ringOn: boolean, order: Order): SubjectRequest | null =>
-  ringOn ? { src: hood, pose: hoodPose(true), order } : null;
+/** The hood's own subject file (v1.1 §G.3): 0.7 of the subject, through the actor's draw order. */
+export const hoodSubject = (hood: string, order: Order): SubjectRequest => ({
+  src: hood,
+  pose: { ...HOOD_POSE },
+  order,
+});
+
+/** `flags.silk.ring` holding the real ring while hooded (#182); written only when it changes. */
+export function ringFlag(doc: PortraitDoc, ring: Ring): Record<string, unknown> {
+  const flag = doc.flags.silk.ring;
+  return flag && JSON.stringify(flag) === JSON.stringify(ring)
+    ? {}
+    : { 'flags.silk.ring': structuredClone(ring) };
+}

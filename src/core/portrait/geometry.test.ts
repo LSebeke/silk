@@ -3,7 +3,7 @@ import {
   clampPose,
   clampScale,
   dragPose,
-  hoodPose,
+  HOOD_POSE,
   SCALE,
   subjectBox,
   subjectCrop,
@@ -30,9 +30,8 @@ describe('Token geometry: Foundry writes (v1.1 §G.3, #171, #168)', () => {
 });
 
 describe('Token geometry: the hood (#133)', () => {
-  it('centred; 0.7 of the subject inside the ring, full size without', () => {
-    expect(hoodPose(true)).toEqual({ anchorX: 0.5, anchorY: 0.5, scale: 0.7 });
-    expect(hoodPose(false)).toEqual(centred);
+  it('centred at 0.7 of the subject (always in its ring, #182)', () => {
+    expect(HOOD_POSE).toEqual({ anchorX: 0.5, anchorY: 0.5, scale: 0.7 });
   });
 });
 

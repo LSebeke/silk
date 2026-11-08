@@ -34,14 +34,8 @@ export const DEFAULT_ORDER: Order = 'ring';
 /** Foundry's token defaults (common/documents/token.mjs). Also the editor's Reset. */
 export const CENTRED: Pose = { anchorX: 0.5, anchorY: 0.5, scale: 1 };
 
-/** The hood is shown at this scale of the subject while the ring is on (#133). */
-export const HOOD_RING_SCALE = 0.7;
-
-/** What players see while hooded: the hood centred, smaller inside the ring. */
-export const hoodPose = (ring: boolean): Pose => ({
-  ...CENTRED,
-  scale: ring ? HOOD_RING_SCALE : CENTRED.scale,
-});
+/** What players see while hooded: the hood centred at 0.7 of the subject, in its ring (#133, #182). */
+export const HOOD_POSE: Readonly<Pose> = { ...CENTRED, scale: 0.7 };
 
 /**
  * The world ring style's colour band edges, as fractions of the ring radius (Foundry's
