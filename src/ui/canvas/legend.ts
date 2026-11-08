@@ -1,6 +1,6 @@
 /**
  * Canvas legend (spec 1.1 §E.3). Built from the tables the canvas runs on (`CANVAS_KEYS`,
- * `RIGHT_DRAG_GESTURES`, `MODIFIER_CONNECTIONS`) and the live Foundry keybindings, so it
+ * `POINTER_GESTURES`, `RIGHT_DRAG_GESTURES`, `MODIFIER_CONNECTIONS`) and the live Foundry keybindings, so it
  * cannot drift from the code. Pure: rows carry i18n keys; the component localises.
  */
 import type { LiveKeybinding } from '../../adapter/keybindings';
@@ -12,6 +12,7 @@ import {
   MODIFIER_CONNECTIONS,
   type CanvasKeyBinding,
 } from './keys';
+import { POINTER_GESTURES } from './pointer-target';
 import { RIGHT_DRAG_GESTURES } from './right-drag';
 
 export interface LegendRow {
@@ -58,7 +59,7 @@ export function legendGroups(foundry: readonly LiveKeybinding[]): LegendGroup[] 
       id: 'mouse',
       title: 'SILK.Legend.Mouse',
       rows: [
-        ...RIGHT_DRAG_GESTURES.map((g) => ({ keys: [], label: g.label })),
+        ...[...POINTER_GESTURES, ...RIGHT_DRAG_GESTURES].map((g) => ({ keys: [], label: g.label })),
         { keys: [], label: 'SILK.Legend.Modifiers', heading: true },
         ...MODIFIER_CONNECTIONS.map((m) => ({ keys: [], label: m.label })),
       ],

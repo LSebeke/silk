@@ -8,11 +8,15 @@ import { NODE_SIZE, type NodeSizeOf, type Size } from './groups';
 export interface CanvasStateValue {
   /** Selected Node ids, in selection order. */
   readonly selection: readonly string[];
+  /** Selected Connection ids (`canvas.deleteSelection`, spec 1.1 §E.4). */
+  readonly connections: readonly string[];
 }
 
 export interface CanvasState {
   get(): CanvasStateValue;
   select(ids: readonly string[], add?: boolean): void;
+  /** Replaces the Connection selection. */
+  selectConnections(ids: readonly string[]): void;
   /**
    * A card's footprint for layout (spec 1.1 §E.1: cards grow to fit their name): measured
    * by the open canvas, else the default `NODE_SIZE`.
@@ -24,20 +28,27 @@ export interface CanvasState {
   subscribe(run: (value: CanvasStateValue) => void): () => void;
 }
 
+const sameIds = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((id, i) => id === b[i]);
+
 export function createCanvasState(): CanvasState {
-  let value: CanvasStateValue = { selection: [] };
+  let value: CanvasStateValue = { selection: [], connections: [] };
   const subscribers = new Set<(value: CanvasStateValue) => void>();
   let measure: NodeSizeOf | undefined;
+  const update = (next: Partial<CanvasStateValue>) => {
+    value = { ...value, ...next };
+    for (const s of subscribers) s(value);
+  };
 
   return {
     get: () => value,
     select(ids, add = false) {
       const next = [...new Set(add ? [...value.selection, ...ids] : ids)];
-      const same =
-        next.length === value.selection.length && next.every((id, i) => id === value.selection[i]);
-      if (same) return;
-      value = { ...value, selection: next };
-      for (const s of subscribers) s(value);
+      if (!sameIds(next, value.selection)) update({ selection: next });
+    },
+    selectConnections(ids) {
+      const next = [...new Set(ids)];
+      if (!sameIds(next, value.connections)) update({ connections: next });
     },
     nodeSize: (id) => measure?.(id) ?? NODE_SIZE,
     measureWith(next) {

@@ -84,6 +84,8 @@ test('Edge menu (spec 1.1 §F.1): right-click on edge and label, entries', async
   // The label; the entries of §F.1.
   await rightClick(gm, centre);
   await expect(menu).toBeVisible();
+  // Never the Creation Pipeline from the label (#138).
+  await expect(gm.locator('[data-silk-class-box]')).toHaveCount(0);
   await expect(menu.locator('[data-silk-menu-item]')).toHaveText([
     'Open details',
     'Reveal',

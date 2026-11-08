@@ -50,6 +50,7 @@
         "open": "Open the World Canvas",
         "moveNodes": "Move Nodes",
         "select": "Select Nodes",
+        "deleteSelection": "Delete selection",
         "group": "Group into a Visual Group",
         "ungroup": "Dissolve Visual Group",
         "renameGroup": "Rename Visual Group",
@@ -256,7 +257,11 @@
         "node-canvas": "Right-drag Node → canvas: new connected Node",
         "canvas-canvas": "Right-click the canvas: new Node",
         "canvas-node": "Right-drag canvas → Node: new Node connected to it",
-        "edge-anywhere": "Right-click a Connection: context menu"
+        "edge-anywhere": "Right-click a Connection or its label: context menu",
+        "leftDrag-node": "Drag a Node: move it (with the selection)",
+        "drag-canvas": "Drag the canvas (left or middle button): pan",
+        "doubleClick-node": "Double-click a Node: Element Detail",
+        "doubleClick-edge": "Double-click a Connection or its label: Connection Detail"
       }
     },
     "Connection": {

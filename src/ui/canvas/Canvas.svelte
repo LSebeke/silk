@@ -52,7 +52,12 @@
     type GroupNode,
   } from './flow-model';
   import { canvasKey, confirmKey, sourceKey } from './keys';
-  import { deleteSelection } from './delete-selection';
+  import {
+    connectionOf,
+    doubleClickCommand,
+    pointerTarget,
+    type PointerTarget,
+  } from './pointer-target';
   import { rightDragAction } from './right-drag';
   import { STATUS_PROMPT, type StatusPrompt } from './status-prompt';
 
@@ -340,6 +345,8 @@
   onDestroy(() => {
     clearTimeout(moveEnd);
     flushView();
+    // Edge selection is not restored on reopen: forget it, so `Del` never hits unseen ones.
+    void run('canvas.select', { ids: canvasState.get().selection, connections: [] });
   });
 
   // --- Connections (T7) ---
@@ -527,10 +534,7 @@
         if (edge) pipeline.editConnection(edge.id);
         break;
       case 'delete':
-        deleteSelection(ctx.run, {
-          elements: canvasState.get().selection.filter((id) => readElement(workingCopy.get(id))),
-          connections: edges.filter((e) => e.selected).map((e) => e.id),
-        }).catch(fail);
+        void run('canvas.deleteSelection', {});
         break;
       case 'command':
         if (edge) void run(action.name, { id: edge.id });
@@ -678,41 +682,23 @@
     return { x1: a.x, y1: a.y, x2: rightDrag.to.x, y2: rightDrag.to.y };
   });
 
-  /** Edges, labels and overlays keep their own right-click (edge context menu, inputs). */
-  function rightTarget(target: EventTarget | null) {
-    const el = target as HTMLElement | null;
-    if (!el?.closest?.('.svelte-flow__pane')) return false;
-    return !el.closest('.svelte-flow__edge, .svelte-flow__edgelabel-renderer, input, textarea');
-  }
-
-  /**
-   * The Connection a right-click or double-click lands on: its edge or its label (spec 1.1
-   * §F.1, §F.2). The label lives in xyflow's label portal, outside the edge, so xyflow's edge
-   * events never see it.
-   */
-  function edgeTarget(target: EventTarget | null): string | undefined {
-    const el = target as Element | null;
-    if (!el?.closest?.('.svelte-flow__pane') || el.closest('[data-silk-connection-editor]'))
-      return undefined;
-    return (
-      el.closest<HTMLElement>('[data-silk-edge]')?.dataset['silkEdge'] ??
-      el.closest<SVGElement>('.svelte-flow__edge')?.dataset['id']
-    );
-  }
+  /** What the pointer is on (spec 1.1 §F.1): the one classifier for every pointer handler. */
+  const targetOf = (event: Event) => pointerTarget(event.target as Element | null);
 
   function onPointerDown(event: PointerEvent) {
-    if (event.button !== 2 || !rightTarget(event.target)) return;
+    const target = event.button === 2 ? targetOf(event) : undefined;
+    if (!target) return;
     const win = root?.ownerDocument.defaultView;
     if (!win) return;
     menu = undefined;
     pipeline.cancel();
-    const start = (event.target as HTMLElement).closest<HTMLElement>('[data-silk-node]')?.dataset[
-      'silkNode'
-    ];
+    const start = target.kind === 'node' ? target.id : undefined;
     const from = { clientX: event.clientX, clientY: event.clientY };
+    // An edge or its label: no rubber band, the release opens its menu (§A row "Connection edge").
+    const banded = !connectionOf(target);
     rightDrag = { start, from };
     const move = (e: PointerEvent) => {
-      if (!rightDrag) return;
+      if (!rightDrag || !banded) return;
       const far = Math.hypot(e.clientX - from.clientX, e.clientY - from.clientY) >= DRAG_MIN;
       if (!far && !rightDrag.to) return;
       rightDrag = { ...rightDrag, to: local(e) };
@@ -730,7 +716,7 @@
     const up = (e: PointerEvent) => {
       if (e.button !== 2) return;
       stop();
-      finishRightDrag(start, from, e);
+      finishRightDrag(target, from, e);
     };
     win.addEventListener('pointermove', move, true);
     win.addEventListener('pointerup', up, true);
@@ -738,10 +724,11 @@
     win.addEventListener('blur', stop);
   }
 
-  function finishRightDrag(start: string | undefined, from: ScreenPoint, end: PointerEvent) {
+  function finishRightDrag(start: PointerTarget, from: ScreenPoint, end: PointerEvent) {
     const action = rightDragAction(start, nodeAt(end), end);
     root?.focus();
     if (action.kind === 'nodeMenu') return openNodeMenu(action.id, end);
+    if (action.kind === 'edgeMenu') return openEdgeMenu(action.id, from);
     if (action.kind === 'connect') {
       connect(action.from, action.to, action.connection).catch(fail);
       return;
@@ -754,24 +741,25 @@
     });
   }
 
-  /** The native menu never shows on the canvas; the press decides (above), or the edge menu. */
+  /** The native menu never shows on the canvas: the press decides (above). */
   function onContextMenu(event: MouseEvent) {
-    const edge = edgeTarget(event.target);
-    if (!edge && !rightTarget(event.target)) return;
+    if (!targetOf(event)) return;
     event.preventDefault();
     event.stopPropagation();
-    if (edge) openEdgeMenu(edge, event);
   }
 
-  /** Double-click on an edge or its label opens its Connection Detail (spec 1.1 §F.2). */
+  /**
+   * Double-click: Element Detail on a Node, Connection Detail on an edge or its label (spec 1.1
+   * §F.2). Bubble phase, so card buttons (eye, pin) keep theirs by stopping it.
+   */
   function onDoubleClick(event: MouseEvent) {
-    const edge = edgeTarget(event.target);
-    if (!edge) return;
+    const command = doubleClickCommand(targetOf(event));
+    if (!command) return;
     event.stopPropagation();
-    void run('connection.openDetail', { id: edge });
+    void run(command.name, command.args);
   }
 
-  function openEdgeMenu(id: string, event: MouseEvent) {
+  function openEdgeMenu(id: string, event: ScreenPoint) {
     pipeline.cancel();
     // Keys (Escape) reach the canvas, not Foundry's close-the-window handler.
     root?.focus();
@@ -811,11 +799,20 @@
   });
   const openCanon = () => void run('canon.openWindow');
 
-  function onSelectionChange({ nodes: selected }: { nodes: (ElementNode | GroupNode)[] }) {
+  function onSelectionChange({
+    nodes: selected,
+    edges: selectedEdges,
+  }: {
+    nodes: (ElementNode | GroupNode)[];
+    edges: FlowEdge[];
+  }) {
     const ids = selected.map((n) => n.id);
-    const current = canvasState.get().selection;
-    if (ids.length === current.length && ids.every((id) => current.includes(id))) return;
-    void run('canvas.select', { ids });
+    const connections = selectedEdges.map((e) => e.id);
+    const same = (a: readonly string[], b: readonly string[]) =>
+      a.length === b.length && a.every((id) => b.includes(id));
+    const current = canvasState.get();
+    if (same(ids, current.selection) && same(connections, current.connections)) return;
+    void run('canvas.select', { ids, connections });
   }
 </script>
 
@@ -835,7 +832,7 @@
   ondrop={onDrop}
   onpointerdowncapture={onPointerDown}
   oncontextmenucapture={onContextMenu}
-  ondblclickcapture={onDoubleClick}
+  ondblclick={onDoubleClick}
 >
   <SvelteFlow
     bind:nodes
