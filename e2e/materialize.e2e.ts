@@ -251,13 +251,15 @@ test('write-through to Foundry, and Foundry edits flow back', async ({ gm, playe
     pages: 5,
   });
   expect(new Set(state.extraOwnership)).toEqual(new Set([0]));
-  // Plus the hood (§8): hooded path, the real image/token waiting for Appearance, and what
-  // the hood overwrote (Unhooded, v1.1 §G.3.1).
+  // Plus the hood (§8): hooded path, the real image/token/ring waiting for Appearance, the
+  // hood's subject file record, and what the hood overwrote (v1.1 §G.3, §G.3.1).
   expect(Object.keys(state.flags).sort()).toEqual([
     'companion',
     'hood',
     'id',
     'img',
+    'ring',
+    'subject',
     'token',
     'unhooded',
   ]);
