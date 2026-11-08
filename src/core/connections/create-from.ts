@@ -6,7 +6,7 @@ import { readElement, type ElementCommandDeps, type ElementClassId } from '../el
 import type { WorkingCopy } from '../working-copy';
 import type { ConnectionCreateArgs, RelativeDirection } from './commands';
 import type { ConnectionType } from './connection';
-import { createFromDefault } from './rules';
+import { defaultConnection } from './rules';
 
 type AfterCreate = NonNullable<ElementCommandDeps['afterCreate']>[number];
 
@@ -18,21 +18,18 @@ export interface CreateFromConnection {
 }
 
 /**
- * The Connection args from origin to the new element. An explicit direction keeps the
- * default Behavioural type only when that type points the same way; otherwise free-form.
+ * The `connection.create` args from origin to the new element; without a type, it picks the
+ * default Connection (v1.1 §F.3). Without type and direction, a Behavioural default is asked
+ * new → origin (v1 §5: a new Location sits inside its origin); otherwise origin → new.
  */
 export function resolveCreateFrom(
   origin: ElementClassId,
   created: ElementClassId,
   wanted: CreateFromConnection = {},
 ): Omit<ConnectionCreateArgs, 'from' | 'to'> {
-  const label = wanted.label === undefined ? {} : { label: wanted.label };
-  if (wanted.type) return { type: wanted.type, direction: wanted.direction ?? 'out', ...label };
-  const fallback = createFromDefault(origin, created);
-  const way: RelativeDirection | undefined = fallback && (fallback.reverse ? 'in' : 'out');
-  if (fallback && (wanted.direction === undefined || wanted.direction === way))
-    return { type: fallback.type, direction: way, ...label };
-  return { type: 'free', direction: wanted.direction ?? 'out', ...label };
+  const fallback: RelativeDirection =
+    !wanted.type && defaultConnection(created, origin) ? 'in' : 'out';
+  return { ...wanted, direction: wanted.direction ?? fallback };
 }
 
 export function connectOnCreate(deps: {

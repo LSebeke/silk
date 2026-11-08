@@ -309,6 +309,49 @@ test('right-drag (spec 1.1 §A): connect, create from/onto a Node, menu, never p
   expect(await viewportTransform(gm)).toBe(before);
 });
 
+test('Default Connection (spec 1.1 §F.3): right-drag Item → Person = Person owns Item; Alt free', async ({
+  gm,
+}) => {
+  await resetCanvas(gm);
+  const run = <T>(name: string, args: object) => api(gm, name, args) as Promise<T>;
+  const { id: alrik } = await run<{ id: string }>('element.create', {
+    class: 'person',
+    name: 'Alrik',
+    at: { x: 200, y: 200 },
+  });
+  const { id: sword } = await run<{ id: string }>('element.create', {
+    class: 'item',
+    name: 'Sword',
+    at: { x: 700, y: 200 },
+  });
+  await openCanvas(gm);
+  const card = (name: string) => gm.locator('[data-silk-node]', { hasText: name });
+  await expect(card('Sword')).toBeVisible();
+
+  await rightDrag(gm, center(await boxOf(card('Sword'))), center(await boxOf(card('Alrik'))));
+  await expect.poll(async () => (await connections(gm)).length).toBe(1);
+  expect((await connections(gm))[0]?.data).toMatchObject({ type: 'owns', from: alrik, to: sword });
+  // Behavioural: the editor offers the types; Enter closes it.
+  await expect(gm.locator('[data-silk-connection-editor] button').first()).toBeFocused();
+  await gm.keyboard.press('Enter');
+  await expect(gm.locator('[data-silk-connection-editor]')).toHaveCount(0);
+
+  // Alt at release: free-form, outgoing.
+  await rightDrag(
+    gm,
+    center(await boxOf(card('Sword'))),
+    center(await boxOf(card('Alrik'))),
+    async () => gm.keyboard.down('Alt'),
+  );
+  await gm.keyboard.up('Alt');
+  await expect.poll(async () => (await connections(gm)).length).toBe(2);
+  expect((await connections(gm)).map((c) => c.data)).toContainEqual(
+    expect.objectContaining({ type: 'free', from: sword, to: alrik }),
+  );
+  await expect(gm.locator('[data-silk-label-input]')).toBeFocused();
+  await gm.keyboard.press('Escape');
+});
+
 test('Source Step (spec 1.1 §B.1): compass after Person/Creature, greyed choices inert, Blank', async ({
   gm,
 }) => {

@@ -11,7 +11,7 @@ import {
   type ConnectionDirection,
   type ConnectionType,
 } from './connection';
-import { check, duplicateOf, typeOptions } from './rules';
+import { check, defaultConnection, duplicateOf, typeOptions } from './rules';
 
 /** Direction relative to `from`: out = from → to (default), in = to → from. */
 export type RelativeDirection = 'out' | 'in' | 'mutual';
@@ -58,17 +58,33 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     available: (ctx) => ctx.isGM,
     async run(args) {
       const wc = deps.workingCopy();
-      for (const end of [args.from, args.to])
-        if (!readElement(wc.get(end))) throw new Error(`Silk: no element "${end}"`);
+      const classOf = (end: string) => {
+        const element = readElement(wc.get(end));
+        if (!element) throw new Error(`Silk: no element "${end}"`);
+        return element.class;
+      };
+      classOf(args.from);
+      classOf(args.to);
       if (args.from === args.to) throw new Error('Silk: an element cannot connect to itself');
-      const type = args.type ?? 'free';
-      if (!isType(type)) throw new Error(`Silk: unknown Connection type "${String(type)}"`);
-      const reverse = args.direction === 'in';
+      if (args.type !== undefined && !isType(args.type))
+        throw new Error(`Silk: unknown Connection type "${String(args.type)}"`);
+      const mutual = args.direction === 'mutual';
+      // The asked pair; without a type, the default Connection (v1.1 §F.3) may swap it.
+      let [from, to] = args.direction === 'in' ? [args.to, args.from] : [args.from, args.to];
+      let type = args.type ?? 'free';
+      const fallback =
+        args.type === undefined && !mutual
+          ? defaultConnection(classOf(from), classOf(to))
+          : undefined;
+      if (fallback) {
+        type = fallback.type;
+        if (fallback.reverse) [from, to] = [to, from];
+      }
       const data: ConnectionData = {
-        from: reverse ? args.to : args.from,
-        to: reverse ? args.from : args.to,
+        from,
+        to,
         type,
-        direction: args.direction === 'mutual' ? 'mutual' : 'directed',
+        direction: mutual ? 'mutual' : 'directed',
         label: type === 'free' ? (args.label ?? '').trim() : '',
       };
       const duplicate = check(wc.records(), data).ok && duplicateOf(wc.records(), data);

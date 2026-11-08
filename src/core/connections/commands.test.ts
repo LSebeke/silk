@@ -48,6 +48,35 @@ describe('connection.create', () => {
     expect(connection(both)).toMatchObject({ from: 'a', to: 'b', direction: 'mutual' });
   });
 
+  it('without type: the one valid Behavioural type, swapped if only the reverse is valid (v1.1 §F.3)', async () => {
+    const { add, create, connection } = setup();
+    await add('alrik', 'person');
+    await add('sword', 'item');
+    await add('gareth', 'location');
+    await add('festum', 'location');
+    expect(connection(await create({ from: 'sword', to: 'alrik' }))).toMatchObject({
+      type: 'owns',
+      from: 'alrik',
+      to: 'sword',
+    });
+    // Shift (in) asks festum → gareth; located in is valid both ways, so as asked.
+    expect(
+      connection(await create({ from: 'gareth', to: 'festum', direction: 'in' })),
+    ).toMatchObject({ type: 'locatedIn', from: 'festum', to: 'gareth' });
+  });
+
+  it('without type: mutual (Ctrl) and an explicit free type (Alt) stay free-form', async () => {
+    const { add, create, connection } = setup();
+    await add('alrik', 'person');
+    await add('sword', 'item');
+    expect(
+      connection(await create({ from: 'alrik', to: 'sword', direction: 'mutual' })),
+    ).toMatchObject({ type: 'free', direction: 'mutual' });
+    expect(
+      connection(await create({ from: 'alrik', to: 'sword', type: 'free', label: 'covets' })),
+    ).toMatchObject({ type: 'free', direction: 'directed', label: 'covets' });
+  });
+
   it('refuses unknown endpoints and self-connections', async () => {
     const { add, create, connections } = setup();
     await add('a', 'person');
@@ -227,16 +256,16 @@ describe('editing Connections', () => {
     await add('city', 'location');
     await add('inn', 'location');
     const up = await create({ from: 'city', to: 'realm', type: 'locatedIn' });
-    const free = await create({ from: 'city', to: 'inn' });
+    const free = await create({ from: 'city', to: 'inn', type: 'free' });
     await registry.run('connection.cycleType', { id: free });
     expect(connection(free)?.type).toBe('locatedIn');
     expect(connections()).toEqual([free]);
     expect(connections()).not.toContain(up);
     // city → realm was replaced, so realm in city is no cycle; inn in realm would be one.
-    const loop = await create({ from: 'realm', to: 'city' });
+    const loop = await create({ from: 'realm', to: 'city', type: 'free' });
     await registry.run('connection.cycleType', { id: loop });
     expect(connection(loop)?.type).toBe('locatedIn');
-    const back = await create({ from: 'inn', to: 'realm' });
+    const back = await create({ from: 'inn', to: 'realm', type: 'free' });
     await registry.run('connection.cycleType', { id: back });
     expect(connection(back)?.type).toBe('free');
   });

@@ -198,7 +198,7 @@ describe('Creation Pipeline with Connections', () => {
       'in',
       (p, from) => [
         async () => p.open({ at: { x: -300, y: 0 }, from, connection: { direction: 'in' } }),
-        () => p.pickClass('item'),
+        () => p.pickClass('faction'),
       ],
     ],
     [
