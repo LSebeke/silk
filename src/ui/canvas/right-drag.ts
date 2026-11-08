@@ -59,15 +59,20 @@ export function rightDragAction(
   const edge = connectionOf(target);
   if (edge) return { kind: 'edgeMenu', id: edge };
   const start = target.kind === 'node' ? target.id : undefined;
-  // From the start of the drag, as the digit keys: default outgoing.
-  const connection = modifierConnection(mods) ?? { direction: 'out' };
+  // A modifier picks an explicit direction (from the start of the drag, as the digit keys).
+  // None: the default, outgoing from the start, which the default Connection may swap and
+  // which gives a new element the same Connection as the palette (v1 §5, v1.1 §F.3).
+  const picked = modifierConnection(mods);
+  const connection = picked ?? {};
   if (start && start === end) return { kind: 'nodeMenu', id: start };
   if (start && end) return { kind: 'connect', from: start, to: end, connection };
   if (start) return { kind: 'create', at: 'end', from: start, connection };
   // The new element is the start: seen from B, the direction flips.
   if (end) {
-    const direction = REVERSE[connection.direction ?? 'out'];
-    return { kind: 'create', at: 'start', from: end, connection: { ...connection, direction } };
+    const seenFromB: CreateFromConnection = picked?.direction
+      ? { ...picked, direction: REVERSE[picked.direction] }
+      : { ...connection, newFirst: true };
+    return { kind: 'create', at: 'start', from: end, connection: seenFromB };
   }
   return { kind: 'create', at: 'start' };
 }

@@ -130,7 +130,7 @@ describe('Node context menu: Add Info Block… (v1.1 §C.1)', () => {
 });
 
 describe('Connection edge context menu', () => {
-  const free = { id: 'c1', type: 'free', direction: 'directed' } as const;
+  const free = { id: 'c1', type: 'free' } as const;
 
   it('Open details, Reveal, the Connection commands (spec 1.1 §F.1)', () => {
     const entries = edgeMenu(free, deps({ isRevealed: () => true }));
@@ -138,7 +138,7 @@ describe('Connection edge context menu', () => {
       'SILK.Canvas.EdgeMenu.OpenDetails',
       'SILK.Reveal.Unreveal',
       'T(connection.setLabel)',
-      'SILK.Canvas.EdgeMenu.DirectedMutual',
+      'T(connection.toggleDirection)',
       'T(connection.cycleType)',
       'SILK.Canvas.EdgeMenu.Reverse',
       'T(connection.delete)',
@@ -149,23 +149,15 @@ describe('Connection edge context menu', () => {
       args: { id: 'c1', revealed: false },
     });
     expect(entries[3]).toMatchObject({
-      command: 'connection.setDirection',
-      args: { id: 'c1', direction: 'mutual' },
+      command: 'connection.toggleDirection',
+      args: { id: 'c1' },
     });
     expect(entries[5]).toMatchObject({ command: 'connection.flip', args: { id: 'c1' } });
     expect(entries.at(-1)).toMatchObject({ command: 'connection.delete', args: { ids: ['c1'] } });
   });
 
-  it('Directed ⇄ Mutual sets the other direction; never reverses (spec 1.1 §F.1)', () => {
-    const mutual = edgeMenu({ ...free, direction: 'mutual' }, deps());
-    expect(mutual[3]).toMatchObject({
-      command: 'connection.setDirection',
-      args: { id: 'c1', direction: 'directed' },
-    });
-  });
-
   it('Directed ⇄ Mutual is off on a Behavioural Connection (always directed)', () => {
-    const owns = edgeMenu({ id: 'c1', type: 'owns', direction: 'directed' }, deps());
+    const owns = edgeMenu({ id: 'c1', type: 'owns' }, deps());
     expect(owns[3]?.disabled).toBe(true);
     expect(owns[5]?.disabled).toBeUndefined();
   });

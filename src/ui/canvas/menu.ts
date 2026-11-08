@@ -4,7 +4,7 @@
  * Pure; the canvas and the Element Detail window render the same entries.
  */
 import type { RevealKind } from '../../core/campaigns';
-import { otherDirection, type Connection } from '../../core/connections';
+import { togglesDirection, type Connection } from '../../core/connections';
 import {
   appearanceBlock,
   elementClass,
@@ -100,23 +100,15 @@ export function nodeMenu(
 }
 
 /** Spec 1.1 §F.1. */
-export function edgeMenu(
-  c: Pick<Connection, 'id' | 'type' | 'direction'>,
-  deps: MenuDeps,
-): MenuEntry[] {
+export function edgeMenu(c: Pick<Connection, 'id' | 'type'>, deps: MenuDeps): MenuEntry[] {
   const { id } = c;
-  const directedMutual = command(
-    deps,
-    'connection.setDirection',
-    { id, direction: otherDirection(c.direction) },
-    'SILK.Canvas.EdgeMenu.DirectedMutual',
-  );
+  const directedMutual = command(deps, 'connection.toggleDirection', { id });
   return [
     command(deps, 'connection.openDetail', { id }, 'SILK.Canvas.EdgeMenu.OpenDetails'),
     toggle(deps, 'connection', id),
     { ...command(deps, 'connection.setLabel', { id }), action: 'editConnection' },
     // Behavioural Connections are always directed.
-    c.type === 'free' ? directedMutual : { ...directedMutual, disabled: true },
+    togglesDirection(c) ? directedMutual : { ...directedMutual, disabled: true },
     command(deps, 'connection.cycleType', { id }),
     command(deps, 'connection.flip', { id }, 'SILK.Canvas.EdgeMenu.Reverse'),
     { ...command(deps, 'connection.delete', { ids: [id] }), danger: true },

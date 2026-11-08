@@ -65,6 +65,19 @@ describe('connection.create', () => {
     ).toMatchObject({ type: 'locatedIn', from: 'festum', to: 'gareth' });
   });
 
+  it('an explicit direction is never swapped: no Behavioural type that way is free-form (v1.1 §F.3)', async () => {
+    const { add, create, connection } = setup();
+    await add('alrik', 'person');
+    await add('sword', 'item');
+    // Shift on a drag Alrik → sword: sword → Alrik, which owns does not fit.
+    expect(connection(await create({ from: 'alrik', to: 'sword', direction: 'in' }))).toMatchObject(
+      { type: 'free', from: 'sword', to: 'alrik', direction: 'directed' },
+    );
+    expect(
+      connection(await create({ from: 'alrik', to: 'sword', direction: 'out' })),
+    ).toMatchObject({ type: 'owns', from: 'alrik', to: 'sword' });
+  });
+
   it('without type: mutual (Ctrl) and an explicit free type (Alt) stay free-form', async () => {
     const { add, create, connection } = setup();
     await add('alrik', 'person');
@@ -190,6 +203,22 @@ describe('editing Connections', () => {
     const id = await create({ from: 'alrik', to: 'sword', type: 'owns' });
     await registry.run('connection.setDirection', { id, direction: 'mutual' });
     expect(connection(id)).toMatchObject({ from: 'alrik', to: 'sword', direction: 'directed' });
+  });
+
+  it('connection.toggleDirection: directed ⇄ mutual, never reverses; a no-op on Behavioural', async () => {
+    const { add, create, registry, connection } = setup();
+    await add('alrik', 'person');
+    await add('sword', 'item');
+    await add('rondra', 'person');
+    const loves = await create({ from: 'rondra', to: 'alrik' });
+    await registry.run('connection.toggleDirection', { id: loves });
+    expect(connection(loves)).toMatchObject({ direction: 'mutual' });
+    await registry.run('connection.toggleDirection', { id: loves });
+    // Mutual → directed points in id order (A→B), as `setDirection`.
+    expect(connection(loves)).toMatchObject({ direction: 'directed', from: 'alrik' });
+    const owns = await create({ from: 'alrik', to: 'sword' });
+    await registry.run('connection.toggleDirection', { id: owns });
+    expect(connection(owns)).toMatchObject({ type: 'owns', direction: 'directed' });
   });
 
   it('connection.cycleType steps through the valid types, then free-form', async () => {

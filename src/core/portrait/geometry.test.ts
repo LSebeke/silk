@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { clampPose, dragPose, hoodPose, imageBox, SCALE, tokenGeometry } from './geometry';
+import { clampPose, clampScale, dragPose, hoodPose, SCALE, tokenGeometry } from './geometry';
 
 const centred = { anchorX: 0.5, anchorY: 0.5, scale: 1 };
 
 describe('Token geometry: Foundry writes (v1.1 §G.3, #134)', () => {
   it('ring on: the image covers the frame; the ring keeps full size (subject scale 1)', () => {
-    expect(tokenGeometry({ anchorX: 0.4, anchorY: 0.3, scale: 2 }, true)).toEqual({
+    expect(tokenGeometry({ anchorX: 0.4, anchorY: 0.3, scale: 2 }, true).data).toEqual({
       'texture.fit': 'cover',
       'texture.anchorX': 0.4,
       'texture.anchorY': 0.3,
@@ -16,7 +16,7 @@ describe('Token geometry: Foundry writes (v1.1 §G.3, #134)', () => {
   });
 
   it('ring off: the plain token, contained; a mirrored axis stays mirrored', () => {
-    expect(tokenGeometry(centred, false, { x: -1, y: 1 })).toMatchObject({
+    expect(tokenGeometry(centred, false, { mirror: { x: -1, y: 1 } }).data).toMatchObject({
       'texture.fit': 'contain',
       'texture.scaleX': -1,
       'texture.scaleY': 1,
@@ -33,11 +33,18 @@ describe('Token geometry: the hood (#133)', () => {
 
 describe('Token geometry: the preview', () => {
   it('ring: a wide image covers the frame, its height fills it', () => {
-    expect(imageBox(centred, true, 2)).toEqual({ left: -0.5, top: 0, width: 2, height: 1 });
+    expect(tokenGeometry(centred, true, { aspect: 2 }).box).toEqual({
+      left: -0.5,
+      top: 0,
+      width: 2,
+      height: 1,
+    });
   });
 
   it('no ring: a tall image is contained, scaled and placed by the anchor', () => {
-    expect(imageBox({ anchorX: 0.5, anchorY: 0.25, scale: 2 }, false, 0.5)).toEqual({
+    expect(
+      tokenGeometry({ anchorX: 0.5, anchorY: 0.25, scale: 2 }, false, { aspect: 0.5 }).box,
+    ).toEqual({
       left: 0,
       top: 0,
       width: 1,
@@ -51,6 +58,8 @@ describe('Token geometry: editing the pose', () => {
     expect(SCALE).toMatchObject({ min: 1, max: 8 });
     expect(clampPose({ ...centred, scale: 12 }, false, 1).scale).toBe(8);
     expect(clampPose({ ...centred, scale: 0.5 }, false, 1).scale).toBe(1);
+    expect(clampScale(9)).toBe(8);
+    expect(clampScale(0.2)).toBe(1);
   });
 
   it('ring: the image cannot be dragged off the frame', () => {

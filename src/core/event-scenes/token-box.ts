@@ -4,26 +4,21 @@
  *
  * - Silk's box is anchored a grid square up-left of the map corner and grows leftwards with
  *   its tokens, one row. Without room it asks for the Scene's `padding` raised just enough, up
- *   to 0.5; beyond that it wraps into more rows (upwards, along the top edge).
- * - Cells fill from the box's bottom-right, so growing never moves a placed token.
+ *   to 0.5; beyond that it keeps adding rows (upwards, along the top edge).
+ * - Cells fill from the box's bottom-right, so growing never moves a placed token. A full box
+ *   always grows: tokens are never stacked.
  * - Silk records the rect it wrote (`flags.silk.rect`). A box whose rect differs (the GM moved
- *   or resized it; v1 Narrative boxes have none) keeps its place: Silk only places into it.
+ *   or resized it) keeps its place: Silk only places into it, adding rows above when full.
+ * - v1's Narrative box (no `flags.silk.rect`, at v1's fixed rect) is Silk's: the load-time
+ *   migration moves it, and the tokens in it, into the padding.
  *
- * Pure: `planBox` says what to write, the Event Scenes core writes it.
+ * Pure: `ensureBox`, `boxSlot` and `migrateBox` say what to write, the Event Scenes core
+ * writes it.
  */
-import type { SceneData } from './port';
-
-export interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface Point {
-  x: number;
-  y: number;
-}
+import type { Rect } from '../canvas/groups';
+import type { Point } from '../elements/element';
+import type { SceneData, TokenData } from './port';
+import { GRID_SIZE, HEIGHT, WIDTH } from './presets';
 
 /** A box Drawing as Silk reads it. */
 export interface BoxDrawing {
@@ -35,22 +30,25 @@ export interface BoxDrawing {
   [key: string]: unknown;
 }
 
+/** What to write, in order: the padding, the box, then the moved tokens. */
 export interface BoxPlan {
   /** Raise the Scene's padding first (placeables follow the map). */
   padding?: number;
-  /** The box Drawing to write. */
-  box?: BoxDrawing;
-  /** True when `box` is new. */
-  create?: boolean;
-  /** Where the new token goes (when placing). */
-  slot?: Point;
+  /** A new box Drawing. */
+  create?: BoxDrawing;
+  /** The existing box Drawing, changed. */
+  update?: BoxDrawing;
+  /** Tokens moved (whole token data, new `x`/`y`). */
+  tokens?: TokenData[];
 }
 
 /** Foundry `Scene` field defaults. */
-const DEFAULTS = { width: 4000, height: 3000, padding: 0.25, grid: 100 } as const;
+const DEFAULTS = { width: WIDTH, height: HEIGHT, padding: 0.25, grid: GRID_SIZE } as const;
 const MAX_PADDING = 0.5;
 /** Foundry's `padding` step (0.05) as steps per 1. */
 const STEPS = 20;
+/** v1's Narrative box rect (v1 presets.ts `BOX`), written without `flags.silk.rect`. */
+const V1_RECT: Rect = { x: 100, y: 100, width: 1000, height: 400 };
 
 const gridOf = (scene: SceneData) =>
   (scene['grid'] as { size?: number } | undefined)?.size || DEFAULTS.grid;
@@ -80,8 +78,10 @@ const rectOf = (d: BoxDrawing): Rect => ({
   width: d.shape.width,
   height: d.shape.height,
 });
-const same = (a: Rect, b: Rect | undefined) =>
+const sameRect = (a: Rect, b: Rect | undefined) =>
   !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+const inside = (p: Point, r: Rect) =>
+  p.x >= r.x && p.x < r.x + r.width && p.y >= r.y && p.y < r.y + r.height;
 
 /** The box's cells, from its bottom-right corner, row by row. */
 function cells(rect: Rect, g: number): Point[] {
@@ -94,6 +94,14 @@ function cells(rect: Rect, g: number): Point[] {
     x: right - ((i % cols) + 1) * g,
     y: bottom - (Math.floor(i / cols) + 1) * g,
   }));
+}
+
+/** `rect` one row taller, its bottom-right kept (the cells already used stay put). */
+function withRow(rect: Rect, g: number): Rect {
+  const m = g / 2;
+  const rows = Math.max(1, Math.floor((rect.height - 2 * m) / g));
+  const height = Math.max(rect.height, (rows + 1) * g + 2 * m);
+  return { ...rect, y: rect.y + rect.height - height, height };
 }
 
 /** Silk's box for `n` cells: its rect and the padding it needs (undefined = as is). */
@@ -121,10 +129,10 @@ function layout(scene: SceneData, n: number): { rect: Rect; padding?: number } {
     const { cols, rows } = room(padding);
     if (cols >= n && rows >= 1) return at(padding, n, 1);
   }
+  // Past 0.5: as many rows as it takes (never stack).
   const padding = Math.max(current, MAX_PADDING);
-  const { cols, rows } = room(padding);
-  const c = Math.max(1, cols);
-  return at(padding, c, Math.max(1, Math.min(Math.ceil(n / c), rows)));
+  const cols = Math.max(1, room(padding).cols);
+  return at(padding, cols, Math.ceil(n / cols));
 }
 
 function newBox(id: string, label: string, rect: Rect): BoxDrawing {
@@ -146,49 +154,75 @@ function newBox(id: string, label: string, rect: Rect): BoxDrawing {
   };
 }
 
-const resized = (box: BoxDrawing, rect: Rect): BoxDrawing => ({
+/** `box` at `rect`; Silk's own box (`own`) records it as Silk's rect. */
+const resized = (box: BoxDrawing, rect: Rect, own: boolean): BoxDrawing => ({
   ...box,
   x: rect.x,
   y: rect.y,
   shape: { ...box.shape, width: rect.width, height: rect.height },
-  flags: { ...box.flags, silk: { ...box.flags.silk, rect } },
+  flags: own ? { ...box.flags, silk: { ...box.flags.silk, rect } } : box.flags,
 });
 
+const padded = (padding: number | undefined) => (padding !== undefined ? { padding } : {});
+
+export interface BoxOptions {
+  newId(): string;
+  /** The box's label ("Tokens", localised). */
+  label: string;
+}
+
+/** What to write so the Scene has its box: a new one, the padding raised for it, or nothing. */
+export function ensureBox(scene: SceneData, opts: BoxOptions): BoxPlan {
+  if (boxOf(scene)) return {};
+  const { rect, padding } = layout(scene, 1);
+  return { ...padded(padding), create: newBox(opts.newId(), opts.label, rect) };
+}
+
 /**
- * What to write so the Scene has its box (`place: false`), or so a new token has a free slot
- * in it (`place: true`): the box is made or grown as needed, the padding raised for it.
+ * A free slot for one more token, and what to write for it: the box made, or grown when full
+ * (Silk's box by its layout, a GM's box by a row above), the padding raised as needed.
  */
-export function planBox(
-  scene: SceneData,
-  opts: { newId(): string; label: string; place: boolean },
-): BoxPlan {
+export function boxSlot(scene: SceneData, opts: BoxOptions): BoxPlan & { slot: Point } {
   const g = gridOf(scene);
   const existing = boxOf(scene);
   if (!existing) {
     const { rect, padding } = layout(scene, 1);
-    return {
-      ...(padding !== undefined ? { padding } : {}),
-      box: newBox(opts.newId(), opts.label, rect),
-      create: true,
-      ...(opts.place ? { slot: cells(rect, g)[0] } : {}),
-    };
+    const create = newBox(opts.newId(), opts.label, rect);
+    return { ...padded(padding), create, slot: cells(rect, g)[0] as Point };
   }
-  if (!opts.place) return {};
   const rect = rectOf(existing);
   const have = cells(rect, g);
-  const tokens = (scene['tokens'] ?? []) as Point[];
+  const tokens = (scene.tokens ?? []) as Point[];
   const taken = (c: Point) =>
     tokens.some((t) => Math.abs(t.x - c.x) < g / 2 && Math.abs(t.y - c.y) < g / 2);
   const free = have.find((c) => !taken(c));
   if (free) return { slot: free };
-  const wrap = { slot: have[tokens.length % have.length] };
-  if (!same(rect, existing.flags.silk.rect)) return wrap;
-  const grown = layout(scene, have.length + 1);
-  const next = cells(grown.rect, g);
-  if (next.length <= have.length) return wrap;
+  const own = sameRect(rect, existing.flags.silk.rect);
+  const laid = own ? layout(scene, have.length + 1) : undefined;
+  const grown =
+    laid && cells(laid.rect, g).length > have.length ? laid : { rect: withRow(rect, g) };
   return {
-    ...(grown.padding !== undefined ? { padding: grown.padding } : {}),
-    box: resized(existing, grown.rect),
-    slot: next[have.length],
+    ...padded(grown.padding),
+    update: resized(existing, grown.rect, own),
+    slot: cells(grown.rect, g)[have.length] as Point,
+  };
+}
+
+/**
+ * Load-time migration (1.1 §I): v1's Narrative box, known by its v1 rect, becomes Silk's box
+ * in the padding, in the 1.1 look; the tokens in it move into its cells. `undefined` when
+ * there is nothing to migrate.
+ */
+export function migrateBox(scene: SceneData, opts: BoxOptions): BoxPlan | undefined {
+  const existing = boxOf(scene);
+  if (!existing || existing.flags.silk.rect || !sameRect(rectOf(existing), V1_RECT))
+    return undefined;
+  const held = (scene.tokens ?? []).filter((t) => inside(t, V1_RECT));
+  const { rect, padding } = layout(scene, Math.max(1, held.length));
+  const slots = cells(rect, gridOf(scene));
+  return {
+    ...padded(padding),
+    update: { ...newBox(existing._id, opts.label, rect), locked: false },
+    tokens: held.map((t, i) => ({ ...t, ...(slots[i] as Point) })),
   };
 }

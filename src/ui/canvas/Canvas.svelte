@@ -17,10 +17,10 @@
   import { onDestroy, setContext, untrack } from 'svelte';
   import { cameraMove, FOCUS_SEEDS, type CameraReason } from '../../core/canvas/focus';
   import { TWEEN_MS } from '../../core/canvas/tween';
+  import { sameIdSet } from '../../core/util/ids';
   import type { PipelineOrigin } from '../../core/canvas';
   import type { CheckoutSummary } from '../../core/campaigns';
   import {
-    otherDirection,
     readConnection,
     type CreateFromConnection,
     type RelativeDirection,
@@ -377,11 +377,7 @@
       ?.closest<HTMLElement>('[data-silk-node]')?.dataset['silkNode'];
 
   /** Connect two existing Nodes, then open the Connection editor (§10.3). */
-  async function connect(
-    from: string,
-    to: string,
-    connection: CreateFromConnection = { direction: 'out' },
-  ) {
+  async function connect(from: string, to: string, connection: CreateFromConnection = {}) {
     const { id } = (await ctx.run('connection.create', { from, to, ...connection })) as {
       id: string;
     };
@@ -541,13 +537,6 @@
       case 'delete':
         void run('canvas.deleteSelection', {});
         break;
-      case 'toggleDirection':
-        if (edge?.data)
-          void run('connection.setDirection', {
-            id: edge.id,
-            direction: otherDirection(edge.data.direction),
-          });
-        break;
       case 'command':
         if (edge) void run(action.name, { id: edge.id });
         break;
@@ -590,7 +579,8 @@
       at: besideNode(from),
       anchor: { x: (rect?.width ?? 400) / 2 - 100, y: 80 },
       from,
-      connection: { direction },
+      // Outgoing is the preselected default: the default Connection may swap it (v1.1 §F.3).
+      connection: direction === 'out' ? {} : { direction },
     });
   }
 
@@ -822,10 +812,8 @@
   }) {
     const ids = selected.map((n) => n.id);
     const connections = selectedEdges.map((e) => e.id);
-    const same = (a: readonly string[], b: readonly string[]) =>
-      a.length === b.length && a.every((id) => b.includes(id));
     const current = canvasState.get();
-    if (same(ids, current.selection) && same(connections, current.connections)) return;
+    if (sameIdSet(ids, current.selection) && sameIdSet(connections, current.connections)) return;
     void run('canvas.select', { ids, connections });
   }
 </script>

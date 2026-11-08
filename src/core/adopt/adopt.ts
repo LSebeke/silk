@@ -35,6 +35,7 @@ import {
   type StoryElement,
 } from '../elements';
 import { sceneBackground, type SceneDocs, type SceneSnapshot } from '../event-scenes/port';
+import { NO_PRESET } from '../event-scenes/presets';
 import {
   OWNERSHIP_NONE,
   connectionsPage,
@@ -484,7 +485,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     await join(id, at);
     // Link first: the Materialize then finds the Scene instead of generating one.
     // Adopted: config untouched, no Preset (1.1 §I).
-    await scenes.update(c.scene._id, { 'flags.silk.sceneOf': id, 'flags.silk.preset': 'none' });
+    await scenes.update(c.scene._id, { 'flags.silk.sceneOf': id, 'flags.silk.preset': NO_PRESET });
     if (cls === 'event') await inferPresentAt(id);
     await deps.materializer.materialize([id]);
     return id;
@@ -560,12 +561,8 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     const origin = element(args.connectTo);
     const created = element(done.id);
     if (origin && created && origin.id !== created.id) {
-      const connection = resolveCreateFrom(origin.class, created.class, args.connection);
-      const made = (await deps.run('connection.create', {
-        from: origin.id,
-        to: created.id,
-        ...connection,
-      })) as { id: string };
+      const connection = resolveCreateFrom(origin, created, args.connection);
+      const made = (await deps.run('connection.create', connection)) as { id: string };
       result.connectionId = made.id;
     }
     return result;

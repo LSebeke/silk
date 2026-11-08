@@ -11,7 +11,7 @@
 import { elementClass } from '../elements/classes';
 import { appearanceBlock, type StoryElement } from '../elements/element';
 import type { SilkDocFlags } from '../materialize/port';
-import { CENTRED, hoodPose, tokenGeometry, type Mirror, type Pose } from './geometry';
+import { CENTRED, clampScale, hoodPose, tokenGeometry, type Mirror, type Pose } from './geometry';
 
 /** The real Portrait: sheet image and prototype token texture. */
 export interface Portrait {
@@ -53,6 +53,7 @@ export interface ImageEdit {
     sameAsImage?: boolean;
     ring?: { enabled?: boolean; colors?: Partial<RingColors> };
     anchor?: { x: number; y: number };
+    /** 1 to 8 (#137); clamped. */
     scale?: number;
     lockRotation?: boolean;
   };
@@ -212,7 +213,7 @@ export function imageWrites(doc: PortraitDoc, edit: ImageEdit, recordImg?: strin
   const pose: Pose = {
     anchorX: t.anchor?.x ?? look.pose.anchorX,
     anchorY: t.anchor?.y ?? look.pose.anchorY,
-    scale: t.scale ?? look.pose.scale,
+    scale: t.scale !== undefined ? clampScale(t.scale) : look.pose.scale,
   };
   const same = t.sameAsImage ?? (t.src === undefined && look.sameAsImage);
   const src = same ? img : (t.src ?? look.token);
@@ -275,7 +276,7 @@ function poseData(pose: Pose, ring: boolean, doc: PortraitDoc): Record<string, u
   const texture = doc.prototypeToken?.texture;
   const sign = (n: number | undefined) => (n !== undefined && n < 0 ? -1 : 1);
   const mirror: Mirror = { x: sign(texture?.scaleX), y: sign(texture?.scaleY) };
-  return tokenGeometry(pose, ring, mirror);
+  return tokenGeometry(pose, ring, { mirror }).data;
 }
 
 const ringData = (ring: Ring): Record<string, unknown> => ({

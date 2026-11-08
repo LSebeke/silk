@@ -6,7 +6,6 @@ type Props = DetailProps & { focus: string | undefined };
 
 export class ElementDetailWindow extends DetailWindow<Props> {
   static override DEFAULT_OPTIONS = { window: { title: 'SILK.Detail.Title' } };
-  static override prefix = 'silk-detail';
 
   protected readonly component = ElementDetail;
 

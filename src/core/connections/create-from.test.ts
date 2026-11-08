@@ -61,15 +61,19 @@ describe('element.create from a Node', () => {
     });
   });
 
-  it('an explicit direction is the asked pair of the default Connection (v1.1 §F.3)', async () => {
+  it('an explicit direction stays as asked, never swapped (v1.1 §F.3)', async () => {
     const { make, connection } = setup();
     const gareth = await make('location');
     const inside = await make('item', { from: gareth.id, connection: { direction: 'in' } });
     expect(connection(inside.connectionId)).toMatchObject({ type: 'locatedIn', from: inside.id });
-    // Only the reverse is valid: swapped, not free-form.
+    // Only the reverse is valid: free-form, as asked.
     const out = await make('item', { from: gareth.id, connection: { direction: 'out' } });
-    expect(connection(out.connectionId)).toMatchObject({ type: 'locatedIn', from: out.id });
-    // Valid both ways: as asked (right-drag A → canvas puts A inside the new Location).
+    expect(connection(out.connectionId)).toMatchObject({
+      type: 'free',
+      from: gareth.id,
+      to: out.id,
+    });
+    // Valid both ways: as asked.
     const outer = await make('location', { from: gareth.id, connection: { direction: 'out' } });
     expect(connection(outer.connectionId)).toMatchObject({
       type: 'locatedIn',
@@ -78,6 +82,26 @@ describe('element.create from a Node', () => {
     });
     const both = await make('item', { from: gareth.id, connection: { direction: 'mutual' } });
     expect(connection(both.connectionId)).toMatchObject({ type: 'free', direction: 'mutual' });
+  });
+
+  it('started on the new element (right-drag canvas → Node): the same default, free-form new → origin', async () => {
+    const { make, connection } = setup();
+    const gareth = await make('location');
+    const inner = await make('location', { from: gareth.id, connection: { newFirst: true } });
+    expect(connection(inner.connectionId)).toMatchObject({
+      type: 'locatedIn',
+      from: inner.id,
+      to: gareth.id,
+    });
+    const alrik = await make('person');
+    const sword = await make('item', { from: alrik.id, connection: { newFirst: true } });
+    expect(connection(sword.connectionId)).toMatchObject({ type: 'owns', from: alrik.id });
+    const rondra = await make('person', { from: alrik.id, connection: { newFirst: true } });
+    expect(connection(rondra.connectionId)).toMatchObject({
+      type: 'free',
+      from: rondra.id,
+      to: alrik.id,
+    });
   });
 
   it('an explicit type and label win over the default', async () => {

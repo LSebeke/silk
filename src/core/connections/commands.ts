@@ -5,7 +5,9 @@ import type { WorkingCopy } from '../working-copy';
 import {
   BEHAVIOURAL_TYPES,
   connectionRecord,
+  otherDirection,
   readConnection,
+  togglesDirection,
   type Connection,
   type ConnectionData,
   type ConnectionDirection,
@@ -20,6 +22,10 @@ export interface ConnectionCreateArgs {
   from: string;
   to: string;
   type?: ConnectionType;
+  /**
+   * Explicit (a modifier, a pick): the pair stays as asked. Undefined (no modifier): from →
+   * to, and the default Connection may swap it (v1.1 §F.3).
+   */
   direction?: RelativeDirection;
   label?: string;
 }
@@ -63,20 +69,22 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
         if (!element) throw new Error(`Silk: no element "${end}"`);
         return element.class;
       };
-      classOf(args.from);
-      classOf(args.to);
+      const requireEnds = (...ends: string[]) => ends.forEach(classOf);
+      requireEnds(args.from, args.to);
       if (args.from === args.to) throw new Error('Silk: an element cannot connect to itself');
       if (args.type !== undefined && !isType(args.type))
         throw new Error(`Silk: unknown Connection type "${String(args.type)}"`);
       const mutual = args.direction === 'mutual';
-      // The asked pair; without a type, the default Connection (v1.1 §F.3) may swap it.
+      // The asked pair. Without a type, the default Connection (v1.1 §F.3); only without a
+      // direction (no modifier) may it swap the pair. An explicit direction it does not fit
+      // is free-form.
       let [from, to] = args.direction === 'in' ? [args.to, args.from] : [args.from, args.to];
       let type = args.type ?? 'free';
       const fallback =
         args.type === undefined && !mutual
           ? defaultConnection(classOf(from), classOf(to))
           : undefined;
-      if (fallback) {
+      if (fallback && (!fallback.reverse || args.direction === undefined)) {
         type = fallback.type;
         if (fallback.reverse) [from, to] = [to, from];
       }
@@ -126,7 +134,7 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     direction: ConnectionDirection,
     [from, to]: [string, string] = [c.from, c.to],
   ) {
-    if (c.type !== 'free') return;
+    if (!togglesDirection(c)) return;
     if (c.direction === direction && c.from === from && c.to === to) return;
     await deps.workingCopy().set([connectionRecord(c.id, { ...strip(c), direction, from, to })]);
   }
@@ -157,6 +165,21 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
         throw new Error(`Silk: unknown direction "${String(direction)}"`);
       if (c.direction === direction) return;
       await writeDirection(c, direction, direction === 'directed' ? ordered(c) : undefined);
+    },
+  };
+
+  /**
+   * v1.1 §F.1 Directed ⇄ Mutual (`Tab`, edge menu, the label editor's button): the other
+   * direction, as `setDirection`; never reverses. A no-op on a Behavioural Connection.
+   */
+  const toggleDirection: Command<{ id: string }, void> = {
+    name: 'connection.toggleDirection',
+    title: 'SILK.Commands.connection.toggleDirection',
+    available: (ctx) => ctx.isGM,
+    async run({ id }) {
+      const c = existing(id);
+      if (!togglesDirection(c)) return;
+      await setDirection.run({ id, direction: otherDirection(c.direction) });
     },
   };
 
@@ -204,5 +227,15 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
     },
   };
 
-  return [create, setLabel, setNotes, setDirection, setType, cycleType, flip, remove];
+  return [
+    create,
+    setLabel,
+    setNotes,
+    setDirection,
+    toggleDirection,
+    setType,
+    cycleType,
+    flip,
+    remove,
+  ];
 }

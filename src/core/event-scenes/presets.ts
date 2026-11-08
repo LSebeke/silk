@@ -9,6 +9,8 @@ export const SCENE_PRESETS = ['travel', 'battle', 'narrative', 'overview'] as co
 export type ScenePreset = (typeof SCENE_PRESETS)[number];
 /** `flags.silk.preset`: imported and Adopted Scenes have none (1.1 §I). */
 export type StoredPreset = ScenePreset | 'none';
+/** The stored Preset of imported and Adopted Scenes. */
+export const NO_PRESET: StoredPreset = 'none';
 export const DEFAULT_PRESET: ScenePreset = 'narrative';
 
 export const isPreset = (value: unknown): value is ScenePreset =>
@@ -18,9 +20,10 @@ export const isPreset = (value: unknown): value is ScenePreset =>
 const GRID = { gridless: 0, square: 1, hexOddR: 2 } as const;
 const FOG = { disabled: 0, individual: 1 } as const;
 
-const GRID_SIZE = 100;
-const WIDTH = 4000;
-const HEIGHT = 3000;
+/** Preset Scene size and grid; also Foundry's `Scene` field defaults. */
+export const GRID_SIZE = 100;
+export const WIDTH = 4000;
+export const HEIGHT = 3000;
 export interface PresetInput {
   id: string;
   name: string;

@@ -13,23 +13,39 @@ type AfterCreate = NonNullable<ElementCommandDeps['afterCreate']>[number];
 /** `element.create`'s `connection` arg: direction is relative to the origin. */
 export interface CreateFromConnection {
   type?: ConnectionType;
+  /** Explicit (a modifier, a pick): kept as asked. Undefined: the default (below). */
   direction?: RelativeDirection;
   label?: string;
+  /**
+   * The gesture started on the new element (right-drag canvas → Node, v1.1 §A): a free-form
+   * default points new → origin instead of origin → new.
+   */
+  newFirst?: boolean;
+}
+
+interface End {
+  id: string;
+  class: ElementClassId;
 }
 
 /**
- * The `connection.create` args from origin to the new element; without a type, it picks the
- * default Connection (v1.1 §F.3). Without type and direction, a Behavioural default is asked
- * new → origin (v1 §5: a new Location sits inside its origin); otherwise origin → new.
+ * The `connection.create` args for a new element and its origin, the same for every gesture.
+ * Explicit direction: as asked, never swapped. Without a direction, a Behavioural default is
+ * asked new → origin (v1 §5: a new Location sits inside its origin; `connection.create` swaps
+ * it where only origin → new is valid, v1.1 §F.3); free-form points origin → new (`newFirst`:
+ * new → origin).
  */
 export function resolveCreateFrom(
-  origin: ElementClassId,
-  created: ElementClassId,
-  wanted: CreateFromConnection = {},
-): Omit<ConnectionCreateArgs, 'from' | 'to'> {
-  const fallback: RelativeDirection =
-    !wanted.type && defaultConnection(created, origin) ? 'in' : 'out';
-  return { ...wanted, direction: wanted.direction ?? fallback };
+  origin: End,
+  created: End,
+  { newFirst, ...wanted }: CreateFromConnection = {},
+): ConnectionCreateArgs {
+  const towardsOrigin =
+    wanted.direction === undefined &&
+    (!!newFirst || (!wanted.type && !!defaultConnection(created.class, origin.class)));
+  return towardsOrigin
+    ? { ...wanted, from: created.id, to: origin.id }
+    : { ...wanted, from: origin.id, to: created.id };
 }
 
 export function connectOnCreate(deps: {
@@ -41,15 +57,11 @@ export function connectOnCreate(deps: {
     const origin = readElement(deps.workingCopy().get(args.from));
     if (!origin) return undefined;
     const connection = resolveCreateFrom(
-      origin.class,
-      element.class,
+      origin,
+      element,
       args.connection as CreateFromConnection | undefined,
     );
-    const { id } = (await deps.run('connection.create', {
-      from: origin.id,
-      to: element.id,
-      ...connection,
-    })) as { id: string };
+    const { id } = (await deps.run('connection.create', connection)) as { id: string };
     return { connectionId: id };
   };
 }

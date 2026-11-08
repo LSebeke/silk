@@ -13,8 +13,8 @@
     CENTRED,
     clampPose,
     dragPose,
-    imageBox,
     SCALE,
+    tokenGeometry,
     type ImageEdit,
     type Pose,
   } from '../../core/portrait';
@@ -123,7 +123,7 @@
     });
   }
 
-  const box = $derived(imageBox(pose, ring.enabled, aspect));
+  const box = $derived(tokenGeometry(pose, ring.enabled, { aspect }).box);
   /** CSS drawing one spritesheet frame at the preview size. */
   function sprite(rect: SheetRect | undefined) {
     if (!style || !rect) return undefined;
@@ -152,7 +152,7 @@
       value={ring.colors[key] ?? '#ffffff'}
       disabled={!ring.enabled}
       onchange={(e) => setColor(key, e.currentTarget.value)}
-      data-silk-image-color-input
+      data-silk-image-color-input={key}
     />
     {#if ring.colors[key]}
       <button
@@ -161,7 +161,7 @@
         disabled={!ring.enabled}
         title={t('WorldDefault')}
         onclick={() => setColor(key, null)}
-        data-silk-image-color-clear><i class="fa-solid fa-xmark"></i></button
+        data-silk-image-color-clear={key}><i class="fa-solid fa-xmark"></i></button
       >
     {:else}
       <span class="hint">{t('WorldDefault')}</span>

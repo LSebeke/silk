@@ -7,7 +7,6 @@
   import { fail } from './actions';
   import { BaseEdge, EdgeLabel, useStore, type EdgeProps, type InternalNode } from '@xyflow/svelte';
   import { getContext } from 'svelte';
-  import { otherDirection } from '../../core/connections';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
   import { facingAnchor, type Box, type ConnectionEdge } from './flow-edges';
 
@@ -61,8 +60,7 @@
 
   const run = (name: string, args: object = {}) => ctx.run(name, { id, ...args }).catch(fail);
   // v1.1 §F.1: Directed ⇄ Mutual; never reverses.
-  const toggleDirection = () =>
-    data && run('connection.setDirection', { direction: otherDirection(data.direction) });
+  const toggleDirection = () => run('connection.toggleDirection');
 
   function onKeydown(event: KeyboardEvent & { currentTarget: HTMLElement }) {
     event.stopPropagation();
