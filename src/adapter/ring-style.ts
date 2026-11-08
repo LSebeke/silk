@@ -3,7 +3,7 @@
  * once per session, for the editor preview (#135) and the ring edges the subject file is cut
  * to (#171). Silk never changes the style; Foundry draws the ring.
  */
-import type { Edges } from '../core/portrait';
+import { DEFAULT_EDGES, type Edges } from '../core/portrait';
 
 /** A rectangle in the spritesheet image (px). */
 export interface SheetRect {
@@ -26,12 +26,15 @@ export interface RingPreview {
   colors: { ring?: string; background?: string };
 }
 
-/** Foundry's colour band when the style gives none (TokenRing). */
-export const DEFAULT_EDGES: Edges = { inner: 0.59, outer: 0.7225 };
+/** A spritesheet colour band (fractions of the ring radius). */
+interface ColorBand {
+  startRadius?: number;
+  endRadius?: number;
+}
 
 export interface SheetJson {
   config?: {
-    defaultColorBand?: { startRadius?: number; endRadius?: number };
+    defaultColorBand?: ColorBand;
     defaultRingColor?: string;
     defaultBackgroundColor?: string;
   };
@@ -42,7 +45,7 @@ export interface SheetJson {
       gridTarget?: number;
       ringColor?: string;
       backgroundColor?: string;
-      colorBand?: { startRadius?: number; endRadius?: number };
+      colorBand?: ColorBand;
     }
   >;
   meta: { image: string; size: { w: number; h: number } };
@@ -94,17 +97,18 @@ export function createRingStyle(
     if (!result) loaded.delete(url);
     return result && { json: result, url };
   }
+  /**
+   * The style for the editor preview of a token `size` grid units wide (the frame the
+   * subject file's edges come from); `undefined` without one.
+   */
+  async function preview(size: number): Promise<RingPreview | undefined> {
+    const style = await load();
+    return style && ringPreview(style.json, style.url, size);
+  }
   return {
-    /** The style for the editor preview; `undefined` without one. */
-    async preview(size = 1): Promise<RingPreview | undefined> {
-      const style = await load();
-      return style && ringPreview(style.json, style.url, size);
-    },
+    preview,
     /** The edges the subject is cut to, for a token `size` grid units wide. */
-    async edges(size: number): Promise<Edges> {
-      const style = await load();
-      return (style && ringPreview(style.json, style.url, size)?.edges) ?? DEFAULT_EDGES;
-    },
+    edges: async (size: number): Promise<Edges> => (await preview(size))?.edges ?? DEFAULT_EDGES,
   };
 }
 

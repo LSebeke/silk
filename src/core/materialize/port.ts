@@ -4,12 +4,12 @@
  * Decisions (which docs, pages, fields) live in the core; the port only executes them.
  */
 import type { ElementClassId } from '../elements';
-import type { Order } from '../portrait/geometry';
+import type { LookFlags } from '../portrait/flags';
 
 export type DocumentName = 'Actor' | 'Item' | 'JournalEntry';
 
-/** `flags.silk` on Silk's docs. Ids only (spec §2). */
-export interface SilkDocFlags {
+/** `flags.silk` on Silk's docs. Ids only (spec §2), but for the look's (`LookFlags`). */
+export interface SilkDocFlags extends LookFlags {
   /** Story Element id, on the element's doc. */
   id?: string;
   /** On an Actor/Item: its Companion Journal's id. */
@@ -27,47 +27,6 @@ export interface SilkDocFlags {
   scene?: string;
   /** On a folder: which Silk folder it is (an Element Class id or `companions`). */
   folder?: string;
-  /**
-   * Person/Creature until Appearance is Revealed (§8): `img` and the prototype token show
-   * `hood`; the real image and token texture wait here.
-   */
-  img?: string;
-  token?: string;
-  hood?: string;
-  /**
-   * The real token position and scale (v1.1 §G.3), when not centred; the token itself shows
-   * the hood centred, or the pose baked into the subject file.
-   */
-  pose?: { anchorX: number; anchorY: number; scale: number };
-  /** Draw order (v1.1 §G.3, #170): only `illustration` is kept; absent: Ring in front. */
-  order?: Order;
-  /**
-   * The subject file Silk wrote to `ring.subject.texture` (v1.1 §G.3) and what it was
-   * rendered from: image, pose, draw order and the ring style's edges (a changed style
-   * rebuilds it). Files from before the draw order have none: Ring in front.
-   */
-  subject?: {
-    file: string;
-    src: string;
-    pose: { anchorX: number; anchorY: number; scale: number };
-    order?: Order;
-    edges: { inner: number; outer: number };
-  };
-  /**
-   * An imported actor's look as it came in (Adopt, Compendium pick, NSC Zucht; v1.1 §G.3.1,
-   * a fifth exception to v1 §2): `img`, the prototype's `texture` and `ring`.
-   */
-  original?: { img?: string; texture: Record<string, unknown>; ring: Record<string, unknown> };
-  /**
-   * What showing the hood overwrote on the prototype (v1.1 §G.3.1): Reveal writes it back
-   * exactly. Dropped by a token edit while hooded (the real look is then Silk's).
-   */
-  unhooded?: {
-    texture: { fit: string; anchorX: number; anchorY: number };
-    subject: { scale: number; texture: string | null };
-    pose?: { anchorX: number; anchorY: number; scale: number };
-    silkSubject?: SilkDocFlags['subject'];
-  };
   /** On a Player Note page: its authoring Campaign (§9). */
   campaign?: string;
   /** On an Info Block page: it is the Appearance block (v1.1 §C.2). */

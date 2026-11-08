@@ -44,6 +44,20 @@ _Avoid_: merge Revelation Maps, merge Campaigns
 **Portrait**: The image a Story Element shows (sheet image and token). For a Person or Creature whose Appearance is not Revealed, players see the hooded image while the real Portrait waits.
 _Avoid_: avatar
 
+**Look**: Everything about how a Person's or Creature's Portrait appears: sheet image, token image, token ring and its colours, the image's position and zoom (its pose), Draw order and Lock rotation. The GM changes it in the image & token editor. Hooded or not, the Look is the real one; the hood only covers it.
+_Avoid_: appearance (that is the Info Block guarding the image), token style
+
+**Subject file**: The image file Silk renders for a token with the ring on: the token image, positioned and zoomed, cut to a circle at the ring's edge. Foundry draws it over the ring; the token image itself stays uncut.
+_Avoid_: crop, token subject
+
+**Draw order**: Whether the ring or the illustration shows in front on a ringed token: Ring in front (the default) or Illustration in front.
+
+**Original look**: The Look an imported Person or Creature (Adopted, picked from a Compendium, or from NSC Zucht) came in with. Silk keeps it, never changes it on its own, and the GM can restore it.
+_Avoid_: default look
+
+**Unhooded**: What the hood covered, kept while the hood shows (for the actor and for each placed token), so the Reveal puts every token back exactly as it was.
+_Avoid_: backup
+
 **Behavioural Connection**: A Connection of a fixed type, valid only between certain Element Classes, that drives behaviour in Foundry or Silk (e.g. "owns", "present at"). All other Connections are free-form, with a label.
 
 **Reveal**: The GM sharing a Story Element, a single Info Block, or a single Connection with the whole party of a Campaign. Revealing an Info Block or Connection also Reveals the Story Element(s) it belongs to, but nothing more. Can be undone.

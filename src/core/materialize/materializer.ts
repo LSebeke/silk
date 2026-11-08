@@ -50,9 +50,10 @@ import { deepMerge } from '../util/objects';
 import {
   imageWrites,
   lookOf,
+  lookSource,
+  lookWriter,
   originalLook,
   restoreWrites,
-  writeLook,
   type ImageEdit,
   type Look,
   type LookStage,
@@ -318,9 +319,10 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     return { ...plan, main };
   }
 
+  const writeLook = deps.look && lookWriter(deps.look, (u, d) => docs.update(u, d));
   /** A look write: the doc, its subject file and every placed token (v1.1 §G.3). */
   async function applyLook(main: DocSnapshot, writes: PortraitWrites) {
-    if (deps.look) await writeLook(deps.look, (u, d) => docs.update(u, d), main.uuid, main, writes);
+    if (writeLook) await writeLook(main.uuid, main, writes);
     else if (Object.keys(writes.doc).length) await docs.update(main.uuid, writes.doc);
   }
 
@@ -466,15 +468,14 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
         if (img !== undefined) await docs.updatePage(main.uuid, cover, { src: img || null });
       } else {
         // Hood-aware (§8, v1.1 §G.3): the Portrait module decides what is shown.
-        await applyLook(main, imageWrites(main, edit, el.img, system.sizeFactor(main.system)));
+        await applyLook(main, imageWrites(lookSource(main, system, el.img), edit));
       }
       await sync(id);
     },
 
     async restoreImages(id) {
-      const main = element(id).uuid ? requireDocs(id).main : undefined;
-      if (!main?.flags.silk.original) throw new Error('Silk: no imported images to restore');
-      await applyLook(main, restoreWrites(main));
+      const { main } = requireDocs(id);
+      await applyLook(main, restoreWrites(lookSource(main, system)));
       await sync(id);
     },
 
@@ -483,11 +484,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       if (!el) return undefined;
       // A Ghost has no doc yet: its record image, no ring, centred.
       const main = (el.uuid && docsOf(id)?.main) || { img: el.img, flags: { silk: {} } };
-      return lookOf(
-        main as PortraitDoc,
-        el.img,
-        system.sizeFactor((main as { system?: unknown }).system),
-      );
+      return lookOf(lookSource(main as PortraitDoc, system, el.img));
     },
 
     async setFields(id, fields) {

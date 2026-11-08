@@ -85,6 +85,8 @@ export const SETTINGS: Record<string, SettingData> = {
   windowState: { scope: 'client', config: false, type: Object, default: {} },
   /** Internal: a GM has seen the one-time FILES_BROWSE notice (§12). */
   fileBrowseNoticeShown: { scope: 'world', config: false, type: Boolean, default: false },
+  /** Internal: the round 2 look migration ran in this World (v1.1 §G.3.2). */
+  lookMigrated: { scope: 'world', config: false, type: Boolean, default: false },
 };
 
 export function registerSettings(register: RegisterSetting): void {

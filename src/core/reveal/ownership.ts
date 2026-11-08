@@ -17,7 +17,14 @@ import { isRevealed, type RevelationMap } from '../campaigns';
 import { appearanceBlock, hasAppearanceClass, type StoryElement } from '../elements';
 import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { DocSnapshot, SystemMapping } from '../materialize/port';
-import { hoodOf, showWrites, type PortraitDoc, type PortraitWrites, type Shown } from '../portrait';
+import {
+  hoodOf,
+  lookSource,
+  showWrites,
+  type PortraitDoc,
+  type PortraitWrites,
+  type Shown,
+} from '../portrait';
 
 export const OWNERSHIP = { NONE: 0, LIMITED: 1, OBSERVER: 2, OWNER: 3 } as const;
 /** `CONST.TOKEN_DISPLAY_MODES`. */
@@ -138,7 +145,7 @@ function appearanceWrites(
   const doc = main as PortraitDoc & { prototypeToken?: { displayName?: number } };
   const showReal = !!appearanceBlock(el) && appearance && revealed;
   const shown: Shown = showReal ? 'real' : { hood: hoodOf(el, input.hood) };
-  const portrait = showWrites(doc, shown, el.img, input.system.sizeFactor(main.system));
+  const portrait = showWrites(lookSource(main as typeof doc, input.system, el.img), shown);
   const display = revealed ? DISPLAY.HOVER : DISPLAY.OWNER;
 
   const data = { ...portrait.doc };

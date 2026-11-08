@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PortraitDoc } from './portrait';
-import { writeLook, type LookStage, type SubjectSpec } from './subject';
+import { lookWriter, type LookStage, type SubjectSpec } from './subject';
 
 const pose = { anchorX: 0.3, anchorY: 0.5, scale: 2 };
 const edges = { inner: 0.666, outer: 0.72 };
@@ -36,7 +36,7 @@ const doc = (over: Partial<PortraitDoc['flags']['silk']> = {}, texture?: string)
 describe('Subject file (v1.1 §G.3, #171)', () => {
   it('ring on: rendered for the actor size, written to the prototype and every placed token', async () => {
     const t = stage();
-    await writeLook(t.s, t.update, 'Actor.a', doc(), {
+    await lookWriter(t.s, t.update)('Actor.a', doc(), {
       doc: { img: 'a.webp' },
       tokens: { 'texture.src': 'a.webp' },
       subject: { src: 'a.webp', pose, order: 'ring' },
@@ -72,7 +72,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
 
   it('the same image, pose and ring style: the file is kept, not rendered again', async () => {
     const t = stage();
-    await writeLook(t.s, t.update, 'Actor.a', built(), {
+    await lookWriter(t.s, t.update)('Actor.a', built(), {
       doc: {},
       tokens: {},
       subject: { src: 'a.webp', pose: { ...pose }, order: 'ring' },
@@ -84,7 +84,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
 
   it('the draw order changed: rebuilt, and the flag records it (#170)', async () => {
     const t = stage();
-    await writeLook(t.s, t.update, 'Actor.a', built(), {
+    await lookWriter(t.s, t.update)('Actor.a', built(), {
       doc: {},
       subject: { src: 'a.webp', pose, order: 'illustration' },
     });
@@ -94,7 +94,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
 
   it('the world ring style changed its edges: rebuilt', async () => {
     const t = stage({ inner: 0.59, outer: 0.7225 });
-    await writeLook(t.s, t.update, 'Actor.a', built(), {
+    await lookWriter(t.s, t.update)('Actor.a', built(), {
       doc: {},
       tokens: {},
       subject: { src: 'a.webp', pose, order: 'ring' },
@@ -110,7 +110,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
       ...d.prototypeToken,
       ring: { enabled: true, subject: { texture: 'mine.webp' } },
     };
-    await writeLook(t.s, t.update, 'Actor.a', d, {
+    await lookWriter(t.s, t.update)('Actor.a', d, {
       doc: {},
       subject: { src: 'a.webp', pose, order: 'ring' },
     });
@@ -119,7 +119,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
 
   it("ring off: Silk's file is cleared everywhere", async () => {
     const t = stage();
-    await writeLook(t.s, t.update, 'Actor.a', built(), { doc: {}, tokens: {}, subject: null });
+    await lookWriter(t.s, t.update)('Actor.a', built(), { doc: {}, tokens: {}, subject: null });
     expect(t.updates).toEqual([
       { 'flags.silk.-=subject': null, 'prototypeToken.ring.subject.texture': null },
     ]);
@@ -128,7 +128,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
 
   it('no subject in the writes: the subject is left alone', async () => {
     const t = stage();
-    await writeLook(t.s, t.update, 'Actor.a', built(), {
+    await lookWriter(t.s, t.update)('Actor.a', built(), {
       doc: { img: 'b.webp' },
       tokens: { 'texture.src': 'b.webp' },
     });

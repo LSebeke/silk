@@ -28,6 +28,9 @@ export const SCALE = { min: 0.5, max: 8, step: 0.05 } as const;
  */
 export type Order = 'ring' | 'illustration';
 
+/** Ring in front: the draw order without `flags.silk.order`. */
+export const DEFAULT_ORDER: Order = 'ring';
+
 /** Foundry's token defaults (common/documents/token.mjs). Also the editor's Reset. */
 export const CENTRED: Pose = { anchorX: 0.5, anchorY: 0.5, scale: 1 };
 
@@ -48,6 +51,16 @@ export interface Edges {
   inner: number;
   outer: number;
 }
+
+/** Foundry's colour band when the style gives none (TokenRing). */
+export const DEFAULT_EDGES: Edges = { inner: 0.59, outer: 0.7225 };
+
+/**
+ * A token's size in grid units, as Foundry picks its ring frame (`min(width, height)`): the
+ * subject file and the editor preview use the same frame (v1.1 §G.3).
+ */
+export const tokenSize = (token: { width?: number; height?: number } | undefined): number =>
+  Math.min(token?.width ?? 1, token?.height ?? 1);
 
 /**
  * The subject's crop radius (fraction of the ring radius, #171): the ring's inner edge for

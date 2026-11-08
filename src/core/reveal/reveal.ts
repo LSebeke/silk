@@ -26,7 +26,7 @@ import { blockJournal, infoBlockPages } from '../materialize/layout';
 import type { Materializer } from '../materialize/materializer';
 import type { DocSnapshot, FoundryDocs, SystemMapping } from '../materialize/port';
 import type { WorkingCopy } from '../working-copy';
-import { isHooded, writeLook, type LookStage } from '../portrait';
+import { isHooded, lookWriter, type LookStage } from '../portrait';
 import { OWNERSHIP, hoodWrites, ownershipWrites, type RevealWrite } from './ownership';
 import { applyReveal, touchedElements, type RevealGraph, type RevealTarget } from './rules';
 
@@ -159,10 +159,11 @@ export function createReveal(deps: RevealDeps): Reveal {
     ).length;
   }
 
+  const writeLook = lookWriter(deps.stage, (u, d) => deps.docs.update(u, d));
   async function write(w: RevealWrite) {
     if (w.op === 'update') await deps.docs.update(w.uuid, w.data);
     else if (w.op === 'page') await deps.docs.updatePage(w.uuid, w.pageId, w.data);
-    else await writeLook(deps.stage, (u, d) => deps.docs.update(u, d), w.uuid, w.doc, w.writes);
+    else await writeLook(w.uuid, w.doc, w.writes);
   }
 
   /** Makes the element's docs match `map`. */

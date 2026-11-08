@@ -86,11 +86,18 @@ describe('flow-back', () => {
 });
 
 describe('tokenUpdates', () => {
+  /** A placed token as the adapter reads it: its source data. */
+  const token = (id: string, actorId: string, source: Record<string, unknown>) => ({
+    id,
+    actorId,
+    toObject: () => structuredClone(source),
+  });
+
   it('lists the actor’s placed tokens whose data differs', () => {
     const tokens = [
-      { id: 't1', actorId: 'a', texture: { src: 'hood' }, displayName: 40 },
-      { id: 't2', actorId: 'a', texture: { src: 'real' }, displayName: 40 },
-      { id: 't3', actorId: 'b', texture: { src: 'real' }, displayName: 40 },
+      token('t1', 'a', { texture: { src: 'hood' }, displayName: 40 }),
+      token('t2', 'a', { texture: { src: 'real' }, displayName: 40 }),
+      token('t3', 'b', { texture: { src: 'real' }, displayName: 40 }),
     ];
     expect(tokenUpdates(tokens, 'a', { 'texture.src': 'hood', displayName: 40 })).toEqual([
       { _id: 't2', 'texture.src': 'hood', displayName: 40 },
@@ -99,8 +106,8 @@ describe('tokenUpdates', () => {
 
   it('linked and unlinked tokens alike (v1.1 §G.3, #166)', () => {
     const tokens = [
-      { id: 't1', actorId: 'a', actorLink: true, texture: { src: 'old' } },
-      { id: 't2', actorId: 'a', actorLink: false, texture: { src: 'old' } },
+      token('t1', 'a', { actorLink: true, texture: { src: 'old' } }),
+      token('t2', 'a', { actorLink: false, texture: { src: 'old' } }),
     ];
     expect(tokenUpdates(tokens, 'a', { 'texture.src': 'new' })).toEqual([
       { _id: 't1', 'texture.src': 'new' },
@@ -108,16 +115,25 @@ describe('tokenUpdates', () => {
     ]);
   });
 
-  it('a ring colour (a Foundry Color on the token) equal to the CSS string is no change', () => {
-    // Foundry's Color: a Number that serialises to its CSS string.
-    const color = Object.assign(new Number(0xff0000), { toJSON: () => '#ff0000' });
-    const tokens = [
-      { id: 't1', actorId: 'a', ring: { colors: { ring: color, background: null } } },
-    ];
+  it('compares source data: a ring colour as its CSS string, unset as null', () => {
+    const tokens = [token('t1', 'a', { ring: { colors: { ring: '#ff0000', background: null } } })];
     const data = { 'ring.colors.ring': '#ff0000', 'ring.colors.background': null };
     expect(tokenUpdates(tokens, 'a', data)).toEqual([]);
     expect(tokenUpdates(tokens, 'a', { 'ring.colors.ring': '#00ff00' })).toHaveLength(1);
-    // An unset value (undefined) is null.
     expect(tokenUpdates(tokens, 'a', { 'ring.subject.texture': null })).toEqual([]);
+  });
+
+  it("each token's own snapshot (v1.1 §G.3.1): stored by the hood", () => {
+    const tokens = [token('t1', 'a', { texture: { src: 'wild-2.webp', fit: 'cover' } })];
+    expect(tokenUpdates(tokens, 'a', { 'texture.src': 'hood' }, 'store')).toEqual([
+      {
+        _id: 't1',
+        'texture.src': 'hood',
+        'flags.silk.unhooded': {
+          texture: { src: 'wild-2.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.5 },
+          subject: { scale: 1, texture: null },
+        },
+      },
+    ]);
   });
 });
