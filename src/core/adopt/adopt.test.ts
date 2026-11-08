@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isBox } from '../event-scenes';
 import type { DocSnapshot } from '../materialize';
 import { must } from '../materialize/test-setup';
 import { HOOD, setup } from './test-setup';
@@ -389,6 +390,26 @@ describe('inferred Connections (spec §6 Connections)', () => {
     });
     // Foundry's Scene thumb is never changed.
     expect(t.scenes.all.get(scene._id)?.['thumb']).toBe('maps/gareth-thumb.webp');
+  });
+
+  it('a Scene without a Foundry thumb gets one made from its background (1.1 §B.2.1)', async () => {
+    const t = setup();
+    const scene = t.foundryScene('Gareth map');
+    Object.assign(must(t.scenes.all.get(scene._id)), {
+      levels: [{ _id: 'level0000000001', background: { src: 'maps/gareth.webp' } }],
+    });
+    const { id } = await t.adoptDoc({ uuid: `Scene.${scene._id}`, class: 'location' });
+    expect(t.element(id).thumb).toBe('thumb:maps/gareth.webp');
+    expect(t.scenes.all.get(scene._id)?.['thumb']).toBeUndefined();
+  });
+
+  it('an Adopted Event Scene: Preset none, a Token Box at once (1.1 §I)', async () => {
+    const t = setup();
+    const scene = t.foundryScene('Bridge fight');
+    await t.adoptDoc({ uuid: `Scene.${scene._id}`, class: 'event' });
+    const live = must(t.scenes.all.get(scene._id));
+    expect(live.flags.silk?.preset).toBe('none');
+    expect((live.drawings ?? []).filter((d) => isBox(d))).toHaveLength(1);
   });
 });
 

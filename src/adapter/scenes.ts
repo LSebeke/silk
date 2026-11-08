@@ -76,6 +76,9 @@ export function createSceneDocs(api: SceneApi): SceneDocs {
     async update(id, data) {
       await must(id).update(data, { ...SILK_WRITE });
     },
+    async setPadding(id, padding) {
+      await must(id).update({ padding }, { ...SILK_WRITE, autoReposition: true });
+    },
     async activate(id) {
       await must(id).activate({ updateOptions: { ...SILK_WRITE } });
     },

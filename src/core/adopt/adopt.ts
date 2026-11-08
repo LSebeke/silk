@@ -97,6 +97,8 @@ export interface AdoptDeps {
   newId(): string;
   localize(key: string, data?: Record<string, string>): string;
   materializer: Pick<Materializer, 'sync' | 'materialize'>;
+  /** A card thumbnail made from an image (1.1 §B.2.1 Images). */
+  thumbnail?(src: string): Promise<string | undefined>;
   foundry: AdoptFoundry;
   /** Registry runner (`connection.create` for drops onto a Node). */
   run(name: string, args: object): Promise<unknown>;
@@ -466,18 +468,23 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     const id = deps.newId();
     // 1.1 §B.2.1 Images: img (journal Cover) = background, card image = the Scene's thumb.
     const img = sceneBackground(c.scene as Parameters<typeof sceneBackground>[0]);
-    const thumb = c.scene['thumb'];
+    const own = c.scene['thumb'];
+    const thumb =
+      typeof own === 'string' && own
+        ? own
+        : img && (await deps.thumbnail?.(img).catch(() => undefined));
     await writeElement(id, {
       class: cls,
       name: c.scene.name,
       position: at,
       adopted: true,
       ...(img ? { img } : {}),
-      ...(typeof thumb === 'string' && thumb ? { thumb } : {}),
+      ...(thumb ? { thumb } : {}),
     });
     await join(id, at);
     // Link first: the Materialize then finds the Scene instead of generating one.
-    await scenes.update(c.scene._id, { 'flags.silk.sceneOf': id });
+    // Adopted: config untouched, no Preset (1.1 §I).
+    await scenes.update(c.scene._id, { 'flags.silk.sceneOf': id, 'flags.silk.preset': 'none' });
     if (cls === 'event') await inferPresentAt(id);
     await deps.materializer.materialize([id]);
     return id;

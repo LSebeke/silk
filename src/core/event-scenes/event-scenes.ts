@@ -32,14 +32,8 @@ import type {
 } from '../materialize';
 import type { WorkingCopy } from '../working-copy';
 import type { EmbeddedOps, SceneData, SceneDocs, SceneSnapshot } from './port';
-import {
-  DEFAULT_PRESET,
-  isPreset,
-  presetOf,
-  presetScene,
-  tokenSlot,
-  type ScenePreset,
-} from './presets';
+import { DEFAULT_PRESET, isPreset, presetScene, type ScenePreset } from './presets';
+import { boxOf, planBox } from './token-box';
 
 export interface EventScenesDeps {
   workingCopy(): WorkingCopy;
@@ -202,7 +196,10 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   async function createFrom(el: StoryElement, data: SceneData) {
     const id = await scenes.create({ ...data, folder: await folder(), ownership: { default: 0 } });
     await setLink(el, id);
-    if (el.class === 'event') await tokensFollowConnections(el);
+    if (el.class === 'event') {
+      await placeInBox(id, false);
+      await tokensFollowConnections(el);
+    }
   }
 
   async function createFromPreset(el: StoryElement, preset: ScenePreset) {
@@ -214,8 +211,6 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
         elementId: el.id,
         folder: null,
         img: el.img,
-        boxId: deps.newId(),
-        boxLabel: deps.localize('SILK.EventScene.Box'),
       }),
     );
   }
@@ -253,7 +248,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
       _id: deps.newId(),
       name: el.name,
       folder: null,
-      flags: { ...flags, silk: { sceneOf: el.id } },
+      flags: { ...flags, silk: { sceneOf: el.id, preset: 'none' } },
     };
   }
 
@@ -267,7 +262,10 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
       const existing = sceneOf(el.id);
       if (existing) {
         await setLink(el, existing._id);
-        if (el.class === 'event') await tokensFollowConnections(el);
+        if (el.class === 'event') {
+          await placeInBox(existing._id, false);
+          await tokensFollowConnections(el);
+        }
         return;
       }
       const snapshot = readSnapshot(wc().get(eventSceneId(el.id)));
@@ -304,8 +302,27 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   async function addToken(sceneId: string, actorId: string) {
     const scene = scenes.get(sceneId);
     if (!scene || scene.tokens.some((t) => t.actorId === actorId)) return;
-    const slot = tokenSlot(presetOf(scene), scene.tokens.length);
-    await scenes.createTokens(sceneId, [{ actorId, ...slot, hidden: true }]);
+    const slot = await placeInBox(sceneId, true);
+    if (slot) await scenes.createTokens(sceneId, [{ actorId, ...slot, hidden: true }]);
+  }
+
+  /**
+   * Makes the Scene's Token Box (1.1 §I), grown and the padding raised as needed; with
+   * `place`, the slot for one more token.
+   */
+  async function placeInBox(sceneId: string, place: boolean) {
+    const scene = scenes.get(sceneId);
+    if (!scene) return undefined;
+    const label = deps.localize('SILK.EventScene.Box');
+    const plan = planBox(scene, { newId: deps.newId, label, place });
+    if (plan.padding !== undefined) await scenes.setPadding(sceneId, plan.padding);
+    if (plan.box)
+      await scenes.syncEmbedded(sceneId, 'drawings', {
+        create: plan.create ? [plan.box] : [],
+        update: plan.create ? [] : [plan.box],
+        delete: [],
+      });
+    return plan.slot;
   }
 
   async function removeTokens(sceneId: string, actorId: string) {
@@ -475,6 +492,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
     },
 
     async reconcile() {
+      await migratePresets();
       for (const record of [...wc().records().values()]) {
         const el = readElement(record);
         if (!el?.uuid || !SCENE_CLASSES.has(el.class)) continue;
@@ -488,6 +506,20 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
       }
     },
   };
+
+  /**
+   * Load-time migration (1.1 §I): a Silk Scene without `flags.silk.preset` gets `narrative`
+   * if it has a box, else its element's Preset, else `none`.
+   */
+  async function migratePresets() {
+    for (const scene of scenes.scenes()) {
+      const silk = scene.flags.silk;
+      if (!silk?.sceneOf || silk.preset) continue;
+      const recorded = element(silk.sceneOf)?.fields?.scenePreset;
+      const preset = boxOf(scene) ? 'narrative' : isPreset(recorded) ? recorded : 'none';
+      await scenes.update(scene._id, { 'flags.silk.preset': preset });
+    }
+  }
 
   /** Makes the live Scene match `wanted` (versioned keys only). */
   async function syncScene(live: SceneSnapshot, wanted: SceneData) {
