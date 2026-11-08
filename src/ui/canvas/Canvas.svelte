@@ -19,7 +19,12 @@
   import { TWEEN_MS } from '../../core/canvas/tween';
   import type { PipelineOrigin } from '../../core/canvas';
   import type { CheckoutSummary } from '../../core/campaigns';
-  import type { CreateFromConnection, RelativeDirection } from '../../core/connections';
+  import {
+    otherDirection,
+    readConnection,
+    type CreateFromConnection,
+    type RelativeDirection,
+  } from '../../core/connections';
   import {
     ELEMENT_CLASSES,
     hasStatus,
@@ -536,6 +541,13 @@
       case 'delete':
         void run('canvas.deleteSelection', {});
         break;
+      case 'toggleDirection':
+        if (edge?.data)
+          void run('connection.setDirection', {
+            id: edge.id,
+            direction: otherDirection(edge.data.direction),
+          });
+        break;
       case 'command':
         if (edge) void run(action.name, { id: edge.id });
         break;
@@ -763,7 +775,9 @@
     pipeline.cancel();
     // Keys (Escape) reach the canvas, not Foundry's close-the-window handler.
     root?.focus();
-    menu = { kind: 'edge', id, ...local(event), entries: edgeMenu(id, menuDeps()) };
+    const connection = readConnection(workingCopy.get(id));
+    if (!connection) return;
+    menu = { kind: 'edge', id, ...local(event), entries: edgeMenu(connection, menuDeps()) };
   }
 
   function onNodeDragStop({ nodes: dragged }: { nodes: (ElementNode | GroupNode)[] }) {

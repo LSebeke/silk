@@ -12,6 +12,10 @@ export type ConnectionType = BehaviouralType | 'free';
 
 export type ConnectionDirection = 'directed' | 'mutual';
 
+/** v1.1 §F.1 "Directed ⇄ Mutual" (`Tab`): the value `connection.setDirection` toggles to. */
+export const otherDirection = (d: ConnectionDirection): ConnectionDirection =>
+  d === 'mutual' ? 'directed' : 'mutual';
+
 export interface ConnectionData {
   from: string;
   to: string;

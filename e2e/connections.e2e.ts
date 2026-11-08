@@ -111,23 +111,19 @@ test('Connections: right-drag, digit keys, c, editor, Tab/q, rendering', async (
   await expect(loves).toHaveAttribute('data-silk-edge-from', alrik);
   await expect(loves).toHaveAttribute('data-silk-edge-direction', 'directed');
 
-  // Tab cycles direction on the selected Connection through A→B, B→A, mutual.
+  // v1.1 §F.1: Tab toggles directed ⇄ mutual (never reverses); Shift+Tab reverses.
   const lovesId = (await loves.getAttribute('data-silk-edge')) ?? '';
   const lovesPath = gm.locator(`.svelte-flow__edge[data-id="${lovesId}"] .svelte-flow__edge-path`);
-  const state = async () =>
-    `${await loves.getAttribute('data-silk-edge-direction')}:${await loves.getAttribute('data-silk-edge-from')}`;
   await loves.click();
-  const seen = [await state()];
-  for (let i = 0; i < 3; i++) {
-    await gm.keyboard.press('Tab');
-    await expect.poll(state).not.toBe(seen.at(-1));
-    seen.push(await state());
-    if (seen.at(-1)?.startsWith('mutual'))
-      await expect(lovesPath).not.toHaveAttribute('marker-end', /url/);
-  }
-  expect(new Set(seen.slice(0, 3)).size).toBe(3);
-  expect(seen.filter((s) => s.startsWith('mutual'))).toHaveLength(1);
-  expect(seen[3]).toBe(seen[0]);
+  await gm.keyboard.press('Tab');
+  await expect(loves).toHaveAttribute('data-silk-edge-direction', 'mutual');
+  await expect(lovesPath).not.toHaveAttribute('marker-end', /url/);
+  await gm.keyboard.press('Tab');
+  await expect(loves).toHaveAttribute('data-silk-edge-direction', 'directed');
+  await expect(loves).toHaveAttribute('data-silk-edge-from', alrik);
+  await gm.keyboard.press('Shift+Tab');
+  await expect(loves).not.toHaveAttribute('data-silk-edge-from', alrik);
+  await expect(loves).toHaveAttribute('data-silk-edge-direction', 'directed');
 
   // q cycles type: Person → Item has `owns`, so a free-form Connection becomes owns.
   // Use `c` to connect Rondra to the Sword, then q.

@@ -130,8 +130,10 @@ describe('Node context menu: Add Info Block… (v1.1 §C.1)', () => {
 });
 
 describe('Connection edge context menu', () => {
+  const free = { id: 'c1', type: 'free', direction: 'directed' } as const;
+
   it('Open details, Reveal, the Connection commands (spec 1.1 §F.1)', () => {
-    const entries = edgeMenu('c1', deps({ isRevealed: () => true }));
+    const entries = edgeMenu(free, deps({ isRevealed: () => true }));
     expect(labels(entries)).toEqual([
       'SILK.Canvas.EdgeMenu.OpenDetails',
       'SILK.Reveal.Unreveal',
@@ -146,13 +148,30 @@ describe('Connection edge context menu', () => {
       command: 'reveal.connection',
       args: { id: 'c1', revealed: false },
     });
-    expect(entries[3]).toMatchObject({ command: 'connection.cycleDirection', args: { id: 'c1' } });
+    expect(entries[3]).toMatchObject({
+      command: 'connection.setDirection',
+      args: { id: 'c1', direction: 'mutual' },
+    });
     expect(entries[5]).toMatchObject({ command: 'connection.flip', args: { id: 'c1' } });
     expect(entries.at(-1)).toMatchObject({ command: 'connection.delete', args: { ids: ['c1'] } });
   });
 
+  it('Directed ⇄ Mutual sets the other direction; never reverses (spec 1.1 §F.1)', () => {
+    const mutual = edgeMenu({ ...free, direction: 'mutual' }, deps());
+    expect(mutual[3]).toMatchObject({
+      command: 'connection.setDirection',
+      args: { id: 'c1', direction: 'directed' },
+    });
+  });
+
+  it('Directed ⇄ Mutual is off on a Behavioural Connection (always directed)', () => {
+    const owns = edgeMenu({ id: 'c1', type: 'owns', direction: 'directed' }, deps());
+    expect(owns[3]?.disabled).toBe(true);
+    expect(owns[5]?.disabled).toBeUndefined();
+  });
+
   it('Open details is disabled while Connection Detail is unavailable', () => {
-    const entries = edgeMenu('c1', deps({ available: (n) => n !== 'connection.openDetail' }));
+    const entries = edgeMenu(free, deps({ available: (n) => n !== 'connection.openDetail' }));
     expect(entries[0]?.disabled).toBe(true);
     expect(entries.slice(1).some((e) => e.disabled)).toBe(false);
   });

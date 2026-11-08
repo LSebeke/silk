@@ -104,12 +104,14 @@ describe('canvas keys (spec §10.3)', () => {
     expect(canvasKey(key('KeyF'), none)).toBeUndefined();
   });
 
-  it('Tab / q cycle direction / type of a selected Connection; F2 edits it', () => {
+  it('Tab toggles directed ⇄ mutual, Shift+Tab reverses, q cycles type; F2 edits it', () => {
     const edge = { node: false, edge: true };
-    expect(canvasKey(key('Tab'), edge)).toEqual({
+    expect(canvasKey(key('Tab'), edge)).toEqual({ kind: 'toggleDirection' });
+    expect(canvasKey(key('Tab', { shiftKey: true }), edge)).toEqual({
       kind: 'command',
-      name: 'connection.cycleDirection',
+      name: 'connection.flip',
     });
+    expect(canvasKey(key('Tab', { ctrlKey: true }), edge)).toBeUndefined();
     expect(canvasKey(key('KeyQ'), edge)).toEqual({ kind: 'command', name: 'connection.cycleType' });
     expect(canvasKey(key('F2'), edge)).toEqual({ kind: 'editConnection' });
     expect(canvasKey(key('Tab'), none)).toBeUndefined();
@@ -166,7 +168,13 @@ describe('canvas keymap table (spec 1.1 §E.3: the legend reads it)', () => {
     edge: { node: false, edge: true },
     nodeOrEdge: { node: false, edge: true },
   } as const;
-  const held = { none: {}, shiftOk: {}, primary: { ctrlKey: true }, connection: {} } as const;
+  const held = {
+    none: {},
+    shiftOk: {},
+    shift: { shiftKey: true },
+    primary: { ctrlKey: true },
+    connection: {},
+  } as const;
 
   it('every row is what canvasKey does under its condition, and nothing without it', () => {
     for (const row of CANVAS_KEYS)

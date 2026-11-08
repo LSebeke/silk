@@ -11,6 +11,7 @@ import {
   KEY_CONDITION_LABELS,
   MODIFIER_CONNECTIONS,
   type CanvasKeyBinding,
+  type KeyModifiers,
 } from './keys';
 import { POINTER_GESTURES } from './pointer-target';
 import { RIGHT_DRAG_GESTURES } from './right-drag';
@@ -41,8 +42,10 @@ function codeName(code: string): string {
   return KEY_NAMES[code] ?? code.replace(/^(Digit|Numpad(?=\d)|Key)/, '');
 }
 
+const MOD_PREFIX: Partial<Record<KeyModifiers, string>> = { primary: 'Ctrl+', shift: 'Shift+' };
+
 function keyRow(b: CanvasKeyBinding): LegendRow {
-  const prefix = b.mods === 'primary' ? 'Ctrl+' : '';
+  const prefix = MOD_PREFIX[b.mods] ?? '';
   const keys = [...new Set([...b.codes.map(codeName), ...(b.keys ?? [])])].map((k) => prefix + k);
   return {
     keys,

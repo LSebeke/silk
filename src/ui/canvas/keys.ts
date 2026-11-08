@@ -15,9 +15,11 @@ export type CanvasKeyAction =
   | { kind: 'pin' }
   | { kind: 'reveal' }
   | { kind: 'editConnection' }
+  /** v1.1 §F.1: `connection.setDirection` with the other value. */
+  | { kind: 'toggleDirection' }
   | { kind: 'delete' }
   | { kind: 'legend' }
-  | { kind: 'command'; name: 'connection.cycleDirection' | 'connection.cycleType' }
+  | { kind: 'command'; name: 'connection.flip' | 'connection.cycleType' }
   | { kind: 'layout'; name: 'canvas.group' | 'canvas.untangle' | 'canvas.undo' };
 
 export interface KeyLike {
@@ -81,14 +83,16 @@ const MET: Record<KeyCondition, (s: Selected) => boolean> = {
  * Modifiers a key accepts:
  * - `none`: no modifier.
  * - `shiftOk`: Shift or none.
+ * - `shift`: Shift, without Ctrl/Alt/Cmd.
  * - `primary`: Ctrl or Cmd, without Shift/Alt.
  * - `connection`: any of Shift/Ctrl/Alt, which pick the Connection (`MODIFIER_CONNECTIONS`); no Cmd.
  */
-export type KeyModifiers = 'none' | 'shiftOk' | 'primary' | 'connection';
+export type KeyModifiers = 'none' | 'shiftOk' | 'shift' | 'primary' | 'connection';
 
 const ACCEPTS: Record<KeyModifiers, (e: KeyLike) => boolean> = {
   none: (e) => !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey,
   shiftOk: (e) => !e.ctrlKey && !e.altKey && !e.metaKey,
+  shift: (e) => e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey,
   primary: (e) => (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey,
   connection: (e) => !e.metaKey,
 };
@@ -149,7 +153,9 @@ export const CANVAS_KEYS: readonly CanvasKeyBinding[] = [
   row(['Delete', 'Backspace'], 'nodeOrEdge', { kind: 'delete' }, 'delete'),
   row(['KeyG'], 'node', { kind: 'layout', name: 'canvas.group' }, 'group'),
   row(['KeyU'], 'node', { kind: 'layout', name: 'canvas.untangle' }, 'untangle'),
-  row(['Tab'], 'edge', { kind: 'command', name: 'connection.cycleDirection' }, 'cycleDirection'),
+  // v1.1 §F.1: Tab toggles directed ⇄ mutual, Shift+Tab reverses.
+  row(['Tab'], 'edge', { kind: 'toggleDirection' }, 'toggleDirection'),
+  row(['Tab'], 'edge', { kind: 'command', name: 'connection.flip' }, 'flip', 'shift'),
   row(['KeyQ'], 'edge', { kind: 'command', name: 'connection.cycleType' }, 'cycleType'),
   // `?` sits on Shift+/ (US) or Shift+ß (DE): matched by `key`, Shift allowed.
   row([], 'always', { kind: 'legend' }, 'legend', 'shiftOk', ['?']),
