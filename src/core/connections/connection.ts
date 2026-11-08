@@ -12,9 +12,12 @@ export type ConnectionType = BehaviouralType | 'free';
 
 export type ConnectionDirection = 'directed' | 'mutual';
 
-/** v1.1 §F.1 "Directed ⇄ Mutual" (`Tab`): the value `connection.setDirection` toggles to. */
+/** v1.1 §F.1 "Directed ⇄ Mutual": the value `connection.toggleDirection` sets. */
 export const otherDirection = (d: ConnectionDirection): ConnectionDirection =>
   d === 'mutual' ? 'directed' : 'mutual';
+
+/** Only free-form Connections toggle directed ⇄ mutual: Behavioural ones are directed. */
+export const togglesDirection = (c: Pick<ConnectionData, 'type'>): boolean => c.type === 'free';
 
 export interface ConnectionData {
   from: string;

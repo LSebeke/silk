@@ -15,11 +15,12 @@ export type CanvasKeyAction =
   | { kind: 'pin' }
   | { kind: 'reveal' }
   | { kind: 'editConnection' }
-  /** v1.1 §F.1: `connection.setDirection` with the other value. */
-  | { kind: 'toggleDirection' }
   | { kind: 'delete' }
   | { kind: 'legend' }
-  | { kind: 'command'; name: 'connection.flip' | 'connection.cycleType' }
+  | {
+      kind: 'command';
+      name: 'connection.toggleDirection' | 'connection.flip' | 'connection.cycleType';
+    }
   | { kind: 'layout'; name: 'canvas.group' | 'canvas.untangle' | 'canvas.undo' };
 
 export interface KeyLike {
@@ -154,7 +155,7 @@ export const CANVAS_KEYS: readonly CanvasKeyBinding[] = [
   row(['KeyG'], 'node', { kind: 'layout', name: 'canvas.group' }, 'group'),
   row(['KeyU'], 'node', { kind: 'layout', name: 'canvas.untangle' }, 'untangle'),
   // v1.1 §F.1: Tab toggles directed ⇄ mutual, Shift+Tab reverses.
-  row(['Tab'], 'edge', { kind: 'toggleDirection' }, 'toggleDirection'),
+  row(['Tab'], 'edge', { kind: 'command', name: 'connection.toggleDirection' }, 'toggleDirection'),
   row(['Tab'], 'edge', { kind: 'command', name: 'connection.flip' }, 'flip', 'shift'),
   row(['KeyQ'], 'edge', { kind: 'command', name: 'connection.cycleType' }, 'cycleType'),
   // `?` sits on Shift+/ (US) or Shift+ß (DE): matched by `key`, Shift allowed.

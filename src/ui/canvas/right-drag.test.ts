@@ -30,7 +30,8 @@ describe('right-click start/end (spec 1.1 §A)', () => {
       kind: 'connect',
       from: 'a',
       to: 'b',
-      connection: { direction: 'out' },
+      // No modifier: the default (outgoing, the default Connection may swap it).
+      connection: {},
     });
   });
 
@@ -39,7 +40,8 @@ describe('right-click start/end (spec 1.1 §A)', () => {
       kind: 'create',
       at: 'end',
       from: 'a',
-      connection: { direction: 'out' },
+      // As the palette: a new Location sits inside A (v1 §5).
+      connection: {},
     });
   });
 
@@ -48,12 +50,12 @@ describe('right-click start/end (spec 1.1 §A)', () => {
   });
 
   it('canvas → Node B creates at the press point, connected new → B', () => {
-    // Relative to B, the pipeline's origin: new → B is incoming.
+    // Relative to B, the pipeline's origin: the default, started on the new element.
     expect(rightDragAction(canvas, 'b', plain)).toEqual({
       kind: 'create',
       at: 'start',
       from: 'b',
-      connection: { direction: 'in' },
+      connection: { newFirst: true },
     });
   });
 

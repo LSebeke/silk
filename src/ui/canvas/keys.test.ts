@@ -106,7 +106,10 @@ describe('canvas keys (spec §10.3)', () => {
 
   it('Tab toggles directed ⇄ mutual, Shift+Tab reverses, q cycles type; F2 edits it', () => {
     const edge = { node: false, edge: true };
-    expect(canvasKey(key('Tab'), edge)).toEqual({ kind: 'toggleDirection' });
+    expect(canvasKey(key('Tab'), edge)).toEqual({
+      kind: 'command',
+      name: 'connection.toggleDirection',
+    });
     expect(canvasKey(key('Tab', { shiftKey: true }), edge)).toEqual({
       kind: 'command',
       name: 'connection.flip',

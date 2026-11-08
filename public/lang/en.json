@@ -109,7 +109,8 @@
         "openDetail": "Connection Detail",
         "setNotes": "Edit Connection notes",
         "setType": "Set Connection type",
-        "setDirection": "Set Connection direction"
+        "setDirection": "Set Connection direction",
+        "toggleDirection": "Directed ⇄ Mutual"
       },
       "materialize": {
         "elements": "Materialize",
@@ -198,7 +199,6 @@
     "Canvas": {
       "EdgeMenu": {
         "OpenDetails": "Open details",
-        "DirectedMutual": "Directed ⇄ Mutual",
         "Reverse": "Reverse direction"
       },
       "Title": "World Canvas",

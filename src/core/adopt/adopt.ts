@@ -561,12 +561,8 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     const origin = element(args.connectTo);
     const created = element(done.id);
     if (origin && created && origin.id !== created.id) {
-      const connection = resolveCreateFrom(origin.class, created.class, args.connection);
-      const made = (await deps.run('connection.create', {
-        from: origin.id,
-        to: created.id,
-        ...connection,
-      })) as { id: string };
+      const connection = resolveCreateFrom(origin, created, args.connection);
+      const made = (await deps.run('connection.create', connection)) as { id: string };
       result.connectionId = made.id;
     }
     return result;
