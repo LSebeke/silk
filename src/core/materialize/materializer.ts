@@ -50,11 +50,14 @@ import { deepMerge } from '../util/objects';
 import {
   imageWrites,
   lookOf,
+  originalLook,
+  restoreWrites,
   writeLook,
   type ImageEdit,
   type Look,
   type LookStage,
   type PortraitDoc,
+  type PortraitWrites,
 } from '../portrait';
 import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
@@ -124,6 +127,8 @@ export interface Materializer {
   setImage(id: string, edit: ImageEdit): Promise<void>;
   /** The real look for the image & token editor (v1.1 §G.3); a Ghost's is its record image. */
   look(id: string): Look | undefined;
+  /** `element.restoreImages` (v1.1 §G.3.1); rejected without `flags.silk.original`. */
+  restoreImages(id: string): Promise<void>;
   setFields(id: string, fields: ClassFields): Promise<void>;
   changeClass(id: string, cls: string): Promise<void>;
   /** `appearance`: the Appearance preset (v1.1 §C.2), actor classes without one only. */
@@ -259,11 +264,14 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
 
   /** The existing doc takes the plan's Silk-owned parts; what the generator made stays. */
   async function bind(uuid: string, main: DocPlan['main']) {
+    const doc = docs.get(uuid) as PortraitDoc | undefined;
+    // v1.1 §G.3.1: no compendium source, so this flag is the only copy of its look.
+    const original = doc ? { original: originalLook(doc) } : {};
     await docs.update(uuid, {
       name: main.name,
       folder: main.folder,
       ownership: main.ownership,
-      flags: { silk: main.flags.silk },
+      flags: { silk: { ...main.flags.silk, ...original } },
     });
     return uuid;
   }
@@ -288,7 +296,16 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       name: blank.name,
       folder: blank.folder,
       ...(blank.ownership ? { ownership: blank.ownership } : {}),
-      flags: { ...data.flags, silk: blank.flags.silk },
+      flags: {
+        ...data.flags,
+        silk: {
+          ...blank.flags.silk,
+          // v1.1 §G.3.1: the entry's look, before a Ghost image edit or the hood.
+          ...(plan.documentName === 'Actor'
+            ? { original: originalLook(data as Pick<PortraitDoc, 'img' | 'prototypeToken'>) }
+            : {}),
+        },
+      },
       // Edits made while a Ghost win over the entry's.
       system: fields
         ? deepMerge(data.system ?? {}, system.toSystem(el.class, { ...fields }))
@@ -299,6 +316,12 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const img = el.img ?? data.img;
     if (img) main.img = img;
     return { ...plan, main };
+  }
+
+  /** A look write: the doc, its subject file and every placed token (v1.1 §G.3). */
+  async function applyLook(main: DocSnapshot, writes: PortraitWrites) {
+    if (deps.look) await writeLook(deps.look, (u, d) => docs.update(u, d), main.uuid, main, writes);
+    else if (Object.keys(writes.doc).length) await docs.update(main.uuid, writes.doc);
   }
 
   function materializeOne(id: string): Promise<string> {
@@ -443,11 +466,15 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
         if (img !== undefined) await docs.updatePage(main.uuid, cover, { src: img || null });
       } else {
         // Hood-aware (§8, v1.1 §G.3): the Portrait module decides what is shown.
-        const writes = imageWrites(main, edit, el.img, system.sizeFactor(main.system));
-        if (deps.look)
-          await writeLook(deps.look, (u, d) => docs.update(u, d), main.uuid, main, writes);
-        else if (Object.keys(writes.doc).length) await docs.update(main.uuid, writes.doc);
+        await applyLook(main, imageWrites(main, edit, el.img, system.sizeFactor(main.system)));
       }
+      await sync(id);
+    },
+
+    async restoreImages(id) {
+      const main = element(id).uuid ? requireDocs(id).main : undefined;
+      if (!main?.flags.silk.original) throw new Error('Silk: no imported images to restore');
+      await applyLook(main, restoreWrites(main));
       await sync(id);
     },
 
@@ -658,6 +685,7 @@ export function materializeCommands(m: Materializer): Command[] {
     command('element.setImage', ({ id, ...edit }: { id: string } & ImageEdit) =>
       m.setImage(id, edit),
     ),
+    command('element.restoreImages', (args: { id: string }) => m.restoreImages(args.id)),
     command('element.setFields', (args: { id: string; fields: ClassFields }) =>
       m.setFields(args.id, args.fields),
     ),

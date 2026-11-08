@@ -88,6 +88,7 @@
         "create": "Element erstellen",
         "rename": "Element umbenennen",
         "setImage": "Bild setzen",
+        "restoreImages": "Importierte Bilder wiederherstellen",
         "setFields": "Klassenfelder setzen",
         "changeClass": "Klasse ändern",
         "openSheet": "Bogen öffnen",
@@ -487,6 +488,8 @@
       "PositionHint": "Ziehen verschiebt den Token, Scrollen skaliert ihn",
       "Scale": "Skalierung",
       "Reset": "Zurücksetzen",
+      "Restore": "Importierte Bilder wiederherstellen",
+      "RestoreHint": "Zurück zu den Bildern und dem Token-Aussehen, mit denen der Akteur importiert wurde. Verhüllt gelten sie bei der Enthüllung.",
       "HoodedHint": "Verhüllt: Die Spieler sehen die Hülle, bis das Aussehen enthüllt ist. Bild, Token und Position gelten dann; Ring und Drehsperre gelten sofort."
     },
     "Detail": {

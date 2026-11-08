@@ -55,6 +55,7 @@ import {
   type SilkDocFlags,
   type SystemMapping,
 } from '../materialize';
+import { originalLook, type PortraitDoc } from '../portrait';
 import type { WorkingCopy } from '../working-copy';
 import { QUEST_PAGE, allowedClasses, bulkClass, inferClass, type Inference } from './infer';
 import { folderLayout, type FolderNode } from './placement';
@@ -320,6 +321,9 @@ export function createAdopt(deps: AdoptDeps): Adopt {
   /** Link flags and layout pieces onto the doc; Actor/Item get their Companion Journal. */
   async function linkDoc(id: string, cls: ElementClassId, doc: DocSnapshot, ghost?: StoryElement) {
     const flags: SilkDocFlags = { id };
+    // v1.1 §G.3.1: an adopted actor's look as it came in, before any hood.
+    if (doc.documentName === 'Actor')
+      flags.original = doc.flags.silk.original ?? originalLook(doc as PortraitDoc);
     if (hasCompanion(cls)) {
       const folder = await docs.ensureFolder(
         'JournalEntry',

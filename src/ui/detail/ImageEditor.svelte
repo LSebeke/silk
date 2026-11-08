@@ -74,6 +74,14 @@
     written++;
   }
 
+  /** v1.1 §G.3.1: an imported actor's original look back (also while hooded). */
+  async function restore() {
+    await run('element.restoreImages', { id });
+    draft = undefined;
+    same = true;
+    written++;
+  }
+
   async function pickSheet() {
     const img = await ctx.pickImage(look?.img ?? '');
     if (img !== undefined) await commit(same ? { img, token: { sameAsImage: true } } : { img });
@@ -336,6 +344,15 @@
       <button type="button" class="reset" onclick={reset} data-silk-image-reset>{t('Reset')}</button
       >
     </DetailSection>
+    {#if look.restorable}
+      <button
+        type="button"
+        class="reset"
+        title={t('RestoreHint')}
+        onclick={() => restore()}
+        data-silk-image-restore>{t('Restore')}</button
+      >
+    {/if}
   {:else}
     <p class="hint">{ctx.localize('SILK.Detail.Gone')}</p>
   {/if}

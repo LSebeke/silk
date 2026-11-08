@@ -271,6 +271,36 @@ describe('Appearance (Person/Creature)', () => {
     expect(shown.flags.silk.pose).toEqual({ anchorX: 0.3, anchorY: 0.5, scale: 1 });
   });
 
+  it('Restore imported images while hooded (v1.1 §G.3.1): the real look at Reveal', async () => {
+    const t = setup();
+    const id = await materialized(t, 'creature', 'Wolf');
+    const uuid = t.doc(id).uuid;
+    await t.docs.update(uuid, {
+      'flags.silk.original': {
+        img: 'wolf.webp',
+        texture: { src: 'wolf-token.webp', fit: 'cover' },
+        ring: { enabled: false },
+      },
+    });
+    await t.registry.run('element.setImage', {
+      id,
+      img: 'mine.webp',
+      token: { sameAsImage: true, anchor: { x: 0.3, y: 0.5 } },
+    });
+    await t.registry.run('element.restoreImages', { id });
+    type Doc = ReturnType<typeof t.doc> & {
+      prototypeToken: { texture: { src: string; fit?: string; anchorX?: number } };
+    };
+    expect(t.doc(id).img).toBe(HOOD);
+    expect(t.element(id).img).toBe('wolf.webp');
+    await t.run('reveal.appearance', { id });
+    const shown = t.doc(id) as Doc;
+    expect(shown.img).toBe('wolf.webp');
+    expect(shown.prototypeToken.texture).toMatchObject({ src: 'wolf-token.webp', fit: 'cover' });
+    expect(shown.prototypeToken.texture.anchorX ?? 0.5).toBe(0.5);
+    expect(shown.flags.silk.pose).toBeUndefined();
+  });
+
   it('GM load migrates a round 2 look (v1.1 §G.3.2): subject file, size factor back', async () => {
     const t = setup();
     const id = await materialized(t, 'creature', 'Ratte');
