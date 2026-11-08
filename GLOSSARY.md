@@ -80,6 +80,8 @@ _Avoid_: auto-layout
 
 **Scene Preset**: One of a fixed set of templates (Travel, Battle, Narrative, Overview) that sets how a Story Element's Foundry Scene is set up for play.
 
+**Token Box**: The marked area beside an Event's Scene, outside the map, where Silk places the tokens of the actors present at the Event, hidden, for the GM to move onto the map.
+
 **Canvas Filter**: A view setting that hides Story Elements from the canvas by Element Class, Status, Revealed, Materialized, Tag, Visual Group, or distance from a focus. Filters never change the Story itself.
 
 **Tag**: A free-form label the GM puts on a Story Element. Tags are part of the Canon and never shown to players.
