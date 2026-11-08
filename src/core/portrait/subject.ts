@@ -1,8 +1,8 @@
 /**
  * The ring subject file (v1.1 §G.3 "Ring composition", #171) and the one place a look is
  * written: the actor doc, the subject file and every placed token. A subject is rebuilt only
- * when what it was rendered from (image, pose, the world ring style's edges) changed, so a
- * changed ring style rebuilds it on the next apply (GM load: reconcile).
+ * when what it was rendered from (image, pose, draw order, the world ring style's edges)
+ * changed, so a changed ring style rebuilds it on the next apply (GM load: reconcile).
  */
 import type { SilkDocFlags } from '../materialize/port';
 import type { Edges } from './geometry';
@@ -29,6 +29,7 @@ export interface LookStage {
 const sameSpec = (flag: SubjectFlag, spec: SubjectSpec) =>
   flag.src === spec.src &&
   samePose(flag.pose, spec.pose) &&
+  (flag.order ?? 'ring') === spec.order &&
   flag.edges.inner === spec.edges.inner &&
   flag.edges.outer === spec.edges.outer;
 

@@ -4,6 +4,7 @@ import { createSubjectFiles } from './subject-file';
 const spec = {
   src: 'worlds/w/alrik.webp',
   pose: { anchorX: 0.5, anchorY: 0.5, scale: 1 },
+  order: 'ring' as const,
   edges: { inner: 0.6, outer: 0.7 },
 };
 

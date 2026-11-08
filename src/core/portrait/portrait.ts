@@ -13,7 +13,7 @@
 import { elementClass } from '../elements/classes';
 import { appearanceBlock, type StoryElement } from '../elements/element';
 import type { SilkDocFlags } from '../materialize/port';
-import { CENTRED, clampScale, hoodPose, tokenData, type Pose } from './geometry';
+import { CENTRED, clampScale, hoodPose, tokenData, type Order, type Pose } from './geometry';
 
 /** The real Portrait: sheet image and prototype token texture. */
 export interface Portrait {
@@ -45,6 +45,8 @@ export interface Look extends Portrait {
   pose: Pose;
   /** Foundry's `lockRotation` (#136). */
   lockRotation: boolean;
+  /** Draw order (#170): which shows in front, the ring or the illustration. */
+  order: Order;
   /** The actor's size factor (its texture scale, #168): the preview draws at it. */
   sizeFactor: number;
 }
@@ -57,9 +59,11 @@ export interface ImageEdit {
     sameAsImage?: boolean;
     ring?: { enabled?: boolean; colors?: Partial<RingColors> };
     anchor?: { x: number; y: number };
-    /** 1 to 8 (#137); clamped. */
+    /** 0.5 to 8 (#137, #167); clamped. */
     scale?: number;
     lockRotation?: boolean;
+    /** Default `ring` (#170). */
+    order?: Order;
   };
 }
 
@@ -88,14 +92,21 @@ export interface PortraitDoc {
   img?: string | null;
   prototypeToken?: TokenData;
   flags: {
-    silk: Pick<SilkDocFlags, 'img' | 'token' | 'hood' | 'pose' | 'subject' | 'original' | 'unhooded'>;
+    silk: Pick<
+      SilkDocFlags,
+      'img' | 'token' | 'hood' | 'pose' | 'subject' | 'order' | 'original' | 'unhooded'
+    >;
   };
 }
 
-/** The ring subject a write needs (v1.1 §G.3): the image and its pose, cut to the ring. */
+/**
+ * The ring subject a write needs (v1.1 §G.3): the image and its pose, cut to the ring at the
+ * edge the draw order picks.
+ */
 export interface SubjectRequest {
   src: string;
   pose: Pose;
+  order: Order;
 }
 
 /**
@@ -163,6 +174,7 @@ export function lookOf(doc: PortraitDoc, recordImg?: string, sizeFactor = 1): Lo
     ring: ringOf(doc.prototypeToken),
     pose: realPose(doc),
     lockRotation: !!doc.prototypeToken?.lockRotation,
+    order: orderOf(doc),
     sizeFactor,
   };
 }
@@ -182,6 +194,7 @@ export function showWrites(
   const flags = doc.flags.silk;
   const real = realPortrait(doc, recordImg);
   const pose = realPose(doc);
+  const order = orderOf(doc);
   const ring = ringOf(doc.prototypeToken).enabled;
   const migrate = migration(doc, sizeFactor);
   if (shown === 'real') {
@@ -201,7 +214,7 @@ export function showWrites(
     return {
       doc: { ...restore, ...proto(doc, token), ...poseFlag(doc, pose) },
       tokens: token,
-      subject: ring ? { src: real.token, pose } : null,
+      subject: ring ? { src: real.token, pose, order } : null,
     };
   }
   const { hood } = shown;
@@ -220,7 +233,7 @@ export function showWrites(
   return {
     doc: { ...data, ...proto(doc, token), ...poseFlag(doc, pose) },
     tokens: token,
-    subject: ring ? { src: hood, pose: hoodPose(true) } : null,
+    subject: ring ? { src: hood, pose: hoodPose(true), order } : null,
   };
 }
 
@@ -258,6 +271,7 @@ export function imageWrites(
     anchorY: t.anchor?.y ?? look.pose.anchorY,
     scale: t.scale !== undefined ? clampScale(t.scale) : look.pose.scale,
   };
+  const order = t.order ?? look.order;
   const same = t.sameAsImage ?? (t.src === undefined && look.sameAsImage);
   const src = same ? img : (t.src ?? look.token);
   const on = ring.enabled;
@@ -273,16 +287,16 @@ export function imageWrites(
     if (edit.token && flags.unhooded) data['flags.silk.-=unhooded'] = null;
     const token = { ...keys, ...tokenData(hoodPose(on), on) };
     return {
-      doc: { ...data, ...proto(doc, token), ...poseFlag(doc, pose) },
+      doc: { ...data, ...proto(doc, token), ...poseFlag(doc, pose), ...orderFlag(doc, order) },
       tokens: token,
-      subject: on ? { src: flags.hood ?? HOODED_DEFAULT, pose: hoodPose(true) } : null,
+      subject: on ? { src: flags.hood ?? HOODED_DEFAULT, pose: hoodPose(true), order } : null,
     };
   }
   const token = { 'texture.src': src, ...keys, ...tokenData(pose, on) };
   return {
-    doc: { ...data, ...proto(doc, token), ...poseFlag(doc, pose) },
+    doc: { ...data, ...proto(doc, token), ...poseFlag(doc, pose), ...orderFlag(doc, order) },
     tokens: token,
-    subject: on ? { src, pose } : null,
+    subject: on ? { src, pose, order } : null,
   };
 }
 
@@ -373,10 +387,10 @@ const isRound2Look = (doc: PortraitDoc): boolean =>
   !doc.flags.silk.subject &&
   !doc.flags.silk.original;
 
-/** Silk wrote this actor's look: a hood, a pose, a subject file, or round 2's look. */
+/** Silk wrote this actor's look: a hood, a pose, a draw order, a subject file, or round 2's. */
 function hasSilkLook(doc: PortraitDoc): boolean {
-  const { hood, pose, subject } = doc.flags.silk;
-  return !!(hood || pose || subject) || isRound2Look(doc);
+  const { hood, pose, subject, order } = doc.flags.silk;
+  return !!(hood || pose || subject || order) || isRound2Look(doc);
 }
 
 /** Round 2 migration: the texture scale back to the size factor (a mirror stays). */
@@ -420,6 +434,16 @@ function poseFlag(doc: PortraitDoc, pose: Pose): Record<string, unknown> {
   const flag = doc.flags.silk.pose;
   if (samePose(pose, CENTRED)) return flag ? { 'flags.silk.-=pose': null } : {};
   return flag && samePose(flag, pose) ? {} : { 'flags.silk.pose': { ...pose } };
+}
+
+/** The actor's draw order (#170): the flag, else Ring in front. */
+const orderOf = (doc: PortraitDoc): Order => doc.flags.silk.order ?? 'ring';
+
+/** `flags.silk.order` holding `order`: set for Illustration in front, cleared for the default. */
+function orderFlag(doc: PortraitDoc, order: Order): Record<string, unknown> {
+  const flag = doc.flags.silk.order;
+  if (order === 'ring') return flag ? { 'flags.silk.-=order': null } : {};
+  return flag === order ? {} : { 'flags.silk.order': order };
 }
 
 /** Token data as prototype token update keys, leaving out what the prototype already has. */

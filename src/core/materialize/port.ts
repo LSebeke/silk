@@ -4,6 +4,7 @@
  * Decisions (which docs, pages, fields) live in the core; the port only executes them.
  */
 import type { ElementClassId } from '../elements';
+import type { Order } from '../portrait/geometry';
 
 export type DocumentName = 'Actor' | 'Item' | 'JournalEntry';
 
@@ -38,14 +39,18 @@ export interface SilkDocFlags {
    * the hood centred, or the pose baked into the subject file.
    */
   pose?: { anchorX: number; anchorY: number; scale: number };
+  /** Draw order (v1.1 §G.3, #170): only `illustration` is kept; absent: Ring in front. */
+  order?: Order;
   /**
    * The subject file Silk wrote to `ring.subject.texture` (v1.1 §G.3) and what it was
-   * rendered from: image, pose and the ring style's edges (a changed style rebuilds it).
+   * rendered from: image, pose, draw order and the ring style's edges (a changed style
+   * rebuilds it). Files from before the draw order have none: Ring in front.
    */
   subject?: {
     file: string;
     src: string;
     pose: { anchorX: number; anchorY: number; scale: number };
+    order?: Order;
     edges: { inner: number; outer: number };
   };
   /**

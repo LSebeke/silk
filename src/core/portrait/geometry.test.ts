@@ -37,8 +37,9 @@ describe('Token geometry: the hood (#133)', () => {
 });
 
 describe('Token geometry: the subject (file and preview)', () => {
-  it('ring in front: cut to the inner edge', () => {
-    expect(subjectCrop({ inner: 0.666, outer: 0.72 })).toBe(0.666);
+  it('ring in front: cut to the inner edge; illustration in front: the outer edge (#170)', () => {
+    expect(subjectCrop({ inner: 0.666, outer: 0.72 }, 'ring')).toBe(0.666);
+    expect(subjectCrop({ inner: 0.666, outer: 0.72 }, 'illustration')).toBe(0.72);
   });
 
   it('ring: a square image covers the crop circle; the circle is centred', () => {
@@ -63,12 +64,23 @@ describe('Token geometry: the subject (file and preview)', () => {
 });
 
 describe('Token geometry: editing the pose', () => {
-  it('scale 1 to 8 (#137)', () => {
-    expect(SCALE).toMatchObject({ min: 1, max: 8 });
+  it('scale 0.5 to 8 (#137, #167)', () => {
+    expect(SCALE).toMatchObject({ min: 0.5, max: 8 });
     expect(clampPose({ ...centred, scale: 12 }, undefined, 1).scale).toBe(8);
-    expect(clampPose({ ...centred, scale: 0.5 }, undefined, 1).scale).toBe(1);
+    expect(clampPose({ ...centred, scale: 0.2 }, undefined, 1).scale).toBe(0.5);
     expect(clampScale(9)).toBe(8);
-    expect(clampScale(0.2)).toBe(1);
+    expect(clampScale(0.2)).toBe(0.5);
+  });
+
+  it('ring, below 1: the image moves freely inside the crop square, not past its edge', () => {
+    // At 0.5 the image is half the circle's square: its anchor may range over [0, 1].
+    expect(dragPose({ ...centred, scale: 0.5 }, 0.2, -0.2, 0.6, 1)).toEqual({
+      anchorX: 0,
+      anchorY: 1,
+      scale: 0.5,
+    });
+    // Dragging 0.03 (frame) of a 0.3 wide image moves the anchor 0.1, the edge not yet reached.
+    expect(dragPose({ ...centred, scale: 0.5 }, 0.03, 0, 0.6, 1).anchorX).toBe(0.4);
   });
 
   it('ring: the image cannot be dragged off the crop circle', () => {

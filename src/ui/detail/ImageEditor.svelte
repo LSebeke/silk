@@ -1,11 +1,12 @@
 <script lang="ts">
   /**
-   * Image & token editor (v1.1 §G.3): sheet image, token image, ring, Lock rotation and the
-   * token's position in a preview of the final token (drag: anchor, wheel or slider: scale).
-   * Every change runs `element.setImage`, which is hood-aware and Ghost-aware. The preview
-   * draws the subject with the same geometry as the subject file (core/portrait), with the
-   * world's ring style: background colour, the subject cut to the ring's inner edge, the ring
-   * frame; all at the actor's size factor in its grid square (#168).
+   * Image & token editor (v1.1 §G.3): sheet image, token image, ring, draw order, Lock
+   * rotation and the token's position in a preview of the final token (drag: anchor, wheel or
+   * slider: scale). Every change runs `element.setImage`, which is hood-aware and Ghost-aware.
+   * The preview draws the subject with the same geometry as the subject file (core/portrait),
+   * with the world's ring style, in Foundry's order: background colour, the ring frame, then
+   * the subject cut to the edge the draw order picks (#170); all at the actor's size factor in
+   * its grid square (#168).
    */
   import { onDestroy, untrack } from 'svelte';
   import { DEFAULT_EDGES, type RingPreview, type SheetRect } from '../../adapter/ring-style';
@@ -18,6 +19,7 @@
     subjectBox,
     subjectCrop,
     type ImageEdit,
+    type Order,
     type Pose,
   } from '../../core/portrait';
   import type { DetailContext } from './context';
@@ -58,8 +60,11 @@
   /** The world's ring style (#135); `undefined` until loaded or without one. */
   let style = $state.raw<RingPreview | undefined>();
   void ctx.ringPreview().then((s) => (style = s));
+  const order = $derived<Order>(look?.order ?? 'ring');
   /** The subject's crop radius with the ring on (the same as the file's); none without. */
-  const crop = $derived(ring.enabled ? subjectCrop(style?.edges ?? DEFAULT_EDGES) : undefined);
+  const crop = $derived(
+    ring.enabled ? subjectCrop(style?.edges ?? DEFAULT_EDGES, order) : undefined,
+  );
   /** The token image's width / height, once loaded. */
   let aspect = $state(1);
 
@@ -233,6 +238,18 @@
         />
         {t('RingEnabled')}
       </label>
+      <div class="row" data-silk-image-order>
+        <span class="label">{t('DrawOrder')}</span>
+        <select
+          value={order}
+          disabled={!ring.enabled}
+          onchange={(e) => commit({ token: { order: e.currentTarget.value as Order } })}
+          data-silk-image-order-select
+        >
+          <option value="ring">{t('OrderRing')}</option>
+          <option value="illustration">{t('OrderIllustration')}</option>
+        </select>
+      </div>
       {@render color('ring', t('RingColor'))}
       {@render color('background', t('BackgroundColor'))}
     </DetailSection>
@@ -273,6 +290,13 @@
               {/if}
             </div>
           {/if}
+          {#if ring.enabled && style}
+            <div class="layer" style={sprite(style.ring)} data-silk-image-preview-ring>
+              {#if band}
+                <div class="layer tint" style:background={band}></div>
+              {/if}
+            </div>
+          {/if}
           <div
             class="layer"
             style:clip-path={subject.circle !== undefined
@@ -293,13 +317,6 @@
               style:height="{box.height * tokenPx}px"
             />
           </div>
-          {#if ring.enabled && style}
-            <div class="layer" style={sprite(style.ring)} data-silk-image-preview-ring>
-              {#if band}
-                <div class="layer tint" style:background={band}></div>
-              {/if}
-            </div>
-          {/if}
         </div>
       </div>
       <label class="row">
