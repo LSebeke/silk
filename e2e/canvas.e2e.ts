@@ -638,9 +638,10 @@ test('Compendium picker (spec 1.1 §B.2, #87): same-name entries merge; their so
   await gm.keyboard.press('ArrowUp');
   await expect(search).toBeFocused();
   await gm.keyboard.type('zwilling');
-  // All: one merged row "×2".
+  // All: one merged row "×2", beside its first source's label (World first).
   await expect(rows).toHaveCount(1);
   await expect(gm.locator('[data-silk-picker-count]')).toHaveText('×2');
+  await expect(rows.first().locator('[data-silk-picker-label]')).toHaveText('World');
   // A single pack is unmerged.
   await gm.locator(`[data-silk-picker-source="${packId}"]`).click();
   await expect(rows).toHaveCount(1);

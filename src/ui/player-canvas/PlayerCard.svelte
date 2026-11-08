@@ -1,10 +1,12 @@
 <script lang="ts">
   /**
-   * Player Canvas Node (spec §9): class colour, name and Cover (hooded until Appearance).
+   * Player Canvas Node (spec §9): class colour, name and Cover (hooded until Appearance). The
+   * name wraps and the card grows, as on the GM's cards (CardName, spec 1.1 §G.5).
    * No Status, no Info Blocks, no Reveal controls. A click opens the doc (PlayerCanvas).
    */
   import { Handle, Position } from '@xyflow/svelte';
   import { getContext } from 'svelte';
+  import CardName from '../CardName.svelte';
   import { classLabelKey, elementClass } from '../../core/elements';
   import { PLAYER_CANVAS_CONTEXT, type PlayerCanvasContext } from './context';
   import type { PlayerNodeData } from './player-flow';
@@ -24,7 +26,7 @@
   data-silk-class={data.class}
   data-silk-img={data.img ?? ''}
 >
-  <div class="block-title">{name}</div>
+  <CardName {name} variant="block" />
   <img
     class="portrait"
     class:icon={!data.img}
@@ -34,7 +36,7 @@
   />
   <div class="body">
     <div class="cls">{label}</div>
-    <div class="title" data-silk-player-title>{name}</div>
+    <CardName {name} variant="title" data-silk-player-title />
   </div>
   <!-- Hidden anchors only: edges attach on the facing side themselves (PlayerEdge). -->
   <Handle
@@ -92,37 +94,14 @@
     text-transform: uppercase;
     color: var(--silk-class);
   }
-  .title {
-    overflow: hidden;
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .block-title {
-    display: none;
-  }
   :global(.lod-title) .cls {
     display: none;
-  }
-  :global(.lod-title) .title {
-    font-size: 18px;
-    white-space: normal;
   }
   :global(.lod-block) .silk-player-card {
     background: var(--silk-class);
     border-color: var(--silk-class);
   }
-  :global(.lod-block) .silk-player-card > :not(.block-title) {
+  :global(.lod-block) .silk-player-card > :not(:global(.silk-card-name)) {
     display: none;
-  }
-  :global(.lod-block) .silk-player-card .block-title {
-    display: block;
-    max-height: 66px;
-    overflow: hidden;
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.1;
-    color: #fff;
   }
 </style>

@@ -108,6 +108,11 @@ test('Player View follows Reveal and moves; the player canvas shows it read-only
   await expect(card('Gareth-T17')).toBeVisible(SYNC);
   await expect(card('Alrik-T17')).toBeVisible(SYNC);
   await expect(canvas.locator('[data-silk-player-node]')).toHaveCount(2);
+  // Names wrap like the GM's cards (spec 1.1 §G.5, §E.1): one shared card-name style.
+  await expect(card('Alrik-T17').locator('[data-silk-card-name="title"]')).toHaveCSS(
+    'white-space',
+    'normal',
+  );
   await expect(canvas.locator(`[data-silk-player-edge="${livesIn}"]`)).toHaveText('lives in');
   await expect(canvas.locator('[data-silk-player-edge]')).toHaveCount(1);
   // Hooded until Appearance; no Status chip, eye toggle or Connection Points.
