@@ -100,10 +100,7 @@ export function nodeMenu(
 }
 
 /** Spec 1.1 §F.1. */
-export function edgeMenu(
-  c: Pick<Connection, 'id' | 'type'>,
-  deps: MenuDeps,
-): MenuEntry[] {
+export function edgeMenu(c: Pick<Connection, 'id' | 'type'>, deps: MenuDeps): MenuEntry[] {
   const { id } = c;
   const directedMutual = command(deps, 'connection.toggleDirection', { id });
   return [

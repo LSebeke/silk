@@ -4,6 +4,7 @@
  * view state.
  */
 import { NODE_SIZE, type NodeSizeOf, type Size } from './groups';
+import { sameIdSet } from '../util/ids';
 
 export interface CanvasStateValue {
   /** Selected Node ids, in selection order. */
@@ -28,9 +29,6 @@ export interface CanvasState {
   subscribe(run: (value: CanvasStateValue) => void): () => void;
 }
 
-const sameIds = (a: readonly string[], b: readonly string[]) =>
-  a.length === b.length && a.every((id, i) => id === b[i]);
-
 export function createCanvasState(): CanvasState {
   let value: CanvasStateValue = { selection: [], connections: [] };
   const subscribers = new Set<(value: CanvasStateValue) => void>();
@@ -44,11 +42,11 @@ export function createCanvasState(): CanvasState {
     get: () => value,
     select(ids, add = false) {
       const next = [...new Set(add ? [...value.selection, ...ids] : ids)];
-      if (!sameIds(next, value.selection)) update({ selection: next });
+      if (!sameIdSet(next, value.selection)) update({ selection: next });
     },
     selectConnections(ids) {
       const next = [...new Set(ids)];
-      if (!sameIds(next, value.connections)) update({ connections: next });
+      if (!sameIdSet(next, value.connections)) update({ connections: next });
     },
     nodeSize: (id) => measure?.(id) ?? NODE_SIZE,
     measureWith(next) {

@@ -27,7 +27,7 @@
   const editor =
     (text: string): Attachment<HTMLElement> =>
     (host) =>
-      untrack(() => mount(host, text, (next) => save(next)));
+      untrack(() => mount(host, text, save));
 </script>
 
 {#key html}

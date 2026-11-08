@@ -70,9 +70,9 @@ describe('connection.create', () => {
     await add('alrik', 'person');
     await add('sword', 'item');
     // Shift on a drag Alrik → sword: sword → Alrik, which owns does not fit.
-    expect(
-      connection(await create({ from: 'alrik', to: 'sword', direction: 'in' })),
-    ).toMatchObject({ type: 'free', from: 'sword', to: 'alrik', direction: 'directed' });
+    expect(connection(await create({ from: 'alrik', to: 'sword', direction: 'in' }))).toMatchObject(
+      { type: 'free', from: 'sword', to: 'alrik', direction: 'directed' },
+    );
     expect(
       connection(await create({ from: 'alrik', to: 'sword', direction: 'out' })),
     ).toMatchObject({ type: 'owns', from: 'alrik', to: 'sword' });

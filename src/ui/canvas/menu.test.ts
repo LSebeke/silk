@@ -130,7 +130,7 @@ describe('Node context menu: Add Info Block… (v1.1 §C.1)', () => {
 });
 
 describe('Connection edge context menu', () => {
-  const free = { id: 'c1', type: 'free', direction: 'directed' } as const;
+  const free = { id: 'c1', type: 'free' } as const;
 
   it('Open details, Reveal, the Connection commands (spec 1.1 §F.1)', () => {
     const entries = edgeMenu(free, deps({ isRevealed: () => true }));
@@ -157,7 +157,7 @@ describe('Connection edge context menu', () => {
   });
 
   it('Directed ⇄ Mutual is off on a Behavioural Connection (always directed)', () => {
-    const owns = edgeMenu({ id: 'c1', type: 'owns', direction: 'directed' }, deps());
+    const owns = edgeMenu({ id: 'c1', type: 'owns' }, deps());
     expect(owns[3]?.disabled).toBe(true);
     expect(owns[5]?.disabled).toBeUndefined();
   });

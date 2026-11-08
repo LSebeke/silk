@@ -33,8 +33,6 @@ import type { WorkingCopy } from '../working-copy';
 import {
   CONNECTIONS_SORT,
   SORT_STEP,
-  appearancePage,
-  appearancePortrait,
   blockJournal,
   blockPage,
   defaultInfoBlocks,
@@ -47,16 +45,9 @@ import {
   type DocPlan,
   type LayoutContext,
 } from './layout';
+import { blockPageText, restorePortrait } from './appearance-page';
 import { deepMerge } from '../util/objects';
-import {
-  imageWrites,
-  lookOf,
-  realPortrait,
-  withPortrait,
-  type ImageEdit,
-  type Look,
-  type PortraitDoc,
-} from '../portrait';
+import { imageWrites, lookOf, type ImageEdit, type Look, type PortraitDoc } from '../portrait';
 import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
 export type MaterializeMode = 'immediate' | 'onDemand';
@@ -214,11 +205,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     if (!el?.uuid) return;
     const found = docsOf(id);
     if (!found) return; // Foundry-side deletion is T9's.
-    const portrait = appearancePortrait(found.main, found.companion);
-    if (portrait && found.companion)
-      await docs.updatePage(found.companion.uuid, portrait.page, {
-        'text.content': portrait.content,
-      });
+    await restorePortrait(docs, found);
     await write(id, readBack(el.class, found.main, found.companion, system));
   }
 
@@ -341,13 +328,6 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       if (el && block) return { el, block };
     }
     throw new Error(`Silk: no Info Block "${blockId}"`);
-  }
-
-  /** An Info Block's page HTML: the Appearance page keeps its portrait on top (v1.1 §G.4). */
-  function pageText(id: string, block: InfoBlock, text: string) {
-    const { main, companion } = requireDocs(id);
-    const appearance = appearancePage(main, companion)?._id === block._id;
-    return appearance ? withPortrait(text, realPortrait(main).img) : text;
   }
 
   function holderOf(id: string) {
@@ -557,7 +537,8 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       }
       const update: Record<string, unknown> = {};
       if (name !== undefined) update['name'] = next.name;
-      if (text !== undefined) update['text.content'] = pageText(el.id, block, text);
+      if (text !== undefined)
+        update['text.content'] = blockPageText(requireDocs(el.id), block._id, text);
       await docs.updatePage(holderOf(el.id).uuid, id, update);
       await sync(el.id);
     },

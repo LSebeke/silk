@@ -30,7 +30,7 @@ export abstract class DetailWindow<
   protected readonly recordId: string;
 
   constructor(ctx: DetailContext, recordId: string) {
-    super({ id: `${(new.target as unknown as { prefix: string }).prefix}-${recordId}` });
+    super({ id: `${(new.target as typeof DetailWindow).prefix}-${recordId}` });
     this.ctx = ctx;
     this.recordId = recordId;
   }
