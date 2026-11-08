@@ -58,6 +58,8 @@ ln -s "$PWD/dist" ~/.local/share/FoundryVTT/Data/modules/silk
 
 **Commands** ([ADR 0003](docs/adr/0003-every-ui-action-is-a-command.md)): every UI action is a command `{ name, title, keys?, available(ctx), run(args) }`, named `area.verb` per spec §15. A feature exports its commands (e.g. `src/ui/canvas/commands.ts`), `module.ts` registers them. Buttons, menus and keys only call `registry.run(name, args)`; `keys` become Foundry keybindings automatically. Interactive elements get a `data-silk-*` attribute. The registry is `game.modules.get('silk').api`.
 
+**Windows**: no scroll container inside a scroll container (spec 1.1 §G.1). Only the window body scrolls; rich-text editors grow with their content.
+
 **Settings**: add to `SETTINGS` in `src/adapter/settings.ts`, its type to `src/types/silk.d.ts`, and DE + EN strings (a test checks both).
 
 ### Dev MCP server
