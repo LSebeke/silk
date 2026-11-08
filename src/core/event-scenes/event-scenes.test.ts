@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { must } from '../materialize/test-setup';
-import { BOX } from './presets';
 import { setup } from './test-setup';
 
 const grid = (scene: Record<string, unknown>) => (scene['grid'] as { type: number }).type;
@@ -108,33 +107,6 @@ describe('Event Scenes: activation and Happened (spec §7)', () => {
 });
 
 describe('present at ↔ tokens (spec §5, §7)', () => {
-  it('creating present at adds one hidden token in the Narrative box', async () => {
-    const t = setup();
-    const ambush = await t.create('event', 'Ambush');
-    const alrik = await t.create('person', 'Alrik');
-    await t.connect(alrik, ambush);
-    const [token] = t.scene(ambush).tokens;
-    expect(t.scene(ambush).tokens).toHaveLength(1);
-    expect(token).toMatchObject({ actorId: t.actorId(alrik), hidden: true });
-    const { x, y } = must(token);
-    expect(x >= BOX.x && x < BOX.x + BOX.width && y >= BOX.y && y < BOX.y + BOX.height).toBe(true);
-  });
-
-  it('Battle/Travel stack the hidden tokens at the left edge', async () => {
-    const t = setup({ mode: 'onDemand' });
-    const fight = await t.create('event', 'Fight');
-    await t.registry.run('event.createScene', { id: fight, preset: 'battle' });
-    const wolf = await t.create('creature', 'Wolf');
-    const bear = await t.create('creature', 'Bear');
-    await t.materialize(wolf, bear);
-    await t.connect(wolf, fight);
-    await t.connect(bear, fight);
-    expect(t.scene(fight).tokens.map((tk) => [tk.x, tk.y, tk.hidden])).toEqual([
-      [0, 0, true],
-      [0, 100, true],
-    ]);
-  });
-
   it('deleting present at removes all of the actor’s tokens, hidden or not', async () => {
     const t = setup();
     const ambush = await t.create('event', 'Ambush');

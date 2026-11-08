@@ -3,6 +3,7 @@
  * as plain data. The adapter implements it with real Scenes (`src/adapter/scenes.ts`),
  * tests with `createMemoryScenes`. Decisions live in the core; the port only executes them.
  */
+import type { StoredPreset } from './presets';
 
 /** `flags.silk` on a Silk Scene. */
 export interface SilkSceneFlags {
@@ -10,6 +11,8 @@ export interface SilkSceneFlags {
   sceneOf?: string;
   /** Set on the first activation: Happened is set once, then the GM may undo it (§7). */
   activated?: boolean;
+  /** The Scene Preset it was made from (1.1 §I). */
+  preset?: StoredPreset;
 }
 
 export interface TokenData {
@@ -56,6 +59,8 @@ export interface SceneDocs {
   delete(id: string): Promise<void>;
   /** Foundry update data; dotted keys allowed. */
   update(id: string, data: Record<string, unknown>): Promise<void>;
+  /** Sets the Scene's `padding`; placeables keep their place relative to the map. */
+  setPadding(id: string, padding: number): Promise<void>;
   /** Activates the Scene (Silk's write: Silk's own hooks skip it). */
   activate(id: string): Promise<void>;
   /** Views the Scene on this client (GM). */

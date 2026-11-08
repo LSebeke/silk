@@ -141,6 +141,7 @@ export function setup() {
     newId,
     localize,
     materializer,
+    thumbnail: async (src) => `thumb:${src}`,
     foundry: {
       async importFromCompendium(uuid) {
         const entry = must(compendium.get(uuid), uuid);

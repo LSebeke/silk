@@ -507,6 +507,7 @@ const adopt = createAdopt({
   newId: () => foundry.utils.randomID(16),
   localize: format,
   materializer,
+  thumbnail: (src) => sceneThumbnail(src),
   foundry: adoptFoundryApi,
   run: (name, args) => registry.run(name, args),
   afterAdopt: async (id) => {

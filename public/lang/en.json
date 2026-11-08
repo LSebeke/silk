@@ -446,7 +446,7 @@
       "Unmaterialize": "Unmaterialize"
     },
     "EventScene": {
-      "Box": "Present",
+      "Box": "Tokens",
       "Happened": "{name} happened (Event Scene activated). Set the Status back to undo.",
       "Deleted": "The Scene of {name} was deleted. Its journal offers Create Scene and Restore from last commit.",
       "NoScene": "This element has no Scene.",

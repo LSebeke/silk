@@ -1,6 +1,7 @@
 /** In-memory `SceneDocs` for tests: a tiny stand-in for Foundry Scenes. */
 import { applyUpdate } from '../materialize/memory-docs';
 import type { NewToken, SceneDocs, SceneSnapshot } from './port';
+import { mapOrigin } from './token-box';
 
 export interface MemoryScenes extends SceneDocs {
   /** All Scenes by id. Mutate to simulate Foundry-side edits. */
@@ -36,6 +37,18 @@ export function createMemoryScenes(): MemoryScenes {
     },
     async update(id, data) {
       applyUpdate(must(id) as unknown as Record<string, unknown>, data);
+    },
+    async setPadding(id, padding) {
+      // Foundry's `autoReposition`: placeables follow the map.
+      const scene = must(id);
+      const from = mapOrigin(scene);
+      scene['padding'] = padding;
+      const to = mapOrigin(scene);
+      const [dx, dy] = [to.x - from.x, to.y - from.y];
+      const points = [...scene.tokens, ...((scene.drawings ?? []) as { x: number; y: number }[])];
+      for (const p of points) Object.assign(p, { x: p.x + dx, y: p.y + dy });
+      for (const wall of (scene.walls ?? []) as { c: number[] }[])
+        wall.c = wall.c.map((v, i) => v + (i % 2 ? dy : dx));
     },
     async activate(id) {
       must(id);
