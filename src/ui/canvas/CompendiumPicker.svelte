@@ -105,10 +105,10 @@
               </span>
             {:else}
               <span class="name">{row.name}</span>
+              <!-- A merged row shows its first source's label beside the "×N" badge (§B.2). -->
+              <span class="label" title={row.label} data-silk-picker-label>{row.label}</span>
               {#if row.count}
                 <span class="count" data-silk-picker-count>×{row.count}</span>
-              {:else}
-                <span class="label" title={row.label}>{row.label}</span>
               {/if}
             {/if}
           </button>
@@ -164,9 +164,14 @@
   }
   .count,
   .label {
-    margin-left: auto;
     font-size: 11px;
     opacity: 0.7;
+  }
+  .label {
+    margin-left: auto;
+  }
+  .count {
+    flex: none;
   }
   .label {
     max-width: 50%;

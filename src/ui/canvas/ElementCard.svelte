@@ -5,6 +5,7 @@
    * wraps and the card grows; layout reads the measured size (Canvas → `measureWith`).
    */
   import { fail } from './actions';
+  import CardName from '../CardName.svelte';
   import { Handle, Position } from '@xyflow/svelte';
   import { getContext } from 'svelte';
   import { classLabelKey, elementClass, statusLabelKey, statusOf } from '../../core/elements';
@@ -64,7 +65,7 @@
   data-silk-ghost={data.ghost ? '' : undefined}
   data-silk-revealed={revealed ? '' : undefined}
 >
-  <div class="block-title">{data.name}</div>
+  {#if !naming}<CardName name={data.name} variant="block" />{/if}
   <img
     class="portrait"
     class:icon={!data.img}
@@ -96,7 +97,7 @@
         data-silk-name-input
       />
     {:else}
-      <div class="title" data-silk-node-title>{data.name}</div>
+      <CardName name={data.name} variant="title" data-silk-node-title />
     {/if}
     <div class="controls">
       {#if status}
@@ -287,14 +288,6 @@
     text-transform: uppercase;
     color: var(--silk-class);
   }
-  /* Wrapped, no line limit at full zoom (spec 1.1 §E.1). */
-  .title {
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.25;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
   /* Status left, eye and pin right. */
   .controls {
     display: flex;
@@ -370,10 +363,6 @@
     color: #222;
     background: #fff;
   }
-  .block-title {
-    display: none;
-  }
-
   .silk-card :global(.silk-anchor) {
     visibility: hidden;
     pointer-events: none;
@@ -383,36 +372,15 @@
   :global(.lod-title) .cls {
     display: none;
   }
-  /* The lower zoom levels wrap too, at most 3 lines (spec 1.1 §E.1). */
-  :global(.lod-title) .title {
-    display: -webkit-box;
-    overflow: hidden;
-    font-size: 18px;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-  }
   :global(.lod-title) .controls:not(:has(.pinned)) {
     display: none;
   }
-  /* Zoom level 3: coloured block with title (full card while naming). */
+  /* Zoom level 3: coloured block with the name (CardName; full card while naming). */
   :global(.lod-block) .silk-card:not(.naming) {
     background: var(--silk-class);
     border-color: var(--silk-class);
   }
-  :global(.lod-block) .silk-card:not(.naming) > :not(.block-title) {
+  :global(.lod-block) .silk-card:not(.naming) > :not(:global(.silk-card-name)) {
     display: none;
-  }
-  :global(.lod-block) .silk-card:not(.naming) .block-title {
-    display: -webkit-box;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.1;
-    color: #fff;
   }
 </style>
