@@ -255,6 +255,16 @@ describe('Portrait: token edits (v1.1 §G.3)', () => {
     });
   });
 
+  it('the scale is kept within 1 to 8, whoever calls (#137)', () => {
+    const doc = actor({ prototypeToken: { texture: { src: 't.webp' } } });
+    expect(imageWrites(doc, { token: { scale: 20 } }).tokens).toMatchObject({
+      'texture.scaleX': 8,
+    });
+    expect(imageWrites(doc, { token: { scale: 0.1 } }).tokens).toMatchObject({
+      'texture.scaleX': 1,
+    });
+  });
+
   it('turning the ring on keeps the scale; the image now covers the ring (#134)', () => {
     const doc = actor({
       prototypeToken: {

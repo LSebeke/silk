@@ -40,31 +40,46 @@ export interface Mirror {
   y: 1 | -1;
 }
 
-/**
- * Token update data (unprefixed keys) for `pose`: fit, anchor, texture scale and the ring
- * subject scale. Foundry's subject scale only shrinks its ring; Silk keeps it at 1.
- */
-export function tokenGeometry(
-  pose: Pose,
-  ring: boolean,
-  mirror: Mirror = { x: 1, y: 1 },
-): Record<string, unknown> {
-  return {
-    'texture.fit': ring ? 'cover' : 'contain',
-    'texture.anchorX': pose.anchorX,
-    'texture.anchorY': pose.anchorY,
-    'texture.scaleX': mirror.x * pose.scale,
-    'texture.scaleY': mirror.y * pose.scale,
-    'ring.subject.scale': 1,
-  };
-}
-
 /** The image's box in the frame (frame side 1, origin top left). */
 export interface ImageBox {
   left: number;
   top: number;
   width: number;
   height: number;
+}
+
+/** Where the token image sits for a pose: the Foundry writes and the preview's box. */
+export interface TokenGeometry {
+  /**
+   * Token update data (unprefixed keys): fit, anchor, texture scale and the ring subject
+   * scale. Foundry's subject scale only shrinks its ring; Silk keeps it at 1.
+   */
+  data: Record<string, unknown>;
+  /** Where the image is drawn in the frame (the editor preview). */
+  box: ImageBox;
+}
+
+/**
+ * The one token geometry (v1.1 §G.3): `pose` as Foundry token data and as the image's box
+ * in the frame. `aspect`: image width / height (only the box depends on it).
+ */
+export function tokenGeometry(
+  pose: Pose,
+  ring: boolean,
+  { aspect = 1, mirror = { x: 1, y: 1 } }: { aspect?: number; mirror?: Mirror } = {},
+): TokenGeometry {
+  const { width, height } = imageSize(pose.scale, ring, aspect);
+  return {
+    data: {
+      'texture.fit': ring ? 'cover' : 'contain',
+      'texture.anchorX': pose.anchorX,
+      'texture.anchorY': pose.anchorY,
+      'texture.scaleX': mirror.x * pose.scale,
+      'texture.scaleY': mirror.y * pose.scale,
+      'ring.subject.scale': 1,
+    },
+    box: { left: 0.5 - pose.anchorX * width, top: 0.5 - pose.anchorY * height, width, height },
+  };
 }
 
 /** Image size in frame units: covering (ring) or contained, times the scale. */
@@ -77,23 +92,16 @@ function imageSize(scale: number, ring: boolean, aspect: number) {
     : { width: scale * short, height: scale * long };
 }
 
-/** Where the image is drawn for `pose`. `aspect`: image width / height. */
-export function imageBox(pose: Pose, ring: boolean, aspect: number): ImageBox {
-  const { width, height } = imageSize(pose.scale, ring, aspect);
-  return {
-    left: 0.5 - pose.anchorX * width,
-    top: 0.5 - pose.anchorY * height,
-    width,
-    height,
-  };
-}
+/** `scale` in the editor range, 1 to 8 (#137). */
+export const clampScale = (scale: number): number =>
+  Math.min(SCALE.max, Math.max(SCALE.min, scale));
 
 /**
  * `pose` with the scale in the editor range and, with the ring, the anchor kept so the
  * image still covers the frame (no empty edge inside the ring).
  */
 export function clampPose(pose: Pose, ring: boolean, aspect: number): Pose {
-  const scale = Math.min(SCALE.max, Math.max(SCALE.min, pose.scale));
+  const scale = clampScale(pose.scale);
   const { width, height } = imageSize(scale, ring, aspect);
   const axis = (anchor: number, size: number) => {
     const margin = ring ? Math.min(0.5, 1 / (2 * size)) : 0;
