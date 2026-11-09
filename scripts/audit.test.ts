@@ -9,6 +9,7 @@ const advisory = (name: string, id: string, severity = 'moderate') => ({
 });
 const report = (...via: ReturnType<typeof advisory>[]) => ({
   vulnerabilities: Object.fromEntries(via.map((a) => [a.name, { via: [a, 'transitive-name'] }])),
+  metadata: { dependencies: {} },
 });
 const reviewed = { 'GHSA-aaaa': { pkg: 'tooling' } };
 
@@ -33,5 +34,23 @@ describe('audit gate', () => {
 
   it('reports reviewed entries that no longer occur', () => {
     expect(judgeAudit(report(), reviewed).stale).toEqual(['GHSA-aaaa']);
+  });
+
+  it('fails when the same advisory also reaches a package listed before the reviewed one', () => {
+    const result = judgeAudit(
+      report(advisory('runtime', 'GHSA-aaaa'), advisory('tooling', 'GHSA-aaaa')),
+      reviewed,
+    );
+    expect(result.failing.map((a) => a.name)).toEqual(['runtime']);
+    expect(result.accepted.map((a) => a.name)).toEqual(['tooling']);
+  });
+
+  it('fails closed when npm audit could not produce a report', () => {
+    const error = {
+      message: 'request to https://registry.npmjs.org failed',
+      error: { code: 'ECONNREFUSED' },
+    };
+    expect(() => judgeAudit(error, reviewed)).toThrow('no report');
+    expect(() => judgeAudit({}, reviewed)).toThrow('no report');
   });
 });

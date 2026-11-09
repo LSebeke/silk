@@ -1,7 +1,7 @@
 name: Release
 
-# Bump "version" and the "download" URL in public/module.json and "version" in package.json
-# (CI checks they agree), merge, then push the matching tag from that commit:
+# Bump the version (`npm version X.Y.Z --no-git-tag-version`, plus "version" and the "download" URL
+# in public/module.json; CI checks they agree), merge, then push the matching tag from that commit:
 #   git tag v1.2.3 && git push origin v1.2.3
 # This builds from that commit, records checksums, signs where the files came from and opens a
 # DRAFT release. Foundry's update check reads releases/latest, which skips drafts: no world sees
@@ -83,5 +83,5 @@ jobs:
               echo "Provenance: \`gh attestation verify silk.zip --repo $GITHUB_REPOSITORY\`"
             fi
           } > notes.md
-          gh release create "$GITHUB_REF_NAME" --draft --title "Silk $GITHUB_REF_NAME" \
+          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Silk $GITHUB_REF_NAME" \
             --notes-file notes.md --generate-notes silk.zip module.json SHA256SUMS

@@ -10,9 +10,10 @@ on:
     - cron: '17 6 * * 1'
   workflow_dispatch:
 
+# Superseded PR runs are cancelled; a push to main does not cancel the weekly run.
 concurrency:
-  group: audit-${{ github.ref }}
-  cancel-in-progress: true
+  group: audit-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -49,8 +50,9 @@ jobs:
       - name: Only registry tarballs
         run: |
           node -e '
+            // Links and unresolved entries would bypass the registry too; bundled ones ship inside a registry tarball.
             const found = Object.entries(require("./package-lock.json").packages)
-              .filter(([k, v]) => k && v.resolved && !v.resolved.startsWith("https://registry.npmjs.org/"))
-              .map(([k, v]) => `${k} ${v.resolved}`);
+              .filter(([k, v]) => k && (v.link || (!v.inBundle && !(v.resolved ?? "").startsWith("https://registry.npmjs.org/"))))
+              .map(([k, v]) => `${k} ${v.resolved ?? (v.link ? "(link)" : "(unresolved)")}`);
             if (found.length) { console.error("Packages from outside the registry:\n" + found.join("\n")); process.exit(1); }
           '

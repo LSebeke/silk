@@ -38,4 +38,17 @@ describe('version gate', () => {
   it('fails on a version Foundry cannot compare reliably', () => {
     expect(checkVersions({ version: 'next' }, mod('next')).join()).toContain('X.Y.Z');
   });
+
+  it('fails when the manifest URL is not the latest release', () => {
+    const wrong = { ...mod('1.2.3'), manifest: `${url}/releases/download/v1.2.3/module.json` };
+    expect(checkVersions({ version: '1.2.3' }, wrong).join()).toContain('manifest');
+  });
+
+  it('fails when the lockfile was not bumped with package.json', () => {
+    const lock = (v: string) => ({ version: v, packages: { '': { version: v } } });
+    expect(checkVersions({ version: '1.2.3' }, mod('1.2.3'), undefined, lock('1.2.3'))).toEqual([]);
+    expect(
+      checkVersions({ version: '1.2.3' }, mod('1.2.3'), undefined, lock('1.2.2')).join(),
+    ).toContain('package-lock.json');
+  });
 });

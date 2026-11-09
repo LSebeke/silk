@@ -7,7 +7,7 @@ file is the baseline for the next release. `results/local.json` (ad-hoc runs) is
 
 ```sh
 npm run test:perf                          # writes results/local.json, prints the gate verdict
-BENCH_VERSION=0.2.0 BENCH_MACHINE="GM RTX 2080" npm run test:perf   # release run
+BENCH_VERSION=X.Y.Z BENCH_MACHINE="GM RTX 2080" npm run test:perf   # release run
 ```
 
 `test:perf` builds with the dev commands (`SILK_DEV=1`) and runs only the `@perf` Playwright

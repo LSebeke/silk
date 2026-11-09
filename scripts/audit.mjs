@@ -3,6 +3,7 @@
 // Each entry names the package it was reviewed for: the same advisory reaching another package, or
 // any new advisory, fails. Remove an entry once the fix has landed; a stale entry is reported.
 import { execFileSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 /** @type {Record<string, { pkg: string, reason: string }>} */
@@ -30,15 +31,20 @@ const GATED = new Set(['moderate', 'high', 'critical']);
 /** @typedef {{ name: string, severity: string, url: string, title: string }} Advisory */
 
 /**
- * @param {{ vulnerabilities?: Record<string, { via: (string | Advisory)[] }> }} report npm audit --json
+ * @param {{ vulnerabilities?: Record<string, { via: (string | Advisory)[] }>, metadata?: object, error?: unknown, message?: string }} report npm audit --json
  * @param {Record<string, { pkg: string }>} [reviewed]
  * @returns {{ failing: Advisory[], accepted: Advisory[], stale: string[] }}
  */
 export function judgeAudit(report, reviewed = REVIEWED) {
+  // A failed audit (registry down, endpoint error) still prints JSON, without a report: fail closed.
+  if (report.error || !report.vulnerabilities || !report.metadata)
+    throw new Error(`npm audit gave no report: ${report.message ?? JSON.stringify(report)}`);
+  // One advisory can cover several packages, each with its own entry under the same URL.
   /** @type {Map<string, Advisory>} */
   const advisories = new Map();
-  for (const vuln of Object.values(report.vulnerabilities ?? {}))
-    for (const via of vuln.via) if (typeof via !== 'string') advisories.set(via.url, via);
+  for (const vuln of Object.values(report.vulnerabilities))
+    for (const via of vuln.via)
+      if (typeof via !== 'string') advisories.set(`${via.url} ${via.name}`, via);
   const failing = [];
   const accepted = [];
   const seen = new Set();
@@ -54,7 +60,7 @@ export function judgeAudit(report, reviewed = REVIEWED) {
   return { failing, accepted, stale };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   let out;
   try {
     out = execFileSync('npm', ['audit', '--json'], { encoding: 'utf8', maxBuffer: 1 << 26 });
@@ -63,7 +69,14 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     out = /** @type {{ stdout?: string }} */ (error).stdout;
     if (!out) throw error;
   }
-  const { failing, accepted, stale } = judgeAudit(JSON.parse(out));
+  let verdict;
+  try {
+    verdict = judgeAudit(JSON.parse(out));
+  } catch (error) {
+    console.error(`::error::${/** @type {Error} */ (error).message}`);
+    process.exit(1);
+  }
+  const { failing, accepted, stale } = verdict;
   const line = (/** @type {Advisory} */ a) => `${a.severity} ${a.name}: ${a.title} ${a.url}`;
   for (const a of accepted)
     console.log(`reviewed: ${line(a)} (${REVIEWED[a.url.split('/').pop() ?? '']?.reason})`);

@@ -82,17 +82,20 @@ CI (`.github/workflows/ci.yml`) runs on every PR and every push to `main`: versi
 
 1. Locally on the reference machine: `npm run test:e2e` and the `test:perf` release gate ([bench/README.md](bench/README.md)).
 2. Raise `compatibility.verified` in `public/module.json` (Foundry, `dsa5`) only to versions you tested.
-3. Bump the version and `download` URL, merge to `main`.
+3. In one PR: `npm version X.Y.Z --no-git-tag-version` (package.json and lockfile), the same `version` and the `download` URL in `public/module.json`, and the bench baseline `bench/results/X.Y.Z.json` from step 1 (run it with `BENCH_VERSION=X.Y.Z`). Merge to `main`.
 4. Push the tag from that commit: `git tag v1.2.3 && git push origin v1.2.3`. `.github/workflows/release.yml` checks that the tag equals the module version, reruns the audit and CI gates, packages `silk.zip`, records SHA-256 checksums, signs a provenance attestation and opens a **draft** release.
-5. Read the draft and press Publish. Foundry's update check reads `releases/latest`, which skips drafts, so no world sees the version before that.
+5. Read the draft and press Publish. Foundry's update check reads `releases/latest`, which skips drafts, so no world sees the version before that. For a backport to an older line, untick "Set as latest release", or Foundry offers worlds a downgrade.
+
+If the release workflow fails (for example a new advisory), no release exists yet: fix it on `main`, then move the tag to the fixed commit (`git push --delete origin vX.Y.Z && git tag -f vX.Y.Z && git push origin vX.Y.Z`) or bump the patch version.
 
 ### Verifying a release
 
-Releases are built by `release.yml` from the tagged commit, never on a laptop. The released `module.json` is the committed one, byte for byte. Each release lists SHA-256 checksums and, while the repo is public, carries a signed provenance attestation. Foundry itself does not check either; verify a download by hand with:
+Releases are built by `release.yml` from the tagged commit, never on a laptop. From v1.0.1 on, the released `module.json` is the committed one, byte for byte. Each release lists SHA-256 checksums (`SHA256SUMS`) and, while the repo is public, carries a signed provenance attestation for `silk.zip` and `module.json`. The attestation is the trust anchor: release notes and assets can be edited by anyone with write access, the signature cannot. Foundry itself checks neither; verify a download by hand, with `SHA256SUMS` from the same release:
 
 ```sh
-sha256sum -c SHA256SUMS
+sha256sum -c --ignore-missing SHA256SUMS   # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
 gh attestation verify silk.zip --repo LSebeke/silk
+gh attestation verify module.json --repo LSebeke/silk
 ```
 
 `fvtt-types` pulls `pixi.js` from GitHub; `package.json` `overrides` swap those for registry versions so `npm ci` needs no git access.

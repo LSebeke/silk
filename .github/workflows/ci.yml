@@ -7,10 +7,10 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
-# A newer push to the same branch or PR cancels the run still going.
+# A newer push to the same PR cancels the run still going; every commit on main keeps its result.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
