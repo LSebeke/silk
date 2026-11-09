@@ -48,18 +48,23 @@ jobs:
       # The released module.json is the committed one, byte for byte: nothing is stamped in.
       - name: Built module.json is the committed one
         run: cmp public/module.json dist/module.json
+      # Zip name and release title come from module.json, so a rename touches no workflow.
+      - name: Module id and title
+        run: |
+          echo "MODULE_ID=$(node -p 'require("./public/module.json").id')" >> "$GITHUB_ENV"
+          echo "MODULE_TITLE=$(node -p 'require("./public/module.json").title')" >> "$GITHUB_ENV"
       - name: Package
         run: |
-          (cd dist && zip -qrX ../silk.zip .)
+          (cd dist && zip -qrX "../$MODULE_ID.zip" .)
           cp dist/module.json module.json
-          sha256sum silk.zip module.json | tee SHA256SUMS
+          sha256sum "$MODULE_ID.zip" module.json | tee SHA256SUMS
       # Signed record that these exact files came from this workflow and commit. GitHub supports it
       # only on public repos (or Enterprise), so a private repo skips it and the draft says so.
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         if: ${{ !github.event.repository.private }}
         with:
           subject-path: |
-            silk.zip
+            ${{ env.MODULE_ID }}.zip
             module.json
       - name: Draft release
         env:
@@ -80,8 +85,8 @@ jobs:
               echo '_No provenance attestation: the repo was private when this was built._'
             else
               echo
-              echo "Provenance: \`gh attestation verify silk.zip --repo $GITHUB_REPOSITORY\`"
+              echo "Provenance: \`gh attestation verify $MODULE_ID.zip --repo $GITHUB_REPOSITORY\`"
             fi
           } > notes.md
-          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Silk $GITHUB_REF_NAME" \
-            --notes-file notes.md --generate-notes silk.zip module.json SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "$MODULE_TITLE $GITHUB_REF_NAME" \
+            --notes-file notes.md --generate-notes "$MODULE_ID.zip" module.json SHA256SUMS

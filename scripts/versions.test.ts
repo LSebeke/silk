@@ -3,6 +3,7 @@ import { checkVersions } from './versions.mjs';
 
 const url = 'https://github.com/LSebeke/silk';
 const mod = (version: string, download = `${url}/releases/download/v${version}/silk.zip`) => ({
+  id: 'silk',
   version,
   url,
   manifest: `${url}/releases/latest/download/module.json`,
@@ -28,6 +29,11 @@ describe('version gate', () => {
       mod('1.2.3', `${url}/releases/latest/download/silk.zip`),
     );
     expect(problems.join()).toContain('download');
+  });
+
+  it('fails when the zip is not named after the module id', () => {
+    const renamed = { ...mod('1.2.3'), id: 'other' };
+    expect(checkVersions({ version: '1.2.3' }, renamed).join()).toContain('other.zip');
   });
 
   it('fails on a tag that is not the module version', () => {
