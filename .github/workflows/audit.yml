@@ -1,0 +1,58 @@
+name: Audit
+
+# Checks the dependencies for known vulnerabilities and for packages that did not come from the
+# registry unchanged. Weekly too: a new advisory can hit packages that have not changed here.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+# Superseded PR runs are cancelled; a push to main does not cancel the weekly run.
+concurrency:
+  group: audit-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Same as .npmrc, also for checkouts that predate it.
+  npm_config_ignore_scripts: true
+
+jobs:
+  audit:
+    name: npm audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - name: Known vulnerabilities (reviewed exceptions in scripts/audit.mjs)
+        run: node scripts/audit.mjs
+      - name: Registry signatures and provenance
+        run: npm audit signatures
+      - name: No new install scripts
+        run: |
+          node -e '
+            const allowed = new Set(["node_modules/fsevents"]);
+            const found = Object.entries(require("./package-lock.json").packages)
+              .filter(([k, v]) => v.hasInstallScript && !allowed.has(k)).map(([k]) => k);
+            if (found.length) { console.error("New packages with install scripts:\n" + found.join("\n")); process.exit(1); }
+          '
+      - name: Only registry tarballs
+        run: |
+          node -e '
+            // Links and unresolved entries would bypass the registry too; bundled ones ship inside a registry tarball.
+            const found = Object.entries(require("./package-lock.json").packages)
+              .filter(([k, v]) => k && (v.link || (!v.inBundle && !(v.resolved ?? "").startsWith("https://registry.npmjs.org/"))))
+              .map(([k, v]) => `${k} ${v.resolved ?? (v.link ? "(link)" : "(unresolved)")}`);
+            if (found.length) { console.error("Packages from outside the registry:\n" + found.join("\n")); process.exit(1); }
+          '

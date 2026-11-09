@@ -74,8 +74,30 @@ claude mcp add silk -- node tools/mcp/main.ts --url http://localhost:30000 --exe
 
 ### CI and releases
 
-CI runs typecheck, lint, unit tests, build and a bundle-size gate: the gzipped entry chunk may grow at most 10% vs `main` unless the PR has the `allow-size` label (lazy chunks are reported only).
+CI (`.github/workflows/ci.yml`) runs on every PR and every push to `main`: version check, typecheck, lint, unit tests, build, the dev-command check and a bundle-size gate: the gzipped entry chunk may grow at most 10% vs `main` unless the PR has the `allow-size` label (lazy chunks are reported only). E2E and perf need a licensed Foundry and stay local (see the release checklist).
 
-Pushing a tag `vX.Y.Z` builds, stamps the version into `module.json` and publishes a GitHub Release with `module.json` and `silk.zip`.
+`.github/workflows/audit.yml` checks dependencies for known vulnerabilities (moderate and above; reviewed exceptions, each with its reason, in `scripts/audit.mjs`), registry signatures, new install scripts and tarballs from outside the registry, also weekly. `.npmrc` turns install scripts off, so `npm install` runs no package code. Dependabot proposes npm and Actions updates a week after release; `fvtt-types` is bumped by hand (below). Actions are pinned to commit SHAs.
+
+**Versions** live in the repo: `version` in `package.json` and `public/module.json` must agree, and the module's `download` must be `…/releases/download/v<version>/silk.zip` (`node scripts/versions.mjs`, run by CI). `manifest` stays `…/releases/latest/download/module.json`, which Foundry reads for its update check. Bump the minor version at least when the Canon `formatVersion` changes (spec §11.1), since older Silk then opens the Canon read-only.
+
+**Release checklist**:
+
+1. Locally on the reference machine: `npm run test:e2e` and the `test:perf` release gate ([bench/README.md](bench/README.md)).
+2. Raise `compatibility.verified` in `public/module.json` (Foundry, `dsa5`) only to versions you tested.
+3. In one PR: `npm version X.Y.Z --no-git-tag-version` (package.json and lockfile), the same `version` and the `download` URL in `public/module.json`, and the bench baseline `bench/results/X.Y.Z.json` from step 1 (run it with `BENCH_VERSION=X.Y.Z`). Merge to `main`.
+4. Push the tag from that commit: `git tag v1.2.3 && git push origin v1.2.3`. `.github/workflows/release.yml` checks that the tag equals the module version, reruns the audit and CI gates, packages `silk.zip`, records SHA-256 checksums, signs a provenance attestation and opens a **draft** release.
+5. Read the draft and press Publish. Foundry's update check reads `releases/latest`, which skips drafts, so no world sees the version before that. For a backport to an older line, untick "Set as latest release", or Foundry offers worlds a downgrade.
+
+If the release workflow fails (for example a new advisory), no release exists yet: fix it on `main`, then move the tag to the fixed commit (`git push --delete origin vX.Y.Z && git tag -f vX.Y.Z && git push origin vX.Y.Z`) or bump the patch version.
+
+### Verifying a release
+
+Releases are built by `release.yml` from the tagged commit, never on a laptop. From v1.0.1 on, the released `module.json` is the committed one, byte for byte. Each release lists SHA-256 checksums (`SHA256SUMS`) and, while the repo is public, carries a signed provenance attestation for `silk.zip` and `module.json`. The attestation is the trust anchor: release notes and assets can be edited by anyone with write access, the signature cannot. Foundry itself checks neither; verify a download by hand, with `SHA256SUMS` from the same release:
+
+```sh
+sha256sum -c --ignore-missing SHA256SUMS   # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
+gh attestation verify silk.zip --repo LSebeke/silk
+gh attestation verify module.json --repo LSebeke/silk
+```
 
 `fvtt-types` pulls `pixi.js` from GitHub; `package.json` `overrides` swap those for registry versions so `npm ci` needs no git access.
