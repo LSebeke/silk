@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Hijacked releases are usually caught and pulled within days: wait a week before proposing one.
+    cooldown:
+      default-days: 7
+    groups:
+      dev-dependencies:
+        dependency-type: development
+    ignore:
+      # A beta build pinned to the Foundry version in module.json `compatibility`, with pixi.js
+      # matched in package.json `overrides`. Bump all of them together, by hand.
+      - dependency-name: fvtt-types
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
