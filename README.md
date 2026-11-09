@@ -1,6 +1,6 @@
 # Garn
 
-FoundryVTT v14 module for DSA5: map a Story on a World Canvas, branch Adventures from a Canon, Reveal content to players. Spec: [`docs/spec/v1.md`](docs/spec/v1.md). Vocabulary: [`GLOSSARY.md`](GLOSSARY.md).
+FoundryVTT v14 module for DSA5: map a Story on a World Canvas, branch Adventures from a Canon, Reveal content to players. Spec: [`docs/spec/v1.md`](docs/spec/v1.md). Vocabulary: [`GLOSSARY.md`](GLOSSARY.md). Working title until 1.1: Silk.
 
 Install: manifest URL `https://github.com/LSebeke/garn/releases/latest/download/module.json`.
 
