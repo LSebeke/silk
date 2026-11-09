@@ -1,45 +1,87 @@
 name: Release
 
+# Bump the version (`npm version X.Y.Z --no-git-tag-version`, plus "version" and the "download" URL
+# in public/module.json; CI checks they agree), merge, then push the matching tag from that commit:
+#   git tag v1.2.3 && git push origin v1.2.3
+# This builds from that commit, records checksums, signs where the files came from and opens a
+# DRAFT release. Foundry's update check reads releases/latest, which skips drafts: no world sees
+# the update until you read the draft and press Publish.
 on:
   push:
-    tags: ['v*']
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  npm_config_ignore_scripts: true
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write # the draft release
+      id-token: write # signing the provenance
+      attestations: write
+      artifact-metadata: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: npm
+      - name: Tag matches module.json and package.json
+        run: node scripts/versions.mjs "$GITHUB_REF_NAME"
+      # The same gates as CI and Audit, on exactly the commit released.
       - run: npm ci
+      - name: Known vulnerabilities (reviewed exceptions in scripts/audit.mjs)
+        run: node scripts/audit.mjs
+      - run: npm audit signatures
+      - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
       - run: npm run build
       - name: No dev-only commands in the build (spec §14)
         run: "! grep -rq 'dev\\.fixture\\.generate' dist"
-      - name: Stamp version and download URL into module.json
-        env:
-          TAG: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
-        run: |
-          node -e '
-            const fs = require("fs");
-            const m = JSON.parse(fs.readFileSync("dist/module.json", "utf8"));
-            m.version = process.env.TAG.replace(/^v/, "");
-            m.manifest = `https://github.com/${process.env.REPO}/releases/latest/download/module.json`;
-            m.download = `https://github.com/${process.env.REPO}/releases/download/${process.env.TAG}/silk.zip`;
-            fs.writeFileSync("dist/module.json", JSON.stringify(m, null, 2) + "\n");
-          '
+      # The released module.json is the committed one, byte for byte: nothing is stamped in.
+      - name: Built module.json is the committed one
+        run: cmp public/module.json dist/module.json
       - name: Package
-        run: cd dist && zip -r ../silk.zip .
-      - name: Create GitHub Release
+        run: |
+          (cd dist && zip -qrX ../silk.zip .)
+          cp dist/module.json module.json
+          sha256sum silk.zip module.json | tee SHA256SUMS
+      # Signed record that these exact files came from this workflow and commit. GitHub supports it
+      # only on public repos (or Enterprise), so a private repo skips it and the draft says so.
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        if: ${{ !github.event.repository.private }}
+        with:
+          subject-path: |
+            silk.zip
+            module.json
+      - name: Draft release
         env:
           GH_TOKEN: ${{ github.token }}
+          PRIVATE: ${{ github.event.repository.private }}
         run: |
-          gh release create "${{ github.ref_name }}" silk.zip dist/module.json \
-            --title "Silk ${{ github.ref_name }}" --generate-notes \
-            --notes "Manifest URL: https://github.com/${{ github.repository }}/releases/latest/download/module.json"
+          {
+            echo "Manifest URL: \`https://github.com/$GITHUB_REPOSITORY/releases/latest/download/module.json\`"
+            echo
+            echo '### Verify'
+            echo
+            echo 'SHA-256:'
+            echo '```'
+            cat SHA256SUMS
+            echo '```'
+            if [ "$PRIVATE" = "true" ]; then
+              echo
+              echo '_No provenance attestation: the repo was private when this was built._'
+            else
+              echo
+              echo "Provenance: \`gh attestation verify silk.zip --repo $GITHUB_REPOSITORY\`"
+            fi
+          } > notes.md
+          gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Silk $GITHUB_REF_NAME" \
+            --notes-file notes.md --generate-notes silk.zip module.json SHA256SUMS

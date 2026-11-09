@@ -5,17 +5,36 @@ on:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+# A newer push to the same PR cancels the run still going; every commit on main keeps its result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Same as .npmrc, also for the base checkout of the size gate, which may predate it.
+  npm_config_ignore_scripts: true
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Versions agree
+        run: node scripts/versions.mjs
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
@@ -28,8 +47,10 @@ jobs:
       - name: Build main for size baseline
         if: github.event_name == 'pull_request'
         id: base
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch --depth=1 origin "${{ github.base_ref }}"
+          git fetch --depth=1 origin "$BASE_REF"
           git worktree add "$RUNNER_TEMP/base" FETCH_HEAD
           cd "$RUNNER_TEMP/base"
           if [ ! -f package.json ]; then echo "No package.json on base; skipping size gate."; exit 0; fi
@@ -39,6 +60,6 @@ jobs:
 
       - name: Bundle size gate (> 10% entry growth needs the allow-size label)
         if: steps.base.outputs.measured == 'true'
-        run: >
-          node scripts/bundle-size.mjs compare "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json"
-          ${{ contains(github.event.pull_request.labels.*.name, 'allow-size') && '--allow-size' || '' }}
+        env:
+          ALLOW_SIZE: ${{ contains(github.event.pull_request.labels.*.name, 'allow-size') && '--allow-size' || '' }}
+        run: node scripts/bundle-size.mjs compare "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json" $ALLOW_SIZE
