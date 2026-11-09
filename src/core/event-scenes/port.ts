@@ -5,8 +5,8 @@
  */
 import type { StoredPreset } from './presets';
 
-/** `flags.silk` on a Silk Scene. */
-export interface SilkSceneFlags {
+/** `flags.garn` on a Garn Scene. */
+export interface GarnSceneFlags {
   /** The Event (or Location, Overview Scene) owning the Scene. */
   sceneOf?: string;
   /** Set on the first activation: Happened is set once, then the GM may undo it (§7). */
@@ -30,7 +30,7 @@ export interface SceneData {
   _id: string;
   name: string;
   folder?: string | null;
-  flags: { silk?: SilkSceneFlags; [scope: string]: unknown };
+  flags: { garn?: GarnSceneFlags; [scope: string]: unknown };
   tokens?: TokenData[];
   walls?: object[];
   drawings?: object[];
@@ -50,7 +50,7 @@ export interface NewToken {
 }
 
 export interface SceneDocs {
-  /** Id of Silk's Scene folder, created if missing. */
+  /** Id of Garn's Scene folder, created if missing. */
   ensureFolder(name: string): Promise<string>;
   scenes(): SceneSnapshot[];
   get(id: string): SceneSnapshot | undefined;
@@ -61,7 +61,7 @@ export interface SceneDocs {
   update(id: string, data: Record<string, unknown>): Promise<void>;
   /** Sets the Scene's `padding`; placeables keep their place relative to the map. */
   setPadding(id: string, padding: number): Promise<void>;
-  /** Activates the Scene (Silk's write: Silk's own hooks skip it). */
+  /** Activates the Scene (Garn's write: Garn's own hooks skip it). */
   activate(id: string): Promise<void>;
   /** Views the Scene on this client (GM). */
   view(id: string): Promise<void>;
@@ -70,7 +70,7 @@ export interface SceneDocs {
   deleteTokens(sceneId: string, ids: string[]): Promise<void>;
   /**
    * Makes an embedded collection (`tokens`, `walls`, `lights`, …) match: creates (with the
-   * given `_id`s), updates, deletes, as Silk's write (merge result, spec §11.4).
+   * given `_id`s), updates, deletes, as Garn's write (merge result, spec §11.4).
    */
   syncEmbedded(sceneId: string, collection: string, ops: EmbeddedOps): Promise<void>;
 }

@@ -1,6 +1,6 @@
 {
-  "SILK": {
-    "Title": "Silk",
+  "GARN": {
+    "Title": "Garn",
     "Settings": {
       "materializeMode": {
         "Name": "Materialisierungsmodus",
@@ -156,9 +156,9 @@
         "cancel": "Zusammenführen abbrechen"
       },
       "adopt": {
-        "doc": "In Silk übernehmen",
-        "folder": "Ordner in Silk übernehmen",
-        "ignore": "Für Silk ignorieren"
+        "doc": "In Garn übernehmen",
+        "folder": "Ordner in Garn übernehmen",
+        "ignore": "Für Garn ignorieren"
       },
       "playerNote": {
         "create": "Spielernotiz hinzufügen",
@@ -296,7 +296,7 @@
       "Checkout": "Checkout",
       "Main": "main (Kanon-Bearbeitung)",
       "Dirty": "ungespeicherte Änderungen",
-      "ReadOnly": "schreibgeschützt, Silk aktualisieren",
+      "ReadOnly": "schreibgeschützt, Garn aktualisieren",
       "Adventures": "Abenteuer",
       "AdventureName": "Name des Abenteuers",
       "PickCampaign": "Kampagne…",
@@ -338,7 +338,7 @@
       "ChipMain": "main"
     },
     "Notice": {
-      "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
+      "FileBrowse": "Garn-Spoilerschutz: {roles} können Dateien durchsuchen, den Garn-Kanon unter Data/garn/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Garn-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
     },
     "Class": {
       "person": "Person",
@@ -378,8 +378,8 @@
       "event": "Ereignisse",
       "quest": "Quests",
       "note": "Notizen",
-      "companions": "Silk-Begleitjournale",
-      "scene": "Silk-Szenen"
+      "companions": "Garn-Begleitjournale",
+      "scene": "Garn-Szenen"
     },
     "Materialize": {
       "CompendiumMissing": "{name}: Der Kompendiumseintrag fehlt; leer materialisiert.",
@@ -431,7 +431,7 @@
       }
     },
     "Lifecycle": {
-      "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Silk nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",
+      "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Garn nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",
       "RestoredBadge": "Wiederhergestellt aus Commit {commit}",
       "CompanionRestored": "Das Begleitjournal von {name} wurde aus dem letzten Commit wiederhergestellt. Nicht committete Änderungen an Infoblöcken sind verloren.",
       "DeleteTitle": "Elemente löschen",
@@ -612,9 +612,9 @@
       "CanonEditConfirmBody": "Das Ergebnis auf main committen und diese Welt umschreiben? Das lässt sich nicht rückgängig machen."
     },
     "Adopt": {
-      "Adopt": "In Silk übernehmen",
-      "AdoptFolder": "Ordner in Silk übernehmen",
-      "Refused": "{name} kann nicht übernommen werden: Silk übernimmt Akteure (Held, NSC, Kreatur), Gegenstände, Journale und Szenen.",
+      "Adopt": "In Garn übernehmen",
+      "AdoptFolder": "Ordner in Garn übernehmen",
+      "Refused": "{name} kann nicht übernommen werden: Garn übernimmt Akteure (Held, NSC, Kreatur), Gegenstände, Journale und Szenen.",
       "WrongClass": "{name} kann kein {class} werden.",
       "Missing": "Kein Foundry-Dokument „{uuid}“.",
       "NoFolder": "Dieser Ordner existiert nicht mehr.",
@@ -631,7 +631,7 @@
       "Ignore": "Ignorieren",
       "Close": "Schließen",
       "AdHocTitle": "Neue Dokumente dieser Sitzung",
-      "AdHocIntro": "Seit dem letzten Commit erstellt und noch nicht in Silk. Ignorierte Dokumente erscheinen nie wieder.",
+      "AdHocIntro": "Seit dem letzten Commit erstellt und noch nicht in Garn. Ignorierte Dokumente erscheinen nie wieder.",
       "EndPlaySessionLabel": "Ende der Spielsitzung"
     },
     "PlayerNote": {

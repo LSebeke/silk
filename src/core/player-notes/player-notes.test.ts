@@ -20,9 +20,9 @@ describe('playerNote.create (spec §9 Player Notes)', () => {
     });
     const doc = t.doc(id);
     const p = page(doc, note);
-    expect(p.category).toBe(doc.flags.silk.playerNotes);
+    expect(p.category).toBe(doc.flags.garn.playerNotes);
     expect(p.text?.content).toBe('<p>Smells of fish</p>');
-    expect(p.flags?.silk?.campaign).toBe('camp1');
+    expect(p.flags?.garn?.campaign).toBe('camp1');
     expect(t.level(p)).toBe(OWNER);
     expect(t.map().playerNotes).toEqual([note]);
     expect(t.element(id).playerNotes).toEqual([
@@ -47,7 +47,7 @@ describe('playerNote.create: who and where', () => {
     expect(t.level(t.companion(id))).toBe(NONE);
     const n = await note(t, id);
     const companion = t.companion(id);
-    expect(page(companion, n).category).toBe(companion.flags.silk.playerNotes);
+    expect(page(companion, n).category).toBe(companion.flags.garn.playerNotes);
     expect(t.level(page(companion, n))).toBe(OWNER);
     expect(t.level(companion)).toBe(OBSERVER);
   });
@@ -78,8 +78,8 @@ describe('playerNote.create: who and where', () => {
     const id = await revealed(t, 'note', 'Rumour');
     const n = await note(t, id);
     const doc = t.doc(id);
-    expect(doc.categories.map((c) => c._id)).toContain(doc.flags.silk.playerNotes);
-    expect(page(doc, n).category).toBe(doc.flags.silk.playerNotes);
+    expect(doc.categories.map((c) => c._id)).toContain(doc.flags.garn.playerNotes);
+    expect(page(doc, n).category).toBe(doc.flags.garn.playerNotes);
     expect(t.element(id).infoBlocks.map((b) => b._id)).not.toContain(n);
   });
 });
@@ -106,7 +106,7 @@ describe('Player Notes and Reveal (spec §8, §9)', () => {
     await t.run('reveal.playerNote', { id: n });
     expect(t.level(page(t.doc(id), n))).toBe(OWNER);
     expect(t.maps.get('camp2')?.playerNotes).toEqual([n]);
-    expect(page(t.doc(id), n).flags?.silk?.campaign).toBe('camp1');
+    expect(page(t.doc(id), n).flags?.garn?.campaign).toBe('camp1');
   });
 });
 
@@ -135,7 +135,7 @@ describe('playerNote.convert (Convert to GM Info Block)', () => {
     await t.run('playerNote.convert', { id: n });
     const p = page(t.doc(id), n);
     expect(p.category ?? null).toBeNull();
-    expect(p.flags?.silk?.campaign).toBeUndefined();
+    expect(p.flags?.garn?.campaign).toBeUndefined();
     expect(t.level(p)).toBe(OBSERVER);
     expect(t.element(id).playerNotes).toBeUndefined();
     expect(t.element(id).infoBlocks.at(-1)).toEqual({ _id: n, name: p.name, text: '<p>keep</p>' });
@@ -168,8 +168,8 @@ describe('Player Notes in the Canon (spec §11.2)', () => {
     await t.run('materialize.elements', { ids: [id] });
     const companion = t.companion(id);
     const p = page(companion, 'pn1');
-    expect(p.category).toBe(companion.flags.silk.playerNotes);
-    expect(p.flags?.silk?.campaign).toBe('camp1');
+    expect(p.category).toBe(companion.flags.garn.playerNotes);
+    expect(p.flags?.garn?.campaign).toBe('camp1');
     expect(t.element(id).playerNotes).toEqual([pn]);
   });
 
@@ -178,7 +178,7 @@ describe('Player Notes in the Canon (spec §11.2)', () => {
     const id = await revealed(t, 'location', 'Gareth');
     const n = await note(t, id);
     await t.notes.retag('camp1', 'camp9');
-    expect(page(t.doc(id), n).flags?.silk?.campaign).toBe('camp9');
+    expect(page(t.doc(id), n).flags?.garn?.campaign).toBe('camp9');
     expect(t.element(id).playerNotes?.[0]?.campaign).toBe('camp9');
   });
 });

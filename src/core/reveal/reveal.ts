@@ -199,7 +199,7 @@ export function createReveal(deps: RevealDeps): Reveal {
 
   async function requireCampaign() {
     const id = deps.adventure() ? await deps.campaign.current() : null;
-    if (!id) throw new Error('Silk: start an Adventure to Reveal');
+    if (!id) throw new Error('Garn: start an Adventure to Reveal');
     return id;
   }
 
@@ -216,7 +216,7 @@ export function createReveal(deps: RevealDeps): Reveal {
     let g = graph();
     const owners = elementsOf(kind, id, g);
     if (!owners.length || owners.some((o) => !read(o)))
-      throw new Error(`Silk: nothing to Reveal for "${id}"`);
+      throw new Error(`Garn: nothing to Reveal for "${id}"`);
     // Only Materialized elements can be Revealed: a Ghost is Materialized first (§8).
     if (revealed) {
       let materialized = false;
@@ -287,7 +287,7 @@ export function createReveal(deps: RevealDeps): Reveal {
     const g = graph();
     const blockOwner = read(id) ? undefined : g.elementOfBlock(id);
     const elementId = blockOwner ?? id;
-    if (!read(elementId)) throw new Error(`Silk: nothing to show for "${id}"`);
+    if (!read(elementId)) throw new Error(`Garn: nothing to show for "${id}"`);
     if (blockOwner) {
       if (!isRevealed(state, 'infoBlock', id)) await set('infoBlock', id, true);
     } else if (!isRevealed(state, 'element', id)) await set('element', id, true);
@@ -449,7 +449,7 @@ export function revealCommands(reveal: Reveal): Command[] {
   const available = (ctx: { isGM: boolean }) => ctx.isGM && reveal.available();
   const target = (kind: RevealTarget): Command<{ id: string; revealed?: boolean }> => ({
     name: `reveal.${kind}`,
-    title: `SILK.Commands.reveal.${kind}`,
+    title: `GARN.Commands.reveal.${kind}`,
     available,
     run: ({ id, revealed = true }) => reveal.set(kind, id, revealed),
   });
@@ -461,7 +461,7 @@ export function revealCommands(reveal: Reveal): Command[] {
     target('playerNote'),
     {
       name: 'reveal.showToPlayers',
-      title: 'SILK.Commands.reveal.showToPlayers',
+      title: 'GARN.Commands.reveal.showToPlayers',
       available,
       run: ({ id }: { id: string }) => reveal.showToPlayers(id),
     },

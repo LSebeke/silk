@@ -17,7 +17,7 @@ function setup(opts: { gm?: boolean; revealed?: boolean; available?: boolean } =
       on: (name, fn) => hooks.set(name, fn),
       isActiveGM: () => opts.gm ?? true,
       isGM: () => opts.gm ?? true,
-      elementIdOf: (doc) => (doc as { flags?: { silk?: { id?: string } } }).flags?.silk?.id,
+      elementIdOf: (doc) => (doc as { flags?: { garn?: { id?: string } } }).flags?.garn?.id,
       run: async (name, args) => void ran.push([name, args]),
       localize: (key) => key,
     },
@@ -29,18 +29,18 @@ function setup(opts: { gm?: boolean; revealed?: boolean; available?: boolean } =
 type Control = { label: string; onClick(): void; visible?: boolean };
 
 describe('sheet header buttons (spec §8 Controls)', () => {
-  it('Silk docs get Reveal, Show to players and Element Detail controls that run commands', () => {
+  it('Garn docs get Reveal, Show to players and Element Detail controls that run commands', () => {
     const t = setup();
     const controls: Control[] = [];
     t.fire(
       'getHeaderControlsDocumentSheetV2',
-      { document: { flags: { silk: { id: 'el1' } } } },
+      { document: { flags: { garn: { id: 'el1' } } } },
       controls,
     );
     expect(controls.map((c) => c.label)).toEqual([
-      'SILK.Reveal.Reveal',
-      'SILK.Commands.reveal.showToPlayers',
-      'SILK.Commands.element.openDetail',
+      'GARN.Reveal.Reveal',
+      'GARN.Commands.reveal.showToPlayers',
+      'GARN.Commands.element.openDetail',
     ]);
     for (const c of controls) c.onClick();
     expect(t.ran).toEqual([
@@ -51,13 +51,13 @@ describe('sheet header buttons (spec §8 Controls)', () => {
   });
 
   it('a Revealed element offers Un-reveal; under main only Element Detail; players and other docs get nothing', () => {
-    const doc = { document: { flags: { silk: { id: 'el1' } } } };
+    const doc = { document: { flags: { garn: { id: 'el1' } } } };
     const revealed: Control[] = [];
     setup({ revealed: true }).fire('getHeaderControlsDocumentSheetV2', doc, revealed);
-    expect(revealed[0]?.label).toBe('SILK.Reveal.Unreveal');
+    expect(revealed[0]?.label).toBe('GARN.Reveal.Unreveal');
     const main: Control[] = [];
     setup({ available: false }).fire('getHeaderControlsDocumentSheetV2', doc, main);
-    expect(main.map((c) => c.label)).toEqual(['SILK.Commands.element.openDetail']);
+    expect(main.map((c) => c.label)).toEqual(['GARN.Commands.element.openDetail']);
     const player: Control[] = [];
     setup({ gm: false }).fire('getHeaderControlsDocumentSheetV2', doc, player);
     const other: Control[] = [];
@@ -67,20 +67,20 @@ describe('sheet header buttons (spec §8 Controls)', () => {
 });
 
 describe('flow-back', () => {
-  it('a Foundry-side image or token edit re-applies the element (hood), not Silk writes', () => {
+  it('a Foundry-side image or token edit re-applies the element (hood), not Garn writes', () => {
     const t = setup();
-    const actor = { flags: { silk: { id: 'el1' } } };
+    const actor = { flags: { garn: { id: 'el1' } } };
     t.fire('updateActor', actor, { img: 'x.webp' }, {});
     t.fire('updateActor', actor, { prototypeToken: { texture: { src: 'y' } } }, {});
     t.fire('updateActor', actor, { name: 'n' }, {});
-    t.fire('updateActor', actor, { img: 'x.webp' }, { silk: { internal: true } });
+    t.fire('updateActor', actor, { img: 'x.webp' }, { garn: { internal: true } });
     expect(t.repaired).toEqual(['el1', 'el1']);
   });
 
   it('revealState changes elsewhere reload the World state', () => {
     const t = setup();
-    t.fire('updateSetting', { key: 'silk.revealState' });
-    t.fire('updateSetting', { key: 'silk.viewState' });
+    t.fire('updateSetting', { key: 'garn.revealState' });
+    t.fire('updateSetting', { key: 'garn.viewState' });
     expect(t.reloaded()).toBe(1);
   });
 });
@@ -129,7 +129,7 @@ describe('tokenUpdates', () => {
       {
         _id: 't1',
         'texture.src': 'hood',
-        'flags.silk.unhooded': {
+        'flags.garn.unhooded': {
           ring: { enabled: false, colors: { ring: null, background: null } },
           texture: { src: 'wild-2.webp', fit: 'cover', anchorX: 0.5, anchorY: 0.5 },
           subject: { scale: 1, texture: null },

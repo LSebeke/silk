@@ -10,7 +10,7 @@ async function adopt(t: ReturnType<typeof setup>, id: string) {
 }
 
 describe('element.delete (spec §6)', () => {
-  it('a Silk-created element: confirm, then its Connections, docs and records go', async () => {
+  it('a Garn-created element: confirm, then its Connections, docs and records go', async () => {
     const t = setup({ mode: 'immediate', connections: true });
     t.settings.confirmDelete = true;
     const alrik = await t.create('person', 'Alrik');
@@ -56,7 +56,7 @@ describe('element.delete (spec §6)', () => {
     expect(t.element(alrik).uuid).toBeDefined();
   });
 
-  it('an Adopted element keeps its Foundry doc by default, without Silk flags', async () => {
+  it('an Adopted element keeps its Foundry doc by default, without Garn flags', async () => {
     const t = setup({ mode: 'immediate' });
     t.settings.confirmDelete = true;
     const gareth = await t.create('person', 'Gareth');
@@ -67,7 +67,7 @@ describe('element.delete (spec §6)', () => {
     await t.registry.run('element.delete', { ids: [gareth] });
 
     expect(t.prompts.delete[0]?.adopted).toBe(1);
-    expect(t.docs.docs.get(actor)?.flags.silk).toEqual({});
+    expect(t.docs.docs.get(actor)?.flags.garn).toEqual({});
     expect(t.docs.docs.has(companion)).toBe(false);
     expect(t.workingCopy.get(gareth)).toBeUndefined();
   });

@@ -8,31 +8,31 @@ export function campaignCommands(getCampaigns: () => Campaigns): Command[] {
   return [
     {
       name: 'campaign.create',
-      title: 'SILK.Commands.campaign.create',
+      title: 'GARN.Commands.campaign.create',
       available: gm,
       run: (args: { name: string }) => getCampaigns().create(args),
     },
     {
       name: 'campaign.rename',
-      title: 'SILK.Commands.campaign.rename',
+      title: 'GARN.Commands.campaign.rename',
       available: gm,
       run: (args: { id: string; name: string }) => getCampaigns().rename(args),
     },
     {
       name: 'campaign.close',
-      title: 'SILK.Commands.campaign.close',
+      title: 'GARN.Commands.campaign.close',
       available: gm,
       run: (args: { id: string }) => getCampaigns().close(args),
     },
     {
       name: 'campaign.reopen',
-      title: 'SILK.Commands.campaign.reopen',
+      title: 'GARN.Commands.campaign.reopen',
       available: gm,
       run: (args: { id: string }) => getCampaigns().reopen(args),
     },
     {
       name: 'adventure.start',
-      title: 'SILK.Commands.adventure.start',
+      title: 'GARN.Commands.adventure.start',
       available: gm,
       run: (args: { name: string; campaignId: string }) => getCampaigns().startAdventure(args),
     },

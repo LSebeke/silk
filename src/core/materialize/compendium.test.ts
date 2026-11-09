@@ -16,7 +16,7 @@ function withPack(t: ReturnType<typeof setup>) {
         name: 'Bite',
         type: 'meleeweapon',
         folder: null,
-        flags: { silk: {} },
+        flags: { garn: {} },
       },
     ],
     flags: { dsa5: { lang: 'de' } },
@@ -44,7 +44,7 @@ describe('Compendium source', () => {
     expect(t.docs.docs.size).toBe(0);
   });
 
-  it('Materialize imports the entry: its system data and items, under the element name, in the Silk folder', async () => {
+  it('Materialize imports the entry: its system data and items, under the element name, in the Garn folder', async () => {
     const t = setup({ mode: 'onDemand' });
     withPack(t);
     const id = await createFromPack(t, 'Grauwolf');
@@ -57,11 +57,11 @@ describe('Compendium source', () => {
       ownership: { default: 0 },
       system: { status: { wounds: { value: 21 } } },
       items: [{ name: 'Bite' }],
-      flags: { dsa5: { lang: 'de' }, silk: { id } },
+      flags: { dsa5: { lang: 'de' }, garn: { id } },
       _stats: { compendiumSource: WOLF },
     });
     expect(doc.folder).toBe(t.docs.folders.find((f) => f.key === 'creature')?.id);
-    // Handled as Silk-created: Companion Journal with the default Info Blocks.
+    // Handled as Garn-created: Companion Journal with the default Info Blocks.
     expect(t.companion(id).pages.map((p) => p.name)).toContain('Appearance');
     expect(t.element(id)).toMatchObject({ name: 'Grauwolf', img: 'packs/wolf.webp' });
   });
@@ -75,7 +75,7 @@ describe('Compendium source', () => {
     await t.registry.run('element.setImage', { id, img: 'mine.webp' });
     await t.registry.run('materialize.elements', { ids: [id] });
     expect(t.doc(id).img).toBe('mine.webp');
-    expect(t.doc(id).flags.silk.original).toEqual({
+    expect(t.doc(id).flags.garn.original).toEqual({
       img: 'packs/wolf.webp',
       texture: { src: 'packs/wolf-token.webp' },
       ring: { enabled: true },
@@ -103,7 +103,7 @@ describe('Compendium source', () => {
       fit: 'cover',
       anchorX: 0.5,
     });
-    expect(doc.flags.silk.pose).toBeUndefined();
+    expect(doc.flags.garn.pose).toBeUndefined();
     expect(t.element(id).img).toBe('packs/wolf.webp');
     expect(t.tokens.at(-1)?.data).toMatchObject({ 'texture.src': 'packs/wolf-token.webp' });
   });

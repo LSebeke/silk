@@ -80,25 +80,25 @@
   }
 </script>
 
-<div class="silk-filter-bar nodrag nopan" data-silk-filter-bar>
+<div class="garn-filter-bar nodrag nopan" data-garn-filter-bar>
   <button
     type="button"
     class="focus"
     class:on={focusOn}
     aria-pressed={focusOn}
     onclick={toggleFocus}
-    data-silk-action="focus-toggle"
+    data-garn-action="focus-toggle"
   >
     <i class="fa-solid fa-bullseye"></i>
-    {ctx.localize('SILK.Focus.Toggle')}
+    {ctx.localize('GARN.Focus.Toggle')}
   </button>
   {#if focusOn}
     <label class="hops">
-      {ctx.localize('SILK.Focus.Hops')}
+      {ctx.localize('GARN.Focus.Hops')}
       <select
         value={String(hops)}
         onchange={(e) => run('focus.setHops', { n: Number(e.currentTarget.value) })}
-        data-silk-focus-hops
+        data-garn-focus-hops
       >
         {#each [0, 1, 2, 3, 4, 5] as n (n)}
           <option value={String(n)}>{n}</option>
@@ -107,57 +107,57 @@
     </label>
   {/if}
   {#each chips as chip (chip.dimension + '\u0000' + chip.value)}
-    <span class="chip" data-silk-filter-chip={chip.dimension} data-silk-filter-value={chip.value}>
-      <b>{ctx.localize(`SILK.Filter.Dimension.${chip.dimension}`)}:</b>
+    <span class="chip" data-garn-filter-chip={chip.dimension} data-garn-filter-value={chip.value}>
+      <b>{ctx.localize(`GARN.Filter.Dimension.${chip.dimension}`)}:</b>
       {chip.label}
       <button
         type="button"
-        aria-label={ctx.localize('SILK.Filter.Clear')}
+        aria-label={ctx.localize('GARN.Filter.Clear')}
         onclick={() => remove(chip)}
-        data-silk-action="filter-remove">×</button
+        data-garn-action="filter-remove">×</button
       >
     </span>
   {/each}
   {#if expanded}
-    <span class="chip extra" data-silk-filter-expanded>
-      {fmt('SILK.Filter.Expanded', { n: expanded })}
+    <span class="chip extra" data-garn-filter-expanded>
+      {fmt('GARN.Filter.Expanded', { n: expanded })}
     </span>
   {/if}
   <select
     bind:value={dimension}
-    aria-label={ctx.localize('SILK.Filter.Add')}
-    data-silk-filter-dimension
+    aria-label={ctx.localize('GARN.Filter.Add')}
+    data-garn-filter-dimension
   >
-    <option value="">{ctx.localize('SILK.Filter.Add')}</option>
+    <option value="">{ctx.localize('GARN.Filter.Add')}</option>
     {#each FILTER_DIMENSIONS as d (d)}
-      <option value={d}>{ctx.localize(`SILK.Filter.Dimension.${d}`)}</option>
+      <option value={d}>{ctx.localize(`GARN.Filter.Dimension.${d}`)}</option>
     {/each}
   </select>
   {#if dimension}
-    <select onchange={(e) => add(e.currentTarget.value)} data-silk-filter-option>
+    <select onchange={(e) => add(e.currentTarget.value)} data-garn-filter-option>
       <option value="">…</option>
       {#each options as option (option.value)}
         <option value={option.value}>{text(option.label)}</option>
       {/each}
     </select>
   {/if}
-  <span class="count" data-silk-filter-count
-    >{fmt('SILK.Filter.Shown', { n: result.visible.size, m: result.total })}</span
+  <span class="count" data-garn-filter-count
+    >{fmt('GARN.Filter.Shown', { n: result.visible.size, m: result.total })}</span
   >
   {#if result.active || expanded}
-    <button type="button" onclick={() => run('filter.clear', {})} data-silk-action="filter-clear">
-      {ctx.localize('SILK.Filter.Clear')}
+    <button type="button" onclick={() => run('filter.clear', {})} data-garn-action="filter-clear">
+      {ctx.localize('GARN.Filter.Clear')}
     </button>
   {/if}
 </div>
 {#if result.visible.size > ctx.renderBudget}
-  <div class="silk-render-budget" role="status" data-silk-render-budget>
-    {fmt('SILK.Filter.Budget', { n: result.visible.size, max: ctx.renderBudget })}
+  <div class="garn-render-budget" role="status" data-garn-render-budget>
+    {fmt('GARN.Filter.Budget', { n: result.visible.size, max: ctx.renderBudget })}
   </div>
 {/if}
 
 <style>
-  .silk-filter-bar {
+  .garn-filter-bar {
     position: absolute;
     top: 8px;
     left: 8px;
@@ -188,7 +188,7 @@
     padding-right: 6px;
   }
   .chip button,
-  .silk-filter-bar > button {
+  .garn-filter-bar > button {
     width: auto;
     min-height: 0;
     padding: 0 6px;
@@ -200,7 +200,7 @@
     border: 0;
     background: none;
   }
-  .silk-filter-bar > button.focus.on {
+  .garn-filter-bar > button.focus.on {
     color: #fff;
     background: #2b6cb0;
   }
@@ -219,7 +219,7 @@
     white-space: nowrap;
     opacity: 0.75;
   }
-  .silk-render-budget {
+  .garn-render-budget {
     position: absolute;
     top: 44px;
     left: 8px;

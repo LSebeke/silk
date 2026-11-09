@@ -4,7 +4,7 @@
  * - A note is a text page in the "Player Notes" category of the element's journal (or its
  *   Companion Journal). Only the active GM writes: players' commands are relayed over the
  *   socket (`relay`), so with no GM online notes can't be created.
- * - A note records its authoring Campaign (`flags.silk.campaign` on the page) and is
+ * - A note records its authoring Campaign (`flags.garn.campaign` on the page) and is
  *   auto-Revealed in that Campaign's Revelation Map. Ownership follows the map (T16
  *   `ownership.ts`): party-editable while Revealed, NONE otherwise.
  * - The element record mirrors notes as `playerNotes` (like Info Blocks), so they are
@@ -61,7 +61,7 @@ export function createPlayerNotes(deps: PlayerNotesDeps): PlayerNotes {
 
   function element(id: string): StoryElement {
     const el = readElement(deps.workingCopy().get(id));
-    if (!el) throw new Error(`Silk: no element "${id}"`);
+    if (!el) throw new Error(`Garn: no element "${id}"`);
     return el;
   }
 
@@ -71,7 +71,7 @@ export function createPlayerNotes(deps: PlayerNotesDeps): PlayerNotes {
       const note = el?.playerNotes?.find((n) => n._id === id);
       if (el && note) return { el, note };
     }
-    throw new Error(`Silk: no Player Note "${id}"`);
+    throw new Error(`Garn: no Player Note "${id}"`);
   }
 
   /** The journal holding the element's notes; `undefined` for a Ghost. */
@@ -79,7 +79,7 @@ export function createPlayerNotes(deps: PlayerNotesDeps): PlayerNotes {
     if (!el.uuid) return undefined;
     const found = deps.materializer.docsOf(el.id);
     const holder = found && blockJournal(found.main, found.companion);
-    if (!holder) throw new Error(`Silk: the journal of "${el.name}" is missing`);
+    if (!holder) throw new Error(`Garn: the journal of "${el.name}" is missing`);
     return holder;
   }
 
@@ -92,14 +92,14 @@ export function createPlayerNotes(deps: PlayerNotesDeps): PlayerNotes {
 
   /** The category's id, created if the journal lacks one (e.g. a Note element). */
   async function category(holder: DocSnapshot): Promise<string> {
-    const id = holder.flags.silk.playerNotes;
+    const id = holder.flags.garn.playerNotes;
     if (id && holder.categories?.some((c) => c._id === id)) return id;
     const created = playerNotesCategory(deps.newId(), {
       localize: deps.localize,
       newId: deps.newId,
     } as never);
     await docs.createCategories(holder.uuid, [created]);
-    await docs.update(holder.uuid, { 'flags.silk.playerNotes': created._id });
+    await docs.update(holder.uuid, { 'flags.garn.playerNotes': created._id });
     return created._id;
   }
 
@@ -107,15 +107,15 @@ export function createPlayerNotes(deps: PlayerNotesDeps): PlayerNotes {
     async create({ elementId, text }) {
       const el = element(elementId);
       if (!el.uuid || !deps.reveal.isRevealed('element', elementId))
-        throw new Error('Silk: Player Notes go on Revealed elements');
+        throw new Error('Garn: Player Notes go on Revealed elements');
       const campaign = await deps.campaign();
-      if (!campaign) throw new Error('Silk: start an Adventure to write Player Notes');
+      if (!campaign) throw new Error('Garn: start an Adventure to write Player Notes');
       const holder = holderOf(el) as DocSnapshot;
       const cat = await category(holder);
       const last = playerNotePages(docs.get(holder.uuid) ?? holder).at(-1)?.sort ?? 0;
       const note: PlayerNote = {
         _id: deps.newId(),
-        name: deps.localize('SILK.PlayerNote.Name'),
+        name: deps.localize('GARN.PlayerNote.Name'),
         text,
         campaign,
       };
@@ -171,7 +171,7 @@ export function createPlayerNotes(deps: PlayerNotesDeps): PlayerNotes {
       await docs.updatePage(holder.uuid, id, {
         category: null,
         sort: Math.min(last + SORT_STEP, Math.floor((last + CONNECTIONS_SORT) / 2)),
-        'flags.silk.-=campaign': null,
+        'flags.garn.-=campaign': null,
       });
       await deps.materializer.sync(el.id);
       await deps.reveal.convertNote(id, note.campaign ? [note.campaign] : []);
@@ -191,7 +191,7 @@ export function createPlayerNotes(deps: PlayerNotesDeps): PlayerNotes {
           continue;
         }
         for (const n of tagged)
-          await docs.updatePage(holder.uuid, n._id, { 'flags.silk.campaign': to });
+          await docs.updatePage(holder.uuid, n._id, { 'flags.garn.campaign': to });
         await deps.materializer.sync(el.id);
       }
     },
@@ -211,7 +211,7 @@ export function playerNoteCommands(notes: PlayerNotes, deps: PlayerNoteCommandDe
   const anyone = () => deps.isGM() || deps.gmOnline();
   const party = <A extends object, R>(name: string, run: (args: A) => Promise<R>): Command<A> => ({
     name,
-    title: `SILK.Commands.${name}`,
+    title: `GARN.Commands.${name}`,
     available: anyone,
     run: (args) => (deps.isGM() ? run(args) : deps.relay(name, args)),
   });
@@ -223,7 +223,7 @@ export function playerNoteCommands(notes: PlayerNotes, deps: PlayerNoteCommandDe
     party('playerNote.delete', (args: { id: string }) => notes.delete(args.id)),
     {
       name: 'playerNote.convert',
-      title: 'SILK.Commands.playerNote.convert',
+      title: 'GARN.Commands.playerNote.convert',
       available: () => deps.isGM(),
       run: (args: { id: string }) => notes.convert(args.id),
     },

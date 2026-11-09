@@ -7,9 +7,9 @@ const group = (id: string, foundry = []) => legendGroups(foundry).find((g) => g.
 describe('canvas legend (spec 1.1 §E.3)', () => {
   it('has the three groups: Keys, Mouse, Foundry keybindings', () => {
     expect(legendGroups([]).map((g) => [g.id, g.title])).toEqual([
-      ['keys', 'SILK.Legend.Keys'],
-      ['mouse', 'SILK.Legend.Mouse'],
-      ['foundry', 'SILK.Legend.Foundry'],
+      ['keys', 'GARN.Legend.Keys'],
+      ['mouse', 'GARN.Legend.Mouse'],
+      ['foundry', 'GARN.Legend.Foundry'],
     ]);
   });
 
@@ -17,58 +17,58 @@ describe('canvas legend (spec 1.1 §E.3)', () => {
     const rows = group('keys')?.rows ?? [];
     expect(rows[0]).toEqual({
       keys: ['1'],
-      label: 'SILK.Canvas.Key.create',
-      args: { class: 'SILK.Class.person' },
+      label: 'GARN.Canvas.Key.create',
+      args: { class: 'GARN.Class.person' },
     });
-    expect(rows.filter((r) => r.label === 'SILK.Canvas.Key.create')).toHaveLength(8);
+    expect(rows.filter((r) => r.label === 'GARN.Canvas.Key.create')).toHaveLength(8);
     expect(rows.some((r) => r.keys.includes('3'))).toBe(false);
   });
 
   it('Keys: modifiers and conditions show, e.g. Ctrl+F, Del on a Node or Connection, ?', () => {
     const rows = group('keys')?.rows ?? [];
-    expect(rows).toContainEqual({ keys: ['Ctrl+F'], label: 'SILK.Canvas.Key.search' });
+    expect(rows).toContainEqual({ keys: ['Ctrl+F'], label: 'GARN.Canvas.Key.search' });
     expect(rows).toContainEqual({
       keys: ['Del', 'Backspace'],
-      label: 'SILK.Canvas.Key.delete',
-      when: 'SILK.Canvas.KeyWhen.nodeOrEdge',
+      label: 'GARN.Canvas.Key.delete',
+      when: 'GARN.Canvas.KeyWhen.nodeOrEdge',
     });
     expect(rows).toContainEqual({
       keys: ['Tab'],
-      label: 'SILK.Canvas.Key.toggleDirection',
-      when: 'SILK.Canvas.KeyWhen.edge',
+      label: 'GARN.Canvas.Key.toggleDirection',
+      when: 'GARN.Canvas.KeyWhen.edge',
     });
     expect(rows).toContainEqual({
       keys: ['Shift+Tab'],
-      label: 'SILK.Canvas.Key.flip',
-      when: 'SILK.Canvas.KeyWhen.edge',
+      label: 'GARN.Canvas.Key.flip',
+      when: 'GARN.Canvas.KeyWhen.edge',
     });
-    expect(rows).toContainEqual({ keys: ['?'], label: 'SILK.Canvas.Key.legend' });
+    expect(rows).toContainEqual({ keys: ['?'], label: 'GARN.Canvas.Key.legend' });
   });
 
   it('Mouse: every pointer gesture: drags, double-clicks, the §A right-drag rows, then the modifiers', () => {
     expect(group('mouse')?.rows.map((r) => r.label)).toEqual([
-      'SILK.Canvas.Gesture.leftDrag-node',
-      'SILK.Canvas.Gesture.drag-canvas',
-      'SILK.Canvas.Gesture.doubleClick-node',
-      'SILK.Canvas.Gesture.doubleClick-edge',
-      'SILK.Canvas.Gesture.node-sameNode',
-      'SILK.Canvas.Gesture.node-otherNode',
-      'SILK.Canvas.Gesture.node-canvas',
-      'SILK.Canvas.Gesture.canvas-canvas',
-      'SILK.Canvas.Gesture.canvas-node',
-      'SILK.Canvas.Gesture.edge-anywhere',
-      'SILK.Legend.Modifiers',
-      'SILK.Canvas.Modifier.shift',
-      'SILK.Canvas.Modifier.ctrl',
-      'SILK.Canvas.Modifier.alt',
+      'GARN.Canvas.Gesture.leftDrag-node',
+      'GARN.Canvas.Gesture.drag-canvas',
+      'GARN.Canvas.Gesture.doubleClick-node',
+      'GARN.Canvas.Gesture.doubleClick-edge',
+      'GARN.Canvas.Gesture.node-sameNode',
+      'GARN.Canvas.Gesture.node-otherNode',
+      'GARN.Canvas.Gesture.node-canvas',
+      'GARN.Canvas.Gesture.canvas-canvas',
+      'GARN.Canvas.Gesture.canvas-node',
+      'GARN.Canvas.Gesture.edge-anywhere',
+      'GARN.Legend.Modifiers',
+      'GARN.Canvas.Modifier.shift',
+      'GARN.Canvas.Modifier.ctrl',
+      'GARN.Canvas.Modifier.alt',
     ]);
     expect(group('mouse')?.rows[10]).toMatchObject({ heading: true });
   });
 
   it('Foundry keybindings: the live bindings as given', () => {
-    const live = [{ title: 'SILK.Commands.canvas.open', keys: ['Shift+S'] }];
+    const live = [{ title: 'GARN.Commands.canvas.open', keys: ['Shift+S'] }];
     expect(legendGroups(live).find((g) => g.id === 'foundry')?.rows).toEqual([
-      { keys: ['Shift+S'], label: 'SILK.Commands.canvas.open' },
+      { keys: ['Shift+S'], label: 'GARN.Commands.canvas.open' },
     ]);
   });
 });

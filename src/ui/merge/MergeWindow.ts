@@ -30,12 +30,12 @@ export interface MergePanelProps extends Record<string, unknown> {
 }
 
 export class MergeWindow extends SvelteApplication<MergePanelProps> {
-  static readonly ID = 'silk-merge';
+  static readonly ID = 'garn-merge';
 
   static override DEFAULT_OPTIONS = {
     id: MergeWindow.ID,
-    classes: ['silk', 'silk-merge-window'],
-    window: { title: 'SILK.Merge.Title', resizable: true, icon: 'fa-solid fa-code-merge' },
+    classes: ['garn', 'garn-merge-window'],
+    window: { title: 'GARN.Merge.Title', resizable: true, icon: 'fa-solid fa-code-merge' },
     position: { width: 1200, height: 700 },
   };
 

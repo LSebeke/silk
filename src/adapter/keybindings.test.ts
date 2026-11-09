@@ -7,7 +7,7 @@ function setup(isGM: boolean) {
   const registry = createRegistry(() => ({ isGM }));
   registry.register({
     name: 'canvas.open',
-    title: 'SILK.Commands.canvas.open',
+    title: 'GARN.Commands.canvas.open',
     keys: [{ key: 'KeyS', modifiers: ['Shift'] }],
     available: (c) => c.isGM,
     run: async () => void runs.push('canvas.open'),
@@ -20,7 +20,7 @@ function setup(isGM: boolean) {
   });
   const bindings = new Map<string, KeybindingData>();
   registerKeybindings(registry, (ns, action, data) => {
-    expect(ns).toBe('silk');
+    expect(ns).toBe('garn');
     bindings.set(action, data);
   });
   return { runs, bindings };
@@ -31,7 +31,7 @@ describe('keybindings from command keys', () => {
     const { bindings } = setup(true);
     expect([...bindings.keys()]).toEqual(['canvas.open']);
     expect(bindings.get('canvas.open')).toMatchObject({
-      name: 'SILK.Commands.canvas.open',
+      name: 'GARN.Commands.canvas.open',
       editable: [{ key: 'KeyS', modifiers: ['Shift'] }],
     });
   });
@@ -54,7 +54,7 @@ describe('live keybindings for the legend (spec 1.1 §E.3)', () => {
     const registry = createRegistry(() => ({ isGM: true }));
     registry.register({
       name: 'canvas.open',
-      title: 'SILK.Commands.canvas.open',
+      title: 'GARN.Commands.canvas.open',
       keys: [{ key: 'KeyS', modifiers: ['Shift'] }],
       available: () => true,
       run: async () => {},
@@ -75,7 +75,7 @@ describe('live keybindings for the legend (spec 1.1 §E.3)', () => {
         : [];
     const names: Record<string, string> = { Control: 'Ctrl', KeyW: 'W' };
     expect(liveKeybindings(registry, current, (code) => names[code] ?? code)).toEqual([
-      { title: 'SILK.Commands.canvas.open', keys: ['Ctrl+Alt+W', 'F4'] },
+      { title: 'GARN.Commands.canvas.open', keys: ['Ctrl+Alt+W', 'F4'] },
     ]);
   });
 });

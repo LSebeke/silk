@@ -6,10 +6,10 @@ type Props = DetailProps & { close: () => void };
 
 export class ConnectionDetailWindow extends DetailWindow<Props> {
   static override DEFAULT_OPTIONS = {
-    window: { title: 'SILK.ConnectionDetail.Title', icon: 'fa-solid fa-link' },
+    window: { title: 'GARN.ConnectionDetail.Title', icon: 'fa-solid fa-link' },
     position: { height: 480 },
   };
-  static override prefix = 'silk-connection-detail';
+  static override prefix = 'garn-connection-detail';
 
   protected readonly component = ConnectionDetail;
 

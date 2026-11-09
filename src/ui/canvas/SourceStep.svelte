@@ -22,7 +22,7 @@
   let el = $state<HTMLElement>();
   /** Cancelled: keys go back to the canvas (digit keys work again). */
   function cancel() {
-    el?.closest<HTMLElement>('[data-silk-canvas]')?.focus();
+    el?.closest<HTMLElement>('[data-garn-canvas]')?.focus();
     ctx.run('pipeline.cancel').catch(fail);
   }
 
@@ -38,16 +38,16 @@
 
 {#if box && !box.pending}
   <div
-    class="silk-source-step"
+    class="garn-source-step"
     style:left="{box.anchor?.x ?? 40}px"
     style:top="{box.anchor?.y ?? 40}px"
     role="menu"
     tabindex="-1"
-    aria-label="{ctx.localize('SILK.Source.Label')}: {ctx.localize(classLabelKey(box.class))}"
+    aria-label="{ctx.localize('GARN.Source.Label')}: {ctx.localize(classLabelKey(box.class))}"
     onkeydown={onKeydown}
     bind:this={el}
     use:focus
-    data-silk-source-step={box.class}
+    data-garn-source-step={box.class}
   >
     {#each box.choices as choice (choice.kind)}
       <button
@@ -59,11 +59,11 @@
         title={choice.reason ? ctx.localize(choice.reason) : undefined}
         tabindex="-1"
         onclick={() => choice.available && pick(choice.kind)}
-        data-silk-source-choice={choice.kind}
-        data-silk-source-available={choice.available ? '' : undefined}
+        data-garn-source-choice={choice.kind}
+        data-garn-source-available={choice.available ? '' : undefined}
       >
         <kbd>{ARROWS[choice.kind]}</kbd>
-        <span>{ctx.localize(`SILK.Source.${choice.kind}`)}</span>
+        <span>{ctx.localize(`GARN.Source.${choice.kind}`)}</span>
       </button>
     {/each}
     <button
@@ -72,16 +72,16 @@
       class="cancel"
       tabindex="-1"
       onclick={cancel}
-      data-silk-source-choice="cancel"
+      data-garn-source-choice="cancel"
     >
       <kbd>↓</kbd>
-      <span>{ctx.localize('SILK.Source.Cancel')}</span>
+      <span>{ctx.localize('GARN.Source.Cancel')}</span>
     </button>
   </div>
 {/if}
 
 <style>
-  .silk-source-step {
+  .garn-source-step {
     position: absolute;
     z-index: 20;
     display: grid;

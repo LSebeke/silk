@@ -1,6 +1,6 @@
 /**
  * Dev-only core commands (spec §14, §15 "Dev only"). Registered only in dev builds
- * (`__SILK_DEV__`), never in a release.
+ * (`__GARN_DEV__`), never in a release.
  */
 import type { Command } from '../commands/registry';
 import type { WorkingCopy } from '../working-copy';

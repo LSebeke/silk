@@ -127,13 +127,13 @@
   let revealBox: HTMLDivElement | undefined = $state();
   function askReveal(kind: 'element' | 'connection', id: string) {
     if (!ctx.available(`reveal.${kind}`)) {
-      ctx.warn(ctx.localize('SILK.Reveal.NeedsAdventure'));
+      ctx.warn(ctx.localize('GARN.Reveal.NeedsAdventure'));
       return;
     }
     const name =
       kind === 'element'
         ? (readElement(workingCopy.get(id))?.name ?? id)
-        : ctx.localize('SILK.Reveal.TheConnection');
+        : ctx.localize('GARN.Reveal.TheConnection');
     revealAsk = { kind, id, name, revealed: !ctx.reveal.isRevealed(kind, id) };
     queueMicrotask(() => revealBox?.focus());
   }
@@ -374,7 +374,7 @@
   const nodeAt = (event: ScreenPoint) =>
     (root?.ownerDocument ?? document)
       .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-silk-node]')?.dataset['silkNode'];
+      ?.closest<HTMLElement>('[data-garn-node]')?.dataset['garnNode'];
 
   /** Connect two existing Nodes, then open the Connection editor (§10.3). */
   async function connect(from: string, to: string, connection: CreateFromConnection = {}) {
@@ -408,12 +408,12 @@
   // Adopt (§6): placement at the viewport centre, flash on a duplicate, drops from Foundry.
   canvasBridge.center = viewCenter;
   canvasBridge.flash = (id) => {
-    const card = root?.querySelector<HTMLElement>(`[data-silk-node="${CSS.escape(id)}"]`);
+    const card = root?.querySelector<HTMLElement>(`[data-garn-node="${CSS.escape(id)}"]`);
     if (!card) return;
-    card.classList.remove('silk-flash');
+    card.classList.remove('garn-flash');
     void card.offsetWidth;
-    card.classList.add('silk-flash');
-    setTimeout(() => card.classList.remove('silk-flash'), 1600);
+    card.classList.add('garn-flash');
+    setTimeout(() => card.classList.remove('garn-flash'), 1600);
   };
   onDestroy(() => {
     if (canvasBridge.center === viewCenter) {
@@ -602,14 +602,14 @@
   function dropTarget(event: ScreenPoint, except?: string) {
     let el = (root?.ownerDocument ?? document)
       .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-silk-node]');
-    if (except && el?.dataset['silkNode'] === except) el = null;
+      ?.closest<HTMLElement>('[data-garn-node]');
+    if (except && el?.dataset['garnNode'] === except) el = null;
     if (el !== dropEl) {
-      dropEl?.classList.remove('silk-drop-target');
-      el?.classList.add('silk-drop-target');
+      dropEl?.classList.remove('garn-drop-target');
+      el?.classList.add('garn-drop-target');
       dropEl = el ?? undefined;
     }
-    return el?.dataset['silkNode'];
+    return el?.dataset['garnNode'];
   }
   function onDragOver(event: DragEvent) {
     // Foundry docs from the sidebar or a compendium: Adopt (§6).
@@ -620,7 +620,7 @@
   }
   function onDragLeave(event: DragEvent) {
     if (event.relatedTarget && root?.contains(event.relatedTarget as Node)) return;
-    dropEl?.classList.remove('silk-drop-target');
+    dropEl?.classList.remove('garn-drop-target');
     dropEl = undefined;
   }
   function onDrop(event: DragEvent) {
@@ -629,7 +629,7 @@
     if (!ELEMENT_CLASSES.some((c) => c.id === cls)) return;
     event.preventDefault();
     const target = dropTarget(event);
-    dropEl?.classList.remove('silk-drop-target');
+    dropEl?.classList.remove('garn-drop-target');
     dropEl = undefined;
     const origin = target
       ? { at: besideNode(target), from: target }
@@ -711,7 +711,7 @@
       win.removeEventListener('pointerup', up, true);
       win.removeEventListener('pointercancel', stop, true);
       win.removeEventListener('blur', stop);
-      dropEl?.classList.remove('silk-drop-target');
+      dropEl?.classList.remove('garn-drop-target');
       dropEl = undefined;
       rightDrag = undefined;
     };
@@ -820,15 +820,15 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_static_element_interactions -->
 <div
-  class="silk-canvas lod-{lod}"
+  class="garn-canvas lod-{lod}"
   class:moving
   class:connecting={!!connectFrom}
   bind:this={root}
   tabindex="0"
   onkeydown={onKeydown}
-  data-silk-canvas
-  data-silk-lod={lod}
-  data-silk-connecting={connectFrom}
+  data-garn-canvas
+  data-garn-lod={lod}
+  data-garn-connecting={connectFrom}
   ondragover={onDragOver}
   ondragleave={onDragLeave}
   ondrop={onDrop}
@@ -861,7 +861,7 @@
     <Background gap={40} />
   </SvelteFlow>
   {#if band}
-    <svg class="silk-rubber-band" data-silk-rubber-band aria-hidden="true">
+    <svg class="garn-rubber-band" data-garn-rubber-band aria-hidden="true">
       <line x1={band.x1} y1={band.y1} x2={band.x2} y2={band.y2} />
     </svg>
   {/if}
@@ -879,57 +879,57 @@
   {/if}
   {#if revealAsk}
     <div
-      class="silk-status-confirm"
+      class="garn-status-confirm"
       role="alertdialog"
       tabindex="-1"
       bind:this={revealBox}
-      data-silk-reveal-confirm={revealAsk.id}
+      data-garn-reveal-confirm={revealAsk.id}
     >
       <span>
         {ctx
-          .localize(revealAsk.revealed ? 'SILK.Reveal.Confirm' : 'SILK.Reveal.UnrevealConfirm')
+          .localize(revealAsk.revealed ? 'GARN.Reveal.Confirm' : 'GARN.Reveal.UnrevealConfirm')
           .replace('{name}', revealAsk.name)}
       </span>
-      <button type="button" onclick={() => answerReveal(true)} data-silk-action="reveal-yes">
-        {ctx.localize('SILK.Canvas.Yes')}
+      <button type="button" onclick={() => answerReveal(true)} data-garn-action="reveal-yes">
+        {ctx.localize('GARN.Canvas.Yes')}
       </button>
-      <button type="button" onclick={() => answerReveal(false)} data-silk-action="reveal-no">
-        {ctx.localize('SILK.Canvas.No')}
+      <button type="button" onclick={() => answerReveal(false)} data-garn-action="reveal-no">
+        {ctx.localize('GARN.Canvas.No')}
       </button>
     </div>
   {/if}
   <FilterBar {ctx} result={filtered} />
   <Legend {ctx} />
-  <div class="silk-canvas-tools">
+  <div class="garn-canvas-tools">
     {#if checkout}
       <button
         type="button"
-        class="silk-canon-chip"
+        class="garn-canon-chip"
         title={ctx.title('canon.openWindow')}
         disabled={!ctx.available('canon.openWindow')}
         onclick={openCanon}
-        data-silk-canon-chip
+        data-garn-canon-chip
       >
-        {checkout.canon} · {checkout.adventure ?? ctx.localize('SILK.Canon.ChipMain')}
+        {checkout.canon} · {checkout.adventure ?? ctx.localize('GARN.Canon.ChipMain')}
       </button>
     {/if}
     <button
       type="button"
-      title="{ctx.localize('SILK.Canvas.Search')} (Ctrl+F)"
+      title="{ctx.localize('GARN.Canvas.Search')} (Ctrl+F)"
       onclick={() => {
         connectFrom = undefined;
         searching = !searching;
       }}
-      data-silk-action="search"
+      data-garn-action="search"
     >
       <i class="fa-solid fa-magnifying-glass"></i>
     </button>
     <button
       type="button"
       class:active={paletteOpen}
-      title={ctx.localize('SILK.Canvas.Palette')}
+      title={ctx.localize('GARN.Canvas.Palette')}
       onclick={() => (paletteOpen = !paletteOpen)}
-      data-silk-action="palette"
+      data-garn-action="palette"
     >
       <i class="fa-solid fa-palette"></i>
     </button>
@@ -952,65 +952,65 @@
     {/key}
   {/if}
   {#if selectedAny && !connectFrom}
-    <div class="silk-selection-toolbar" data-silk-selection-toolbar>
-      <button type="button" onclick={() => run('canvas.group', {})} data-silk-action="group">
-        {ctx.localize('SILK.Canvas.Group')} <kbd>g</kbd>
+    <div class="garn-selection-toolbar" data-garn-selection-toolbar>
+      <button type="button" onclick={() => run('canvas.group', {})} data-garn-action="group">
+        {ctx.localize('GARN.Canvas.Group')} <kbd>g</kbd>
       </button>
       {#if selectedElements >= 2}
         <button
           type="button"
           onclick={() => run('canvas.untangle', {})}
-          data-silk-action="untangle"
+          data-garn-action="untangle"
         >
-          {ctx.localize('SILK.Canvas.Untangle')} <kbd>u</kbd>
+          {ctx.localize('GARN.Canvas.Untangle')} <kbd>u</kbd>
         </button>
       {/if}
     </div>
   {/if}
   {#if statusAsk}
     <div
-      class="silk-status-confirm"
+      class="garn-status-confirm"
       role="alertdialog"
       tabindex="-1"
       bind:this={statusBox}
-      data-silk-status-confirm={statusAsk.id}
+      data-garn-status-confirm={statusAsk.id}
     >
       <span>
         {ctx
-          .localize('SILK.Canvas.StatusConfirm')
+          .localize('GARN.Canvas.StatusConfirm')
           .replace('{name}', statusAsk.name)
           .replace('{status}', ctx.localize(statusLabelKey(statusAsk.status)))}
       </span>
-      <button type="button" onclick={() => answerStatus(true)} data-silk-action="status-yes">
-        {ctx.localize('SILK.Canvas.Yes')}
+      <button type="button" onclick={() => answerStatus(true)} data-garn-action="status-yes">
+        {ctx.localize('GARN.Canvas.Yes')}
       </button>
-      <button type="button" onclick={() => answerStatus(false)} data-silk-action="status-no">
-        {ctx.localize('SILK.Canvas.No')}
+      <button type="button" onclick={() => answerStatus(false)} data-garn-action="status-no">
+        {ctx.localize('GARN.Canvas.No')}
       </button>
     </div>
   {/if}
   {#if checkout === null}
-    <div class="silk-no-canon" role="status" data-silk-no-canon>
-      <strong>{ctx.localize('SILK.Canon.NoCanon')}</strong>
+    <div class="garn-no-canon" role="status" data-garn-no-canon>
+      <strong>{ctx.localize('GARN.Canon.NoCanon')}</strong>
       <button
         type="button"
         disabled={!ctx.available('canon.openWindow')}
         onclick={openCanon}
-        data-silk-action="open-canon"
+        data-garn-action="open-canon"
       >
         {ctx.title('canon.openWindow')}
       </button>
     </div>
   {/if}
   {#if focusHint}
-    <div class="silk-focus-hint" role="status" data-silk-focus-hint>
-      {ctx.localize('SILK.Focus.Hint')}
+    <div class="garn-focus-hint" role="status" data-garn-focus-hint>
+      {ctx.localize('GARN.Focus.Hint')}
     </div>
   {/if}
 </div>
 
 <style>
-  .silk-canvas {
+  .garn-canvas {
     position: relative;
     width: 100%;
     height: 100%;
@@ -1018,10 +1018,10 @@
     color: #222;
     background: #f4efe4;
   }
-  .silk-canvas :global(.svelte-flow) {
+  .garn-canvas :global(.svelte-flow) {
     background: #f4efe4;
   }
-  .silk-selection-toolbar {
+  .garn-selection-toolbar {
     position: absolute;
     top: 8px;
     left: 50%;
@@ -1035,19 +1035,19 @@
     box-shadow: 0 1px 3px #0003;
     transform: translateX(-50%);
   }
-  .silk-selection-toolbar button {
+  .garn-selection-toolbar button {
     width: auto;
     padding: 2px 8px;
     font-size: 12px;
     line-height: 20px;
     white-space: nowrap;
   }
-  .silk-selection-toolbar kbd {
+  .garn-selection-toolbar kbd {
     margin-left: 4px;
     font-size: 10px;
     opacity: 0.7;
   }
-  .silk-canvas-tools {
+  .garn-canvas-tools {
     position: absolute;
     top: 8px;
     right: 8px;
@@ -1055,7 +1055,7 @@
     display: flex;
     gap: 4px;
   }
-  .silk-canvas-tools button {
+  .garn-canvas-tools button {
     width: 28px;
     height: 28px;
     min-height: 0;
@@ -1064,10 +1064,10 @@
     border: 1px solid #c9bfa8;
     border-radius: 6px;
   }
-  .silk-canvas-tools button.active {
+  .garn-canvas-tools button.active {
     border-color: #2b6cb0;
   }
-  .silk-canvas-tools .silk-canon-chip {
+  .garn-canvas-tools .garn-canon-chip {
     width: auto;
     max-width: 280px;
     padding: 0 10px;
@@ -1077,7 +1077,7 @@
     white-space: nowrap;
     border-radius: 14px;
   }
-  .silk-no-canon {
+  .garn-no-canon {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -1094,10 +1094,10 @@
     /* Over the canvas centre: Nodes and edges beneath stay reachable; only the button catches. */
     pointer-events: none;
   }
-  .silk-no-canon button {
+  .garn-no-canon button {
     pointer-events: auto;
   }
-  .silk-rubber-band {
+  .garn-rubber-band {
     position: absolute;
     inset: 0;
     z-index: 5;
@@ -1106,16 +1106,16 @@
     overflow: visible;
     pointer-events: none;
   }
-  .silk-rubber-band line {
+  .garn-rubber-band line {
     stroke: #2b6cb0;
     stroke-width: 2;
     stroke-dasharray: 6 4;
   }
-  .silk-canvas :global(.silk-drop-target) {
+  .garn-canvas :global(.garn-drop-target) {
     outline: 3px solid #2b6cb0;
     outline-offset: 2px;
   }
-  .silk-focus-hint {
+  .garn-focus-hint {
     position: absolute;
     bottom: 12px;
     left: 50%;
@@ -1128,7 +1128,7 @@
     border-radius: 6px;
     transform: translateX(-50%);
   }
-  .silk-status-confirm {
+  .garn-status-confirm {
     position: absolute;
     bottom: 12px;
     left: 50%;
@@ -1146,36 +1146,36 @@
     box-shadow: 0 1px 3px #0003;
     transform: translateX(-50%);
   }
-  .silk-status-confirm button {
+  .garn-status-confirm button {
     width: auto;
     padding: 0 8px;
     font-size: 12px;
     line-height: 20px;
   }
-  .silk-canvas :global(.silk-flash) {
-    animation: silk-flash 0.4s ease-in-out 4 alternate;
+  .garn-canvas :global(.garn-flash) {
+    animation: garn-flash 0.4s ease-in-out 4 alternate;
   }
-  @keyframes silk-flash {
+  @keyframes garn-flash {
     to {
       box-shadow:
         0 0 0 4px #f5c542,
         0 0 16px 4px #f5c542;
     }
   }
-  .silk-canvas.connecting :global(.silk-card) {
+  .garn-canvas.connecting :global(.garn-card) {
     cursor: crosshair;
   }
   /* Detail drop: paint only, no reflow; Connections and labels hidden. */
-  .silk-canvas.moving :global(.silk-card) {
-    background: var(--silk-class);
-    border-color: var(--silk-class);
+  .garn-canvas.moving :global(.garn-card) {
+    background: var(--garn-class);
+    border-color: var(--garn-class);
     box-shadow: none;
   }
-  .silk-canvas.moving :global(.silk-card > *) {
+  .garn-canvas.moving :global(.garn-card > *) {
     visibility: hidden;
   }
-  .silk-canvas.moving :global(.svelte-flow__edges),
-  .silk-canvas.moving :global(.svelte-flow__edgelabel-renderer) {
+  .garn-canvas.moving :global(.svelte-flow__edges),
+  .garn-canvas.moving :global(.svelte-flow__edgelabel-renderer) {
     visibility: hidden;
   }
 </style>

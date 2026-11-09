@@ -55,15 +55,15 @@
 
 <!-- Double-click opens Element Detail (§8): the canvas runs it (pointer-target.ts). -->
 <div
-  class="silk-card"
+  class="garn-card"
   class:selected
   class:ghost={data.ghost}
   class:naming
-  style:--silk-class={cls?.color ?? '#666'}
-  data-silk-node={id}
-  data-silk-class={data.class}
-  data-silk-ghost={data.ghost ? '' : undefined}
-  data-silk-revealed={revealed ? '' : undefined}
+  style:--garn-class={cls?.color ?? '#666'}
+  data-garn-node={id}
+  data-garn-class={data.class}
+  data-garn-ghost={data.ghost ? '' : undefined}
+  data-garn-revealed={revealed ? '' : undefined}
 >
   {#if !naming}<CardName name={data.name} variant="block" />{/if}
   <img
@@ -80,9 +80,9 @@
       {#if data.restoredFrom}
         <i
           class="fa-solid fa-clock-rotate-left restored"
-          data-silk-restored={data.restoredFrom}
+          data-garn-restored={data.restoredFrom}
           title={ctx
-            .localize('SILK.Lifecycle.RestoredBadge')
+            .localize('GARN.Lifecycle.RestoredBadge')
             .replace('{commit}', data.restoredFrom.slice(0, 8))}
         ></i>
       {/if}
@@ -94,10 +94,10 @@
         onkeydown={onKeydown}
         onblur={(e) => pipeline.submitName(e.currentTarget.value).catch(fail)}
         use:focus
-        data-silk-name-input
+        data-garn-name-input
       />
     {:else}
-      <CardName name={data.name} variant="title" data-silk-node-title />
+      <CardName name={data.name} variant="title" data-garn-node-title />
     {/if}
     <div class="controls">
       {#if status}
@@ -105,12 +105,12 @@
         <button
           type="button"
           class="nodrag nopan status status-{status}"
-          title={ctx.localize('SILK.Canvas.StatusChip').replace('{status}', statusLabel)}
+          title={ctx.localize('GARN.Canvas.StatusChip').replace('{status}', statusLabel)}
           onclick={(e) => {
             e.stopPropagation();
             statusPrompt.ask(id);
           }}
-          data-silk-status={status}>{statusLabel}</button
+          data-garn-status={status}>{statusLabel}</button
         >
       {/if}
       <span class="spacer"></span>
@@ -121,13 +121,13 @@
         title={ctx.localize(
           ctx.available('reveal.element')
             ? revealed
-              ? 'SILK.Reveal.Unreveal'
-              : 'SILK.Reveal.Reveal'
-            : 'SILK.Reveal.NeedsAdventure',
+              ? 'GARN.Reveal.Unreveal'
+              : 'GARN.Reveal.Reveal'
+            : 'GARN.Reveal.NeedsAdventure',
         )}
         onclick={toggleReveal}
         ondblclick={(e) => e.stopPropagation()}
-        data-silk-eye={revealed ? 'on' : 'off'}
+        data-garn-eye={revealed ? 'on' : 'off'}
         ><i class="fa-solid {revealed ? 'fa-eye' : 'fa-eye-slash'}"></i></button
       >
       <!-- Focus Pin (§10.2, §10.6): always shown in Focus View; like `p`. -->
@@ -135,13 +135,13 @@
         type="button"
         class="nodrag nopan pin"
         class:pinned={data.pinned}
-        title={ctx.localize(data.pinned ? 'SILK.Focus.Unpin' : 'SILK.Focus.Pin')}
+        title={ctx.localize(data.pinned ? 'GARN.Focus.Unpin' : 'GARN.Focus.Pin')}
         aria-pressed={!!data.pinned}
         onclick={(e) => {
           e.stopPropagation();
           ctx.run(data.pinned ? 'focus.unpin' : 'focus.pin', { ids: [id] }).catch(fail);
         }}
-        data-silk-pin={data.pinned ? 'pinned' : ''}><i class="fa-solid fa-thumbtack"></i></button
+        data-garn-pin={data.pinned ? 'pinned' : ''}><i class="fa-solid fa-thumbtack"></i></button
       >
     </div>
   </div>
@@ -149,10 +149,10 @@
     <!-- Shown despite the filters (Search jump, new Node) until deselected (§10.8). -->
     <div
       class="filtered-marker"
-      title={ctx.localize('SILK.Canvas.FilteredTitle')}
-      data-silk-filtered
+      title={ctx.localize('GARN.Canvas.FilteredTitle')}
+      data-garn-filtered
     >
-      {ctx.localize('SILK.Canvas.Filtered')}
+      {ctx.localize('GARN.Canvas.Filtered')}
     </div>
   {/if}
   {#if data.hidden}
@@ -160,17 +160,17 @@
     <button
       type="button"
       class="nodrag nopan hidden-badge"
-      title={ctx.localize('SILK.Filter.Badge').replace('{n}', String(data.hidden))}
+      title={ctx.localize('GARN.Filter.Badge').replace('{n}', String(data.hidden))}
       onclick={(e) => {
         e.stopPropagation();
         ctx.run('filter.expandBadge', { id }).catch(fail);
       }}
-      data-silk-badge={data.hidden}>+{data.hidden}</button
+      data-garn-badge={data.hidden}>+{data.hidden}</button
     >
   {/if}
   <!-- Edges float (spec 1.1 §A): ConnectionEdge attaches them on the facing side. Svelte Flow
        renders an edge only between Nodes with a Handle, so each card has one, hidden. -->
-  <Handle type="source" position={Position.Top} isConnectable={false} class="silk-anchor" />
+  <Handle type="source" position={Position.Top} isConnectable={false} class="garn-anchor" />
 </div>
 
 <style>
@@ -185,7 +185,7 @@
     background: #6b6b6b;
     border-radius: 8px;
   }
-  .silk-card {
+  .garn-card {
     position: relative;
     display: flex;
     gap: 8px;
@@ -196,7 +196,7 @@
     color: #222;
     background: #fffdf8;
     border: 1px solid #c9bfa8;
-    border-left: 6px solid var(--silk-class);
+    border-left: 6px solid var(--garn-class);
     border-radius: 6px;
     box-shadow: 0 1px 2px #0002;
   }
@@ -240,7 +240,7 @@
   :global(.lod-title) .pin:not(.pinned) {
     display: none;
   }
-  .silk-card.selected {
+  .garn-card.selected {
     outline: 2px solid #2b6cb0;
   }
   .restored {
@@ -248,7 +248,7 @@
     font-size: 10px;
     color: #777;
   }
-  .silk-card.ghost {
+  .garn-card.ghost {
     opacity: 0.55;
     border-style: dashed;
   }
@@ -262,7 +262,7 @@
   }
   .portrait.icon {
     padding: 4px;
-    background: var(--silk-class);
+    background: var(--garn-class);
   }
   .body {
     display: flex;
@@ -286,7 +286,7 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--silk-class);
+    color: var(--garn-class);
   }
   /* Status left, eye and pin right. */
   .controls {
@@ -363,7 +363,7 @@
     color: #222;
     background: #fff;
   }
-  .silk-card :global(.silk-anchor) {
+  .garn-card :global(.garn-anchor) {
     visibility: hidden;
     pointer-events: none;
   }
@@ -376,11 +376,11 @@
     display: none;
   }
   /* Zoom level 3: coloured block with the name (CardName; full card while naming). */
-  :global(.lod-block) .silk-card:not(.naming) {
-    background: var(--silk-class);
-    border-color: var(--silk-class);
+  :global(.lod-block) .garn-card:not(.naming) {
+    background: var(--garn-class);
+    border-color: var(--garn-class);
   }
-  :global(.lod-block) .silk-card:not(.naming) > :not(:global(.silk-card-name)) {
+  :global(.lod-block) .garn-card:not(.naming) > :not(:global(.garn-card-name)) {
     display: none;
   }
 </style>

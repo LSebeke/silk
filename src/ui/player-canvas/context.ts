@@ -17,4 +17,4 @@ export interface PlayerCanvasContext {
   localize(key: string): string;
 }
 
-export const PLAYER_CANVAS_CONTEXT = Symbol('silk-player-canvas');
+export const PLAYER_CANVAS_CONTEXT = Symbol('garn-player-canvas');

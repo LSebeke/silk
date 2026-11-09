@@ -7,8 +7,8 @@ import { hoodSnapshot, snapshotData } from './hood';
 import type { PlacedToken, SnapshotMode } from './portrait';
 import { valueAt } from './writes';
 
-const SNAPSHOT = 'flags.silk.unhooded';
-const DROP_SNAPSHOT = 'flags.silk.-=unhooded';
+const SNAPSHOT = 'flags.garn.unhooded';
+const DROP_SNAPSHOT = 'flags.garn.-=unhooded';
 
 /** Update data for `token` (dotted keys), or `undefined` when it already matches. */
 export function placedTokenUpdate(
@@ -16,7 +16,7 @@ export function placedTokenUpdate(
   data: Record<string, unknown>,
   snapshot?: SnapshotMode,
 ): Record<string, unknown> | undefined {
-  const own = token.flags?.silk?.unhooded;
+  const own = token.flags?.garn?.unhooded;
   let update = data;
   if (snapshot === 'store' && !own && token.texture?.src !== data['texture.src'])
     update = { ...data, [SNAPSHOT]: hoodSnapshot(token) };

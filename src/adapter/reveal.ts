@@ -1,12 +1,12 @@
 /**
- * Foundry side of Reveal (spec §8): placed tokens, the forced Show popup, Silk header
+ * Foundry side of Reveal (spec §8): placed tokens, the forced Show popup, Garn header
  * buttons on journal and actor/item sheets, and flow-back of hand edits that undo the hood.
  */
 import { MODULE_ID } from '../constants';
 import { placedTokenUpdate, touchesPortrait } from '../core/portrait';
 import type { LookStage, PlacedToken, SnapshotMode } from '../core/portrait';
 import type { Reveal, RevealStage } from '../core/reveal';
-import { SILK_WRITE, isSilkWrite } from './working-copy-journal';
+import { GARN_WRITE, isGarnWrite } from './working-copy-journal';
 
 interface TokenLike {
   id: string | null;
@@ -50,7 +50,7 @@ export async function updatePlacedTokens(
   if (!actor?.id || actor.parent) return;
   for (const scene of (game.scenes ?? []) as unknown as Iterable<Scene>) {
     const updates = tokenUpdates(scene.tokens, actor.id, data, snapshot);
-    if (updates.length) await scene.updateEmbeddedDocuments('Token', updates, { ...SILK_WRITE });
+    if (updates.length) await scene.updateEmbeddedDocuments('Token', updates, { ...GARN_WRITE });
   }
 }
 
@@ -87,7 +87,7 @@ export function registerRevealHooks(
   },
 ): void {
   const fail = (error: unknown) => console.error(error);
-  // AppV2 document sheets (journals, DSA5 actor/item sheets): Silk entries in the header menu.
+  // AppV2 document sheets (journals, DSA5 actor/item sheets): Garn entries in the header menu.
   deps.on('getHeaderControlsDocumentSheetV2', (app, controls) => {
     const doc = (app as { document?: { flags?: unknown } }).document;
     const id = doc && deps.isGM() ? deps.elementIdOf(doc) : undefined;
@@ -95,7 +95,7 @@ export function registerRevealHooks(
     const list = controls as HeaderControl[];
     const control = (action: string, icon: string, label: string, name: string, args: object) =>
       list.push({
-        action: `silk-${action}`,
+        action: `garn-${action}`,
         icon,
         label: deps.localize(label),
         onClick: () => void deps.run(name, args).catch(fail),
@@ -105,14 +105,14 @@ export function registerRevealHooks(
       control(
         'reveal',
         revealed ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye',
-        revealed ? 'SILK.Reveal.Unreveal' : 'SILK.Reveal.Reveal',
+        revealed ? 'GARN.Reveal.Unreveal' : 'GARN.Reveal.Reveal',
         'reveal.element',
         { id, revealed: !revealed },
       );
       control(
         'show',
         'fa-solid fa-display',
-        'SILK.Commands.reveal.showToPlayers',
+        'GARN.Commands.reveal.showToPlayers',
         'reveal.showToPlayers',
         { id },
       );
@@ -120,7 +120,7 @@ export function registerRevealHooks(
     control(
       'detail',
       'fa-solid fa-diagram-project',
-      'SILK.Commands.element.openDetail',
+      'GARN.Commands.element.openDetail',
       'element.openDetail',
       { id },
     );
@@ -128,7 +128,7 @@ export function registerRevealHooks(
 
   // A hand edit of the image or token while hooded: re-apply the hood (§8 Appearance).
   deps.on('updateActor', (doc, changed, options) => {
-    if (!deps.isActiveGM() || isSilkWrite(options)) return;
+    if (!deps.isActiveGM() || isGarnWrite(options)) return;
     if (!touchesPortrait(changed as Record<string, unknown>)) return;
     const id = deps.elementIdOf(doc as { flags?: unknown });
     if (id) reveal.repair(id).catch(fail);

@@ -57,19 +57,19 @@ function keyRow(b: CanvasKeyBinding): LegendRow {
 
 export function legendGroups(foundry: readonly LiveKeybinding[]): LegendGroup[] {
   return [
-    { id: 'keys', title: 'SILK.Legend.Keys', rows: CANVAS_KEYS.map(keyRow) },
+    { id: 'keys', title: 'GARN.Legend.Keys', rows: CANVAS_KEYS.map(keyRow) },
     {
       id: 'mouse',
-      title: 'SILK.Legend.Mouse',
+      title: 'GARN.Legend.Mouse',
       rows: [
         ...[...POINTER_GESTURES, ...RIGHT_DRAG_GESTURES].map((g) => ({ keys: [], label: g.label })),
-        { keys: [], label: 'SILK.Legend.Modifiers', heading: true },
+        { keys: [], label: 'GARN.Legend.Modifiers', heading: true },
         ...MODIFIER_CONNECTIONS.map((m) => ({ keys: [], label: m.label })),
       ],
     },
     {
       id: 'foundry',
-      title: 'SILK.Legend.Foundry',
+      title: 'GARN.Legend.Foundry',
       rows: foundry.map((b) => ({ keys: b.keys, label: b.title })),
     },
   ];
@@ -105,7 +105,7 @@ export function createLegendState(setting: {
 export function legendCommands(state: LegendState): Command[] {
   const toggle: Command<{ open?: boolean } | undefined, { open: boolean }> = {
     name: 'legend.toggle',
-    title: 'SILK.Commands.legend.toggle',
+    title: 'GARN.Commands.legend.toggle',
     available: (ctx) => ctx.isGM,
     async run(args) {
       const open = args?.open ?? !state.get();

@@ -57,7 +57,7 @@ describe('Adopt ways in end in the Creation Pipeline (spec §6)', () => {
   it('refused docs toast; Story Elements are selected via adopt.doc', async () => {
     const refused = starter(inferred({ refused: true }));
     await refused.start('Actor.g');
-    expect(refused.errors).toEqual(['SILK.Adopt.Refused']);
+    expect(refused.errors).toEqual(['GARN.Adopt.Refused']);
     const existing = starter(inferred({ class: 'person' }, { existing: 'el1' }));
     await existing.start('Actor.a');
     expect(existing.runs).toEqual([
@@ -114,13 +114,13 @@ describe('Adopt hooks', () => {
     onClick: (e: Event, el: HTMLElement) => void;
   }
 
-  it('adds "Adopt into Silk" to sidebar entries of Actors, Items, Journals and Scenes', () => {
+  it('adds "Adopt into Garn" to sidebar entries of Actors, Items, Journals and Scenes', () => {
     const t = hooks();
     for (const name of ['Actor', 'Item', 'JournalEntry', 'Scene']) {
       const options: Entry[] = [];
       t.fire(`get${name}ContextOptions`, {}, options);
       const entry = options[0] as Entry;
-      expect(entry.label).toBe('SILK.Adopt.Adopt');
+      expect(entry.label).toBe('GARN.Adopt.Adopt');
       expect(entry.visible?.(li({ entryId: 'x1' }))).toBe(true);
       entry.onClick(new Event('click'), li({ entryId: 'x1' }));
     }
@@ -155,15 +155,15 @@ describe('Adopt hooks', () => {
     expect(t.started).toEqual(['Actor.a', 'Actor.a.Item.i']);
   });
 
-  it('hands docs created in Foundry to the duplicate check, not Silk’s own', () => {
+  it('hands docs created in Foundry to the duplicate check, not Garn’s own', () => {
     const t = hooks();
     const doc = {
       uuid: 'Actor.c',
       documentName: 'Actor',
-      toObject: () => ({ flags: { silk: { id: 'e' } } }),
+      toObject: () => ({ flags: { garn: { id: 'e' } } }),
     };
     t.fire('createActor', doc, {});
-    t.fire('createActor', doc, { silk: { internal: true } });
+    t.fire('createActor', doc, { garn: { internal: true } });
     t.fire('createScene', { id: 's1', toObject: () => ({ flags: {} }) }, {});
     expect(t.created).toEqual(['Actor.c', 'Scene.s1']);
   });

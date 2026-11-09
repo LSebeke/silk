@@ -6,10 +6,10 @@
   let { data }: { data: { label: string; side: 'ours' | 'theirs' } } = $props();
 </script>
 
-<div class="silk-merge-outline {data.side}" data-silk-merge-outline={data.side}>{data.label}</div>
+<div class="garn-merge-outline {data.side}" data-garn-merge-outline={data.side}>{data.label}</div>
 
 <style>
-  .silk-merge-outline {
+  .garn-merge-outline {
     width: 190px;
     height: 48px;
     border: 1px dashed #6fa8dc;
@@ -19,7 +19,7 @@
     padding: 0.2rem 0.4rem;
     pointer-events: none;
   }
-  .silk-merge-outline.theirs {
+  .garn-merge-outline.theirs {
     border-color: #e8915a;
     color: #e8915a;
   }

@@ -12,7 +12,7 @@ export function detailUiCommands(getContext: () => DetailContext): Command[] {
   return [
     {
       name: 'element.openDetail',
-      title: 'SILK.Commands.element.openDetail',
+      title: 'GARN.Commands.element.openDetail',
       available: (ctx) => ctx.isGM,
       async run({ id, addInfoBlock }: { id: string; addInfoBlock?: boolean }) {
         const ctx = getContext();
@@ -26,26 +26,26 @@ export function detailUiCommands(getContext: () => DetailContext): Command[] {
     },
     {
       name: 'connection.openDetail',
-      title: 'SILK.Commands.connection.openDetail',
+      title: 'GARN.Commands.connection.openDetail',
       available: (ctx) => ctx.isGM,
       async run({ id }: { id: string }) {
         const ctx = getContext();
         if (!readConnection(ctx.workingCopy.get(id)))
-          throw new Error(`Silk: no Connection "${id}"`);
+          throw new Error(`Garn: no Connection "${id}"`);
         const { ConnectionDetailWindow } = await import('./ConnectionDetailWindow');
         await ConnectionDetailWindow.show(ctx, id);
       },
     },
     {
-      // v1.1 §G.3: Silk's editor, not Foundry's TokenConfig (which would write over a hood).
+      // v1.1 §G.3: Garn's editor, not Foundry's TokenConfig (which would write over a hood).
       name: 'element.openImageEditor',
-      title: 'SILK.Commands.element.openImageEditor',
+      title: 'GARN.Commands.element.openImageEditor',
       available: (ctx) => ctx.isGM,
       async run({ id }: { id: string }) {
         const ctx = getContext();
         const element = readElement(ctx.workingCopy.get(id));
         if (!element || !hasAppearanceClass(element.class))
-          throw new Error(`Silk: "${id}" has no image & token editor`);
+          throw new Error(`Garn: "${id}" has no image & token editor`);
         const { ImageEditorWindow } = await import('./ImageEditorWindow');
         await ImageEditorWindow.show(ctx, id);
       },

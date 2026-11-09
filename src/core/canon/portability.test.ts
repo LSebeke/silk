@@ -104,7 +104,7 @@ describe('exportBackup', () => {
         el('a', { img: 'worlds/w/hero.webp', icon: 'icons/svg/mystery-man.svg' }),
         el('b', {
           sheet: { img: 'systems/dsa5/icons/x.png', token: { src: '/modules/m/t.png' } },
-          info: '<p>See <img src="silk-art/map%20one.jpg"></p>',
+          info: '<p>See <img src="garn-art/map%20one.jpg"></p>',
           url: 'https://example.com/a.png',
           lost: 'worlds/w/gone.png',
         }),
@@ -114,7 +114,7 @@ describe('exportBackup', () => {
       author: 'GM',
       ref: { main: true },
     });
-    const assets = memoryAssets({ 'worlds/w/hero.webp': 'abc', 'silk-art/map one.jpg': 'map' });
+    const assets = memoryAssets({ 'worlds/w/hero.webp': 'abc', 'garn-art/map one.jpg': 'map' });
 
     const { entries, manifest } = await exportBackup({
       files,
@@ -127,12 +127,12 @@ describe('exportBackup', () => {
       sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
     });
     expect(manifest.assets.map((a) => a.path).sort()).toEqual([
-      'silk-art/map one.jpg',
+      'garn-art/map one.jpg',
       'worlds/w/hero.webp',
     ]);
     expect(manifest.missingAssets).toEqual(['worlds/w/gone.png']);
     expect(text(entries.get('assets/worlds/w/hero.webp'))).toBe('abc');
-    expect(text(entries.get('assets/silk-art/map one.jpg'))).toBe('map');
+    expect(text(entries.get('assets/garn-art/map one.jpg'))).toBe('map');
   });
 });
 
@@ -356,7 +356,7 @@ describe('importArchive', () => {
       const result = await importArchive({ files, assets: target, entries, newId: () => 's' });
 
       // SHA-256("map") starts with 60be9861.
-      const renamed = 'worlds/w/map.silk-60be9861.png';
+      const renamed = 'worlds/w/map.garn-60be9861.png';
       expect(result.assets.renamed).toEqual([{ from: 'worlds/w/map.png', to: renamed }]);
       expect(text(target.contents.get(renamed))).toBe('map');
       expect(text(target.contents.get('worlds/w/map.png'))).toBe('other map');
@@ -377,11 +377,11 @@ describe('importArchive', () => {
 
     it('refuses paths that escape the Canon folder or Data', async () => {
       const entries = await archiveWithArt('backup');
-      const manifest = JSON.parse(text(entries.get('silk-export.json'))) as {
+      const manifest = JSON.parse(text(entries.get('garn-export.json'))) as {
         assets: { path: string; sha256: string }[];
       };
       manifest.assets.push({ path: '../evil.png', sha256: 'x' });
-      entries.set('silk-export.json', new TextEncoder().encode(JSON.stringify(manifest)));
+      entries.set('garn-export.json', new TextEncoder().encode(JSON.stringify(manifest)));
       await expect(
         importArchive({ files: createMemoryFiles(), assets: memoryAssets(), entries }),
       ).rejects.toThrow(/evil/);

@@ -22,9 +22,9 @@ export interface CanonPanelProps extends Record<string, unknown> {
 
 export class CanonWindow extends SvelteApplication<CanonPanelProps> {
   static override DEFAULT_OPTIONS = {
-    id: 'silk-canon',
-    classes: ['silk'],
-    window: { title: 'SILK.Canon.Title', resizable: true },
+    id: 'garn-canon',
+    classes: ['garn'],
+    window: { title: 'GARN.Canon.Title', resizable: true },
     position: { width: 520, height: 640 },
   };
 
@@ -58,7 +58,7 @@ export class CanonWindow extends SvelteApplication<CanonPanelProps> {
       run: async (name, args) => {
         try {
           const api = game.modules?.get(MODULE_ID)?.api;
-          if (!api) throw new Error('Silk: not ready yet');
+          if (!api) throw new Error('Garn: not ready yet');
           await api.run(name, args);
         } catch (error) {
           ui.notifications?.error(error instanceof Error ? error.message : String(error));

@@ -64,17 +64,17 @@
   {#if text || data?.badge !== 'same'}
     <EdgeLabel x={geometry.x} y={geometry.y}>
       <span
-        class="silk-merge-edge-label"
+        class="garn-merge-edge-label"
         style:color={stroke}
-        data-silk-merge-edge={id}
-        data-silk-merge-badge={data?.badge}>{text}{data?.open ? ` (${data.open}!)` : ''}</span
+        data-garn-merge-edge={id}
+        data-garn-merge-badge={data?.badge}>{text}{data?.open ? ` (${data.open}!)` : ''}</span
       >
     </EdgeLabel>
   {/if}
 {/if}
 
 <style>
-  .silk-merge-edge-label {
+  .garn-merge-edge-label {
     background: #22201dcc;
     padding: 0 0.3em;
     border-radius: 3px;

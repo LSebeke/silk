@@ -13,7 +13,7 @@ export interface PlayerDoc {
   name: string | null;
   img?: string | null;
   src?: string | null;
-  flags: { silk?: { cover?: string; companion?: string } };
+  flags: { garn?: { cover?: string; companion?: string } };
   pages?: { get(id: string): PlayerDoc | undefined };
   testUserPermission(user: unknown, level: Level): boolean;
   sheet?: { render(force: boolean): Promise<unknown> | unknown } | null;
@@ -28,7 +28,7 @@ export function resolvePlayerNode(
   if (!doc?.testUserPermission(user, 'LIMITED')) return { name: '' };
   const name = doc.name ?? '';
   if (doc.documentName === 'JournalEntry') {
-    const coverId = doc.flags.silk?.cover;
+    const coverId = doc.flags.garn?.cover;
     const cover = coverId ? doc.pages?.get(coverId) : undefined;
     const src = cover?.testUserPermission(user, 'OBSERVER') ? cover.src : undefined;
     return src ? { name, img: src } : { name };
@@ -49,7 +49,7 @@ export async function openPlayerDoc(
   await doc.sheet?.render(true);
   if (doc.documentName === 'JournalEntry') return;
   // Actor/Item: the Companion Journal opens once a block, Connection or note made it OBSERVER.
-  const id = doc.flags.silk?.companion;
+  const id = doc.flags.garn?.companion;
   const companion = id ? deps.journal(id) : undefined;
   if (companion?.testUserPermission(deps.user, 'OBSERVER')) await companion.sheet?.render(true);
 }

@@ -3,10 +3,10 @@
  *
  * - Placement: an Item owned by a Materialized actor Materializes embedded in that actor's
  *   inventory; that embedded copy *is* the Item's doc. Unowned → world Item.
- * - Silk-driven changes (Connection commands, Materialize) move the doc to its placement.
- * - Foundry-driven changes (hooks) move the Connection instead: the Silk id follows the
+ * - Garn-driven changes (Connection commands, Materialize) move the doc to its placement.
+ * - Foundry-driven changes (hooks) move the Connection instead: the Garn id follows the
  *   Item only when the original doc is deleted in the process (a move between actors).
- *   Copies get no Silk id. When the doc leaves its actor otherwise, owns is deleted.
+ *   Copies get no Garn id. When the doc leaves its actor otherwise, owns is deleted.
  *
  * Pure core over the `FoundryDocs` port.
  */
@@ -51,15 +51,15 @@ export interface Owns {
   wrap(commands: Command[]): Command[];
   /** Creation Pipeline finished: run the implicit Materialize it held back. */
   afterPipeline(id: string): Promise<void>;
-  /** Foundry `createItem` (not Silk's own write). */
+  /** Foundry `createItem` (not Garn's own write). */
   itemCreated(doc: DocSnapshot): Promise<void>;
-  /** Foundry `deleteItem` (not Silk's own write). */
+  /** Foundry `deleteItem` (not Garn's own write). */
   itemDeleted(doc: DocSnapshot): Promise<void>;
   /**
    * The deleted doc is an Item's doc whose recent copy survives: a move, not a deletion, so
    * T9 Foundry-side deletion must not Unmaterialize it. Ask before `itemDeleted` runs.
    */
-  isMove(doc: { uuid: string; flags: { silk?: { id?: unknown } } }): boolean;
+  isMove(doc: { uuid: string; flags: { garn?: { id?: unknown } } }): boolean;
   /** Foundry `createActor`: embedded Items of a copied actor are copies too. */
   actorCreated(doc: DocSnapshot): Promise<void>;
 }
@@ -67,7 +67,7 @@ export interface Owns {
 /** A copy and the original's deletion closer than this are one move. */
 export const MOVE_WINDOW_MS = 10_000;
 
-/** A snapshot as create data (without Silk's identity fields). */
+/** A snapshot as create data (without Garn's identity fields). */
 export function sourceData(doc: DocSnapshot): DocData {
   const data: Partial<DocSnapshot> = structuredClone(doc);
   delete data.uuid;
@@ -76,8 +76,8 @@ export function sourceData(doc: DocSnapshot): DocData {
   return data as DocData;
 }
 
-const silkId = (doc: { flags?: { silk?: { id?: unknown } } }) => {
-  const id = doc.flags?.silk?.id;
+const garnId = (doc: { flags?: { garn?: { id?: unknown } } }) => {
+  const id = doc.flags?.garn?.id;
   return typeof id === 'string' ? id : undefined;
 };
 
@@ -123,7 +123,7 @@ export function createOwns(deps: OwnsDeps): Owns {
       .set([elementRecord(id, { ...(record.data as unknown as ElementData), uuid })]);
   }
 
-  /** Moves a Materialized Item's doc to where owns places it (Silk-driven). */
+  /** Moves a Materialized Item's doc to where owns places it (Garn-driven). */
   async function relocate(itemId: string) {
     const current = docOf(itemId);
     if (!current || current.documentName !== 'Item') return;
@@ -132,7 +132,7 @@ export function createOwns(deps: OwnsDeps): Owns {
     const data = sourceData(current);
     data.folder = target
       ? null
-      : await docs.ensureFolder('Item', 'item', deps.localize('SILK.Folder.item'));
+      : await docs.ensureFolder('Item', 'item', deps.localize('GARN.Folder.item'));
     const moved = await docs.create('Item', data, target);
     await docs.delete(current.uuid);
     await writeUuid(itemId, moved);
@@ -212,7 +212,7 @@ export function createOwns(deps: OwnsDeps): Owns {
   }
 
   async function strip(uuid: string) {
-    await docs.update(uuid, { 'flags.silk.-=id': null, 'flags.silk.-=companion': null });
+    await docs.update(uuid, { 'flags.garn.-=id': null, 'flags.garn.-=companion': null });
   }
 
   return {
@@ -233,14 +233,14 @@ export function createOwns(deps: OwnsDeps): Owns {
     },
 
     itemCreated(doc) {
-      const id = silkId(doc);
+      const id = garnId(doc);
       const el = element(id);
       if (!id || !el || el.uuid === doc.uuid) return Promise.resolve();
       // A copy: remember it now (the original's deletion may follow: a move).
       const original = el.uuid ? docs.get(el.uuid) : undefined;
       if (original) {
         const list = (copies.get(id) ?? []).filter((c) => deps.now() - c.at < MOVE_WINDOW_MS);
-        const companion = doc.flags.silk.companion;
+        const companion = doc.flags.garn.companion;
         list.push({ uuid: doc.uuid, at: deps.now(), ...(companion ? { companion } : {}) });
         copies.set(id, list);
       }
@@ -248,7 +248,7 @@ export function createOwns(deps: OwnsDeps): Owns {
     },
 
     isMove(doc) {
-      const id = silkId(doc);
+      const id = garnId(doc);
       if (!id || element(id)?.uuid !== doc.uuid) return false;
       return (copies.get(id) ?? []).some(
         (c) => deps.now() - c.at < MOVE_WINDOW_MS && !!docs.get(c.uuid),
@@ -256,7 +256,7 @@ export function createOwns(deps: OwnsDeps): Owns {
     },
 
     itemDeleted(doc) {
-      const id = silkId(doc);
+      const id = garnId(doc);
       const el = element(id);
       if (!id || !el || el.uuid !== doc.uuid) return Promise.resolve();
       const recent = (copies.get(id) ?? []).filter((c) => deps.now() - c.at < MOVE_WINDOW_MS);
@@ -268,8 +268,8 @@ export function createOwns(deps: OwnsDeps): Owns {
           if (doc.parent) await setOwner(id, undefined);
           return;
         }
-        const silk = moved.companion ? { id, companion: moved.companion } : { id };
-        await docs.update(moved.uuid, { flags: { silk } });
+        const garn = moved.companion ? { id, companion: moved.companion } : { id };
+        await docs.update(moved.uuid, { flags: { garn } });
         await writeUuid(id, moved.uuid);
         await setOwner(id, ownerElement(docs.get(moved.uuid)?.parent));
       });
@@ -277,7 +277,7 @@ export function createOwns(deps: OwnsDeps): Owns {
 
     actorCreated(doc) {
       const stale = (doc.items ?? []).filter((item) => {
-        const id = silkId(item);
+        const id = garnId(item);
         return id && element(id) && element(id)?.uuid !== `${doc.uuid}.Item.${item._id}`;
       });
       return serial(async () => {

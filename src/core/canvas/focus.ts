@@ -18,7 +18,7 @@ export const FOCUS_SEEDS = 'focus';
 /** The Foundry Scene that is active, as plain data (adapter). */
 export interface ActiveScene {
   id: string;
-  /** Element linked to the Scene (`flags.silk.sceneOf`, Event Scenes). */
+  /** Element linked to the Scene (`flags.garn.sceneOf`, Event Scenes). */
   sceneOf?: string | undefined;
   /** World Actor ids of its tokens. */
   actorIds: readonly (string | null)[];
@@ -121,7 +121,7 @@ export function createFocus(deps: FocusDeps): Focus {
     hops: () => view().hops ?? DEFAULT_HOPS,
     pins: () => view().pins ?? [],
     async setHops(n) {
-      if (!Number.isInteger(n) || n < 0) throw new Error(`Silk: bad Focus View hops "${n}"`);
+      if (!Number.isInteger(n) || n < 0) throw new Error(`Garn: bad Focus View hops "${n}"`);
       await save({ hops: n });
     },
     async pin(ids) {
@@ -149,19 +149,19 @@ export function createFocus(deps: FocusDeps): Focus {
 export function focusCommands(focus: Focus): Command[] {
   const setHops: Command<{ n: number }, void> = {
     name: 'focus.setHops',
-    title: 'SILK.Commands.focus.setHops',
+    title: 'GARN.Commands.focus.setHops',
     available: (ctx) => ctx.isGM,
     run: ({ n }) => focus.setHops(n),
   };
   const pin: Command<{ ids: string[] }, void> = {
     name: 'focus.pin',
-    title: 'SILK.Commands.focus.pin',
+    title: 'GARN.Commands.focus.pin',
     available: (ctx) => ctx.isGM,
     run: ({ ids }) => focus.pin(ids ?? []),
   };
   const unpin: Command<{ ids: string[] }, void> = {
     name: 'focus.unpin',
-    title: 'SILK.Commands.focus.unpin',
+    title: 'GARN.Commands.focus.unpin',
     available: (ctx) => ctx.isGM,
     run: ({ ids }) => focus.unpin(ids ?? []),
   };

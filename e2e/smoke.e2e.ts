@@ -1,10 +1,10 @@
 import { expect, test } from './fixtures';
 
-test('silk loads with its api for GM and player', async ({ gm, player }) => {
+test('garn loads with its api for GM and player', async ({ gm, player }) => {
   for (const page of [gm, player]) {
     const state = await page.evaluate(() => {
-      const silk = game.modules?.get('silk');
-      return { active: silk?.active, hasRun: typeof silk?.api?.run === 'function' };
+      const garn = game.modules?.get('garn');
+      return { active: garn?.active, hasRun: typeof garn?.api?.run === 'function' };
     });
     expect(state).toEqual({ active: true, hasRun: true });
   }

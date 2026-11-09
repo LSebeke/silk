@@ -1,5 +1,5 @@
 /**
- * `CanonFiles` over Foundry's FilePicker (spec §11.1): writes `Data/silk/<path>` with
+ * `CanonFiles` over Foundry's FilePicker (spec §11.1): writes `Data/garn/<path>` with
  * `FilePicker.upload('data')`, reads by HTTP, lists with `FilePicker.browse`.
  */
 import type { AssetFiles, CanonFiles } from '../core/canon';
@@ -19,7 +19,7 @@ export interface FilePickerApi {
   route(path: string): string;
 }
 
-const ROOT = 'silk';
+const ROOT = 'garn';
 
 /** Creates directories on demand, remembering which exist this session. */
 function directoryMaker(api: FilePickerApi) {
@@ -52,7 +52,7 @@ async function upload(
   await ensureDir(dir);
   const result = await api.upload('data', dir, file(path.slice(slash + 1)));
   if (!result || (result as { status?: string }).status === 'error')
-    throw new Error(`Silk: upload of ${path} failed`);
+    throw new Error(`Garn: upload of ${path} failed`);
 }
 
 export function createFilePickerFiles(api: FilePickerApi): CanonFiles {
@@ -64,7 +64,7 @@ export function createFilePickerFiles(api: FilePickerApi): CanonFiles {
       const url = api.route(encodePath(`${ROOT}/${path}`));
       const res = await api.fetch(url);
       if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`Silk: reading ${path} failed (${res.status})`);
+      if (!res.ok) throw new Error(`Garn: reading ${path} failed (${res.status})`);
       return res.text();
     },
     async write(path, text) {

@@ -10,7 +10,7 @@ describe('Event Scenes: generated from the Preset (spec §4, §6 Immediate)', ()
     const ambush = await t.create('event', 'Ambush');
     const scene = t.scene(ambush);
     expect(scene.name).toBe('Ambush');
-    expect(t.doc(ambush).flags.silk.scene).toBe(scene._id);
+    expect(t.doc(ambush).flags.garn.scene).toBe(scene._id);
     expect(scene.tokenVision).toBe(false);
     expect(grid(scene)).toBe(0);
     expect(scene.drawings).toHaveLength(1);
@@ -47,7 +47,7 @@ describe('Event Scenes: generated from the Preset (spec §4, §6 Immediate)', ()
     ).rejects.toThrow();
     await t.registry.run('event.createScene', { id: town });
     expect([grid(t.scene(town)), t.scene(town).tokenVision]).toEqual([0, false]);
-    expect(t.doc(town).flags.silk.scene).toBe(t.scene(town)._id);
+    expect(t.doc(town).flags.garn.scene).toBe(t.scene(town)._id);
     const ambush = await t.create('event', 'Ambush');
     await expect(
       t.registry.run('event.createScene', { id: ambush, preset: 'overview' }),
@@ -204,7 +204,7 @@ describe('Event Scenes follow the element lifecycle (spec §6)', () => {
     expect(t.scene(ambush)._id).toBe(sceneId);
     expect(t.scene(ambush).walls).toEqual([{ _id: 'w1', c: [0, 0, 100, 0] }]);
     expect(t.tokens(ambush)).toEqual([t.actorId(alrik)]);
-    expect(t.doc(ambush).flags.silk.scene).toBe(sceneId);
+    expect(t.doc(ambush).flags.garn.scene).toBe(sceneId);
   });
 
   it('Unmaterializing a present actor deletes its tokens; Materializing it adds one again', async () => {
@@ -227,13 +227,13 @@ describe('Event Scenes follow the element lifecycle (spec §6)', () => {
     await t.commit('c1');
     const deleted = t.scene(ambush);
     await t.deleteSceneInFoundry(ambush);
-    expect(t.doc(ambush).flags.silk.scene).toBeUndefined();
+    expect(t.doc(ambush).flags.garn.scene).toBeUndefined();
     expect(t.element(ambush).uuid).toBeTruthy();
     expect(t.presentAt(ambush)).toEqual([alrik]);
     await t.registry.run('event.restoreScene', { id: ambush });
     expect(t.scene(ambush)._id).toBe(deleted._id);
     expect(t.tokens(ambush)).toEqual([t.actorId(alrik)]);
-    expect(t.doc(ambush).flags.silk.scene).toBe(deleted._id);
+    expect(t.doc(ambush).flags.garn.scene).toBe(deleted._id);
   });
 
   it('Create Scene after a deletion makes a fresh one; restore without a Commit fails', async () => {
@@ -281,6 +281,6 @@ describe('Event Scenes follow the element lifecycle (spec §6)', () => {
     t.scenes.all.delete(t.scene(feast)._id);
     await t.lifecycle.reconcile();
     expect(t.presentAt(ambush)).toEqual([alrik]);
-    expect(t.doc(feast).flags.silk.scene).toBeUndefined();
+    expect(t.doc(feast).flags.garn.scene).toBeUndefined();
   });
 });

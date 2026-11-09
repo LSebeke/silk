@@ -67,13 +67,13 @@ interface DocumentKind {
   entry(e: IndexEntry): PickerEntry;
 }
 
-const silkFlags = (d: WorldDoc) =>
-  d.flags?.['silk'] as { id?: string; sceneOf?: string } | undefined;
+const garnFlags = (d: WorldDoc) =>
+  d.flags?.['garn'] as { id?: string; sceneOf?: string } | undefined;
 
 /** Per picker document name: its World docs, index fields and entry shape. */
 const KINDS: Record<PickerKind['documentName'], DocumentKind> = {
   Actor: {
-    world: (game) => [...(game.actors ?? [])].filter((d) => !silkFlags(d)?.id),
+    world: (game) => [...(game.actors ?? [])].filter((d) => !garnFlags(d)?.id),
     fields: ['type', 'img'],
     entry: (e) => ({
       uuid: e.uuid,
@@ -86,7 +86,7 @@ const KINDS: Record<PickerKind['documentName'], DocumentKind> = {
   // v14: the background lives on the first Level (`sceneBackground`).
   Scene: {
     world: (game) =>
-      [...(game.scenes ?? [])].filter((d) => !silkFlags(d)?.id && !silkFlags(d)?.sceneOf),
+      [...(game.scenes ?? [])].filter((d) => !garnFlags(d)?.id && !garnFlags(d)?.sceneOf),
     // `background.src`: packs not yet migrated to v14 Levels.
     fields: ['thumb', 'levels.background.src', 'background.src'],
     entry: (e) => {
@@ -141,7 +141,7 @@ export interface ThumbnailHelper {
   ): Promise<{ thumb: string } | null>;
 }
 
-/** Longest side of a card thumbnail Silk makes (§B.2.1 Images). */
+/** Longest side of a card thumbnail Garn makes (§B.2.1 Images). */
 const THUMB_SIZE = 192;
 
 /**

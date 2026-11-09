@@ -46,18 +46,18 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="silk-picker" onkeydown={onKeydown} data-silk-picker>
+<div class="garn-picker" onkeydown={onKeydown} data-garn-picker>
   <input
     type="search"
     class="search"
-    placeholder={localize('SILK.Picker.Search')}
+    placeholder={localize('GARN.Picker.Search')}
     value={$picker.query}
     oninput={(e) => command('picker.search', { query: e.currentTarget.value })}
     use:focus
-    data-silk-picker-search
+    data-garn-picker-search
   />
   <div class="body">
-    <ul class="sources" role="listbox" aria-label={localize('SILK.Picker.Sources')}>
+    <ul class="sources" role="listbox" aria-label={localize('GARN.Picker.Sources')}>
       {#each $picker.sources as source (source.id)}
         <li>
           <button
@@ -67,21 +67,21 @@
             class:selected={$picker.source === source.id}
             tabindex="-1"
             onclick={() => command('picker.source', { id: source.id })}
-            data-silk-picker-source={source.id}
+            data-garn-picker-source={source.id}
           >
             <span class="name" title={source.label}
-              >{source.label ?? localize('SILK.Picker.All')}</span
+              >{source.label ?? localize('GARN.Picker.All')}</span
             >
             <span class="count">{source.count}</span>
           </button>
         </li>
       {/each}
     </ul>
-    <ul class="rows" role="listbox" aria-label={localize('SILK.Picker.Results')}>
+    <ul class="rows" role="listbox" aria-label={localize('GARN.Picker.Results')}>
       {#if $picker.choosing !== undefined}
-        <li class="choosing" data-silk-picker-choosing>
+        <li class="choosing" data-garn-picker-choosing>
           <span class="name">{$picker.choosing}</span>
-          <span class="label">{localize('SILK.Picker.ChooseSource')}</span>
+          <span class="label">{localize('GARN.Picker.ChooseSource')}</span>
         </li>
       {/if}
       {#each $picker.rows as row, i (row.uuid)}
@@ -95,33 +95,33 @@
             use:reveal={$picker.active === i}
             onmouseenter={() => picker.activate(i)}
             onclick={() => pick(row.uuid)}
-            data-silk-picker-row={row.uuid}
+            data-garn-picker-row={row.uuid}
           >
             <img src={row.thumb || row.img || 'icons/svg/mystery-man.svg'} alt="" />
             {#if $picker.choosing !== undefined}
               <span class="name" title={row.label}>{row.label}</span>
-              <span class="chip" data-silk-picker-outcome>
-                {localize(row.source === 'world' ? 'SILK.Picker.Adopt' : 'SILK.Picker.Import')}
+              <span class="chip" data-garn-picker-outcome>
+                {localize(row.source === 'world' ? 'GARN.Picker.Adopt' : 'GARN.Picker.Import')}
               </span>
             {:else}
               <span class="name">{row.name}</span>
               <!-- A merged row shows its first source's label beside the "×N" badge (§B.2). -->
-              <span class="label" title={row.label} data-silk-picker-label>{row.label}</span>
+              <span class="label" title={row.label} data-garn-picker-label>{row.label}</span>
               {#if row.count}
-                <span class="count" data-silk-picker-count>×{row.count}</span>
+                <span class="count" data-garn-picker-count>×{row.count}</span>
               {/if}
             {/if}
           </button>
         </li>
       {:else}
-        <li class="empty">{localize('SILK.Picker.None')}</li>
+        <li class="empty">{localize('GARN.Picker.None')}</li>
       {/each}
     </ul>
   </div>
 </div>
 
 <style>
-  .silk-picker {
+  .garn-picker {
     display: flex;
     flex-direction: column;
     gap: 6px;

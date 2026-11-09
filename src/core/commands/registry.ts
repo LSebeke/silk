@@ -42,9 +42,9 @@ export function createRegistry(getContext: () => CommandContext): CommandRegistr
   return {
     register(command) {
       if (!COMMAND_NAME.test(command.name))
-        throw new Error(`Silk: command name "${command.name}" must be dot-namespaced area.verb`);
+        throw new Error(`Garn: command name "${command.name}" must be dot-namespaced area.verb`);
       if (commands.has(command.name))
-        throw new Error(`Silk: command "${command.name}" is already registered`);
+        throw new Error(`Garn: command "${command.name}" is already registered`);
       commands.set(command.name, command);
     },
     get: (name) => commands.get(name),
@@ -55,9 +55,9 @@ export function createRegistry(getContext: () => CommandContext): CommandRegistr
     },
     async run<Result>(name: string, args: object = {}) {
       const command = commands.get(name);
-      if (!command) throw new Error(`Silk: unknown command "${name}"`);
+      if (!command) throw new Error(`Garn: unknown command "${name}"`);
       if (!command.available(getContext()))
-        throw new Error(`Silk: command "${name}" is not available right now`);
+        throw new Error(`Garn: command "${name}" is not available right now`);
       return (await command.run(args)) as Result;
     },
   };

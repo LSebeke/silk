@@ -5,7 +5,7 @@ import { ensureAdventure } from './adventure';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
@@ -13,12 +13,12 @@ const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
 async function ready(page: Page) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
-  await page.evaluate(() => game.settings?.set('silk', 'materializeMode', 'immediate'));
+  await page.evaluate(() => game.settings?.set('garn', 'materializeMode', 'immediate'));
   // The page lists Revealed Connections only (§5, §8): Reveal needs an Adventure.
   await ensureAdventure(page);
 }
@@ -26,12 +26,12 @@ async function ready(page: Page) {
 /** The element's Connections page content (journal, or Companion Journal for actors/items). */
 const connectionsPage = (page: Page, id: string) =>
   page.evaluate((elementId) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data['uuid'];
     if (typeof uuid !== 'string') return null;
     const doc = fromUuidSync(uuid) as any;
     const journal =
-      doc?.documentName === 'JournalEntry' ? doc : game.journal?.get(doc?.flags.silk?.companion);
-    const page = journal?.pages.get(journal.flags.silk?.connections);
+      doc?.documentName === 'JournalEntry' ? doc : game.journal?.get(doc?.flags.garn?.companion);
+    const page = journal?.pages.get(journal.flags.garn?.connections);
     return page
       ? { content: page.text.content as string, ownership: page.ownership.default as number }
       : null;
@@ -104,9 +104,9 @@ test('a hand edit of the Connections page is regenerated', async ({ gm }) => {
   const expected = '<ul><li>Gareth and Punin trade</li></ul>';
   await expect.poll(async () => (await connectionsPage(gm, b))?.content).toBe(expected);
   await gm.evaluate(async (elementId) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data['uuid'];
     const journal = fromUuidSync(uuid as string) as any;
-    await journal.pages.get(journal.flags.silk.connections).update({ 'text.content': 'mine' });
+    await journal.pages.get(journal.flags.garn.connections).update({ 'text.content': 'mine' });
   }, b);
   await expect.poll(async () => (await connectionsPage(gm, b))?.content).toBe(expected);
 });

@@ -151,7 +151,7 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
   let session: Promise<PickerSession | undefined> = Promise.resolve(undefined);
   const current = async () => {
     const open = await session;
-    if (!open) throw new Error('Silk: the compendium picker is not open');
+    if (!open) throw new Error('Garn: the compendium picker is not open');
     return open;
   };
 
@@ -163,7 +163,7 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
   }
 
   return {
-    unavailable: (cls) => (deps.kind(cls) ? undefined : 'SILK.Source.NotForClass'),
+    unavailable: (cls) => (deps.kind(cls) ? undefined : 'GARN.Source.NotForClass'),
     pick({ class: cls, signal }) {
       const kind = deps.kind(cls);
       if (!kind || signal.aborted) return Promise.resolve(undefined);
@@ -220,12 +220,12 @@ export function compendiumSource(deps: CompendiumProviderDeps): CompendiumSource
 export function pickerCommands(source: CompendiumSource): Command[] {
   const picker = async () => {
     const open = await source.ready();
-    if (!open) throw new Error('Silk: the compendium picker is not open');
+    if (!open) throw new Error('Garn: the compendium picker is not open');
     return open;
   };
   const command = <A>(name: string, run: (args: A) => Promise<unknown>): Command<A> => ({
     name,
-    title: `SILK.Commands.${name}`,
+    title: `GARN.Commands.${name}`,
     available: (ctx) => ctx.isGM,
     run,
   });

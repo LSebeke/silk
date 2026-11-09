@@ -39,11 +39,11 @@ interface Item {
 }
 
 const SECTION: Record<RevealKind, string> = {
-  element: 'SILK.Merge.Join.element',
-  appearance: 'SILK.Merge.Join.appearance',
-  infoBlock: 'SILK.Merge.Join.infoBlock',
-  connection: 'SILK.Merge.Join.connection',
-  playerNote: 'SILK.Merge.Join.playerNote',
+  element: 'GARN.Merge.Join.element',
+  appearance: 'GARN.Merge.Join.appearance',
+  infoBlock: 'GARN.Merge.Join.infoBlock',
+  connection: 'GARN.Merge.Join.connection',
+  playerNote: 'GARN.Merge.Join.playerNote',
 };
 
 const str = (v: unknown, fallback: string) => (typeof v === 'string' && v ? v : fallback);

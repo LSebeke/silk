@@ -4,26 +4,26 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
 
 const element = (page: Page, id: string) =>
   page.evaluate(
-    (i) => game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data as Record<string, any>,
+    (i) => game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data as Record<string, any>,
     id,
   );
 
 async function ready(page: Page, mode: 'immediate' | 'onDemand') {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
-  await page.evaluate((m) => game.settings?.set('silk', 'materializeMode', m), mode);
+  await page.evaluate((m) => game.settings?.set('garn', 'materializeMode', m), mode);
 }
 
 interface DocInfo {
@@ -42,7 +42,7 @@ interface DocInfo {
 /** The element's Foundry doc (and Companion Journal), read in the page. */
 const docInfo = (page: Page, id: string): Promise<DocInfo | null> =>
   page.evaluate((elementId) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data['uuid'];
     const info = (doc: any): any => {
       const pages = doc.pages ? [...doc.pages].sort((a: any, b: any) => a.sort - b.sort) : [];
       return {
@@ -52,7 +52,7 @@ const docInfo = (page: Page, id: string): Promise<DocInfo | null> =>
         img: doc.img ?? null,
         folder: doc.folder?.name ?? null,
         ownership: { ...doc.ownership },
-        flags: { ...doc.flags.silk },
+        flags: { ...doc.flags.garn },
         pages: pages.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -67,7 +67,7 @@ const docInfo = (page: Page, id: string): Promise<DocInfo | null> =>
     const doc = fromUuidSync(uuid) as any;
     if (!doc) return null;
     const out = info(doc);
-    const companion = doc.flags.silk?.companion && game.journal?.get(doc.flags.silk.companion);
+    const companion = doc.flags.garn?.companion && game.journal?.get(doc.flags.garn.companion);
     if (companion) out.companion = info(companion);
     return out;
   }, id);
@@ -87,7 +87,7 @@ test('immediate Materialize creates each class’s doc per §4 with NONE pages',
     folder: 'Persons',
     ownership: { default: 0 },
   });
-  expect(person?.companion).toMatchObject({ name: 'Alrik', folder: 'Silk Companions' });
+  expect(person?.companion).toMatchObject({ name: 'Alrik', folder: 'Garn Companions' });
   expect(person?.companion?.pages.map((p) => p.name)).toEqual([
     'Appearance',
     'Personality',
@@ -132,9 +132,9 @@ test('immediate Materialize creates each class’s doc per §4 with NONE pages',
   const quest = await docInfo(gm, questId);
   expect(quest?.pages.map((p) => p.type)).toEqual(['image', 'dsaquestlog', 'text', 'text', 'text']);
   const questData = await gm.evaluate((id) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(id)?.data['uuid'] as string;
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(id)?.data['uuid'] as string;
     const doc = fromUuidSync(uuid) as any;
-    return doc.pages.get(doc.flags.silk.quest).system.quests[doc.flags.silk.questKey];
+    return doc.pages.get(doc.flags.garn.quest).system.quests[doc.flags.garn.questKey];
   }, questId);
   expect(questData).toMatchObject({
     title: 'Find the Ring',
@@ -153,24 +153,24 @@ test('the Creation Pipeline Materializes after the name step, with the typed nam
 }) => {
   await ready(gm, 'immediate');
   await api(gm, 'canvas.open');
-  const pane = gm.locator('[data-silk-canvas] .svelte-flow__pane');
+  const pane = gm.locator('[data-garn-canvas] .svelte-flow__pane');
   await expect(pane).toBeVisible();
   await pane.click({ button: 'right', position: { x: 400, y: 300 } });
-  await gm.locator('[data-silk-class-search]').fill('Pers');
-  await gm.locator('[data-silk-class-search]').press('Enter');
+  await gm.locator('[data-garn-class-search]').fill('Pers');
+  await gm.locator('[data-garn-class-search]').press('Enter');
   // Source Step (spec 1.1 §B.1): → Blank.
-  await expect(gm.locator('[data-silk-source-step]')).toBeFocused();
+  await expect(gm.locator('[data-garn-source-step]')).toBeFocused();
   await gm.keyboard.press('ArrowRight');
-  await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
+  await expect(gm.locator('[data-garn-name-input]')).toBeFocused();
   await gm.keyboard.type('Pipeline Pete');
   await gm.keyboard.press('Enter');
 
-  const card = gm.locator('[data-silk-node]', { hasText: 'Pipeline Pete' });
-  await expect(card).not.toHaveAttribute('data-silk-ghost', '');
+  const card = gm.locator('[data-garn-node]', { hasText: 'Pipeline Pete' });
+  await expect(card).not.toHaveAttribute('data-garn-ghost', '');
   const names = await gm.evaluate(() => game.actors?.map((a) => a.name));
   expect(names).toContain('Pipeline Pete');
   expect(names).not.toContain('Person');
-  await gm.evaluate(() => foundry.applications.instances.get('silk-canvas')?.close());
+  await gm.evaluate(() => foundry.applications.instances.get('garn-canvas')?.close());
 });
 
 test('on demand: Ghosts until materialize.elements / materialize.visible / openSheet', async ({
@@ -224,19 +224,19 @@ test('write-through to Foundry, and Foundry edits flow back', async ({ gm, playe
 
   const state = await gm.evaluate(
     ([elementId, blockId]) => {
-      const data = game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data;
+      const data = game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data;
       const actor = fromUuidSync(data?.['uuid'] as string) as any;
-      const companion = game.journal?.get(actor.flags.silk.companion) as any;
+      const companion = game.journal?.get(actor.flags.garn.companion) as any;
       return {
         name: actor.name,
         // Hooded until Appearance is Revealed (§8): the real image waits in the flag.
-        img: actor.flags.silk.img ?? actor.img,
+        img: actor.flags.garn.img ?? actor.img,
         merchant: actor.system.merchant.merchantType,
         companion: companion.name,
         text: companion.pages.get(blockId).text.content,
         pages: companion.pages.size,
         extraOwnership: [...companion.pages].map((p: any) => p.ownership.default),
-        flags: actor.flags.silk,
+        flags: actor.flags.garn,
       };
     },
     [id, blocks[0]?._id] as const,
@@ -246,8 +246,8 @@ test('write-through to Foundry, and Foundry edits flow back', async ({ gm, playe
     img: 'icons/svg/aura.svg',
     merchant: 'merchant',
     companion: 'Trader Tom',
-    // Appearance: the Silk-managed portrait region, then the block's text (v1.1 §G.4).
-    text: '<figure data-silk-portrait><img src="icons/svg/aura.svg"></figure><p>Tall</p>',
+    // Appearance: the Garn-managed portrait region, then the block's text (v1.1 §G.4).
+    text: '<figure data-garn-portrait><img src="icons/svg/aura.svg"></figure><p>Tall</p>',
     pages: 5,
   });
   expect(new Set(state.extraOwnership)).toEqual(new Set([0]));
@@ -265,13 +265,13 @@ test('write-through to Foundry, and Foundry edits flow back', async ({ gm, playe
   ]);
   expect((await element(gm, id))['tags']).toEqual(['market']);
 
-  // Foundry → Silk: edits in Foundry's own UI/API flow back into the element.
+  // Foundry → Garn: edits in Foundry's own UI/API flow back into the element.
   await gm.evaluate(
     async ([elementId, blockId]) => {
-      const data = game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data;
+      const data = game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data;
       const actor = fromUuidSync(data?.['uuid'] as string) as any;
       await actor.update({ name: 'Tom the Trader', 'system.merchant.merchantType': 'loot' });
-      const companion = game.journal?.get(actor.flags.silk.companion) as any;
+      const companion = game.journal?.get(actor.flags.garn.companion) as any;
       await companion.updateEmbeddedDocuments('JournalEntryPage', [
         { _id: blockId, name: 'Price list', 'text.content': '<p>Cheap</p>' },
       ]);

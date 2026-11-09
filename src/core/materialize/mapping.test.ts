@@ -8,12 +8,12 @@ describe('Materialize: journal layout (spec §4)', () => {
     await t.registry.run('materialize.elements', { ids: [id] });
 
     const doc = t.doc(id);
-    expect([doc.documentName, doc.name, doc.flags.silk.id]).toEqual(['JournalEntry', 'Gareth', id]);
+    expect([doc.documentName, doc.name, doc.flags.garn.id]).toEqual(['JournalEntry', 'Gareth', id]);
     expect(pageNames(doc)).toEqual(['Cover', 'Description', 'Secrets', 'Connections']);
-    expect(page(doc, doc.flags.silk.cover).type).toBe('image');
-    expect(page(doc, doc.flags.silk.connections).type).toBe('text');
+    expect(page(doc, doc.flags.garn.cover).type).toBe('image');
+    expect(page(doc, doc.flags.garn.connections).type).toBe('text');
     expect(doc.categories).toEqual([
-      { _id: doc.flags.silk.playerNotes, name: 'PlayerNotes', sort: 0 },
+      { _id: doc.flags.garn.playerNotes, name: 'PlayerNotes', sort: 0 },
     ]);
   });
 });
@@ -28,14 +28,14 @@ describe('Materialize: class → doc mapping (spec §4)', () => {
     expect([actor.documentName, actor.type, actor.name]).toEqual(['Actor', 'npc', 'Alrik']);
     const companion = t.companion(id);
     expect(companion.name).toBe('Alrik');
-    expect(companion.flags.silk.companionOf).toBe(id);
+    expect(companion.flags.garn.companionOf).toBe(id);
     expect(t.materializer.elementIdOf(companion)).toBe(id);
     expect(t.materializer.elementIdOf(actor)).toBe(id);
     expect(pageNames(companion)).toEqual(['Appearance', 'Personality', 'Secrets', 'Connections']);
     expect(companion.categories.map((c) => c.name)).toEqual(['PlayerNotes']);
   });
 
-  it('files docs into per-class folders and "Silk Companions" (§8)', async () => {
+  it('files docs into per-class folders and "Garn Companions" (§8)', async () => {
     const t = setup();
     const a = await t.create('person', 'A');
     const b = await t.create('person', 'B');
@@ -58,7 +58,7 @@ describe('Materialize: class → doc mapping (spec §4)', () => {
     await t.registry.run('materialize.elements', { ids: [wolf, sword] });
     expect([t.doc(wolf).documentName, t.doc(wolf).type]).toEqual(['Actor', 'creature']);
     expect([t.doc(sword).documentName, t.doc(sword).type]).toEqual(['Item', 'equipment']);
-    expect(t.companion(sword).flags.silk.companionOf).toBe(sword);
+    expect(t.companion(sword).flags.garn.companionOf).toBe(sword);
   });
 
   it('a Quest journal holds one dsaquestlog quest: hidden, Party audience, titled', async () => {
@@ -66,11 +66,11 @@ describe('Materialize: class → doc mapping (spec §4)', () => {
     const id = await t.create('quest', 'Find the Ring');
     await t.registry.run('materialize.elements', { ids: [id] });
     const doc = t.doc(id);
-    const quest = page(doc, doc.flags.silk.quest);
+    const quest = page(doc, doc.flags.garn.quest);
     expect(quest.type).toBe('dsaquestlog');
     expect(quest.system).toEqual({
       quests: {
-        [doc.flags.silk.questKey]: {
+        [doc.flags.garn.questKey]: {
           title: 'Find the Ring',
           status: 0,
           audience: 0,
@@ -88,10 +88,10 @@ describe('Materialize: class → doc mapping (spec §4)', () => {
     const doc = t.doc(id);
     expect(pageNames(doc)).toEqual(['Description']);
     expect(doc.categories).toEqual([]);
-    expect(doc.flags.silk).toEqual({ id });
+    expect(doc.flags.garn).toEqual({ id });
   });
 
-  it('Silk-created docs and pages get explicit player ownership NONE (§8 Defaults)', async () => {
+  it('Garn-created docs and pages get explicit player ownership NONE (§8 Defaults)', async () => {
     const t = setup();
     const ids = [await t.create('person', 'P'), await t.create('event', 'E')];
     await t.registry.run('materialize.elements', { ids });
@@ -102,7 +102,7 @@ describe('Materialize: class → doc mapping (spec §4)', () => {
     }
   });
 
-  it('flags.silk holds ids only (§2)', async () => {
+  it('flags.garn holds ids only (§2)', async () => {
     const t = setup();
     const ids = [
       await t.create('person', 'P'),
@@ -111,7 +111,7 @@ describe('Materialize: class → doc mapping (spec §4)', () => {
     ];
     await t.registry.run('materialize.elements', { ids });
     for (const doc of t.docs.docs.values())
-      for (const value of Object.values(doc.flags.silk)) expect(value).toMatch(/^[A-Za-z0-9]+$/);
+      for (const value of Object.values(doc.flags.garn)) expect(value).toMatch(/^[A-Za-z0-9]+$/);
   });
 
   it('Ghost Info Blocks become pages with the same ids; the record mirrors them', async () => {
@@ -151,7 +151,7 @@ describe('Appearance flag (v1.1 §C.2)', () => {
     ]);
     await t.registry.run('materialize.elements', { ids: [id] });
     const companion = t.companion(id);
-    const flagged = companion.pages.filter((p) => p.flags?.silk?.appearance);
+    const flagged = companion.pages.filter((p) => p.flags?.garn?.appearance);
     expect(flagged.map((p) => p.name)).toEqual(['Appearance']);
     // Read back: the flag, not the name, marks it. A renamed block stays the Appearance.
     page(companion, must(flagged[0])._id).name = 'Aussehen';

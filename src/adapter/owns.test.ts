@@ -21,7 +21,7 @@ const item = {
   uuid: 'Actor.a.Item.i',
   documentName: 'Item',
   parent: { uuid: 'Actor.a' },
-  toObject: () => ({ _id: 'i', name: 'Sword', flags: { silk: { id: 'el' } } }),
+  toObject: () => ({ _id: 'i', name: 'Sword', flags: { garn: { id: 'el' } } }),
 };
 
 describe('owns hooks (spec §7)', () => {
@@ -37,10 +37,10 @@ describe('owns hooks (spec §7)', () => {
     ]);
   });
 
-  it('ignores Silk’s own writes and runs only on the active GM', () => {
+  it('ignores Garn’s own writes and runs only on the active GM', () => {
     const { fire, seen } = setup();
-    fire('createItem', item, { silk: { internal: true } }, 'user');
-    fire('deleteItem', item, { silk: { internal: true } }, 'user');
+    fire('createItem', item, { garn: { internal: true } }, 'user');
+    fire('deleteItem', item, { garn: { internal: true } }, 'user');
     expect(seen).toEqual([]);
     const other = setup(false);
     other.fire('createItem', item, {}, 'user');

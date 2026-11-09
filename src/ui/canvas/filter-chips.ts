@@ -40,11 +40,11 @@ export function valueLabel(
       return { key: statusLabelKey(value as Status) };
     case 'revealed':
     case 'materialized':
-      return { key: `SILK.Filter.Value.${value}` };
+      return { key: `GARN.Filter.Value.${value}` };
     case 'tag':
       return { text: value };
     case 'hops':
-      return value === FOCUS_SEEDS ? { key: 'SILK.Focus.Seeds' } : nameOf(records, value);
+      return value === FOCUS_SEEDS ? { key: 'GARN.Focus.Seeds' } : nameOf(records, value);
     case 'group':
     case 'contents':
       return nameOf(records, value);

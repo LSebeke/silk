@@ -80,7 +80,7 @@ describe('Materialize triggers (spec §6)', () => {
     const id = await t.create('person', 'Alrik');
     await t.registry.run('element.openJournal', { id });
     expect(t.toasts).toEqual(['Implicit']);
-    expect(t.docs.opened).toEqual([`JournalEntry.${t.doc(id).flags.silk.companion}`]);
+    expect(t.docs.opened).toEqual([`JournalEntry.${t.doc(id).flags.garn.companion}`]);
   });
 
   it('Open journal: the main journal of a journal class (v1.1 §G.2)', async () => {

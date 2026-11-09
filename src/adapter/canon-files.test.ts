@@ -43,14 +43,14 @@ function fakeData() {
 }
 
 describe('FilePicker canon files', () => {
-  it('writes under Data/silk/, creating directories once', async () => {
+  it('writes under Data/garn/, creating directories once', async () => {
     const data = fakeData();
     const files = createFilePickerFiles(data.api);
 
     await files.write('abc/refs/main.json', '{"head":"1"}');
     await files.write('abc/refs/adventures/a 1.json', '{}');
 
-    expect(data.files.get('silk/abc/refs/main.json')).toBe('{"head":"1"}');
+    expect(data.files.get('garn/abc/refs/main.json')).toBe('{"head":"1"}');
     expect(await files.read('abc/refs/main.json')).toBe('{"head":"1"}');
     expect(await files.read('abc/refs/adventures/a 1.json')).toBe('{}');
     expect(await files.read('abc/missing.json')).toBeNull();
@@ -73,7 +73,7 @@ describe('FilePicker canon files', () => {
 
     await createFilePickerFiles(data.api).write('abc/canon.json', '2');
 
-    expect(data.files.get('silk/abc/canon.json')).toBe('2');
+    expect(data.files.get('garn/abc/canon.json')).toBe('2');
   });
 
   it('throws when an upload fails', async () => {
@@ -86,7 +86,7 @@ describe('FilePicker canon files', () => {
 });
 
 describe('FilePicker asset files', () => {
-  it('reads and writes Data files as bytes, outside silk/', async () => {
+  it('reads and writes Data files as bytes, outside garn/', async () => {
     const data = fakeData();
     const assets = createFilePickerAssets(data.api);
 

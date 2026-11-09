@@ -1,4 +1,4 @@
-/** Silk settings (spec §13). Registered on `init` by the adapter. */
+/** Garn settings (spec §13). Registered on `init` by the adapter. */
 import { MODULE_ID } from '../constants';
 import { HOODED_DEFAULT } from '../core/portrait';
 
@@ -16,8 +16,8 @@ export interface SettingData {
 export type RegisterSetting = (namespace: typeof MODULE_ID, key: string, data: SettingData) => void;
 
 const label = (key: string) => ({
-  name: `SILK.Settings.${key}.Name`,
-  hint: `SILK.Settings.${key}.Hint`,
+  name: `GARN.Settings.${key}.Name`,
+  hint: `GARN.Settings.${key}.Hint`,
 });
 
 export const SETTINGS: Record<string, SettingData> = {
@@ -28,8 +28,8 @@ export const SETTINGS: Record<string, SettingData> = {
     type: String,
     default: 'immediate',
     choices: {
-      immediate: 'SILK.Settings.materializeMode.Immediate',
-      onDemand: 'SILK.Settings.materializeMode.OnDemand',
+      immediate: 'GARN.Settings.materializeMode.Immediate',
+      onDemand: 'GARN.Settings.materializeMode.OnDemand',
     },
   },
   hoodedImage: {
@@ -120,9 +120,9 @@ export function canonWindowMenu<T extends AppClass>(
     }
   }
   return {
-    name: 'SILK.Settings.canonWindow.Name',
-    label: 'SILK.Commands.canon.openWindow',
-    hint: 'SILK.Settings.canonWindow.Hint',
+    name: 'GARN.Settings.canonWindow.Name',
+    label: 'GARN.Commands.canon.openWindow',
+    hint: 'GARN.Settings.canonWindow.Hint',
     icon: 'fa-solid fa-book-atlas',
     type: CanonWindowLauncher,
     restricted: true,

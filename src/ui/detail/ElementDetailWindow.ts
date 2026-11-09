@@ -5,7 +5,7 @@ import ElementDetail from './ElementDetail.svelte';
 type Props = DetailProps & { focus: string | undefined };
 
 export class ElementDetailWindow extends DetailWindow<Props> {
-  static override DEFAULT_OPTIONS = { window: { title: 'SILK.Detail.Title' } };
+  static override DEFAULT_OPTIONS = { window: { title: 'GARN.Detail.Title' } };
 
   protected readonly component = ElementDetail;
 

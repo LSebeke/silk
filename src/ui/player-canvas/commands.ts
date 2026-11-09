@@ -9,7 +9,7 @@ export function playerCanvasCommands(deps: {
   return [
     {
       name: 'playerCanvas.openDoc',
-      title: 'SILK.Commands.playerCanvas.openDoc',
+      title: 'GARN.Commands.playerCanvas.openDoc',
       available: () => true,
       async run({ id }: { id: string }) {
         const node = deps.view().nodes.find((n) => n.id === id);

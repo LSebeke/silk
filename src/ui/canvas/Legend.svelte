@@ -23,11 +23,11 @@
   const toggle = () => ctx.run('legend.toggle').catch(console.error);
 </script>
 
-<div class="silk-legend" data-silk-legend>
+<div class="garn-legend" data-garn-legend>
   {#if $open}
-    <div class="panel" aria-label={ctx.localize('SILK.Legend.Title')} data-silk-legend-panel>
+    <div class="panel" aria-label={ctx.localize('GARN.Legend.Title')} data-garn-legend-panel>
       {#each groups as group (group.id)}
-        <section data-silk-legend-group={group.id}>
+        <section data-garn-legend-group={group.id}>
           <h4>{ctx.localize(group.title)}</h4>
           {#each group.rows as row, i (i)}
             {#if row.heading}
@@ -46,7 +46,7 @@
               </div>
             {/if}
           {:else}
-            <div class="row muted">{ctx.localize('SILK.Legend.None')}</div>
+            <div class="row muted">{ctx.localize('GARN.Legend.None')}</div>
           {/each}
         </section>
       {/each}
@@ -55,16 +55,16 @@
   <button
     type="button"
     class:active={$open}
-    title={ctx.localize('SILK.Legend.Toggle')}
+    title={ctx.localize('GARN.Legend.Toggle')}
     onclick={toggle}
-    data-silk-action="legend"
+    data-garn-action="legend"
   >
     ?
   </button>
 </div>
 
 <style>
-  .silk-legend {
+  .garn-legend {
     position: absolute;
     bottom: 8px;
     left: 8px;

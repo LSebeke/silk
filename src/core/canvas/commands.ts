@@ -21,7 +21,7 @@ export interface NodeMove {
 export function canvasCoreCommands(deps: CanvasCommandDeps): Command[] {
   const moveNodes: Command<{ moves: NodeMove[] }, void> = {
     name: 'canvas.moveNodes',
-    title: 'SILK.Commands.canvas.moveNodes',
+    title: 'GARN.Commands.canvas.moveNodes',
     available: (ctx) => ctx.isGM,
     async run({ moves }) {
       const wc = deps.workingCopy();
@@ -34,7 +34,7 @@ export function canvasCoreCommands(deps: CanvasCommandDeps): Command[] {
   /** `connections`: replaces the Connection selection; omitted, it stays. */
   const select: Command<{ ids: string[]; add?: boolean; connections?: string[] }, void> = {
     name: 'canvas.select',
-    title: 'SILK.Commands.canvas.select',
+    title: 'GARN.Commands.canvas.select',
     available: (ctx) => ctx.isGM,
     async run({ ids, add, connections }) {
       deps.state.select(ids, add);

@@ -15,7 +15,7 @@ interface Registered {
 function collect() {
   const settings = new Map<string, Registered>();
   registerSettings((namespace, key, data) => {
-    expect(namespace).toBe('silk');
+    expect(namespace).toBe('garn');
     settings.set(key, data as Registered);
   });
   return settings;
@@ -84,7 +84,7 @@ describe('settings (spec §13)', () => {
 describe('Module Settings menu "Open Canon window" (v1.1 §H)', () => {
   class Base {
     render(): Promise<unknown> {
-      throw new Error('Silk: the launcher never renders itself');
+      throw new Error('Garn: the launcher never renders itself');
     }
   }
 

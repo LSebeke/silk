@@ -9,10 +9,10 @@
  * `hood.ts` and `unhood.ts`), `edit.ts` (the editor), `restore.ts` (the Original look),
  * `migration.ts` (round 2), `placed.ts` (each placed token).
  *
- * Hooded: `img` and the token textures show `flags.silk.hood` (the world's hooded image, or
+ * Hooded: `img` and the token textures show `flags.garn.hood` (the world's hooded image, or
  * the class icon once the Appearance block is deleted), centred in its ring (world style,
  * default colours, #182); the real image, token texture, ring and pose wait in the flags.
- * The texture scale is the actor's size factor and never Silk's (#168).
+ * The texture scale is the actor's size factor and never Garn's (#168).
  */
 import { elementClass } from '../elements/classes';
 import { appearanceBlock, type StoryElement } from '../elements/element';
@@ -86,7 +86,7 @@ export interface TokenData {
 
 /** A placed token's source data (plain: colours as CSS strings), with its own snapshot. */
 export interface PlacedToken extends TokenData {
-  flags?: { silk?: PlacedTokenFlags };
+  flags?: { garn?: PlacedTokenFlags };
   [key: string]: unknown;
 }
 
@@ -94,7 +94,7 @@ export interface PlacedToken extends TokenData {
 export interface PortraitDoc {
   img?: string | null;
   prototypeToken?: TokenData;
-  flags: { silk: LookFlags };
+  flags: { garn: LookFlags };
 }
 
 /**
@@ -131,7 +131,7 @@ export interface SubjectRequest {
 /**
  * How a write treats each placed token's own Unhooded snapshot (v1.1 §G.3.1): `store` it
  * before the hood overwrites the token, `restore` it at Reveal, `drop` it (the real look is
- * Silk's now).
+ * Garn's now).
  */
 export type SnapshotMode = 'store' | 'restore' | 'drop';
 
@@ -139,7 +139,7 @@ export type SnapshotMode = 'store' | 'restore' | 'drop';
  * Update data for a Portrait change. `doc`: dotted keys for the actor/item update. `tokens`:
  * for every placed token of the actor (the adapter skips unchanged ones), each token's own
  * snapshot handled by `snapshot`. `subject`: the ring subject file to write (ring on),
- * `null` to clear Silk's (ring off), absent: unchanged.
+ * `null` to clear Garn's (ring off), absent: unchanged.
  */
 export interface PortraitWrites {
   doc: Record<string, unknown>;
@@ -148,10 +148,10 @@ export interface PortraitWrites {
   subject?: SubjectRequest | null;
 }
 
-/** v1.1 §C.4: Foundry core's icon replaces the image Silk 1.0 shipped. */
+/** v1.1 §C.4: Foundry core's icon replaces the image Garn 1.0 shipped. */
 export const HOODED_DEFAULT = 'icons/svg/mystery-man-black.svg';
-/** Silk 1.0's shipped hooded image, removed in 1.1. */
-const HOODED_1_0 = 'modules/silk/assets/hooded.svg';
+/** Garn 1.0's shipped hooded image, removed in 1.1. */
+const HOODED_1_0 = 'modules/garn/assets/hooded.svg';
 
 /** The world setting `hoodedImage` as used: empty or a saved 1.0 default → the core icon. */
 export const hoodImage = (setting: string | undefined): string =>
@@ -162,15 +162,15 @@ export function hoodOf(element: Pick<StoryElement, 'class' | 'infoBlocks'>, worl
   return appearanceBlock(element) ? world : (elementClass(element.class)?.icon ?? world);
 }
 
-/** `img` shows the hood; the real image waits in `flags.silk.img`. */
+/** `img` shows the hood; the real image waits in `flags.garn.img`. */
 export function isHooded(doc: Pick<PortraitDoc, 'img' | 'flags'>): boolean {
-  const { hood } = doc.flags.silk;
+  const { hood } = doc.flags.garn;
   return !!hood && doc.img === hood;
 }
 
 /** The real Portrait, wherever it is now. A known `recordImg` (the element's) wins. */
 export function realPortrait(doc: PortraitDoc, recordImg?: string): Portrait {
-  const flags = doc.flags.silk;
+  const flags = doc.flags.garn;
   const protoSrc = doc.prototypeToken?.texture?.src ?? undefined;
   const img = recordImg ?? (isHooded(doc) ? flags.img : (doc.img ?? undefined)) ?? '';
   const token = (protoSrc === flags.hood ? flags.token : protoSrc) ?? img;
@@ -190,7 +190,7 @@ export function lookOf({ doc, recordImg, sizeFactor }: LookSource): Look {
     order: orderOf(doc),
     sizeFactor,
     size: tokenSize(doc.prototypeToken),
-    restorable: !!doc.flags.silk.original,
+    restorable: !!doc.flags.garn.original,
   };
 }
 
@@ -208,7 +208,7 @@ export function ringOf(token: TokenData | undefined): Ring {
 
 /** The real ring: in the flag while hooded (#182), else the prototype's. */
 export function realRing(doc: PortraitDoc): Ring {
-  const { ring } = doc.flags.silk;
+  const { ring } = doc.flags.garn;
   return ring && isHooded(doc) ? structuredClone(ring) : ringOf(doc.prototypeToken);
 }
 
@@ -217,7 +217,7 @@ export function realRing(doc: PortraitDoc): Ring {
  * texture scale is the size factor, never the pose); a hooded one is centred.
  */
 export function realPose(doc: PortraitDoc): Pose {
-  const { pose } = doc.flags.silk;
+  const { pose } = doc.flags.garn;
   if (pose) return { ...pose };
   if (isHooded(doc)) return { ...CENTRED };
   const texture = doc.prototypeToken?.texture;
@@ -229,10 +229,10 @@ export function realPose(doc: PortraitDoc): Pose {
 }
 
 /** The actor's draw order (#170): the flag, else Ring in front. */
-export const orderOf = (doc: PortraitDoc): Order => doc.flags.silk.order ?? DEFAULT_ORDER;
+export const orderOf = (doc: PortraitDoc): Order => doc.flags.garn.order ?? DEFAULT_ORDER;
 
-/** Silk wrote this actor's look: a hood, a pose, a draw order or a subject file. */
-export function hasSilkLook(doc: PortraitDoc): boolean {
-  const { hood, pose, subject, order } = doc.flags.silk;
+/** Garn wrote this actor's look: a hood, a pose, a draw order or a subject file. */
+export function hasGarnLook(doc: PortraitDoc): boolean {
+  const { hood, pose, subject, order } = doc.flags.garn;
   return !!(hood || pose || subject || order);
 }

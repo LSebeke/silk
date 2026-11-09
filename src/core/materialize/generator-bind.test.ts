@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { must, setup } from './test-setup';
 
-/** A world Actor as NSC Zucht leaves it: in its own folder, no Silk flags. */
+/** A world Actor as NSC Zucht leaves it: in its own folder, no Garn flags. */
 function generated(t: ReturnType<typeof setup>, name = 'Ulf Hjaldarson') {
   return t.docs.create('Actor', {
     _id: 'gen00000000001',
@@ -10,7 +10,7 @@ function generated(t: ReturnType<typeof setup>, name = 'Ulf Hjaldarson') {
     img: 'tokens/ulf.webp',
     folder: 'zuchtFolder',
     system: {},
-    flags: { silk: {} },
+    flags: { garn: {} },
   });
 }
 
@@ -36,18 +36,18 @@ describe('Generator pick binds the created Actor (spec 1.1 §B.3, §D)', () => {
     const id = await createFrom(t, actor);
     expect(t.element(id).uuid).toBe(actor);
     const doc = t.doc(id);
-    expect(doc.flags.silk.id).toBe(id);
+    expect(doc.flags.garn.id).toBe(id);
     expect(doc.folder).toBe(t.docs.folders.find((f) => f.key === 'person')?.id);
     expect(doc.ownership).toEqual({ default: 0 });
     const companion = t.companion(id);
-    expect(companion.flags.silk.companionOf).toBe(id);
+    expect(companion.flags.garn.companionOf).toBe(id);
     expect(companion.pages.map((p) => p.name)).toEqual([
       'Appearance',
       'Personality',
       'Secrets',
       'Connections',
     ]);
-    expect(companion.pages[0]?.flags?.silk?.appearance).toBe(true);
+    expect(companion.pages[0]?.flags?.garn?.appearance).toBe(true);
     // Only the generated Actor and its Companion Journal: nothing else is created.
     expect(t.docs.docs.size).toBe(2);
   });
@@ -58,7 +58,7 @@ describe('Generator pick binds the created Actor (spec 1.1 §B.3, §D)', () => {
     expect(t.element(id).img).toBe('tokens/ulf.webp');
     expect(t.docs.docs.size).toBe(2);
     // v1.1 §G.3.1: no compendium source, so the flag is the only copy.
-    expect(t.doc(id).flags.silk.original).toEqual({
+    expect(t.doc(id).flags.garn.original).toEqual({
       img: 'tokens/ulf.webp',
       texture: {},
       ring: {},
@@ -81,7 +81,7 @@ describe('Generator pick binds the created Actor (spec 1.1 §B.3, §D)', () => {
     const second = await createFrom(t, actor);
     expect(t.element(second).uuid).toBeTruthy();
     expect(t.element(second).uuid).not.toBe(actor);
-    expect(must(t.docs.docs.get(actor)).flags.silk.id).toBe(first);
+    expect(must(t.docs.docs.get(actor)).flags.garn.id).toBe(first);
   });
 
   it('the Actor gone before binding: a fresh Actor is Materialized instead', async () => {

@@ -184,7 +184,7 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
   }
 
   async function pickClass(id: ElementClassId) {
-    if (step.step !== 'classBox') throw new Error('Silk: the class box is not open');
+    if (step.step !== 'classBox') throw new Error('Garn: the class box is not open');
     return createAt(step, id);
   }
 
@@ -210,10 +210,10 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
     kind: SourceKind,
     kinds: readonly SourceKind[],
   ): SourceChoice {
-    if (!kinds.includes(kind)) return { kind, available: false, reason: 'SILK.Source.NotForClass' };
+    if (!kinds.includes(kind)) return { kind, available: false, reason: 'GARN.Source.NotForClass' };
     if (kind === 'blank') return { kind, available: true };
     const provider = deps.sources?.[kind];
-    const reason = provider ? provider.unavailable(id) : 'SILK.Source.Unavailable';
+    const reason = provider ? provider.unavailable(id) : 'GARN.Source.Unavailable';
     return reason ? { kind, available: false, reason } : { kind, available: true };
   }
 
@@ -394,7 +394,7 @@ export function createCreationPipeline(deps: CreationPipelineDeps): CreationPipe
 export function pipelineCommands(pipeline: CreationPipeline): Command[] {
   const command = <A>(name: string, run: (args: A) => Promise<unknown>): Command<A> => ({
     name,
-    title: `SILK.Commands.${name}`,
+    title: `GARN.Commands.${name}`,
     available: (ctx) => ctx.isGM,
     run,
   });

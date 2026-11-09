@@ -34,9 +34,9 @@ export function nextStatus(element: { class: ElementClassId; status?: string }):
   const values = statusesOf(element.class);
   const current = statusOf(element);
   const next = values[(values.indexOf(current as Status) + 1) % values.length];
-  if (!next) throw new Error(`Silk: ${element.class} elements have no Status`);
+  if (!next) throw new Error(`Garn: ${element.class} elements have no Status`);
   return next;
 }
 
 /** i18n key of a Status's display name. */
-export const statusLabelKey = (status: Status) => `SILK.Status.${status}`;
+export const statusLabelKey = (status: Status) => `GARN.Status.${status}`;

@@ -5,7 +5,7 @@ import type { CommandRegistry, KeyChord } from '../core/commands/registry';
 export interface KeybindingData {
   name: string;
   editable: KeyChord[];
-  /** Returns true when Silk handled the key, so Foundry stops propagating it. */
+  /** Returns true when Garn handled the key, so Foundry stops propagating it. */
   onDown(): boolean;
 }
 
@@ -30,14 +30,14 @@ export function registerKeybindings(registry: CommandRegistry, register: Registe
   }
 }
 
-/** A Silk keybinding as bound now (the legend, 1.1 §E.3): title i18n key, display chords. */
+/** A Garn keybinding as bound now (the legend, 1.1 §E.3): title i18n key, display chords. */
 export interface LiveKeybinding {
   title: string;
   keys: string[];
 }
 
 /**
- * Silk's keybindings with their current chords (`game.keybindings.get`), so rebinds show.
+ * Garn's keybindings with their current chords (`game.keybindings.get`), so rebinds show.
  * `keyName`: Foundry's `KeyboardManager.getKeycodeDisplayString`.
  */
 export function liveKeybindings(

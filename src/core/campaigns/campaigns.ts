@@ -73,7 +73,7 @@ export function createCampaigns(deps: CampaignsDeps): Campaigns {
   const now = deps.now ?? (() => new Date().toISOString());
   const newId = deps.newId ?? newCanonId;
 
-  const UNBOUND = 'Silk: this World is not bound to a Canon yet';
+  const UNBOUND = 'Garn: this World is not bound to a Canon yet';
 
   async function requireCanon() {
     const canon = await history.canon();
@@ -89,13 +89,13 @@ export function createCampaigns(deps: CampaignsDeps): Campaigns {
 
   async function requireCampaign(id: string): Promise<Campaign> {
     const campaign = await (await requireCanon()).getCampaign(id);
-    if (!campaign) throw new Error(`Silk: no Campaign "${id}" in this Canon`);
+    if (!campaign) throw new Error(`Garn: no Campaign "${id}" in this Canon`);
     return campaign;
   }
 
   function requireName(name: string): string {
     const trimmed = name.trim();
-    if (!trimmed) throw new Error('Silk: a name is required');
+    if (!trimmed) throw new Error('Garn: a name is required');
     return trimmed;
   }
 
@@ -140,7 +140,7 @@ export function createCampaigns(deps: CampaignsDeps): Campaigns {
     async writeRevelationMap(campaignId, map) {
       const campaign = await requireCampaign(campaignId);
       if (campaign.closed && (await checkedOutAdventure())?.campaignId !== campaignId)
-        throw new Error(`Silk: Campaign "${campaign.name}" is closed; its map is read-only`);
+        throw new Error(`Garn: Campaign "${campaign.name}" is closed; its map is read-only`);
       await (await requireCanon()).writeRevelationMap(campaignId, serializeRevelationMap(map));
     },
 
@@ -153,16 +153,16 @@ export function createCampaigns(deps: CampaignsDeps): Campaigns {
       const canon = await requireCanon();
       const binding = requireBinding();
       if (!('main' in binding.checkout))
-        throw new Error('Silk: Adventures start only from main; end the running Adventure first');
+        throw new Error('Garn: Adventures start only from main; end the running Adventure first');
       const advName = requireName(name);
       const campaign = await requireCampaign(campaignId);
       if (campaign.closed)
-        throw new Error(`Silk: Campaign "${campaign.name}" is closed; reopen it first`);
-      if (!binding.head) throw new Error('Silk: make a first Commit on main before an Adventure');
+        throw new Error(`Garn: Campaign "${campaign.name}" is closed; reopen it first`);
+      if (!binding.head) throw new Error('Garn: make a first Commit on main before an Adventure');
       if ((await canon.getMain()) !== binding.head)
-        throw new Error('Silk: main moved on in another World; reload to update first');
+        throw new Error('Garn: main moved on in another World; reload to update first');
       if (await history.isDirty())
-        throw new Error('Silk: commit or discard uncommitted changes before an Adventure');
+        throw new Error('Garn: commit or discard uncommitted changes before an Adventure');
 
       const adventureId = newId();
       await canon.writeAdventure({

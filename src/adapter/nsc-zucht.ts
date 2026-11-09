@@ -1,6 +1,6 @@
 /**
  * Source Step Generator: NSC Zucht, the NPC generator of `dsa5-mastersworkshop` (spec 1.1
- * §B.3). The module has no public API: Silk imports its `npcgenerator.js` the way the
+ * §B.3). The module has no public API: Garn imports its `npcgenerator.js` the way the
  * module's own GM menu does, renders it, and takes the first NPC Actor the GM creates
  * while it is open (`createActor`). The import is guarded: a failure greys the choice.
  */
@@ -22,8 +22,8 @@ export interface CreatedActor {
   uuid: string;
   name: string;
   type: string;
-  /** Already a Silk doc (flagged at create): Materialize, not the generator, made it. */
-  silk?: boolean;
+  /** Already a Garn doc (flagged at create): Materialize, not the generator, made it. */
+  garn?: boolean;
 }
 
 export interface NscZuchtDeps {
@@ -53,15 +53,15 @@ export function createNscZucht(deps: NscZuchtDeps): NscZucht {
   let failed = false;
 
   function unavailable() {
-    if (!deps.active()) return 'SILK.Source.GeneratorMissing';
-    if (!deps.isGM()) return 'SILK.Source.GeneratorGMOnly';
-    return failed ? 'SILK.Source.GeneratorFailed' : undefined;
+    if (!deps.active()) return 'GARN.Source.GeneratorMissing';
+    if (!deps.isGM()) return 'GARN.Source.GeneratorGMOnly';
+    return failed ? 'GARN.Source.GeneratorFailed' : undefined;
   }
 
   /** The import failed: the choice greys from now on. */
   function importFailed(err: unknown) {
     failed = true;
-    console.warn('Silk | NSC Zucht import failed', err);
+    console.warn('Garn | NSC Zucht import failed', err);
   }
 
   async function open(): Promise<GeneratorApp | undefined> {
@@ -69,7 +69,7 @@ export function createNscZucht(deps: NscZuchtDeps): NscZucht {
       return await deps.load();
     } catch (err) {
       importFailed(err);
-      deps.warn(deps.localize('SILK.Source.GeneratorFailed'));
+      deps.warn(deps.localize('GARN.Source.GeneratorFailed'));
       return undefined;
     }
   }
@@ -92,7 +92,7 @@ export function createNscZucht(deps: NscZuchtDeps): NscZucht {
       };
       const onAbort = () => finish(undefined);
       const off = deps.onCreateActor((actor, userId) => {
-        if (userId !== deps.userId() || actor.silk || actor.type !== NPC) return;
+        if (userId !== deps.userId() || actor.garn || actor.type !== NPC) return;
         finish({
           source: { kind: 'generator', id: 'nsc-zucht', actorUuid: actor.uuid },
           name: actor.name,
@@ -118,7 +118,7 @@ interface FoundryActor {
   uuid: string;
   name: string;
   type: string;
-  flags?: { silk?: { id?: unknown } };
+  flags?: { garn?: { id?: unknown } };
 }
 
 type GeneratorModule = { default?: () => Promise<GeneratorApp> };
@@ -133,7 +133,7 @@ export function foundryNscZucht(localize: (key: string) => string): NscZucht {
       throw err;
     });
     if (typeof mod.default !== 'function')
-      throw new Error('Silk: npcgenerator.js has no default getInstance()');
+      throw new Error('Garn: npcgenerator.js has no default getInstance()');
     return mod.default;
   };
   return createNscZucht({
@@ -154,7 +154,7 @@ export function foundryNscZucht(localize: (key: string) => string): NscZucht {
     onCreateActor(listener) {
       const onCreate = (actor: FoundryActor, _options: unknown, userId: string) =>
         listener(
-          { uuid: actor.uuid, name: actor.name, type: actor.type, silk: !!actor.flags?.silk?.id },
+          { uuid: actor.uuid, name: actor.name, type: actor.type, garn: !!actor.flags?.garn?.id },
           userId,
         );
       const id = Hooks.on('createActor', onCreate as never);

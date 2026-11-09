@@ -2,13 +2,13 @@
  * Foundry side of Event Scenes (spec §4, §7): `SceneDocs` over real Scenes, the token and
  * activation hooks, and the journal's Scene bar (GM only: Scene link, Activate, or "no
  * Scene" with Create / Restore). Thin: decisions live in `src/core/event-scenes`. Hooks
- * fire on every client; only the active GM reacts, Silk's own writes are skipped.
+ * fire on every client; only the active GM reacts, Garn's own writes are skipped.
  */
 import type { EventScenes } from '../core/event-scenes';
 import type { SceneData, SceneDocs, SceneSnapshot } from '../core/event-scenes';
-import { SILK_WRITE, isSilkWrite } from './working-copy-journal';
+import { GARN_WRITE, isGarnWrite } from './working-copy-journal';
 
-/** The slice of a Foundry Scene Silk uses. */
+/** The slice of a Foundry Scene Garn uses. */
 export interface FoundryScene {
   id: string | null;
   toObject(): object;
@@ -40,7 +40,7 @@ export function sceneSnapshot(scene: FoundryScene): SceneSnapshot {
   const data = scene.toObject() as SceneSnapshot;
   return {
     ...data,
-    flags: { ...data.flags, silk: { ...data.flags?.silk } },
+    flags: { ...data.flags, garn: { ...data.flags?.garn } },
     tokens: data.tokens ?? [],
     active: !!data.active,
   };
@@ -49,7 +49,7 @@ export function sceneSnapshot(scene: FoundryScene): SceneSnapshot {
 export function createSceneDocs(api: SceneApi): SceneDocs {
   const must = (id: string) => {
     const scene = api.get(id);
-    if (!scene) throw new Error(`Silk: no Scene "${id}"`);
+    if (!scene) throw new Error(`Garn: no Scene "${id}"`);
     return scene;
   };
   return {
@@ -63,24 +63,24 @@ export function createSceneDocs(api: SceneApi): SceneDocs {
       const cls = api.sceneClass();
       const source = cls.migrateData(structuredClone(data));
       const scene = await cls.create(source, {
-        ...SILK_WRITE,
+        ...GARN_WRITE,
         keepId: true,
         keepEmbeddedIds: true,
       });
-      if (!scene?.id) throw new Error(`Silk: Foundry refused to create Scene "${data.name}"`);
+      if (!scene?.id) throw new Error(`Garn: Foundry refused to create Scene "${data.name}"`);
       return scene.id;
     },
     async delete(id) {
-      await must(id).delete({ ...SILK_WRITE });
+      await must(id).delete({ ...GARN_WRITE });
     },
     async update(id, data) {
-      await must(id).update(data, { ...SILK_WRITE });
+      await must(id).update(data, { ...GARN_WRITE });
     },
     async setPadding(id, padding) {
-      await must(id).update({ padding }, { ...SILK_WRITE, autoReposition: true });
+      await must(id).update({ padding }, { ...GARN_WRITE, autoReposition: true });
     },
     async activate(id) {
-      await must(id).activate({ updateOptions: { ...SILK_WRITE } });
+      await must(id).activate({ updateOptions: { ...GARN_WRITE } });
     },
     async view(id) {
       await must(id).view();
@@ -92,21 +92,21 @@ export function createSceneDocs(api: SceneApi): SceneDocs {
         const token = await api.tokenData(actorId, rest, scene);
         if (token) data.push(token);
       }
-      if (data.length) await scene.createEmbeddedDocuments('Token', data, { ...SILK_WRITE });
+      if (data.length) await scene.createEmbeddedDocuments('Token', data, { ...GARN_WRITE });
     },
     async deleteTokens(sceneId, ids) {
-      await must(sceneId).deleteEmbeddedDocuments('Token', ids, { ...SILK_WRITE });
+      await must(sceneId).deleteEmbeddedDocuments('Token', ids, { ...GARN_WRITE });
     },
     async syncEmbedded(sceneId, collection, ops) {
       const scene = must(sceneId);
       const name = api.embeddedName(collection);
-      if (!name) throw new Error(`Silk: Scenes have no embedded "${collection}"`);
+      if (!name) throw new Error(`Garn: Scenes have no embedded "${collection}"`);
       if (ops.delete.length)
-        await scene.deleteEmbeddedDocuments(name, ops.delete, { ...SILK_WRITE });
+        await scene.deleteEmbeddedDocuments(name, ops.delete, { ...GARN_WRITE });
       if (ops.update.length)
-        await scene.updateEmbeddedDocuments(name, ops.update, { ...SILK_WRITE, recursive: false });
+        await scene.updateEmbeddedDocuments(name, ops.update, { ...GARN_WRITE, recursive: false });
       if (ops.create.length)
-        await scene.createEmbeddedDocuments(name, ops.create, { ...SILK_WRITE, keepId: true });
+        await scene.createEmbeddedDocuments(name, ops.create, { ...GARN_WRITE, keepId: true });
     },
   };
 }
@@ -124,7 +124,7 @@ export function registerSceneHooks(
   const token =
     (handler: (t: { sceneId: string; actorId: string | null }) => Promise<void>) =>
     (doc: unknown, options: unknown) => {
-      if (!deps.isActiveGM() || isSilkWrite(options)) return;
+      if (!deps.isActiveGM() || isGarnWrite(options)) return;
       const t = doc as Token;
       const sceneId = t.parent?.id;
       if (sceneId) handler({ sceneId, actorId: t.actorId ?? null }).catch(fail);
@@ -138,7 +138,7 @@ export function registerSceneHooks(
     token((t) => es.tokenDeleted(t)),
   );
   deps.on('updateScene', (scene, changed, options) => {
-    if (!deps.isActiveGM() || isSilkWrite(options)) return;
+    if (!deps.isActiveGM() || isGarnWrite(options)) return;
     const id = (scene as { id: string | null }).id;
     if (id && (changed as { active?: boolean }).active === true) es.sceneActivated(id).catch(fail);
   });
@@ -155,26 +155,26 @@ const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCode
 
 /** The journal's Scene bar (§4: Scene link, Activate; §6: "no Scene" + Create / Restore). */
 export function sceneBarHtml(state: SceneBarState, localize: (key: string) => string): string {
-  const L = (key: string) => escape(localize(`SILK.EventScene.${key}`));
+  const L = (key: string) => escape(localize(`GARN.EventScene.${key}`));
   const button = (attr: string, label: string, icon: string) =>
     `<button type="button" ${attr}><i class="fa-solid ${icon}"></i> ${label}</button>`;
   if (state.scene)
     return (
-      `<a data-silk-scene-link><i class="fa-solid fa-map"></i> ${escape(state.scene)}</a>` +
-      button('data-silk-activate-scene', L('Activate'), 'fa-bullseye')
+      `<a data-garn-scene-link><i class="fa-solid fa-map"></i> ${escape(state.scene)}</a>` +
+      button('data-garn-activate-scene', L('Activate'), 'fa-bullseye')
     );
   if (state.cls === 'location')
-    return button('data-silk-create-scene', L('CreateOverview'), 'fa-map');
+    return button('data-garn-create-scene', L('CreateOverview'), 'fa-map');
   return (
-    `<span data-silk-no-scene>${L('None')}</span>` +
-    button('data-silk-create-scene', L('Create'), 'fa-plus') +
-    button('data-silk-restore-scene', L('Restore'), 'fa-clock-rotate-left')
+    `<span data-garn-no-scene>${L('None')}</span>` +
+    button('data-garn-create-scene', L('Create'), 'fa-plus') +
+    button('data-garn-restore-scene', L('Restore'), 'fa-clock-rotate-left')
   );
 }
 
 /**
  * Adds the Scene bar to Event / Location journal sheets (GM). The journal re-renders when
- * its `flags.silk.scene` link changes, so the bar follows the Scene.
+ * its `flags.garn.scene` link changes, so the bar follows the Scene.
  */
 export function registerSceneBar(deps: {
   on(hook: string, fn: (...args: unknown[]) => void): void;
@@ -187,12 +187,12 @@ export function registerSceneBar(deps: {
   deps.on('renderJournalEntrySheet', (app, element) => {
     if (!deps.isGM()) return;
     const root = element as HTMLElement;
-    root.querySelector('[data-silk-scene-bar]')?.remove();
+    root.querySelector('[data-garn-scene-bar]')?.remove();
     const state = deps.state((app as { document?: { flags?: unknown } }).document ?? {});
     if (!state) return;
     const bar = root.ownerDocument.createElement('div');
-    bar.className = 'silk-scene-bar';
-    bar.dataset['silkSceneBar'] = '';
+    bar.className = 'garn-scene-bar';
+    bar.dataset['garnSceneBar'] = '';
     bar.innerHTML = sceneBarHtml(state, deps.localize);
     const run = (command: string) => (event: Event) => {
       event.preventDefault();
@@ -204,10 +204,10 @@ export function registerSceneBar(deps: {
     };
     const on = (selector: string, command: string) =>
       bar.querySelector(selector)?.addEventListener('click', run(command));
-    on('[data-silk-scene-link]', 'event.viewScene');
-    on('[data-silk-activate-scene]', 'event.activateScene');
-    on('[data-silk-create-scene]', 'event.createScene');
-    on('[data-silk-restore-scene]', 'event.restoreScene');
+    on('[data-garn-scene-link]', 'event.viewScene');
+    on('[data-garn-activate-scene]', 'event.activateScene');
+    on('[data-garn-create-scene]', 'event.createScene');
+    on('[data-garn-restore-scene]', 'event.restoreScene');
     const content = root.querySelector('.window-content') ?? root;
     content.prepend(bar);
   });

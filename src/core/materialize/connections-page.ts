@@ -1,5 +1,5 @@
 /**
- * The Silk-generated Connections page (spec §4 Journal layout, §5 "In journals"): one
+ * The Garn-generated Connections page (spec §4 Journal layout, §5 "In journals"): one
  * read-only sentence per Connection, on both endpoints. Kept current from Working Copy
  * changes (Connection create/edit/flip/delete, endpoint rename, Materialize, class change).
  * Pure core over the `FoundryDocs` port; the active GM runs it.
@@ -66,7 +66,7 @@ export function createConnectionsPages(deps: ConnectionsPagesDeps): ConnectionsP
     const found = deps.docsOf(id);
     if (!found) return;
     const journal = found.main.documentName === 'JournalEntry' ? found.main : found.companion;
-    const pageId = journal?.flags.silk.connections;
+    const pageId = journal?.flags.garn.connections;
     const page = pageId ? journal.pages?.find((p) => p._id === pageId) : undefined;
     if (!journal || !page) return;
     const content = html(records, id);

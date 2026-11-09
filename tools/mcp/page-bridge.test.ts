@@ -7,11 +7,11 @@ const inProcessPage: EvaluatingPage = {
   evaluate: async (fn, arg) => fn(arg),
 };
 
-function foundryWithSilk(isGM: boolean) {
+function foundryWithGarn(isGM: boolean) {
   const api = createRegistry(() => ({ isGM }));
   api.register({
     name: 'canvas.open',
-    title: 'SILK.Command.canvas.open',
+    title: 'GARN.Command.canvas.open',
     available: () => true,
     run: async () => 'opened',
   });
@@ -21,28 +21,28 @@ function foundryWithSilk(isGM: boolean) {
     available: (ctx) => ctx.isGM,
     run: async (args: { id: string; name: string }) => ({ renamed: args }),
   });
-  vi.stubGlobal('game', { modules: new Map([['silk', { api }]]) });
+  vi.stubGlobal('game', { modules: new Map([['garn', { api }]]) });
 }
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('pageBridge', () => {
   it("lists the page's registry commands with their availability", async () => {
-    foundryWithSilk(false);
+    foundryWithGarn(false);
     expect(await pageBridge(inProcessPage).listCommands()).toEqual([
-      { name: 'canvas.open', title: 'SILK.Command.canvas.open', available: true },
+      { name: 'canvas.open', title: 'GARN.Command.canvas.open', available: true },
       { name: 'element.rename', title: 'Rename', available: false },
     ]);
   });
 
   it('runs a command through the page registry', async () => {
-    foundryWithSilk(true);
+    foundryWithGarn(true);
     const result = await pageBridge(inProcessPage).run('element.rename', { id: 'e1', name: 'X' });
     expect(result).toEqual({ renamed: { id: 'e1', name: 'X' } });
   });
 
-  it('fails clearly when Silk is not loaded in the page', async () => {
+  it('fails clearly when Garn is not loaded in the page', async () => {
     vi.stubGlobal('game', { modules: new Map() });
-    await expect(pageBridge(inProcessPage).listCommands()).rejects.toThrow(/Silk API not found/);
+    await expect(pageBridge(inProcessPage).listCommands()).rejects.toThrow(/Garn API not found/);
   });
 });

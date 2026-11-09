@@ -1,13 +1,13 @@
 /**
  * Foundry side of the Connections page (spec §5 "In journals"): the page is generated and
- * read-only, so a hand edit (not Silk's own write) is overwritten on the active GM.
+ * read-only, so a hand edit (not Garn's own write) is overwritten on the active GM.
  */
 import type { ConnectionsPages } from '../core/materialize';
-import { isSilkWrite } from './working-copy-journal';
+import { isGarnWrite } from './working-copy-journal';
 
 type Page = {
   id?: string | null;
-  parent?: { flags?: { silk?: { id?: string; companionOf?: string; connections?: string } } };
+  parent?: { flags?: { garn?: { id?: string; companionOf?: string; connections?: string } } };
 };
 
 export function registerConnectionsPageHooks(
@@ -15,11 +15,11 @@ export function registerConnectionsPageHooks(
   deps: { on(hook: string, fn: (...args: unknown[]) => void): void; isActiveGM(): boolean },
 ): void {
   deps.on('updateJournalEntryPage', (doc, _changed, options) => {
-    if (!deps.isActiveGM() || isSilkWrite(options)) return;
+    if (!deps.isActiveGM() || isGarnWrite(options)) return;
     const page = doc as Page;
-    const silk = page.parent?.flags?.silk;
-    const id = silk?.id ?? silk?.companionOf;
-    if (!id || !page.id || page.id !== silk?.connections) return;
+    const garn = page.parent?.flags?.garn;
+    const id = garn?.id ?? garn?.companionOf;
+    if (!id || !page.id || page.id !== garn?.connections) return;
     pages.refresh([id]).catch((error: unknown) => console.error(error));
   });
 }

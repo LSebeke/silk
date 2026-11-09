@@ -1,5 +1,5 @@
 /**
- * Foundry's ProseMirror editor for Silk rich text (Info Blocks, Connection Notes; v1.1 §C.1,
+ * Foundry's ProseMirror editor for Garn rich text (Info Blocks, Connection Notes; v1.1 §C.1,
  * §G.1): a toggled `<prose-mirror>` showing the enriched HTML, sized to its content (Foundry's
  * `content-sized`: no inner scroll, read-only or open); its save hands the edited HTML on.
  */

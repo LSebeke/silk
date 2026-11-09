@@ -1,13 +1,13 @@
 /**
- * Scene Presets (spec §4 Event Scenes): Silk generates the Scene config, the GM draws
- * walls and places the map by hand. The Preset is stored on the Scene (`flags.silk.preset`,
+ * Scene Presets (spec §4 Event Scenes): Garn generates the Scene config, the GM draws
+ * walls and places the map by hand. The Preset is stored on the Scene (`flags.garn.preset`,
  * 1.1 §I); tokens go into the Token Box (`token-box.ts`). Pure.
  */
 import type { SceneData } from './port';
 
 export const SCENE_PRESETS = ['travel', 'battle', 'narrative', 'overview'] as const;
 export type ScenePreset = (typeof SCENE_PRESETS)[number];
-/** `flags.silk.preset`: imported and Adopted Scenes have none (1.1 §I). */
+/** `flags.garn.preset`: imported and Adopted Scenes have none (1.1 §I). */
 export type StoredPreset = ScenePreset | 'none';
 /** The stored Preset of imported and Adopted Scenes. */
 export const NO_PRESET: StoredPreset = 'none';
@@ -42,7 +42,7 @@ export function presetScene(preset: ScenePreset, input: PresetInput): SceneData 
     width: WIDTH,
     height: HEIGHT,
     ownership: { default: 0 },
-    flags: { silk: { sceneOf: input.elementId, preset } },
+    flags: { garn: { sceneOf: input.elementId, preset } },
   };
   const background = input.img ? { background: { src: input.img } } : {};
   const vision = (on: boolean) => ({

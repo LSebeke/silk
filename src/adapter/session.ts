@@ -1,5 +1,5 @@
 /**
- * The World's Silk session: its Working Copy and history, wired to Foundry on `ready`.
+ * The World's Garn session: its Working Copy and history, wired to Foundry on `ready`.
  * Later features read `getSession().workingCopy` (records + change notifications).
  */
 import { MODULE_ID } from '../constants';
@@ -44,7 +44,7 @@ export function setBeforeCommit(capture: () => Promise<void>): void {
 }
 
 export function getSession(): Session {
-  if (!session) throw new Error('Silk: not ready yet');
+  if (!session) throw new Error('Garn: not ready yet');
   return session;
 }
 
@@ -67,7 +67,7 @@ export async function startSession(): Promise<Session> {
     files: createFilePickerFiles(foundryFilePicker()),
     workingCopy,
     author: () => game.user?.name ?? 'GM',
-    createdWith: `silk ${game.modules?.get(MODULE_ID)?.version ?? 'dev'}`,
+    createdWith: `garn ${game.modules?.get(MODULE_ID)?.version ?? 'dev'}`,
     beforeCommit: () => beforeCommit(),
   });
 

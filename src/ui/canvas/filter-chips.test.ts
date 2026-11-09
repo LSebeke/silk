@@ -13,12 +13,12 @@ const records = new Map(
 
 describe('filter chips', () => {
   it('labels values by dimension', () => {
-    expect(valueLabel(records, 'class', 'person')).toEqual({ key: 'SILK.Class.person' });
-    expect(valueLabel(records, 'status', 'dead')).toEqual({ key: 'SILK.Status.dead' });
-    expect(valueLabel(records, 'revealed', 'hidden')).toEqual({ key: 'SILK.Filter.Value.hidden' });
+    expect(valueLabel(records, 'class', 'person')).toEqual({ key: 'GARN.Class.person' });
+    expect(valueLabel(records, 'status', 'dead')).toEqual({ key: 'GARN.Status.dead' });
+    expect(valueLabel(records, 'revealed', 'hidden')).toEqual({ key: 'GARN.Filter.Value.hidden' });
     expect(valueLabel(records, 'hops', 'a')).toEqual({ text: 'N-a' });
     expect(valueLabel(records, 'tag', 'noble')).toEqual({ text: 'noble' });
-    expect(valueLabel(records, 'hops', 'focus')).toEqual({ key: 'SILK.Focus.Seeds' });
+    expect(valueLabel(records, 'hops', 'focus')).toEqual({ key: 'GARN.Focus.Seeds' });
   });
 
   it('offers Tags in use, and the selection for N-hop / Locations for contents', () => {

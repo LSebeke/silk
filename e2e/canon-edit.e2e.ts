@@ -6,15 +6,15 @@ import type { Page } from '@playwright/test';
 import type { Session } from '../src/adapter/session';
 import type { CanonRecord } from '../src/core/canon';
 import type { CommandRegistry } from '../src/core/commands/registry';
-import { expect, test, waitForSilk } from './fixtures';
+import { expect, test, waitForGarn } from './fixtures';
 
-type Silk = { api: CommandRegistry; session: Session };
+type Garn = { api: CommandRegistry; session: Session };
 
-/** Runs `fn` in the page with Silk's api and session. */
-function silk<A, R>(page: Page, fn: (s: Silk, arg: A) => R | Promise<R>, arg?: A): Promise<R> {
+/** Runs `fn` in the page with Garn's api and session. */
+function garn<A, R>(page: Page, fn: (s: Garn, arg: A) => R | Promise<R>, arg?: A): Promise<R> {
   return page.evaluate(
     ([src, a]) => {
-      const mod = game.modules?.get('silk') as unknown as {
+      const mod = game.modules?.get('garn') as unknown as {
         api: CommandRegistry;
         session(): Session;
       };
@@ -37,27 +37,27 @@ async function closePopups(page: Page) {
   });
 }
 
-const head = (page: Page) => silk(page, ({ session }) => session.workingCopy.binding?.head);
+const head = (page: Page) => garn(page, ({ session }) => session.workingCopy.binding?.head);
 const main = (page: Page) =>
-  silk(page, async ({ session }) => (await session.history.canon())?.getMain());
+  garn(page, async ({ session }) => (await session.history.canon())?.getMain());
 
 async function reload(page: Page) {
   await page.reload();
-  await waitForSilk(page);
+  await waitForGarn(page);
 }
 
 /** Bound, on clean main at main's head, with Gareth (Ghost) and Ulf (Materialized) committed. */
 async function cleanMain(page: Page) {
   await page.waitForFunction(() => {
     try {
-      (game.modules?.get('silk') as unknown as { session(): unknown }).session();
+      (game.modules?.get('garn') as unknown as { session(): unknown }).session();
       return true;
     } catch {
       return false;
     }
   });
-  await page.evaluate(() => game.settings?.set('silk', 'materializeMode', 'onDemand'));
-  await silk(page, async ({ api, session }) => {
+  await page.evaluate(() => game.settings?.set('garn', 'materializeMode', 'onDemand'));
+  await garn(page, async ({ api, session }) => {
     if (!session.workingCopy.binding) await api.run('canon.create', { name: 'E2E' });
     await api.run('merge.cancel');
     const checkout = session.workingCopy.binding?.checkout;
@@ -71,7 +71,7 @@ async function cleanMain(page: Page) {
     await reload(page);
     await expect.poll(() => head(page), { timeout: 60_000 }).toBe(await main(page));
   }
-  return silk(page, async ({ api }) => {
+  return garn(page, async ({ api }) => {
     const gareth = (
       await api.run<{ id: string }>('element.create', { class: 'person', name: 'Gareth' })
     ).id;
@@ -85,7 +85,7 @@ async function cleanMain(page: Page) {
 
 /** Another World's Canon edit: renames on main's head, committed straight to main. */
 function otherWorldCommit(page: Page, names: Record<string, string>) {
-  return silk(
+  return garn(
     page,
     async ({ session }, names) => {
       const canon = await session.history.canon();
@@ -118,7 +118,7 @@ test('clean load after main moved: fast-forward rewrites the Materialized docs',
   await expect.poll(() => head(gm), { timeout: 60_000 }).toBe(moved);
   // The binding moves first, then the docs are rewritten.
   const ulfDoc = () =>
-    silk(
+    garn(
       gm,
       ({ session }, ulf) =>
         (fromUuidSync(session.workingCopy.get(ulf)?.data.uuid as string) as { name?: string })
@@ -126,7 +126,7 @@ test('clean load after main moved: fast-forward rewrites the Materialized docs',
       ids.ulf,
     );
   await expect.poll(ulfDoc, { timeout: 60_000 }).toBe('Ulf the Bold');
-  const state = await silk(
+  const state = await garn(
     gm,
     ({ session }, ulf) => {
       const uuid = session.workingCopy.get(ulf)?.data.uuid as string;
@@ -146,7 +146,7 @@ test('dirty load after main moved: merge "Canon (incoming)" / "This World", conf
 }) => {
   test.setTimeout(240_000);
   const ids = await cleanMain(gm);
-  await silk(
+  await garn(
     gm,
     ({ api }, id) => api.run('element.rename', { id, name: 'Gareth (here)' }),
     ids.gareth,
@@ -155,20 +155,20 @@ test('dirty load after main moved: merge "Canon (incoming)" / "This World", conf
 
   await reload(gm);
 
-  const win = gm.locator('[data-silk-merge]');
+  const win = gm.locator('[data-garn-merge]');
   // Under load the first render of the merge window takes a while.
   await expect(win).toBeVisible({ timeout: 90_000 });
-  await expect(win.locator('[data-silk-merge-title]')).toHaveAttribute(
-    'data-silk-merge-kind',
+  await expect(win.locator('[data-garn-merge-title]')).toHaveAttribute(
+    'data-garn-merge-kind',
     'canonEdit',
   );
   // Both cards sit at (0, 0); Ulf's covers Gareth's.
-  await win.locator(`[data-silk-merge-node="${ids.gareth}"]`).dispatchEvent('click');
+  await win.locator(`[data-garn-merge-node="${ids.gareth}"]`).dispatchEvent('click');
   await expect(win.locator('th.canon')).toHaveText('Canon (incoming)');
   await expect(win.locator('th.adv')).toHaveText('This World');
   expect(await head(gm)).not.toBe(moved);
   // Commits stay blocked until the merge is done.
-  const refused = await silk(gm, ({ api }) =>
+  const refused = await garn(gm, ({ api }) =>
     api.run('history.commit', {}).then(
       () => 'committed',
       (e: Error) => e.name,
@@ -177,10 +177,10 @@ test('dirty load after main moved: merge "Canon (incoming)" / "This World", conf
   expect(refused).toBe('MainMovedError');
 
   await closePopups(gm);
-  await silk(gm, ({ api }) => api.run('merge.confirm', { confirmed: true }));
+  await garn(gm, ({ api }) => api.run('merge.confirm', { confirmed: true }));
   await expect(win).toHaveCount(0, { timeout: 30_000 });
 
-  const after = await silk(
+  const after = await garn(
     gm,
     async ({ session }, { gareth, ulf }) => {
       const canon = await session.history.canon();
@@ -214,7 +214,7 @@ test('Abandon: typed confirmation in the Canon window resets to main, deleting A
 }) => {
   test.setTimeout(240_000);
   const ids = await cleanMain(gm);
-  const doomed = await silk(gm, async ({ api, session }) => {
+  const doomed = await garn(gm, async ({ api, session }) => {
     const campaign = await session.campaigns.create({ name: 'Dienstagsgruppe' });
     await api.run('adventure.start', { name: 'Sackgasse', campaignId: campaign.id });
     const id = (
@@ -224,30 +224,30 @@ test('Abandon: typed confirmation in the Canon window resets to main, deleting A
     await api.run('history.commit', { label: 'Session 1' });
     return { id, uuid: session.workingCopy.get(id)?.data.uuid as string };
   });
-  await silk(
+  await garn(
     gm,
     ({ api }, id) => api.run('element.rename', { id, name: 'Ulf (Adventure)' }),
     ids.ulf,
   );
 
   await closePopups(gm);
-  await silk(gm, ({ api }) => api.run('canon.openWindow'));
-  await gm.locator('[data-silk-adventure-abandon]').click();
-  const dialog = gm.locator('[data-silk-abandon-dialog]');
+  await garn(gm, ({ api }) => api.run('canon.openWindow'));
+  await gm.locator('[data-garn-adventure-abandon]').click();
+  const dialog = gm.locator('[data-garn-abandon-dialog]');
   await expect(dialog).toBeVisible({ timeout: 30_000 });
-  const confirm = dialog.locator('[data-silk-abandon-confirm]');
-  await dialog.locator('[data-silk-abandon-input]').fill('sackgasse');
+  const confirm = dialog.locator('[data-garn-abandon-confirm]');
+  await dialog.locator('[data-garn-abandon-input]').fill('sackgasse');
   await expect(confirm).toBeDisabled();
-  await dialog.locator('[data-silk-abandon-input]').fill('Sackgasse');
+  await dialog.locator('[data-garn-abandon-input]').fill('Sackgasse');
   await expect(confirm).toBeEnabled();
   await confirm.click();
 
-  await expect(gm.locator('[data-silk-checkout]')).toContainText('main', { timeout: 60_000 });
+  await expect(gm.locator('[data-garn-checkout]')).toContainText('main', { timeout: 60_000 });
   // The binding moves first, then the docs are rewritten.
   await expect
-    .poll(() => silk(gm, (_, uuid) => !!fromUuidSync(uuid), doomed.uuid), { timeout: 60_000 })
+    .poll(() => garn(gm, (_, uuid) => !!fromUuidSync(uuid), doomed.uuid), { timeout: 60_000 })
     .toBe(false);
-  const after = await silk(
+  const after = await garn(
     gm,
     async ({ session }, { doomed, ulf }) => {
       const uuid = session.workingCopy.get(ulf)?.data.uuid as string;

@@ -150,7 +150,7 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
     expanded: () => current().expanded ?? [],
     async set(dimension, values) {
       if (!isFilterDimension(dimension))
-        throw new Error(`Silk: unknown filter dimension "${String(dimension)}"`);
+        throw new Error(`Garn: unknown filter dimension "${String(dimension)}"`);
       const filters = { ...current().filters, [dimension]: [...new Set(values)] };
       if (dimension === 'revealed') await deps.revealed.refresh();
       await save({ filters });
@@ -188,19 +188,19 @@ export function createCanvasFilter(deps: CanvasFilterDeps): CanvasFilter {
 export function filterCommands(filter: CanvasFilter): Command[] {
   const set: Command<{ dimension: FilterDimension; values: string[] }, void> = {
     name: 'filter.set',
-    title: 'SILK.Commands.filter.set',
+    title: 'GARN.Commands.filter.set',
     available: (ctx) => ctx.isGM,
     run: ({ dimension, values }) => filter.set(dimension, values ?? []),
   };
   const clear: Command<{ dimension?: FilterDimension }, void> = {
     name: 'filter.clear',
-    title: 'SILK.Commands.filter.clear',
+    title: 'GARN.Commands.filter.clear',
     available: (ctx) => ctx.isGM,
     run: ({ dimension } = {}) => filter.clear(dimension),
   };
   const expandBadge: Command<{ id: string }, void> = {
     name: 'filter.expandBadge',
-    title: 'SILK.Commands.filter.expandBadge',
+    title: 'GARN.Commands.filter.expandBadge',
     available: (ctx) => ctx.isGM,
     run: ({ id }) => filter.expandBadge(id),
   };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { portraitUpdate, withPortrait, withoutPortrait } from './figure';
 
-const FIG = '<figure data-silk-portrait=""><img src="alrik.webp"></figure>';
+const FIG = '<figure data-garn-portrait=""><img src="alrik.webp"></figure>';
 
 describe('Portrait figure on the Appearance page (v1.1 §G.4)', () => {
   it('the page starts with the managed figure, then the text', () => {
@@ -9,7 +9,7 @@ describe('Portrait figure on the Appearance page (v1.1 §G.4)', () => {
   });
 
   it('an old figure is replaced, wherever it is', () => {
-    const old = '<p>Tall.</p><figure data-silk-portrait><img src="old.webp" alt=""></figure>';
+    const old = '<p>Tall.</p><figure data-garn-portrait><img src="old.webp" alt=""></figure>';
     expect(withPortrait(old, 'alrik.webp')).toBe(`${FIG}<p>Tall.</p>`);
   });
 
@@ -19,7 +19,7 @@ describe('Portrait figure on the Appearance page (v1.1 §G.4)', () => {
 
   it('the image path is escaped', () => {
     expect(withPortrait('', 'a "b" & c.webp')).toBe(
-      '<figure data-silk-portrait=""><img src="a &quot;b&quot; &amp; c.webp"></figure>',
+      '<figure data-garn-portrait=""><img src="a &quot;b&quot; &amp; c.webp"></figure>',
     );
   });
 
@@ -30,7 +30,7 @@ describe('Portrait figure on the Appearance page (v1.1 §G.4)', () => {
 
   it('update: undefined when the figure is at the top with the image, as Foundry saved it', () => {
     const saved =
-      '<figure data-silk-portrait="" class="x"><img src="alrik.webp" alt="A"></figure><p>T</p>';
+      '<figure data-garn-portrait="" class="x"><img src="alrik.webp" alt="A"></figure><p>T</p>';
     expect(portraitUpdate(saved, 'alrik.webp')).toBeUndefined();
     expect(portraitUpdate('<p>T</p>', '')).toBeUndefined();
   });
@@ -39,7 +39,7 @@ describe('Portrait figure on the Appearance page (v1.1 §G.4)', () => {
     expect(portraitUpdate('<p>T</p>', 'alrik.webp')).toBe(`${FIG}<p>T</p>`);
     expect(portraitUpdate(`<p>T</p>${FIG}`, 'alrik.webp')).toBe(`${FIG}<p>T</p>`);
     expect(portraitUpdate(FIG, 'new.webp')).toBe(
-      '<figure data-silk-portrait=""><img src="new.webp"></figure>',
+      '<figure data-garn-portrait=""><img src="new.webp"></figure>',
     );
     expect(portraitUpdate(`${FIG}<p>T</p>`, '')).toBe('<p>T</p>');
   });

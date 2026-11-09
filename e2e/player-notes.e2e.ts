@@ -6,26 +6,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate over untyped Foundry docs */
 import type { Page } from '@playwright/test';
 import { ensureAdventure } from './adventure';
-import { expect, test, waitForSilk } from './fixtures';
+import { expect, test, waitForGarn } from './fixtures';
 
 /** Player sync is slow under load (e2e.md): never poll it below 20 s. */
 const SYNC = { timeout: 45_000 };
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
 
 const record = (page: Page, id: string) =>
-  page.evaluate((i) => game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data as any, id);
+  page.evaluate((i) => game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data as any, id);
 
 /** The player's permission on each Player Note page / Info Block of the element's journal. */
 const playerPages = (page: Page, uuid: string) =>
   page.evaluate((u) => {
     const doc = fromUuidSync(u) as any;
-    const companion = doc?.flags?.silk?.companion
-      ? game.journal?.get(doc.flags.silk.companion)
+    const companion = doc?.flags?.garn?.companion
+      ? game.journal?.get(doc.flags.garn.companion)
       : undefined;
     const journal = doc?.documentName === 'JournalEntry' ? doc : companion;
     if (!journal) return null;
@@ -40,7 +40,7 @@ const playerPages = (page: Page, uuid: string) =>
         p.id,
         {
           level: level(p),
-          note: !!p.category && p.category === journal.flags.silk?.playerNotes,
+          note: !!p.category && p.category === journal.flags.garn?.playerNotes,
           text: p.text?.content as string,
         },
       ]),
@@ -62,9 +62,9 @@ async function closePopups(page: Page) {
 
 test('a player writes, edits and loses notes; the GM converts one', async ({ gm, player }) => {
   test.setTimeout(300_000);
-  await waitForSilk(gm);
+  await waitForGarn(gm);
   await ensureAdventure(gm);
-  await gm.evaluate(() => game.settings?.set('silk', 'materializeMode', 'immediate'));
+  await gm.evaluate(() => game.settings?.set('garn', 'materializeMode', 'immediate'));
   const create = async (cls: string, name: string) =>
     (await api<{ id: string }>(gm, 'element.create', { class: cls, name })).id;
   const gareth = await create('location', 'Gareth-T18');
@@ -76,7 +76,7 @@ test('a player writes, edits and loses notes; the GM converts one', async ({ gm,
   await api(gm, 'reveal.element', { id: alrik });
 
   // Player: the header button on the Revealed journal, a prompt, socket → GM.
-  await waitForSilk(player);
+  await waitForGarn(player);
   await closePopups(player);
   await expect
     .poll(
@@ -96,7 +96,7 @@ test('a player writes, edits and loses notes; the GM converts one', async ({ gm,
       .find((c: any) => c.label === 'Add Player Note')
       .onClick();
   }, garethUuid);
-  await player.locator('[data-silk-player-note-text]').fill('The gate guard takes bribes');
+  await player.locator('[data-garn-player-note-text]').fill('The gate guard takes bribes');
   await player.locator('dialog button[data-action="ok"]').click();
 
   await expect.poll(async () => (await record(gm, gareth))?.playerNotes?.length ?? 0, SYNC).toBe(1);

@@ -7,4 +7,4 @@ export interface StatusPrompt {
   ask(id: string): void;
 }
 
-export const STATUS_PROMPT = Symbol('silk-status-prompt');
+export const STATUS_PROMPT = Symbol('garn-status-prompt');

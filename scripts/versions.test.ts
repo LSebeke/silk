@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { checkVersions } from './versions.mjs';
 
-const url = 'https://github.com/LSebeke/silk';
-const mod = (version: string, download = `${url}/releases/download/v${version}/silk.zip`) => ({
-  id: 'silk',
+const url = 'https://github.com/LSebeke/garn';
+const mod = (version: string, download = `${url}/releases/download/v${version}/garn.zip`) => ({
+  id: 'garn',
   version,
   url,
   manifest: `${url}/releases/latest/download/module.json`,
@@ -26,7 +26,7 @@ describe('version gate', () => {
   it('fails when the download URL points at another release', () => {
     const problems = checkVersions(
       { version: '1.2.3' },
-      mod('1.2.3', `${url}/releases/latest/download/silk.zip`),
+      mod('1.2.3', `${url}/releases/latest/download/garn.zip`),
     );
     expect(problems.join()).toContain('download');
   });

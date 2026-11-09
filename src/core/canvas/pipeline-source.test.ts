@@ -105,8 +105,8 @@ describe('Source Step', () => {
     void pipeline.create({ at: { x: 0, y: 0 } }, 'person');
     expect(pipeline.get()).toMatchObject({
       choices: [
-        { kind: 'compendium', available: false, reason: 'SILK.Source.Unavailable' },
-        { kind: 'generator', available: false, reason: 'SILK.Source.Unavailable' },
+        { kind: 'compendium', available: false, reason: 'GARN.Source.Unavailable' },
+        { kind: 'generator', available: false, reason: 'GARN.Source.Unavailable' },
         { kind: 'blank', available: true },
       ],
     });
@@ -115,7 +115,7 @@ describe('Source Step', () => {
     expect(pipeline.get()).toMatchObject({
       choices: [
         { kind: 'compendium', available: false },
-        { kind: 'generator', available: false, reason: 'SILK.Source.NotForClass' },
+        { kind: 'generator', available: false, reason: 'GARN.Source.NotForClass' },
         { kind: 'blank', available: true },
       ],
     });
@@ -169,13 +169,13 @@ describe('Source providers (Compendium T33, Generator T34)', () => {
   it('a registered provider makes its choice available; its reason greys it', () => {
     const { pipeline } = setup({
       compendium: provider(async () => undefined),
-      generator: provider(async () => undefined, 'SILK.Source.GeneratorMissing'),
+      generator: provider(async () => undefined, 'GARN.Source.GeneratorMissing'),
     });
     void pipeline.create({ at: { x: 0, y: 0 } }, 'person');
     expect(pipeline.get()).toMatchObject({
       choices: [
         { kind: 'compendium', available: true },
-        { kind: 'generator', available: false, reason: 'SILK.Source.GeneratorMissing' },
+        { kind: 'generator', available: false, reason: 'GARN.Source.GeneratorMissing' },
         { kind: 'blank', available: true },
       ],
     });
@@ -249,7 +249,7 @@ describe('Source providers (Compendium T33, Generator T34)', () => {
       generator: {
         unavailable: () => reason,
         pick: async () => {
-          reason = 'SILK.Source.GeneratorFailed';
+          reason = 'GARN.Source.GeneratorFailed';
           return undefined;
         },
       },
@@ -260,7 +260,7 @@ describe('Source providers (Compendium T33, Generator T34)', () => {
       step: 'source',
       choices: [
         { kind: 'compendium' },
-        { kind: 'generator', available: false, reason: 'SILK.Source.GeneratorFailed' },
+        { kind: 'generator', available: false, reason: 'GARN.Source.GeneratorFailed' },
         { kind: 'blank', available: true },
       ],
     });

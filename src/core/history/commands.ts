@@ -7,25 +7,25 @@ export function historyCommands(getHistory: () => History): Command[] {
   return [
     {
       name: 'canon.create',
-      title: 'SILK.Commands.canon.create',
+      title: 'GARN.Commands.canon.create',
       available: (ctx) => ctx.isGM,
       run: (args: { name: string }) => getHistory().createCanon(args),
     },
     {
       name: 'canon.bind',
-      title: 'SILK.Commands.canon.bind',
+      title: 'GARN.Commands.canon.bind',
       available: (ctx) => ctx.isGM,
       run: (args: { canonId: string }) => getHistory().bind(args),
     },
     {
       name: 'history.commit',
-      title: 'SILK.Commands.history.commit',
+      title: 'GARN.Commands.history.commit',
       available: (ctx) => ctx.isGM,
       run: (args: { label?: string }) => getHistory().commit(args),
     },
     {
       name: 'history.discard',
-      title: 'SILK.Commands.history.discard',
+      title: 'GARN.Commands.history.discard',
       available: (ctx) => ctx.isGM,
       run: () => getHistory().discard(),
     },

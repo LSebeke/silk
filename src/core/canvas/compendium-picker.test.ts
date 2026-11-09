@@ -264,7 +264,7 @@ describe('compendiumSource (the Source Step ↑ choice), driven by picker comman
   it('available for classes with an Actor type', () => {
     const { source } = setup();
     expect(source.unavailable('person')).toBeUndefined();
-    expect(source.unavailable('location')).toBe('SILK.Source.NotForClass');
+    expect(source.unavailable('location')).toBe('GARN.Source.NotForClass');
   });
 
   it('picker.search / picker.source / picker.pick drive the open picker; the pick closes it', async () => {

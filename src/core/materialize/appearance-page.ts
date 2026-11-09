@@ -1,6 +1,6 @@
 /**
- * The Appearance page's HTML (v1.1 §G.4): a Silk-managed portrait region on top, showing the
- * element's real image, then the block's text. Silk restores the region when it is missing or
+ * The Appearance page's HTML (v1.1 §G.4): a Garn-managed portrait region on top, showing the
+ * element's real image, then the block's text. Garn restores the region when it is missing or
  * stale and keeps it when the block's text is edited. Readback strips it (layout `readBack`).
  */
 import { portraitUpdate, withPortrait } from '../portrait/figure';
@@ -17,7 +17,7 @@ export interface ElementDocs {
 /** The Appearance page: an actor's flagged Info Block page in its Companion Journal. */
 export function appearancePage({ main, companion }: ElementDocs) {
   if (main.documentName !== 'Actor' || !companion) return undefined;
-  return infoBlockPages(companion).find((p) => p.flags?.silk?.appearance);
+  return infoBlockPages(companion).find((p) => p.flags?.garn?.appearance);
 }
 
 /**

@@ -3,7 +3,7 @@
  * working copy and Campaigns. The merge window renders `view()`; every UI action is one of
  * `endAdventure / pick / nextConflict / confirm / cancel` (commands in `./commands`).
  *
- * - The draft (which commits, the GM's picks, the cursor) lives in the World's Silk Working
+ * - The draft (which commits, the GM's picks, the cursor) lives in the World's Garn Working
  *   Copy as the meta value `mergeDraft`, so a merge can be resumed after a reload.
  * - `ours` is the side merged into (Canon now), `theirs` the incoming side (the Adventure =
  *   this World). Fields that only make sense in one World (doc uuids) always take the World's
@@ -209,7 +209,7 @@ function sameRecords(a: Snapshot, b: Snapshot): boolean {
   return true;
 }
 
-const UNBOUND = 'Silk: this World is not bound to a Canon yet';
+const UNBOUND = 'Garn: this World is not bound to a Canon yet';
 
 export function createMerges(deps: MergesDeps): Merges {
   const { history, workingCopy } = deps;
@@ -240,7 +240,7 @@ export function createMerges(deps: MergesDeps): Merges {
 
   function requireDraft(): MergeDraft {
     const d = draft();
-    if (!d) throw new Error('Silk: no merge is open');
+    if (!d) throw new Error('Garn: no merge is open');
     return d;
   }
 
@@ -290,7 +290,7 @@ export function createMerges(deps: MergesDeps): Merges {
 
   async function adventureOf(d: MergeDraft): Promise<AdventureRef> {
     const ref = await (await requireCanon()).getAdventure(d.adventureId);
-    if (!ref) throw new Error(`Silk: no Adventure "${d.adventureId}" in this Canon`);
+    if (!ref) throw new Error(`Garn: no Adventure "${d.adventureId}" in this Canon`);
     return ref;
   }
 
@@ -421,9 +421,9 @@ export function createMerges(deps: MergesDeps): Merges {
         ? { adventure: adventure.name, campaign: await campaignName(adventure.campaignId) }
         : { adventure: (await requireCanon()).manifest.name, campaign: '' },
       columns: {
-        base: 'SILK.Merge.Base',
-        ours: canonEdit ? 'SILK.Merge.CanonIncoming' : 'SILK.Merge.CanonNow',
-        theirs: canonEdit ? 'SILK.Merge.ThisWorld' : 'SILK.Merge.Adventure',
+        base: 'GARN.Merge.Base',
+        ours: canonEdit ? 'GARN.Merge.CanonIncoming' : 'GARN.Merge.CanonNow',
+        theirs: canonEdit ? 'GARN.Merge.ThisWorld' : 'GARN.Merge.Adventure',
       },
       records,
       counts,
@@ -448,7 +448,7 @@ export function createMerges(deps: MergesDeps): Merges {
     return {
       draft: d,
       title: { adventure: sourceName, campaign: await campaignName(d.targetId) },
-      columns: { base: '', ours: 'SILK.Merge.Target', theirs: 'SILK.Merge.Source' },
+      columns: { base: '', ours: 'GARN.Merge.Target', theirs: 'GARN.Merge.Source' },
       records,
       counts: {
         conflicts: 0,
@@ -467,9 +467,9 @@ export function createMerges(deps: MergesDeps): Merges {
 
   async function requireOpenTarget(targetId: string) {
     const target = await (await requireCanon()).getCampaign(targetId);
-    if (!target) throw new Error(`Silk: no Campaign "${targetId}" in this Canon`);
+    if (!target) throw new Error(`Garn: no Campaign "${targetId}" in this Canon`);
     if (target.closed)
-      throw new Error(`Silk: Campaign "${target.name}" is closed; it can't be a join target`);
+      throw new Error(`Garn: Campaign "${target.name}" is closed; it can't be a join target`);
   }
 
   async function applyJoin(d: JoinDraft): Promise<void> {
@@ -489,19 +489,19 @@ export function createMerges(deps: MergesDeps): Merges {
     const checkout = workingCopy.binding?.checkout;
     if (!checkout) throw new Error(UNBOUND);
     if (!('adventure' in checkout))
-      throw new Error('Silk: no Adventure is checked out; there is nothing to end');
+      throw new Error('Garn: no Adventure is checked out; there is nothing to end');
     const ref = await (await requireCanon()).getAdventure(checkout.adventure);
-    if (!ref) throw new Error(`Silk: no Adventure "${checkout.adventure}" in this Canon`);
+    if (!ref) throw new Error(`Garn: no Adventure "${checkout.adventure}" in this Canon`);
     return ref;
   }
 
   return {
     async endAdventure() {
-      if (joinDraft()) throw new Error('Silk: finish or cancel the open join first');
+      if (joinDraft()) throw new Error('Garn: finish or cancel the open join first');
       const adventure = await checkedOutAdventure();
       const theirs = await history.commit({ label: 'Before merge' });
       const ours = await (await requireCanon()).getMain();
-      if (!ours) throw new Error('Silk: main has no Commit');
+      if (!ours) throw new Error('Garn: main has no Commit');
       const previous = draft();
       const resumed = previous?.adventureId === adventure.id ? previous : null;
       const next: MergeDraft = {
@@ -518,8 +518,8 @@ export function createMerges(deps: MergesDeps): Merges {
     },
 
     async join({ sourceId, targetId, closeSource = true }) {
-      if (sourceId === targetId) throw new Error('Silk: a Campaign cannot join itself');
-      if (stored()) throw new Error('Silk: finish or cancel the open merge first');
+      if (sourceId === targetId) throw new Error('Garn: a Campaign cannot join itself');
+      if (stored()) throw new Error('Garn: finish or cancel the open merge first');
       await deps.campaigns.readRevelationMap(sourceId);
       await requireOpenTarget(targetId);
       const next: JoinDraft = { kind: 'join', sourceId, targetId, closeSource, picks: [] };
@@ -570,10 +570,10 @@ export function createMerges(deps: MergesDeps): Merges {
     async abandon({ confirm }) {
       const adventure = await checkedOutAdventure();
       if (confirm !== adventure.name)
-        throw new Error(`Silk: type the Adventure name "${adventure.name}" to abandon it`);
+        throw new Error(`Garn: type the Adventure name "${adventure.name}" to abandon it`);
       const canon = await requireCanon();
       const main = await canon.getMain();
-      if (!main) throw new Error('Silk: main has no Commit');
+      if (!main) throw new Error('Garn: main has no Commit');
       const binding = workingCopy.binding;
       if (!binding) throw new Error(UNBOUND);
       await canon.writeAdventure({ ...adventure, abandoned: now() });
@@ -597,7 +597,7 @@ export function createMerges(deps: MergesDeps): Merges {
           (r) => r.id === pick.recordId && r.fields.some((f) => f.field === pick.field),
         );
         if (!known || !('side' in pick))
-          throw new Error(`Silk: no item "${pick.field}" of "${pick.recordId}" in this join`);
+          throw new Error(`Garn: no item "${pick.field}" of "${pick.recordId}" in this join`);
         const picks = j.picks.filter((p) => p.recordId !== pick.recordId || p.field !== pick.field);
         await saveDraft({ ...j, picks: [...picks, pick] });
         return;
@@ -605,9 +605,9 @@ export function createMerges(deps: MergesDeps): Merges {
       const d = requireDraft();
       const merge = await mergeOf(d);
       if (!merge.records.has(pick.recordId))
-        throw new Error(`Silk: no record "${pick.recordId}" in this merge`);
+        throw new Error(`Garn: no record "${pick.recordId}" in this merge`);
       if (isWorldLocal(merge.records.get(pick.recordId)?.kind ?? 'element', pick.field))
-        throw new Error(`Silk: "${pick.field}" belongs to this World and is not merged`);
+        throw new Error(`Garn: "${pick.field}" belongs to this World and is not merged`);
       // A row covering several fields (an Event Scene token): take the side for each.
       const record = merge.records.get(pick.recordId);
       const covered =
@@ -635,14 +635,14 @@ export function createMerges(deps: MergesDeps): Merges {
     },
 
     async confirm() {
-      if (joinDraft()) throw new Error('Silk: a join has no Commit; confirm it with confirmJoin');
+      if (joinDraft()) throw new Error('Garn: a join has no Commit; confirm it with confirmJoin');
       const d = requireDraft();
       const canon = await requireCanon();
       const { snapshot, unresolved } = resolve(await mergeOf(d), d.picks);
       if (unresolved.length)
-        throw new Error(`Silk: ${unresolved.length} conflict(s) left; pick a side for each first`);
+        throw new Error(`Garn: ${unresolved.length} conflict(s) left; pick a side for each first`);
       if ((await canon.getMain()) !== d.ours)
-        throw new Error('Silk: main moved on since this merge started; end the Adventure again');
+        throw new Error('Garn: main moved on since this merge started; end the Adventure again');
       const binding = workingCopy.binding;
       if (!binding) throw new Error(UNBOUND);
       const adventure = d.kind === 'canonEdit' ? null : await adventureOf(d);
@@ -665,7 +665,7 @@ export function createMerges(deps: MergesDeps): Merges {
 
     async confirmJoin() {
       const j = joinDraft();
-      if (!j) throw new Error('Silk: no join is open');
+      if (!j) throw new Error('Garn: no join is open');
       await applyJoin(j);
     },
 

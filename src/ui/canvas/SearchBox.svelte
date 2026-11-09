@@ -122,37 +122,37 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="silk-search" data-silk-search={mode} onkeydown={onKeydown}>
+<div class="garn-search" data-garn-search={mode} onkeydown={onKeydown}>
   {#if direction}
-    <div class="title" data-silk-connect-hint>{ctx.localize('SILK.Canvas.NewNodeDirection')}</div>
-    <div class="directions" role="radiogroup" tabindex="-1" use:focus data-silk-directions>
+    <div class="title" data-garn-connect-hint>{ctx.localize('GARN.Canvas.NewNodeDirection')}</div>
+    <div class="directions" role="radiogroup" tabindex="-1" use:focus data-garn-directions>
       {#each DIRECTIONS as d (d)}
         <button
           type="button"
           class:active={d === direction}
           onclick={() => onnew?.(d)}
-          data-silk-direction={d}
+          data-garn-direction={d}
         >
-          {ctx.localize(`SILK.Connection.Point.${d}`)}
+          {ctx.localize(`GARN.Connection.Point.${d}`)}
         </button>
       {/each}
     </div>
   {:else}
     {#if mode === 'connect'}
-      <div class="title" data-silk-connect-hint>{ctx.localize('SILK.Canvas.ConnectHint')}</div>
+      <div class="title" data-garn-connect-hint>{ctx.localize('GARN.Canvas.ConnectHint')}</div>
     {/if}
     <input
       type="search"
       value={query}
-      placeholder={ctx.localize('SILK.Canvas.SearchPlaceholder')}
+      placeholder={ctx.localize('GARN.Canvas.SearchPlaceholder')}
       oninput={(e) => void onInput(e.currentTarget.value).catch(console.error)}
       use:focus
-      data-silk-search-input
+      data-garn-search-input
     />
     <div class="results" role="listbox">
       {#each entries as entry, i (i)}
         {#if entry.kind === 'header'}
-          <div class="header" data-silk-search-tag>{entry.label}</div>
+          <div class="header" data-garn-search-tag>{entry.label}</div>
         {:else if entry.kind === 'new'}
           <button
             type="button"
@@ -160,10 +160,10 @@
             aria-selected={pickable[active] === i}
             class:active={pickable[active] === i}
             onclick={() => choose(entry)}
-            data-silk-search-new
+            data-garn-search-new
           >
             <i class="fa-solid fa-plus"></i>
-            {ctx.localize('SILK.Canvas.NewNode')}
+            {ctx.localize('GARN.Canvas.NewNode')}
           </button>
         {:else}
           <button
@@ -172,9 +172,9 @@
             aria-selected={pickable[active] === i}
             class:active={pickable[active] === i}
             class:ghost={entry.ghost}
-            style:--silk-class={elementClass(entry.cls)?.color ?? '#999'}
+            style:--garn-class={elementClass(entry.cls)?.color ?? '#999'}
             onclick={() => choose(entry)}
-            data-silk-search-hit={entry.id}
+            data-garn-search-hit={entry.id}
           >
             <span class="name">{entry.name}</span>
             {#if entry.sub}
@@ -186,14 +186,14 @@
         {/if}
       {/each}
       {#if query.trim() && !hits.length}
-        <div class="empty" data-silk-search-empty>{ctx.localize('SILK.Canvas.SearchEmpty')}</div>
+        <div class="empty" data-garn-search-empty>{ctx.localize('GARN.Canvas.SearchEmpty')}</div>
       {/if}
     </div>
   {/if}
 </div>
 
 <style>
-  .silk-search {
+  .garn-search {
     position: absolute;
     top: 44px;
     left: 50%;
@@ -244,7 +244,7 @@
     text-align: left;
     background: #fff;
     border: 1px solid #ddd;
-    border-left: 4px solid var(--silk-class, #2b6cb0);
+    border-left: 4px solid var(--garn-class, #2b6cb0);
     border-radius: 4px;
     cursor: pointer;
   }

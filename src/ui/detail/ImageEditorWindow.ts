@@ -4,10 +4,10 @@ import ImageEditor from './ImageEditor.svelte';
 
 export class ImageEditorWindow extends DetailWindow {
   static override DEFAULT_OPTIONS = {
-    window: { title: 'SILK.ImageEditor.Title', icon: 'fa-solid fa-image' },
+    window: { title: 'GARN.ImageEditor.Title', icon: 'fa-solid fa-image' },
     position: { width: 360, height: 640 },
   };
-  static override prefix = 'silk-image-editor';
+  static override prefix = 'garn-image-editor';
 
   protected readonly component = ImageEditor;
 }

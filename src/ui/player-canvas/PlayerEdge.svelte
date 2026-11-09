@@ -17,7 +17,7 @@
   const behavioural = $derived(data?.type !== 'free');
   const text = $derived(
     behavioural
-      ? ctx.localize(`SILK.Connection.Type.${data?.type}`)
+      ? ctx.localize(`GARN.Connection.Type.${data?.type}`)
       : data?.label || (data?.direction === 'mutual' ? '—' : '→'),
   );
   const box = (node: InternalNode | undefined): Box | undefined =>
@@ -52,22 +52,22 @@
     {id}
     path={geometry.path}
     {markerEnd}
-    class={['silk-edge', behavioural ? 'behavioural' : 'free']}
+    class={['garn-edge', behavioural ? 'behavioural' : 'free']}
   />
   <EdgeLabel
     x={geometry.x}
     y={geometry.y}
-    class={['silk-edge-label', 'silk-player-edge-label', behavioural ? 'behavioural' : 'free']}
-    data-silk-player-edge={id}
-    data-silk-edge-from={source}
-    data-silk-edge-to={target}
+    class={['garn-edge-label', 'garn-player-edge-label', behavioural ? 'behavioural' : 'free']}
+    data-garn-player-edge={id}
+    data-garn-edge-from={source}
+    data-garn-edge-to={target}
   >
     {data?.direction === 'mutual' ? '⟷ ' : ''}{text}
   </EdgeLabel>
 {/if}
 
 <style>
-  :global(.silk-player-edge-label.silk-edge-label) {
+  :global(.garn-player-edge-label.garn-edge-label) {
     cursor: default;
   }
 </style>

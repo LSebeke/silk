@@ -31,7 +31,7 @@
   let props: { ctx: DetailContext; id: string } = $props();
   const ctx = untrack(() => props.ctx);
   const id = untrack(() => props.id);
-  const t = (key: string) => ctx.localize(`SILK.ImageEditor.${key}`);
+  const t = (key: string) => ctx.localize(`GARN.ImageEditor.${key}`);
 
   /** Preview grid square (px). */
   const SIZE = 180;
@@ -172,14 +172,14 @@
 </script>
 
 {#snippet color(key: 'ring' | 'background', label: string)}
-  <div class="row" data-silk-image-color={key}>
+  <div class="row" data-garn-image-color={key}>
     <span class="label">{label}</span>
     <input
       type="color"
       value={ring.colors[key] ?? '#ffffff'}
       disabled={!ring.enabled}
       onchange={(e) => setColor(key, e.currentTarget.value)}
-      data-silk-image-color-input={key}
+      data-garn-image-color-input={key}
     />
     {#if ring.colors[key]}
       <button
@@ -188,7 +188,7 @@
         disabled={!ring.enabled}
         title={t('WorldDefault')}
         onclick={() => setColor(key, null)}
-        data-silk-image-color-clear={key}><i class="fa-solid fa-xmark"></i></button
+        data-garn-image-color-clear={key}><i class="fa-solid fa-xmark"></i></button
       >
     {:else}
       <span class="hint">{t('WorldDefault')}</span>
@@ -202,26 +202,26 @@
   {/if}
 {/snippet}
 
-<DetailShell data-silk-image-editor={id} header={element ? header : undefined}>
+<DetailShell data-garn-image-editor={id} header={element ? header : undefined}>
   {#if element && look}
     {#if look.hooded}
-      <p class="hint" data-silk-image-hooded>{t('HoodedHint')}</p>
+      <p class="hint" data-garn-image-hooded>{t('HoodedHint')}</p>
     {/if}
-    <DetailSection title={t('SheetImage')} data-silk-image-sheet>
+    <DetailSection title={t('SheetImage')} data-garn-image-sheet>
       <div class="row">
         <img class="thumb" src={look.img || undefined} alt="" />
         <span class="path" title={look.img}>{look.img || '–'}</span>
-        <button type="button" onclick={pickSheet} data-silk-image-sheet-choose>{t('Choose')}</button
+        <button type="button" onclick={pickSheet} data-garn-image-sheet-choose>{t('Choose')}</button
         >
       </div>
     </DetailSection>
-    <DetailSection title={t('TokenImage')} data-silk-image-token>
+    <DetailSection title={t('TokenImage')} data-garn-image-token>
       <label class="row">
         <input
           type="checkbox"
           checked={same}
           onchange={(e) => setSame(e.currentTarget.checked)}
-          data-silk-image-same
+          data-garn-image-same
         />
         {t('SameAsImage')}
       </label>
@@ -229,7 +229,7 @@
         <div class="row">
           <img class="thumb" src={look.token || undefined} alt="" />
           <span class="path" title={look.token}>{look.token || '–'}</span>
-          <button type="button" onclick={pickToken} data-silk-image-token-choose
+          <button type="button" onclick={pickToken} data-garn-image-token-choose
             >{t('Choose')}</button
           >
         </div>
@@ -239,28 +239,28 @@
           type="checkbox"
           checked={look.lockRotation}
           onchange={(e) => commit({ token: { lockRotation: e.currentTarget.checked } })}
-          data-silk-image-lock-rotation
+          data-garn-image-lock-rotation
         />
         {t('LockRotation')}
       </label>
     </DetailSection>
-    <DetailSection title={t('Ring')} data-silk-image-ring>
+    <DetailSection title={t('Ring')} data-garn-image-ring>
       <label class="row">
         <input
           type="checkbox"
           checked={ring.enabled}
           onchange={(e) => commit({ token: { ring: { enabled: e.currentTarget.checked } } })}
-          data-silk-image-ring-enabled
+          data-garn-image-ring-enabled
         />
         {t('RingEnabled')}
       </label>
-      <div class="row" data-silk-image-order>
+      <div class="row" data-garn-image-order>
         <span class="label">{t('DrawOrder')}</span>
         <select
           value={order}
           disabled={!ring.enabled}
           onchange={(e) => commit({ token: { order: e.currentTarget.value as Order } })}
-          data-silk-image-order-select
+          data-garn-image-order-select
         >
           <option value="ring">{t('OrderRing')}</option>
           <option value="illustration">{t('OrderIllustration')}</option>
@@ -269,7 +269,7 @@
       {@render color('ring', t('RingColor'))}
       {@render color('background', t('BackgroundColor'))}
     </DetailSection>
-    <DetailSection title={t('Position')} data-silk-image-position>
+    <DetailSection title={t('Position')} data-garn-image-position>
       <div
         class="frame"
         style:width="{SIZE}px"
@@ -285,7 +285,7 @@
         onpointerup={up}
         onpointercancel={up}
         onwheel={wheel}
-        data-silk-image-preview
+        data-garn-image-preview
       >
         <div
           class="token"
@@ -293,10 +293,10 @@
           class:styled={ring.enabled && style}
           style:width="{tokenPx}px"
           style:height="{tokenPx}px"
-          data-silk-image-preview-token
+          data-garn-image-preview-token
         >
           {#if ring.enabled}
-            <div class="layer" style={sprite(style?.background)} data-silk-image-preview-background>
+            <div class="layer" style={sprite(style?.background)} data-garn-image-preview-background>
               {#if backgroundColor}
                 <div
                   class="layer tint"
@@ -307,7 +307,7 @@
             </div>
           {/if}
           {#if ring.enabled && style}
-            <div class="layer" style={sprite(style.ring)} data-silk-image-preview-ring>
+            <div class="layer" style={sprite(style.ring)} data-garn-image-preview-ring>
               {#if band}
                 <div class="layer tint" style:background={band}></div>
               {/if}
@@ -345,11 +345,11 @@
           value={pose.scale}
           oninput={(e) => (draft = slide(e.currentTarget.value))}
           onchange={(e) => writePose(slide(e.currentTarget.value))}
-          data-silk-image-scale
+          data-garn-image-scale
         />
         <span class="value">{pose.scale.toFixed(2)}</span>
       </label>
-      <button type="button" class="reset" onclick={reset} data-silk-image-reset>{t('Reset')}</button
+      <button type="button" class="reset" onclick={reset} data-garn-image-reset>{t('Reset')}</button
       >
     </DetailSection>
     {#if look.restorable}
@@ -358,11 +358,11 @@
         class="reset"
         title={t('RestoreHint')}
         onclick={() => restore()}
-        data-silk-image-restore>{t('Restore')}</button
+        data-garn-image-restore>{t('Restore')}</button
       >
     {/if}
   {:else}
-    <p class="hint">{ctx.localize('SILK.Detail.Gone')}</p>
+    <p class="hint">{ctx.localize('GARN.Detail.Gone')}</p>
   {/if}
 </DetailShell>
 

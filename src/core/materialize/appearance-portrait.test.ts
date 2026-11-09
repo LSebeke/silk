@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { must, page, setup } from './test-setup';
 
-const fig = (src: string) => `<figure data-silk-portrait=""><img src="${src}"></figure>`;
+const fig = (src: string) => `<figure data-garn-portrait=""><img src="${src}"></figure>`;
 
 /** A Materialized Person with image `img`; its Appearance block id. */
 async function person(img = 'alrik.webp') {

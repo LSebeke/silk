@@ -38,7 +38,7 @@ describe('resolvePlayerNode (spec §9 Node: name + Cover from docs the player se
   it('a journal element: its name and the Cover page image when that page is visible', () => {
     const cover = doc('JournalEntryPage', 'OBSERVER', { src: 'gareth.webp' });
     const entry = doc('JournalEntry', 'OBSERVER', {
-      flags: { silk: { cover: 'cov' } },
+      flags: { garn: { cover: 'cov' } },
       pages: new Map([['cov', cover]]),
     });
     const docs = new Map([['JournalEntry.g', entry]]);
@@ -51,7 +51,7 @@ describe('resolvePlayerNode (spec §9 Node: name + Cover from docs the player se
   it('a hidden Cover page shows no image', () => {
     const cover = doc('JournalEntryPage', 'NONE', { src: 'secret.webp' });
     const entry = doc('JournalEntry', 'OBSERVER', {
-      flags: { silk: { cover: 'cov' } },
+      flags: { garn: { cover: 'cov' } },
       pages: new Map([['cov', cover]]),
     });
     expect(resolvePlayerNode(node('location', 'x'), () => entry, {})).toEqual({
@@ -87,7 +87,7 @@ describe('openPlayerDoc (spec §9: click opens the Foundry doc)', () => {
 
   it('an actor opens the LIMITED sheet plus the Companion Journal once the player may see it', async () => {
     const companion = doc('JournalEntry', 'OBSERVER');
-    const actor = doc('Actor', 'LIMITED', { flags: { silk: { companion: 'comp' } } });
+    const actor = doc('Actor', 'LIMITED', { flags: { garn: { companion: 'comp' } } });
     await openPlayerDoc(node('person', 'a'), {
       get: () => actor,
       journal: (id) => (id === 'comp' ? companion : undefined),
@@ -98,7 +98,7 @@ describe('openPlayerDoc (spec §9: click opens the Foundry doc)', () => {
 
   it('a NONE Companion Journal stays closed', async () => {
     const companion = doc('JournalEntry', 'NONE');
-    const actor = doc('Actor', 'LIMITED', { flags: { silk: { companion: 'comp' } } });
+    const actor = doc('Actor', 'LIMITED', { flags: { garn: { companion: 'comp' } } });
     await openPlayerDoc(node('person', 'a'), {
       get: () => actor,
       journal: () => companion,

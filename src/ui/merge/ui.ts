@@ -5,7 +5,7 @@
 import type { MergeUi } from '../../core/merge';
 import type { MergeDeps, MergeWindow } from './MergeWindow';
 
-const ID = 'silk-merge';
+const ID = 'garn-merge';
 
 export function createMergeUi(deps: MergeDeps): MergeUi {
   const current = () => foundry.applications.instances.get(ID) as MergeWindow | undefined;
@@ -33,13 +33,13 @@ export function createMergeUi(deps: MergeDeps): MergeUi {
       const kind = (await deps.view())?.draft.kind;
       const body =
         kind === 'join'
-          ? 'SILK.Merge.JoinConfirmBody'
+          ? 'GARN.Merge.JoinConfirmBody'
           : kind === 'canonEdit'
-            ? 'SILK.Merge.CanonEditConfirmBody'
-            : 'SILK.Merge.ConfirmBody';
-      const title = kind === 'join' ? 'SILK.Merge.JoinConfirmTitle' : 'SILK.Merge.ConfirmTitle';
+            ? 'GARN.Merge.CanonEditConfirmBody'
+            : 'GARN.Merge.ConfirmBody';
+      const title = kind === 'join' ? 'GARN.Merge.JoinConfirmTitle' : 'GARN.Merge.ConfirmTitle';
       return !!(await foundry.applications.api.DialogV2.confirm({
-        id: 'silk-merge-confirm',
+        id: 'garn-merge-confirm',
         window: { title: deps.t(title) },
         content: `<p>${deps.t(body)}</p>`,
       }));

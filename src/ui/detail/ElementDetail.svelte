@@ -75,7 +75,7 @@
   /** Focuses (and selects) a block's name field once it is rendered. */
   async function focusName(block: string) {
     await tick();
-    const input = root?.querySelector<HTMLInputElement>(`[data-silk-detail-block-name="${block}"]`);
+    const input = root?.querySelector<HTMLInputElement>(`[data-garn-detail-block-name="${block}"]`);
     input?.focus();
     input?.select();
   }
@@ -115,8 +115,8 @@
   }
   async function remove(block: { _id: string; name: string }) {
     const yes = await ctx.confirm(
-      ctx.localize('SILK.Detail.DeleteInfoBlockTitle'),
-      ctx.format('SILK.Detail.DeleteInfoBlockConfirm', { name: block.name }),
+      ctx.localize('GARN.Detail.DeleteInfoBlockTitle'),
+      ctx.format('GARN.Detail.DeleteInfoBlockConfirm', { name: block.name }),
     );
     if (yes) await run('infoBlock.delete', { id: block._id });
   }
@@ -167,7 +167,7 @@
             }
           }}
           onblur={(e) => saveName(e.currentTarget.value)}
-          data-silk-detail-name-input
+          data-garn-detail-name-input
         />
       {:else}
         <div class="row">
@@ -178,7 +178,7 @@
               class="icon"
               title={ctx.title('element.rename')}
               onclick={() => (naming = true)}
-              data-silk-detail-rename><i class="fa-solid fa-pencil"></i></button
+              data-garn-detail-rename><i class="fa-solid fa-pencil"></i></button
             >
           {/if}
         </div>
@@ -187,27 +187,27 @@
   {/if}
 {/snippet}
 
-<DetailShell data-silk-detail={id} bind:root header={element ? header : undefined}>
+<DetailShell data-garn-detail={id} bind:root header={element ? header : undefined}>
   {#if element}
     {#if !canReveal}
-      <p class="hint" data-silk-detail-hint>{ctx.localize('SILK.Reveal.NeedsAdventure')}</p>
+      <p class="hint" data-garn-detail-hint>{ctx.localize('GARN.Reveal.NeedsAdventure')}</p>
     {/if}
     {#if appearance || imageEditor}
       <DetailSection>
         <div class="row">
           {#if appearance}
-            <span class="row appearance" data-silk-detail-appearance>
+            <span class="row appearance" data-garn-detail-appearance>
               {@render eye('appearance', id)}
-              <span>{ctx.localize('SILK.Reveal.Appearance')}</span>
+              <span>{ctx.localize('GARN.Reveal.Appearance')}</span>
             </span>
           {/if}
           {#if imageEditor}
-            <!-- v1.1 §G.3: Silk's editor, hood-aware (not Foundry's TokenConfig). -->
+            <!-- v1.1 §G.3: Garn's editor, hood-aware (not Foundry's TokenConfig). -->
             <button
               type="button"
               class="image"
               onclick={() => run('element.openImageEditor', { id })}
-              data-silk-detail-image-editor
+              data-garn-detail-image-editor
               ><i class="fa-solid fa-image"></i>
               {ctx.title('element.openImageEditor')}</button
             >
@@ -215,12 +215,12 @@
         </div>
       </DetailSection>
     {/if}
-    <DetailSection title={ctx.localize('SILK.Detail.InfoBlocks')}>
+    <DetailSection title={ctx.localize('GARN.Detail.InfoBlocks')}>
       {#each blocks as block (block._id)}
         <div
           class="block"
           class:over={over === block._id && dragging !== block._id}
-          data-silk-detail-block={block._id}
+          data-garn-detail-block={block._id}
           role="listitem"
           ondragover={(e) => {
             if (!dragging) return;
@@ -239,7 +239,7 @@
               role="button"
               tabindex="-1"
               title={ctx.title('infoBlock.move')}
-              data-silk-detail-block-handle={block._id}
+              data-garn-detail-block-handle={block._id}
               ondragstart={(e) => {
                 dragging = block._id;
                 e.dataTransfer?.setData('text/plain', block._id);
@@ -255,8 +255,8 @@
               class="name"
               value={block.name}
               disabled={!canEdit}
-              aria-label={ctx.localize('SILK.Detail.InfoBlockName')}
-              data-silk-detail-block-name={block._id}
+              aria-label={ctx.localize('GARN.Detail.InfoBlockName')}
+              data-garn-detail-block-name={block._id}
               onchange={(e) => rename(block, e.currentTarget)}
               onkeydown={(e) => {
                 if (e.key === 'Enter') e.currentTarget.blur();
@@ -271,7 +271,7 @@
               class="icon"
               title={ctx.title('infoBlock.open')}
               onclick={() => run('infoBlock.open', { id: block._id })}
-              data-silk-detail-block-open={block._id}
+              data-garn-detail-block-open={block._id}
               ><i class="fa-solid fa-arrow-up-right-from-square"></i></button
             >
             <button
@@ -280,12 +280,12 @@
               disabled={!canEdit}
               title={ctx.title('infoBlock.delete')}
               onclick={() => remove(block)}
-              data-silk-detail-block-delete={block._id}><i class="fa-solid fa-trash"></i></button
+              data-garn-detail-block-delete={block._id}><i class="fa-solid fa-trash"></i></button
             >
           </div>
           {#if block.appearance && element.img}
-            <!-- v1.1 §G.4: the page's Silk-managed portrait, read-only; the editor has only the text. -->
-            <figure class="text portrait" data-silk-detail-portrait={block._id}>
+            <!-- v1.1 §G.4: the page's Garn-managed portrait, read-only; the editor has only the text. -->
+            <figure class="text portrait" data-garn-detail-portrait={block._id}>
               <img src={element.img} alt={element.name} />
             </figure>
           {/if}
@@ -295,19 +295,19 @@
                 mount={ctx.editor}
                 html={block.text}
                 save={(text) => void run('infoBlock.edit', { id: block._id, text })}
-                data-silk-detail-block-text={block._id}
+                data-garn-detail-block-text={block._id}
               />
             </div>
           {/if}
         </div>
       {/each}
-      <div class="add-group" data-silk-detail-add>
+      <div class="add-group" data-garn-detail-add>
         <button
           type="button"
           class="add"
           disabled={!canEdit}
           onclick={() => addBlock()}
-          data-silk-detail-add-block>{ctx.localize('SILK.Detail.AddInfoBlock')}</button
+          data-garn-detail-add-block>{ctx.localize('GARN.Detail.AddInfoBlock')}</button
         >
         {#if appearancePreset}
           <!-- v1.1 §C.2: the "+ Info Block" control offers the Appearance preset. -->
@@ -317,31 +317,31 @@
             disabled={!canEdit}
             aria-haspopup="menu"
             aria-expanded={presets}
-            aria-label={ctx.localize('SILK.Detail.AddPresets')}
-            title={ctx.localize('SILK.Detail.AddPresets')}
+            aria-label={ctx.localize('GARN.Detail.AddPresets')}
+            title={ctx.localize('GARN.Detail.AddPresets')}
             onclick={() => (presets = !presets)}
-            data-silk-detail-add-menu>▾</button
+            data-garn-detail-add-menu>▾</button
           >
           {#if presets}
             <div class="presets" role="menu">
               <button
                 type="button"
                 role="menuitem"
-                title={ctx.localize('SILK.Detail.AddAppearanceHint')}
+                title={ctx.localize('GARN.Detail.AddAppearanceHint')}
                 onclick={() => {
                   presets = false;
                   void addBlock('appearance');
                 }}
-                data-silk-detail-add-appearance>{ctx.localize('SILK.Detail.AddAppearance')}</button
+                data-garn-detail-add-appearance>{ctx.localize('GARN.Detail.AddAppearance')}</button
               >
             </div>
           {/if}
         {/if}
       </div>
     </DetailSection>
-    <DetailSection title={ctx.localize('SILK.Detail.Connections')}>
+    <DetailSection title={ctx.localize('GARN.Detail.Connections')}>
       {#each connections as c (c.id)}
-        <div class="row" data-silk-detail-connection={c.id}>
+        <div class="row" data-garn-detail-connection={c.id}>
           {@render eye('connection', c.id)}
           <span class="name">{c.text}</span>
           {#if canOpenConnection}
@@ -351,7 +351,7 @@
               class="icon"
               title={ctx.title('connection.openDetail')}
               onclick={() => run('connection.openDetail', { id: c.id })}
-              data-silk-detail-connection-open={c.id}><i class="fa-solid fa-pencil"></i></button
+              data-garn-detail-connection-open={c.id}><i class="fa-solid fa-pencil"></i></button
             >
           {/if}
         </div>
@@ -359,7 +359,7 @@
         <p class="hint">–</p>
       {/each}
     </DetailSection>
-    <DetailSection data-silk-detail-actions>
+    <DetailSection data-garn-detail-actions>
       <div class="actions">
         {#each entries as entry (entry.key)}
           <button
@@ -368,13 +368,13 @@
             disabled={entry.disabled}
             title={entry.hint ? ctx.localize(entry.hint) : undefined}
             onclick={() => pick(entry)}
-            data-silk-menu-item={entry.key}>{ctx.localize(entry.label)}</button
+            data-garn-menu-item={entry.key}>{ctx.localize(entry.label)}</button
           >
         {/each}
       </div>
     </DetailSection>
   {:else}
-    <p class="hint">{ctx.localize('SILK.Detail.Gone')}</p>
+    <p class="hint">{ctx.localize('GARN.Detail.Gone')}</p>
   {/if}
 </DetailShell>
 
