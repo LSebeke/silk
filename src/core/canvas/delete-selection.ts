@@ -11,7 +11,7 @@ import type { CanvasCommandDeps } from './commands';
 export function deleteSelectionCommand(deps: CanvasCommandDeps): Command {
   const command: Command<object, void> = {
     name: 'canvas.deleteSelection',
-    title: 'SILK.Commands.canvas.deleteSelection',
+    title: 'GARN.Commands.canvas.deleteSelection',
     available: (ctx) => ctx.isGM,
     async run() {
       const { selection, connections } = deps.state.get();

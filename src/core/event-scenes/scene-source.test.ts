@@ -44,12 +44,12 @@ describe('Scene source (spec 1.1 §B.2.1)', () => {
       tokenVision: true,
       walls: [{ _id: 'wall000000000001' }],
       lights: [{ _id: 'light00000000001' }],
-      flags: { dsa5: { lang: 'de' }, silk: { sceneOf: town } },
+      flags: { dsa5: { lang: 'de' }, garn: { sceneOf: town } },
       folder: 'sceneFolder',
     });
     // No Preset applied: no Narrative box, no Preset flag.
     expect(scene.drawings ?? []).toEqual([]);
-    expect(t.doc(town).flags.silk.scene).toBe(scene._id);
+    expect(t.doc(town).flags.garn.scene).toBe(scene._id);
     // The journal is the Location's own, its Cover the Scene's background.
     expect(t.doc(town).documentName).toBe('JournalEntry');
     expect(t.element(town).img).toBe('maps/gareth.webp');

@@ -38,8 +38,8 @@ export interface MenuDeps {
   selection: readonly string[];
 }
 
-const NEEDS_ADVENTURE = 'SILK.Reveal.NeedsAdventure';
-const ADD_INFO_BLOCK = 'SILK.Detail.AddInfoBlockMenu';
+const NEEDS_ADVENTURE = 'GARN.Reveal.NeedsAdventure';
+const ADD_INFO_BLOCK = 'GARN.Detail.AddInfoBlockMenu';
 
 function command(deps: MenuDeps, name: string, args: object, label?: string): MenuEntry {
   const off = !deps.available(name);
@@ -58,11 +58,11 @@ function toggle(deps: MenuDeps, kind: Exclude<RevealKind, 'playerNote'>, id: str
   const label =
     kind === 'appearance'
       ? revealed
-        ? 'SILK.Reveal.HideAppearance'
-        : 'SILK.Reveal.RevealAppearance'
+        ? 'GARN.Reveal.HideAppearance'
+        : 'GARN.Reveal.RevealAppearance'
       : revealed
-        ? 'SILK.Reveal.Unreveal'
-        : 'SILK.Reveal.Reveal';
+        ? 'GARN.Reveal.Unreveal'
+        : 'GARN.Reveal.Reveal';
   return command(deps, `reveal.${kind}`, { id, revealed: !revealed }, label);
 }
 
@@ -104,13 +104,13 @@ export function edgeMenu(c: Pick<Connection, 'id' | 'type'>, deps: MenuDeps): Me
   const { id } = c;
   const directedMutual = command(deps, 'connection.toggleDirection', { id });
   return [
-    command(deps, 'connection.openDetail', { id }, 'SILK.Canvas.EdgeMenu.OpenDetails'),
+    command(deps, 'connection.openDetail', { id }, 'GARN.Canvas.EdgeMenu.OpenDetails'),
     toggle(deps, 'connection', id),
     { ...command(deps, 'connection.setLabel', { id }), action: 'editConnection' },
     // Behavioural Connections are always directed.
     togglesDirection(c) ? directedMutual : { ...directedMutual, disabled: true },
     command(deps, 'connection.cycleType', { id }),
-    command(deps, 'connection.flip', { id }, 'SILK.Canvas.EdgeMenu.Reverse'),
+    command(deps, 'connection.flip', { id }, 'GARN.Canvas.EdgeMenu.Reverse'),
     { ...command(deps, 'connection.delete', { ids: [id] }), danger: true },
   ];
 }

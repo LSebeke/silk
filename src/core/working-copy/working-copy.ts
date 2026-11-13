@@ -1,8 +1,8 @@
 /**
- * Silk Working Copy (spec §11.3): the World's uncommitted records (non-Materialized
+ * Garn Working Copy (spec §11.3): the World's uncommitted records (non-Materialized
  * elements, Connections, Tags, layout) plus the Canon binding. Pure core over an
  * injected backend; the Foundry adapter stores it in a hidden JournalEntry,
- * one `flags.silk.records.<id>` per record. Only the active GM writes.
+ * one `flags.garn.records.<id>` per record. Only the active GM writes.
  */
 import { canonicalJson, type CanonRecord, type JsonValue, type Snapshot } from '../canon';
 
@@ -123,10 +123,10 @@ export function createWorkingCopy(
 
   async function write(patch: WorkingCopyPatch) {
     if (!options.canWrite())
-      throw new Error('Silk: only the active GM writes the Silk Working Copy');
+      throw new Error('Garn: only the active GM writes the Garn Working Copy');
     for (const record of patch.set ?? [])
       if (!RECORD_ID.test(record.id) || RESERVED.has(record.id))
-        throw new Error(`Silk: invalid record id "${record.id}"`);
+        throw new Error(`Garn: invalid record id "${record.id}"`);
     const empty =
       !patch.set?.length &&
       !patch.delete?.length &&

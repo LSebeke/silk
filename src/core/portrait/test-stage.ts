@@ -23,7 +23,7 @@ export function testLookStage() {
     },
     ringEdges: async () => TEST_EDGES,
     async renderSubject(actor, spec) {
-      const file = `silk/test/tokens/${actor.split('.').pop()}-${subjects.length + 1}.webp`;
+      const file = `garn/test/tokens/${actor.split('.').pop()}-${subjects.length + 1}.webp`;
       subjects.push({ actor, spec, file });
       return file;
     },

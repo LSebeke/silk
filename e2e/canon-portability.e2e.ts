@@ -8,15 +8,15 @@ import { expect as baseExpect, test } from './fixtures';
 // Export and import do many sequential FilePicker round trips; slow on a loaded machine.
 const expect = baseExpect.configure({ timeout: 30_000 });
 
-/** Runs `fn` in the page with Silk's api and session. */
-function silk<A, R>(
+/** Runs `fn` in the page with Garn's api and session. */
+function garn<A, R>(
   page: Page,
   fn: (s: { api: CommandRegistry; session: Session }, arg: A) => R | Promise<R>,
   arg?: A,
 ): Promise<R> {
   return page.evaluate(
     ([src, a]) => {
-      const mod = game.modules?.get('silk') as unknown as {
+      const mod = game.modules?.get('garn') as unknown as {
         api: CommandRegistry;
         session(): Session;
       };
@@ -53,9 +53,9 @@ async function closePopups(page: Page) {
   });
 }
 
-/** Confirm the open Silk portability dialog (Foundry DialogV2 "Yes"). */
+/** Confirm the open Garn portability dialog (Foundry DialogV2 "Yes"). */
 async function confirmDialog(page: Page, text?: RegExp) {
-  const dialog = page.locator('.application:has([data-silk-portability-dialog])').last();
+  const dialog = page.locator('.application:has([data-garn-portability-dialog])').last();
   await expect(dialog).toBeVisible({ timeout: 30_000 });
   if (text) await expect(dialog).toContainText(text);
   // The next dialog may open right away: wait for this one by id.
@@ -66,7 +66,7 @@ async function confirmDialog(page: Page, text?: RegExp) {
 
 /** `canon.import` through the command API with zip bytes; resolves after dialogs are answered. */
 function importBytes(page: Page, path: string) {
-  return silk(
+  return garn(
     page,
     ({ api }, bytes) =>
       api.run<ImportResult | null>('canon.import', { file: new Uint8Array(bytes) }),
@@ -78,21 +78,21 @@ test('Canon Backup and Share: export, import round-trip with assets', async ({ g
   test.setTimeout(240_000);
   await gm.waitForFunction(() => {
     try {
-      (game.modules?.get('silk') as unknown as { session(): unknown }).session();
+      (game.modules?.get('garn') as unknown as { session(): unknown }).session();
       return true;
     } catch {
       return false;
     }
   });
   const run = Date.now().toString(36);
-  const dir = `silk-e2e-${run}`;
+  const dir = `garn-e2e-${run}`;
   await upload(gm, dir, 'hero.png', 'hero v1');
-  const canonId = await silk(gm, async ({ api, session }) => {
+  const canonId = await garn(gm, async ({ api, session }) => {
     const bound = session.workingCopy.binding;
     if (bound) return bound.canonId;
     return (await api.run<{ canonId: string }>('canon.create', { name: 'E2E' })).canonId;
   });
-  const backedUp = await silk(
+  const backedUp = await garn(
     gm,
     async ({ api, session }, img) => {
       await session.workingCopy.set([
@@ -104,26 +104,26 @@ test('Canon Backup and Share: export, import round-trip with assets', async ({ g
   );
 
   await closePopups(gm);
-  await silk(gm, ({ api }) => api.run('canon.openWindow'));
-  const win = gm.locator('[data-silk-canon]');
-  await expect(win.locator('[data-silk-portability]')).toBeVisible();
+  await garn(gm, ({ api }) => api.run('canon.openWindow'));
+  const win = gm.locator('[data-garn-canon]');
+  await expect(win.locator('[data-garn-portability]')).toBeVisible();
 
   // Backup through the UI: summary dialog with the orphan count, then a download.
   const backupDownload = gm.waitForEvent('download');
-  await win.locator('[data-silk-canon-backup]').click();
+  await win.locator('[data-garn-canon-backup]').click();
   await confirmDialog(gm, /garbage collection|Aufräumen/);
   const backupPath = `${test.info().outputPath('backup.zip')}`;
   await (await backupDownload).saveAs(backupPath);
-  expect((await backupDownload).suggestedFilename()).toMatch(/^silk-backup-.*\.zip$/);
+  expect((await backupDownload).suggestedFilename()).toMatch(/^garn-backup-.*\.zip$/);
 
   // Re-importing the same Backup through the UI is a fast-forward; the asset is identical.
   // Permanent notices (file browser, hardware acceleration) would hold the queue.
   await gm.evaluate(() => ui.notifications?.clear());
-  await win.locator('[data-silk-canon-import]').setInputFiles(backupPath);
+  await win.locator('[data-garn-canon-import]').setInputFiles(backupPath);
   await expect(gm.locator('#notifications')).toContainText(canonId, { timeout: 60_000 });
 
   // Local main moves on and the asset changes: the Backup has diverged.
-  await silk(gm, async ({ api, session }) => {
+  await garn(gm, async ({ api, session }) => {
     await session.workingCopy.set([{ kind: 'element', id: 'el-t27b', data: { name: 'later' } }]);
     await api.run('history.commit', { label: 'T27 later' });
   });
@@ -134,14 +134,14 @@ test('Canon Backup and Share: export, import round-trip with assets', async ({ g
   const copied = await copy;
   expect(copied).toMatchObject({ mode: 'copy', assets: { overwritten: [`${dir}/hero.png`] } });
   expect(copied?.canonId).not.toBe(canonId);
-  expect(JSON.parse(await fetchText(gm, `/silk/${copied?.canonId}/refs/main.json`))).toEqual({
+  expect(JSON.parse(await fetchText(gm, `/garn/${copied?.canonId}/refs/main.json`))).toEqual({
     head: backedUp,
   });
   expect(await fetchText(gm, `/${dir}/hero.png`)).toBe('hero v1');
 
   // Share the head through the UI, import it: a new Canon with one root Commit.
   await upload(gm, dir, 'hero.png', 'hero v3');
-  await silk(
+  await garn(
     gm,
     async ({ api, session }, img) => {
       await session.workingCopy.set([
@@ -151,9 +151,9 @@ test('Canon Backup and Share: export, import round-trip with assets', async ({ g
     },
     `${dir}/hero.png`,
   );
-  await silk(gm, ({ api }) => api.run('canon.openWindow'));
+  await garn(gm, ({ api }) => api.run('canon.openWindow'));
   const shareDownload = gm.waitForEvent('download');
-  await win.locator('[data-silk-canon-share]').click();
+  await win.locator('[data-garn-canon-share]').click();
   await confirmDialog(gm);
   const sharePath = test.info().outputPath('share.zip');
   await (await shareDownload).saveAs(sharePath);
@@ -165,18 +165,18 @@ test('Canon Backup and Share: export, import round-trip with assets', async ({ g
   expect(shared?.assets.renamed).toEqual([
     {
       from: `${dir}/hero.png`,
-      to: expect.stringMatching(new RegExp(`^${dir}/hero\\.silk-[0-9a-f]{8}\\.png$`)),
+      to: expect.stringMatching(new RegExp(`^${dir}/hero\\.garn-[0-9a-f]{8}\\.png$`)),
     },
   ]);
   const renamed = shared?.assets.renamed[0]?.to ?? '';
   expect(await fetchText(gm, `/${renamed}`)).toBe('hero v3');
   const head = (
-    JSON.parse(await fetchText(gm, `/silk/${shared?.canonId}/refs/main.json`)) as {
+    JSON.parse(await fetchText(gm, `/garn/${shared?.canonId}/refs/main.json`)) as {
       head: string;
     }
   ).head;
   const commit = JSON.parse(
-    await fetchText(gm, `/silk/${shared?.canonId}/commits/${head}.json`),
+    await fetchText(gm, `/garn/${shared?.canonId}/commits/${head}.json`),
   ) as {
     parents: string[];
     label: string;

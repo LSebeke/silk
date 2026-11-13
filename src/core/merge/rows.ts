@@ -22,8 +22,8 @@ export interface SheetSections {
 }
 
 export const DEFAULT_SECTIONS: SheetSections = {
-  system: () => 'SILK.Merge.Section.system',
-  item: () => 'SILK.Merge.Section.items',
+  system: () => 'GARN.Merge.Section.system',
+  item: () => 'GARN.Merge.Section.items',
 };
 
 /** Who changed a field in the Canon since the Adventure started (spec §11.4 chip). */
@@ -101,7 +101,7 @@ function elementGroup(record: Sides, field: string): Group {
     return {
       field,
       kind: 'field',
-      section: 'SILK.Merge.Section.infoBlocks',
+      section: 'GARN.Merge.Section.infoBlocks',
       label: [nameOf(block, id), ...rest].join(' · '),
     };
   }
@@ -109,13 +109,13 @@ function elementGroup(record: Sides, field: string): Group {
     return {
       field,
       kind: 'field',
-      section: 'SILK.Merge.Section.layout',
+      section: 'GARN.Merge.Section.layout',
       label: parts(field).join(' · '),
     };
   return {
     field,
     kind: 'field',
-    section: 'SILK.Merge.Section.element',
+    section: 'GARN.Merge.Section.element',
     label: parts(field).join(' · '),
   };
 }
@@ -151,12 +151,12 @@ function sheetGroup(record: Sides, field: string, sections: SheetSections): Grou
     return {
       field,
       kind: 'field',
-      section: 'SILK.Merge.Section.effects',
+      section: 'GARN.Merge.Section.effects',
       label: [nameOf(entry(record, '/doc/effects', id), id), ...rest].join(' · '),
     };
   if (root === 'companion')
-    return { field, kind: 'field', section: 'SILK.Merge.Section.companion', label };
-  return { field, kind: 'field', section: 'SILK.Merge.Section.doc', label: label || field };
+    return { field, kind: 'field', section: 'GARN.Merge.Section.companion', label };
+  return { field, kind: 'field', section: 'GARN.Merge.Section.doc', label: label || field };
 }
 
 function sceneGroup(record: Sides, field: string): Group {
@@ -165,7 +165,7 @@ function sceneGroup(record: Sides, field: string): Group {
     return {
       field: `/scene/tokens/${id}`,
       kind: 'token',
-      section: 'SILK.Merge.Section.tokens',
+      section: 'GARN.Merge.Section.tokens',
       label: nameOf(entry(record, '/scene/tokens', id), id),
     };
   const collection =
@@ -176,13 +176,13 @@ function sceneGroup(record: Sides, field: string): Group {
     return {
       field: `/scene/${key}`,
       kind: 'count',
-      section: 'SILK.Merge.Section.sceneContents',
+      section: 'GARN.Merge.Section.sceneContents',
       label: key,
     };
   return {
     field,
     kind: 'field',
-    section: 'SILK.Merge.Section.scene',
+    section: 'GARN.Merge.Section.scene',
     label: parts(field).slice(1).join(' · ') || field,
   };
 }
@@ -192,7 +192,7 @@ function groupOf(kind: CanonRecord['kind'], record: Sides, field: string, sectio
   if (kind === 'sheet') return sheetGroup(record, field, sections);
   if (kind === 'eventScene') return sceneGroup(record, field);
   const section =
-    kind === 'layoutGroup' ? 'SILK.Merge.Section.layout' : 'SILK.Merge.Section.connection';
+    kind === 'layoutGroup' ? 'GARN.Merge.Section.layout' : 'GARN.Merge.Section.connection';
   return { field, kind: 'field' as const, section, label: parts(field).join(' · ') };
 }
 

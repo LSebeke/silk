@@ -3,10 +3,10 @@
  * the Foundry writes, the subject file and the editor preview alike. Pure.
  *
  * The frame is the ring's square, side 1 (Foundry draws background, ring, then subject, all
- * in it). With the ring on, Silk renders the subject itself: the image, posed, covering the
+ * in it). With the ring on, Garn renders the subject itself: the image, posed, covering the
  * crop circle and cut to it (`subjectBox`). Foundry gets that file with the texture centred.
  * Without the ring the image is contained and the pose anchor is the texture anchor. The
- * texture scale is never Silk's: it is the actor's size factor (#168).
+ * texture scale is never Garn's: it is the actor's size factor (#168).
  */
 
 /**
@@ -28,7 +28,7 @@ export const SCALE = { min: 0.5, max: 8, step: 0.05 } as const;
  */
 export type Order = 'ring' | 'illustration';
 
-/** Ring in front: the draw order without `flags.silk.order`. */
+/** Ring in front: the draw order without `flags.garn.order`. */
 export const DEFAULT_ORDER: Order = 'ring';
 
 /** Foundry's token defaults (common/documents/token.mjs). Also the editor's Reset. */
@@ -111,7 +111,7 @@ export function tokenData(pose: Pose, ring: boolean): Record<string, unknown> {
 
 /**
  * Image size in frame units. Ring: covering the crop circle's square, times the scale. No
- * ring: contained in the frame (Foundry does not scale it for Silk).
+ * ring: contained in the frame (Foundry does not scale it for Garn).
  */
 function imageSize(scale: number, crop: number | undefined, aspect: number) {
   const ring = crop !== undefined;

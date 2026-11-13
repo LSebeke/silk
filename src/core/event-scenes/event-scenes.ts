@@ -3,11 +3,11 @@
  *
  * - Each Event owns one Foundry Scene, generated from its Scene Preset when the Event
  *   Materializes (a Location may own an Overview Scene). The Scene carries
- *   `flags.silk.sceneOf`; the journal mirrors the link in `flags.silk.scene`.
+ *   `flags.garn.sceneOf`; the journal mirrors the link in `flags.garn.scene`.
  * - The Scene follows the element lifecycle (`contributor`): Unmaterialize snapshots it into
  *   an `eventScene` record and deletes it, Materialize restores it, a Commit captures it.
  *   Deleted in Foundry → the link is cleared ("no Scene"), **present at** stays.
- * - **present at** ↔ tokens, Event Scenes only. Silk-driven (Connection commands,
+ * - **present at** ↔ tokens, Event Scenes only. Garn-driven (Connection commands,
  *   Materialize) changes the tokens; Foundry-driven (token hooks, reconcile) the Connections.
  * - Happened: set on the Scene's first activation, once (the GM may undo it).
  *
@@ -61,11 +61,11 @@ export interface EventScenes {
   renamed(id: string): Promise<void>;
   /** The element's Scene, if it has one. */
   sceneOf(id: string): SceneSnapshot | undefined;
-  /** Foundry `createToken` (not Silk's own write). */
+  /** Foundry `createToken` (not Garn's own write). */
   tokenCreated(token: { sceneId: string; actorId: string | null }): Promise<void>;
-  /** Foundry `deleteToken` (not Silk's own write). */
+  /** Foundry `deleteToken` (not Garn's own write). */
   tokenDeleted(token: { sceneId: string; actorId: string | null }): Promise<void>;
-  /** Foundry `updateScene` with `active: true` (not Silk's own write). */
+  /** Foundry `updateScene` with `active: true` (not Garn's own write). */
   sceneActivated(sceneId: string): Promise<void>;
   activateScene(id: string): Promise<void>;
   createScene(id: string, preset?: string): Promise<void>;
@@ -138,12 +138,12 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   };
 
   function sceneOf(id: string) {
-    return scenes.scenes().find((s) => s.flags.silk?.sceneOf === id);
+    return scenes.scenes().find((s) => s.flags.garn?.sceneOf === id);
   }
 
   /** The Event an Event Scene belongs to (Overview Scenes are not Event Scenes, §7). */
   function eventOf(sceneId: string): StoryElement | undefined {
-    const el = element(scenes.get(sceneId)?.flags.silk?.sceneOf);
+    const el = element(scenes.get(sceneId)?.flags.garn?.sceneOf);
     return el?.class === 'event' && el.uuid ? el : undefined;
   }
 
@@ -173,13 +173,13 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
     await wc().set([elementRecord(el.id, data as unknown as ElementData)]);
   }
 
-  /** Mirrors the link into the element's journal (`flags.silk.scene`). */
+  /** Mirrors the link into the element's journal (`flags.garn.scene`). */
   async function setLink(el: StoryElement, sceneId: string | undefined) {
     const journal = el.uuid ? docs.get(el.uuid) : undefined;
-    if (!journal || journal.flags.silk.scene === sceneId) return;
+    if (!journal || journal.flags.garn.scene === sceneId) return;
     await docs.update(
       journal.uuid,
-      sceneId ? { 'flags.silk.scene': sceneId } : { 'flags.silk.-=scene': null },
+      sceneId ? { 'flags.garn.scene': sceneId } : { 'flags.garn.-=scene': null },
     );
   }
 
@@ -190,7 +190,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   };
 
   async function folder() {
-    return scenes.ensureFolder(deps.localize('SILK.Folder.scene'));
+    return scenes.ensureFolder(deps.localize('GARN.Folder.scene'));
   }
 
   async function createFrom(el: StoryElement, data: SceneData) {
@@ -239,7 +239,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   async function importedScene(el: StoryElement, uuid: string): Promise<SceneData | undefined> {
     const data = await docs.importData(uuid);
     if (!data) {
-      deps.notify(deps.localize('SILK.Materialize.CompendiumMissing', { name: el.name }));
+      deps.notify(deps.localize('GARN.Materialize.CompendiumMissing', { name: el.name }));
       return undefined;
     }
     const flags = (data.flags ?? {}) as SceneData['flags'];
@@ -248,7 +248,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
       _id: deps.newId(),
       name: el.name,
       folder: null,
-      flags: { ...flags, silk: { sceneOf: el.id, preset: NO_PRESET } },
+      flags: { ...flags, garn: { sceneOf: el.id, preset: NO_PRESET } },
     };
   }
 
@@ -277,7 +277,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
     });
   }
 
-  /** Silk-driven: each present Materialized actor has a token; others' tokens go. */
+  /** Garn-driven: each present Materialized actor has a token; others' tokens go. */
   async function tokensFollowConnections(event: StoryElement) {
     const scene = sceneOf(event.id);
     if (!scene) return;
@@ -316,7 +316,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   ): Promise<P | undefined> {
     const scene = scenes.get(sceneId);
     if (!scene) return undefined;
-    const p = plan(scene, { newId: deps.newId, label: deps.localize('SILK.EventScene.Box') });
+    const p = plan(scene, { newId: deps.newId, label: deps.localize('GARN.EventScene.Box') });
     if (!p) return undefined;
     if (p.padding !== undefined) await scenes.setPadding(sceneId, p.padding);
     if (p.create || p.update)
@@ -336,7 +336,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
     if (ids.length) await scenes.deleteTokens(sceneId, ids);
   }
 
-  /** A present at pair changed by a Silk command: implicit Materialize, then tokens. */
+  /** A present at pair changed by a Garn command: implicit Materialize, then tokens. */
   async function settle(from: string, to: string, present: boolean) {
     const actor = element(from);
     const event = element(to);
@@ -407,14 +407,14 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
   /** First activation: Happened (once; the GM may undo it). */
   async function markActivated(sceneId: string) {
     const scene = scenes.get(sceneId);
-    if (!scene || scene.flags.silk?.activated || activating.has(sceneId)) return;
+    if (!scene || scene.flags.garn?.activated || activating.has(sceneId)) return;
     activating.add(sceneId);
     try {
-      await scenes.update(sceneId, { 'flags.silk.activated': true });
+      await scenes.update(sceneId, { 'flags.garn.activated': true });
       const event = eventOf(sceneId);
       if (event && (event.status ?? 'planned') === 'planned') {
         await deps.materializer.setStatus(event.id, 'happened');
-        deps.notify(deps.localize('SILK.EventScene.Happened', { name: event.name }));
+        deps.notify(deps.localize('GARN.EventScene.Happened', { name: event.name }));
       }
     } finally {
       activating.delete(sceneId);
@@ -423,9 +423,9 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
 
   function requireScenic(id: string) {
     const el = element(id);
-    if (!el) throw new Error(`Silk: no element "${id}"`);
+    if (!el) throw new Error(`Garn: no element "${id}"`);
     if (!SCENE_CLASSES.has(el.class))
-      throw new Error(`Silk: only Events and Locations have a Scene, not ${el.class}`);
+      throw new Error(`Garn: only Events and Locations have a Scene, not ${el.class}`);
     return el;
   }
 
@@ -457,30 +457,30 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
       const actorId = actorIdOf(el);
       if (actorId)
         for (const s of scenes.scenes())
-          if (element(s.flags.silk?.sceneOf)?.class === 'event') await removeTokens(s._id, actorId);
+          if (element(s.flags.garn?.sceneOf)?.class === 'event') await removeTokens(s._id, actorId);
     },
 
     async deleted({ element: el, keepFoundryDoc }) {
       const scene = SCENE_CLASSES.has(el.class) ? sceneOf(el.id) : undefined;
       if (scene) {
-        if (keepFoundryDoc) await scenes.update(scene._id, { 'flags.-=silk': null });
+        if (keepFoundryDoc) await scenes.update(scene._id, { 'flags.-=garn': null });
         else await scenes.delete(scene._id);
       }
       if (wc().get(eventSceneId(el.id))) await wc().delete([eventSceneId(el.id)]);
       const actorId = actorIdOf(el);
       if (actorId)
         for (const s of scenes.scenes())
-          if (element(s.flags.silk?.sceneOf)?.class === 'event') await removeTokens(s._id, actorId);
+          if (element(s.flags.garn?.sceneOf)?.class === 'event') await removeTokens(s._id, actorId);
     },
 
     async docDeleted(doc) {
       if (doc.documentName !== 'Scene') return false;
-      const el = element((doc.flags as { silk?: { sceneOf?: string } }).silk?.sceneOf);
+      const el = element((doc.flags as { garn?: { sceneOf?: string } }).garn?.sceneOf);
       if (!el) return false;
       if (sceneOf(el.id)) return true; // Another Scene is linked now.
       await setLink(el, undefined);
       if (wc().get(eventSceneId(el.id))) await wc().delete([eventSceneId(el.id)]);
-      deps.notify(deps.localize('SILK.EventScene.Deleted', { name: el.name }));
+      deps.notify(deps.localize('GARN.EventScene.Deleted', { name: el.name }));
       return true;
     },
 
@@ -514,18 +514,18 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
 
   /**
    * Load-time migrations (1.1 §I): v1's Narrative box moves into the padding (`migrateBox`);
-   * a Silk Scene without `flags.silk.preset` gets `narrative` if it has a box, else its
+   * a Garn Scene without `flags.garn.preset` gets `narrative` if it has a box, else its
    * element's Preset, else `none`.
    */
   async function migrateScenes() {
     for (const scene of scenes.scenes()) {
-      const silk = scene.flags.silk;
-      if (!silk?.sceneOf) continue;
+      const garn = scene.flags.garn;
+      if (!garn?.sceneOf) continue;
       await writeBox(scene._id, migrateBox);
-      if (silk.preset) continue;
-      const recorded = element(silk.sceneOf)?.fields?.scenePreset;
+      if (garn.preset) continue;
+      const recorded = element(garn.sceneOf)?.fields?.scenePreset;
       const preset = boxOf(scene) ? 'narrative' : isPreset(recorded) ? recorded : NO_PRESET;
-      await scenes.update(scene._id, { 'flags.silk.preset': preset });
+      await scenes.update(scene._id, { 'flags.garn.preset': preset });
     }
   }
 
@@ -546,7 +546,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
 
   async function rewrite(before: Snapshot, result: Snapshot) {
     for (const live of scenes.scenes()) {
-      const owner = live.flags.silk?.sceneOf;
+      const owner = live.flags.garn?.sceneOf;
       if (owner && before.has(owner) && !result.has(owner)) await scenes.delete(live._id);
     }
     for (const record of result.values()) {
@@ -586,7 +586,7 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
       requireScenic(id);
       await deps.materializer.ensureMaterialized(id);
       const scene = sceneOf(id);
-      if (!scene) throw new Error(deps.localize('SILK.EventScene.NoScene'));
+      if (!scene) throw new Error(deps.localize('GARN.EventScene.NoScene'));
       await scenes.activate(scene._id);
       await markActivated(scene._id);
     },
@@ -594,11 +594,11 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
     async createScene(id, preset) {
       let el = requireScenic(id);
       if (preset !== undefined && !isPreset(preset))
-        throw new Error(`Silk: unknown Scene Preset "${preset}"`);
+        throw new Error(`Garn: unknown Scene Preset "${preset}"`);
       if (preset === 'overview' && el.class !== 'location')
-        throw new Error('Silk: the Overview Preset is for Locations only');
+        throw new Error('Garn: the Overview Preset is for Locations only');
       if (preset && preset !== 'overview' && el.class === 'location')
-        throw new Error('Silk: a Location only has an Overview Scene');
+        throw new Error('Garn: a Location only has an Overview Scene');
       el = await setPreset(el, presetFor(el, preset));
       if (!el.uuid) {
         // A Ghost: the Scene comes with the Materialize (implicit, §6).
@@ -606,23 +606,23 @@ export function createEventScenes(deps: EventScenesDeps): EventScenes {
         if (el.class === 'event' || sceneOf(id)) return;
         el = element(id) as StoryElement;
       }
-      if (sceneOf(id)) throw new Error(`Silk: "${el.name}" has a Scene already`);
+      if (sceneOf(id)) throw new Error(`Garn: "${el.name}" has a Scene already`);
       await once(id, () => createFromPreset(el, presetFor(el)));
     },
 
     async restoreScene(id) {
       const el = requireScenic(id);
-      if (!el.uuid) throw new Error(`Silk: "${el.name}" is a Ghost`);
-      if (sceneOf(id)) throw new Error(`Silk: "${el.name}" has a Scene already`);
+      if (!el.uuid) throw new Error(`Garn: "${el.name}" is a Ghost`);
+      if (sceneOf(id)) throw new Error(`Garn: "${el.name}" has a Scene already`);
       const snapshot = readSnapshot((await deps.lastCommit())?.snapshot.get(eventSceneId(id)));
       if (!snapshot)
-        throw new Error(deps.localize('SILK.EventScene.NothingToRestore', { name: el.name }));
+        throw new Error(deps.localize('GARN.EventScene.NothingToRestore', { name: el.name }));
       await once(id, () => createFrom(el, { ...snapshot.scene, name: el.name }));
     },
 
     async viewScene(id) {
       const scene = sceneOf(requireScenic(id).id);
-      if (!scene) throw new Error(deps.localize('SILK.EventScene.NoScene'));
+      if (!scene) throw new Error(deps.localize('GARN.EventScene.NoScene'));
       await scenes.view(scene._id);
     },
   };
@@ -633,7 +633,7 @@ export function eventSceneCommands(es: EventScenes): Command[] {
   const gm = (ctx: { isGM: boolean }) => ctx.isGM;
   const command = <A>(name: string, run: (args: A) => Promise<void>): Command<A, void> => ({
     name,
-    title: `SILK.Commands.${name}`,
+    title: `GARN.Commands.${name}`,
     available: gm,
     run,
   });

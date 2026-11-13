@@ -1,5 +1,5 @@
 /**
- * Canon binding, Commit and discard (spec §11.3). Ties the World's Silk Working Copy
+ * Canon binding, Commit and discard (spec §11.3). Ties the World's Garn Working Copy
  * to its Canon store. Pure core: files and the working copy are injected.
  */
 import {
@@ -16,7 +16,7 @@ import type { WorkingCopy } from '../working-copy';
 /** A Commit under main found main moved by another World: sync (fast-forward or merge) first. */
 export class MainMovedError extends Error {
   constructor() {
-    super('Silk: main moved on in another World; update this World first (merge)');
+    super('Garn: main moved on in another World; update this World first (merge)');
     this.name = 'MainMovedError';
   }
 }
@@ -26,7 +26,7 @@ export interface HistoryDeps {
   workingCopy: WorkingCopy;
   /** Commit author, e.g. the GM's user name. */
   author(): string;
-  /** Written to a new Canon's manifest, e.g. `silk 1.2.0`. */
+  /** Written to a new Canon's manifest, e.g. `garn 1.2.0`. */
   createdWith: string;
   /** Before every Commit: capture World State from Foundry into the working copy (T9 sheets). */
   beforeCommit?(): Promise<void>;
@@ -64,13 +64,13 @@ export function createHistory(deps: HistoryDeps): History {
 
   function requireBinding() {
     const binding = workingCopy.binding;
-    if (!binding) throw new Error('Silk: this World is not bound to a Canon yet');
+    if (!binding) throw new Error('Garn: this World is not bound to a Canon yet');
     return binding;
   }
 
   function requireUnbound() {
     if (workingCopy.binding)
-      throw new Error('Silk: this World is already bound to a Canon (bound for life)');
+      throw new Error('Garn: this World is already bound to a Canon (bound for life)');
   }
 
   async function canon(): Promise<CanonStore | null> {
@@ -82,7 +82,7 @@ export function createHistory(deps: HistoryDeps): History {
 
   async function requireCanon(): Promise<CanonStore> {
     const opened = await canon();
-    if (!opened) throw new Error('Silk: this World is not bound to a Canon yet');
+    if (!opened) throw new Error('Garn: this World is not bound to a Canon yet');
     return opened;
   }
 

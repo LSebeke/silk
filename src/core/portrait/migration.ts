@@ -15,16 +15,16 @@ import {
   type PortraitDoc,
   type PortraitWrites,
 } from './portrait';
-import { silkLookWrites } from './unhood';
+import { garnLookWrites } from './unhood';
 import { poseFlag, prototypeUpdate, samePose } from './writes';
 
 /**
- * A round 2 look: Silk's (no Original look, no subject file), the pose in the texture. Ring
- * on: fit cover. Ring off: a texture scale other than 1 (Silk 1.1 round 3 never writes one
+ * A round 2 look: Garn's (no Original look, no subject file), the pose in the texture. Ring
+ * on: fit cover. Ring off: a texture scale other than 1 (Garn 1.1 round 3 never writes one
  * to the prototype), or a pose flag.
  */
 export function isRound2Look(doc: PortraitDoc): boolean {
-  const { subject, original, pose } = doc.flags.silk;
+  const { subject, original, pose } = doc.flags.garn;
   if (subject || original) return false;
   const texture = doc.prototypeToken?.texture;
   if (ringOf(doc.prototypeToken).enabled) return texture?.fit === 'cover';
@@ -33,7 +33,7 @@ export function isRound2Look(doc: PortraitDoc): boolean {
 
 /** The real pose of a round 2 look: the flag (hooded), else the texture's anchor and scale. */
 function round2Pose(doc: PortraitDoc): Pose {
-  const { pose } = doc.flags.silk;
+  const { pose } = doc.flags.garn;
   if (pose) return { ...pose };
   if (isHooded(doc)) return { ...CENTRED };
   const texture = doc.prototypeToken?.texture;
@@ -52,10 +52,10 @@ export function round2Writes(source: LookSource): PortraitWrites | undefined {
   // Read as if the pose were already in its flag: the look writes then build it as for 1.1.
   const posed: LookSource = samePose(pose, CENTRED)
     ? source
-    : { ...source, doc: { ...doc, flags: { silk: { ...doc.flags.silk, pose } } } };
+    : { ...source, doc: { ...doc, flags: { garn: { ...doc.flags.garn, pose } } } };
   const writes = isHooded(doc)
-    ? hoodWrites(posed, doc.flags.silk.hood ?? HOODED_DEFAULT)
-    : silkLookWrites(posed);
+    ? hoodWrites(posed, doc.flags.garn.hood ?? HOODED_DEFAULT)
+    : garnLookWrites(posed);
   const texture = doc.prototypeToken?.texture;
   const sign = (n: number | undefined) => (n !== undefined && n < 0 ? -1 : 1);
   const scale = (factor: number) => ({

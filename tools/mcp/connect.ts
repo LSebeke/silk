@@ -1,5 +1,5 @@
 /**
- * Gets a Playwright page on a running Foundry world with Silk loaded. Kept small on
+ * Gets a Playwright page on a running Foundry world with Garn loaded. Kept small on
  * purpose: the e2e harness owns starting Foundry and worlds; this only attaches to one.
  */
 import { chromium, type Page } from 'playwright-core';

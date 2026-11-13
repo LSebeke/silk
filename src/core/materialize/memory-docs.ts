@@ -138,7 +138,7 @@ export function createMemoryDocs(): MemoryDocs {
     },
     async unflag(uuid) {
       const doc = must(uuid);
-      doc.flags = { ...doc.flags, silk: {} };
+      doc.flags = { ...doc.flags, garn: {} };
     },
     async open(uuid, pageId) {
       must(uuid);

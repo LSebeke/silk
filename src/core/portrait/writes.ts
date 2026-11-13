@@ -40,18 +40,18 @@ export function prototypeUpdate(
 export const samePose = (a: Pose, b: Pose): boolean =>
   a.anchorX === b.anchorX && a.anchorY === b.anchorY && a.scale === b.scale;
 
-/** `flags.silk.pose` holding `pose`: set when not centred, cleared when centred. */
+/** `flags.garn.pose` holding `pose`: set when not centred, cleared when centred. */
 export function poseFlag(doc: PortraitDoc, pose: Pose): Record<string, unknown> {
-  const flag = doc.flags.silk.pose;
-  if (samePose(pose, CENTRED)) return flag ? { 'flags.silk.-=pose': null } : {};
-  return flag && samePose(flag, pose) ? {} : { 'flags.silk.pose': { ...pose } };
+  const flag = doc.flags.garn.pose;
+  if (samePose(pose, CENTRED)) return flag ? { 'flags.garn.-=pose': null } : {};
+  return flag && samePose(flag, pose) ? {} : { 'flags.garn.pose': { ...pose } };
 }
 
-/** `flags.silk.order` holding `order`: set for Illustration in front, cleared for the default. */
+/** `flags.garn.order` holding `order`: set for Illustration in front, cleared for the default. */
 export function orderFlag(doc: PortraitDoc, order: Order): Record<string, unknown> {
-  const flag = doc.flags.silk.order;
-  if (order === DEFAULT_ORDER) return flag ? { 'flags.silk.-=order': null } : {};
-  return flag === order ? {} : { 'flags.silk.order': order };
+  const flag = doc.flags.garn.order;
+  if (order === DEFAULT_ORDER) return flag ? { 'flags.garn.-=order': null } : {};
+  return flag === order ? {} : { 'flags.garn.order': order };
 }
 
 export const ringData = (ring: Ring): Record<string, unknown> => ({
@@ -80,10 +80,10 @@ export const hoodSubject = (hood: string, order: Order): SubjectRequest => ({
   order,
 });
 
-/** `flags.silk.ring` holding the real ring while hooded (#182); written only when it changes. */
+/** `flags.garn.ring` holding the real ring while hooded (#182); written only when it changes. */
 export function ringFlag(doc: PortraitDoc, ring: Ring): Record<string, unknown> {
-  const flag = doc.flags.silk.ring;
+  const flag = doc.flags.garn.ring;
   return flag && JSON.stringify(flag) === JSON.stringify(ring)
     ? {}
-    : { 'flags.silk.ring': structuredClone(ring) };
+    : { 'flags.garn.ring': structuredClone(ring) };
 }

@@ -11,16 +11,16 @@ type Props = {
 
 class CompendiumPickerWindow extends SvelteApplication<Props> {
   static override DEFAULT_OPTIONS = {
-    id: 'silk-compendium-picker',
-    classes: ['silk', 'silk-picker-window'],
-    window: { title: 'SILK.Picker.Title', resizable: true, icon: 'fa-solid fa-book-atlas' },
+    id: 'garn-compendium-picker',
+    classes: ['garn', 'garn-picker-window'],
+    window: { title: 'GARN.Picker.Title', resizable: true, icon: 'fa-solid fa-book-atlas' },
     position: { width: 520, height: 480 },
   };
 
   protected readonly component = CompendiumPicker;
 
   readonly #props: Props;
-  /** Closed by Silk (pick, cancel, aborted creation), not by the user. */
+  /** Closed by Garn (pick, cancel, aborted creation), not by the user. */
   #closing = false;
 
   constructor(props: Props) {

@@ -7,11 +7,11 @@ file is the baseline for the next release. `results/local.json` (ad-hoc runs) is
 
 ```sh
 npm run test:perf                          # writes results/local.json, prints the gate verdict
-BENCH_VERSION=0.2.0 BENCH_MACHINE="GM RTX 2080" npm run test:perf   # release run
+BENCH_VERSION=X.Y.Z BENCH_MACHINE="GM RTX 2080" npm run test:perf   # release run
 ```
 
-`test:perf` builds with the dev commands (`SILK_DEV=1`) and runs only the `@perf` Playwright
-tests (`SILK_PERF=1`): reopen-restores-view timing, create-connected input count, and the
+`test:perf` builds with the dev commands (`GARN_DEV=1`) and runs only the `@perf` Playwright
+tests (`GARN_PERF=1`): reopen-restores-view timing, create-connected input count, and the
 bench. The bench calls `dev.bench.fastPan { count, epf, ms }` for the 500 / 1000 / 2000
 fixture (`dev.fixture.generate { count, seed: 1 }`) at 8 mousemoves per frame, 3 s each,
 headless Chromium with GPU flags. Release runs belong on the reference machine (GM's RTX

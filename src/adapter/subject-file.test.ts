@@ -18,13 +18,13 @@ describe('subject files (v1.1 §G.3 Files)', () => {
     const render = createSubjectFiles({
       draw: async (s) => bytes.get(s.src) as Uint8Array,
       write: async (path, b) => void written.push([path, b]),
-      worldId: () => 'silk-dev',
+      worldId: () => 'garn-dev',
     });
     const a = await render('Actor.abc123', { ...spec, src: 'a.webp' });
     const again = await render('Actor.abc123', { ...spec, src: 'a.webp' });
     const b = await render('Actor.abc123', { ...spec, src: 'b.webp' });
     // sha256 of [1, 2, 3], first 16 hex digits.
-    expect(a).toBe('silk/silk-dev/tokens/abc123-039058c6f2c0cb49.webp');
+    expect(a).toBe('garn/garn-dev/tokens/abc123-039058c6f2c0cb49.webp');
     expect(again).toBe(a);
     expect(b).not.toBe(a);
     expect(written.map(([path]) => path)).toEqual([a, a, b]);

@@ -20,7 +20,7 @@ describe('owns: where an Item Materializes (spec §5 owns)', () => {
   });
 });
 
-describe('owns: Silk-driven changes move the doc', () => {
+describe('owns: Garn-driven changes move the doc', () => {
   it('Materializing the owner pulls its world Item into the inventory', async () => {
     const t = setup({ mode: 'immediate' });
     t.setMode('onDemand');
@@ -49,7 +49,7 @@ describe('owns: Silk-driven changes move the doc', () => {
     const second = await t.connect(wolf, sword);
     expect(t.doc(sword).parent).toBe(t.doc(wolf).uuid);
     expect(t.docs.get(swordDoc.uuid)).toBeUndefined();
-    expect(t.doc(sword).flags.silk).toEqual(swordDoc.flags.silk);
+    expect(t.doc(sword).flags.garn).toEqual(swordDoc.flags.garn);
     expect(t.workingCopy.get(first)).toBeUndefined();
     await t.registry.run('connection.delete', { ids: [second] });
     expect(t.doc(sword).parent).toBeUndefined();
@@ -118,12 +118,12 @@ describe('owns: Foundry-driven changes move the Connection (spec §7 owns)', () 
     return { t, alrik, wolf, sword };
   }
 
-  it('copies get no Silk id; the original keeps it and owns stays', async () => {
+  it('copies get no Garn id; the original keeps it and owns stays', async () => {
     const { t, alrik, sword } = await owned();
     const original = t.doc(sword);
     const world = await t.copyItem(original);
     const same = await t.copyItem(original, original.parent);
-    for (const uuid of [world, same]) expect(t.docs.get(uuid)?.flags.silk).toEqual({});
+    for (const uuid of [world, same]) expect(t.docs.get(uuid)?.flags.garn).toEqual({});
     expect(t.element(sword).uuid).toBe(original.uuid);
     expect(t.owners(sword)).toEqual([alrik]);
   });
@@ -135,7 +135,7 @@ describe('owns: Foundry-driven changes move the Connection (spec §7 owns)', () 
     t.tick(500);
     expect(await t.deleteItem(original.uuid)).toBe(true); // no Unmaterialize (T9)
     expect(t.element(sword).uuid).toBe(copy);
-    expect(t.doc(sword).flags.silk).toEqual(original.flags.silk);
+    expect(t.doc(sword).flags.garn).toEqual(original.flags.garn);
     expect(t.owners(sword)).toEqual([wolf]);
   });
 
@@ -145,7 +145,7 @@ describe('owns: Foundry-driven changes move the Connection (spec §7 owns)', () 
       _id: 'stranger',
       name: 'X',
       folder: null,
-      flags: { silk: {} },
+      flags: { garn: {} },
     });
     const original = t.doc(sword);
     const copy = await t.copyItem(original, stranger);
@@ -170,11 +170,11 @@ describe('owns: Foundry-driven changes move the Connection (spec §7 owns)', () 
     expect(t.owners(sword)).toEqual([]);
   });
 
-  it('a copied actor’s inventory holds copies: their Silk ids are stripped', async () => {
+  it('a copied actor’s inventory holds copies: their Garn ids are stripped', async () => {
     const { t, alrik, sword } = await owned();
     const actor = sourceData(t.doc(alrik));
     const item = sourceData(t.doc(sword));
-    const copy = await t.docs.create('Actor', { ...actor, _id: 'copy', flags: { silk: {} } });
+    const copy = await t.docs.create('Actor', { ...actor, _id: 'copy', flags: { garn: {} } });
     await t.docs.create('Item', item, copy);
     await t.owns.actorCreated({
       ...actor,
@@ -183,7 +183,7 @@ describe('owns: Foundry-driven changes move the Connection (spec §7 owns)', () 
       documentName: 'Actor',
       items: [{ ...item, _id: item._id }],
     });
-    expect(t.docs.get(`${copy}.Item.${item._id}`)?.flags.silk).toEqual({});
-    expect(t.doc(sword).flags.silk.id).toBe(sword);
+    expect(t.docs.get(`${copy}.Item.${item._id}`)?.flags.garn).toEqual({});
+    expect(t.doc(sword).flags.garn.id).toBe(sword);
   });
 });

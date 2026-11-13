@@ -5,13 +5,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { prepareDataPath, testWorldId } from './harness';
 
 describe('testWorldId', () => {
-  it('names the world silk-test-<run>', () => {
-    expect(testWorldId('1a2b')).toBe('silk-test-1a2b');
+  it('names the world garn-test-<run>', () => {
+    expect(testWorldId('1a2b')).toBe('garn-test-1a2b');
   });
 
-  it('refuses runs that would not yield a plain silk-test-* id', () => {
+  it('refuses runs that would not yield a plain garn-test-* id', () => {
     expect(() => testWorldId('')).toThrow();
-    expect(() => testWorldId('../silk-dev')).toThrow();
+    expect(() => testWorldId('../garn-dev')).toThrow();
     expect(() => testWorldId('Dev World')).toThrow();
   });
 });
@@ -19,7 +19,7 @@ describe('testWorldId', () => {
 describe('prepareDataPath', () => {
   const dirs: string[] = [];
   const tmp = () => {
-    const dir = mkdtempSync(join(tmpdir(), 'silk-harness-'));
+    const dir = mkdtempSync(join(tmpdir(), 'garn-harness-'));
     dirs.push(dir);
     return dir;
   };
@@ -32,7 +32,7 @@ describe('prepareDataPath', () => {
     mkdirSync(join(source, 'Config'));
     writeFileSync(join(source, 'Config/license.json'), '{"license":"x"}');
     mkdirSync(join(source, 'Data/systems/dsa5'), { recursive: true });
-    mkdirSync(join(source, 'Data/worlds/silk-dev'), { recursive: true });
+    mkdirSync(join(source, 'Data/worlds/garn-dev'), { recursive: true });
     const dist = tmp();
 
     const dataPath = prepareDataPath({ source, dist, parent: tmp() });
@@ -41,7 +41,7 @@ describe('prepareDataPath', () => {
     expect(readlinkSync(join(dataPath, 'Data/systems/dsa5'))).toBe(
       join(source, 'Data/systems/dsa5'),
     );
-    expect(readlinkSync(join(dataPath, 'Data/modules/silk'))).toBe(dist);
-    expect(existsSync(join(dataPath, 'Data/worlds/silk-dev'))).toBe(false);
+    expect(readlinkSync(join(dataPath, 'Data/modules/garn'))).toBe(dist);
+    expect(existsSync(join(dataPath, 'Data/worlds/garn-dev'))).toBe(false);
   });
 });

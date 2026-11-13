@@ -20,10 +20,10 @@
   class:on
   disabled={!enabled}
   title={localize(
-    enabled ? (on ? 'SILK.Reveal.Unreveal' : 'SILK.Reveal.Reveal') : 'SILK.Reveal.NeedsAdventure',
+    enabled ? (on ? 'GARN.Reveal.Unreveal' : 'GARN.Reveal.Reveal') : 'GARN.Reveal.NeedsAdventure',
   )}
   {onclick}
-  data-silk-eye={on ? 'on' : 'off'}
+  data-garn-eye={on ? 'on' : 'off'}
   ><i class="fa-solid {on ? 'fa-eye' : 'fa-eye-slash'}"></i></button
 >
 

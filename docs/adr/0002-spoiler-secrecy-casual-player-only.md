@@ -1,6 +1,6 @@
 # 2. Spoiler secrecy defends against the casual player only
 
-Silk hides unrevealed content from players through Foundry's UI, not through real access control. A player who opens the browser console can read every spoiler.
+Garn hides unrevealed content from players through Foundry's UI, not through real access control. A player who opens the browser console can read every spoiler.
 
 ## Context
 
@@ -8,7 +8,7 @@ Foundry sends every journal entry and page to every client, NONE ownership inclu
 
 ## Decision
 
-v1 defends against the casual player only: unrevealed content stays out of the player UI. Reading client data and guessing URLs are accepted and documented. The Canon stays in the Data folder under an unguessable directory (`Data/silk/<random 128-bit id>/`), which keeps outsiders out. The GM gets a warning when players can browse files.
+v1 defends against the casual player only: unrevealed content stays out of the player UI. Reading client data and guessing URLs are accepted and documented. The Canon stays in the Data folder under an unguessable directory (`Data/garn/<random 128-bit id>/`), which keeps outsiders out. The GM gets a warning when players can browse files.
 
 ## Considered Options
 
@@ -19,4 +19,4 @@ v1 defends against the casual player only: unrevealed content stays out of the p
 
 - Unrevealed Info Blocks live in world journals at NONE, and the real image waits in a flag.
 - Player clients may load Canon data (e.g. layout for the player canvas), which reveals the Canon path to them.
-- Hiding the Canon path only keeps out people without a login. A player with file-browse rights can list `Data/silk/`.
+- Hiding the Canon path only keeps out people without a login. A player with file-browse rights can list `Data/garn/`.

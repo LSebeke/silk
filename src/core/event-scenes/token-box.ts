@@ -2,14 +2,14 @@
  * Token Box (spec 1.1 §I): the marked area beside an Event Scene, in the Scene padding just
  * outside the map's top-left corner, where present at actors' tokens are placed hidden.
  *
- * - Silk's box is anchored a grid square up-left of the map corner and grows leftwards with
+ * - Garn's box is anchored a grid square up-left of the map corner and grows leftwards with
  *   its tokens, one row. Without room it asks for the Scene's `padding` raised just enough, up
  *   to 0.5; beyond that it keeps adding rows (upwards, along the top edge).
  * - Cells fill from the box's bottom-right, so growing never moves a placed token. A full box
  *   always grows: tokens are never stacked.
- * - Silk records the rect it wrote (`flags.silk.rect`). A box whose rect differs (the GM moved
- *   or resized it) keeps its place: Silk only places into it, adding rows above when full.
- * - v1's Narrative box (no `flags.silk.rect`, at v1's fixed rect) is Silk's: the load-time
+ * - Garn records the rect it wrote (`flags.garn.rect`). A box whose rect differs (the GM moved
+ *   or resized it) keeps its place: Garn only places into it, adding rows above when full.
+ * - v1's Narrative box (no `flags.garn.rect`, at v1's fixed rect) is Garn's: the load-time
  *   migration moves it, and the tokens in it, into the padding.
  *
  * Pure: `ensureBox`, `boxSlot` and `migrateBox` say what to write, the Event Scenes core
@@ -20,13 +20,13 @@ import type { Point } from '../elements/element';
 import type { SceneData, TokenData } from './port';
 import { GRID_SIZE, HEIGHT, WIDTH } from './presets';
 
-/** A box Drawing as Silk reads it. */
+/** A box Drawing as Garn reads it. */
 export interface BoxDrawing {
   _id: string;
   x: number;
   y: number;
   shape: { type?: string; width: number; height: number; [key: string]: unknown };
-  flags: { silk: { box: true; rect?: Rect }; [scope: string]: unknown };
+  flags: { garn: { box: true; rect?: Rect }; [scope: string]: unknown };
   [key: string]: unknown;
 }
 
@@ -47,7 +47,7 @@ const DEFAULTS = { width: WIDTH, height: HEIGHT, padding: 0.25, grid: GRID_SIZE 
 const MAX_PADDING = 0.5;
 /** Foundry's `padding` step (0.05) as steps per 1. */
 const STEPS = 20;
-/** v1's Narrative box rect (v1 presets.ts `BOX`), written without `flags.silk.rect`. */
+/** v1's Narrative box rect (v1 presets.ts `BOX`), written without `flags.garn.rect`. */
 const V1_RECT: Rect = { x: 100, y: 100, width: 1000, height: 400 };
 
 const gridOf = (scene: SceneData) =>
@@ -68,7 +68,7 @@ export function mapOrigin(scene: SceneData, padding = num(scene['padding'], DEFA
 }
 
 export const isBox = (d: unknown): d is BoxDrawing =>
-  (d as { flags?: { silk?: { box?: unknown } } } | null)?.flags?.silk?.box === true;
+  (d as { flags?: { garn?: { box?: unknown } } } | null)?.flags?.garn?.box === true;
 
 export const boxOf = (scene: SceneData) => (scene.drawings ?? []).find(isBox);
 
@@ -104,7 +104,7 @@ function withRow(rect: Rect, g: number): Rect {
   return { ...rect, y: rect.y + rect.height - height, height };
 }
 
-/** Silk's box for `n` cells: its rect and the padding it needs (undefined = as is). */
+/** Garn's box for `n` cells: its rect and the padding it needs (undefined = as is). */
 function layout(scene: SceneData, n: number): { rect: Rect; padding?: number } {
   const g = gridOf(scene);
   const m = g / 2;
@@ -150,17 +150,17 @@ function newBox(id: string, label: string, rect: Rect): BoxDrawing {
     fillType: 1,
     fillColor: '#ffffff',
     fillAlpha: 1,
-    flags: { silk: { box: true, rect } },
+    flags: { garn: { box: true, rect } },
   };
 }
 
-/** `box` at `rect`; Silk's own box (`own`) records it as Silk's rect. */
+/** `box` at `rect`; Garn's own box (`own`) records it as Garn's rect. */
 const resized = (box: BoxDrawing, rect: Rect, own: boolean): BoxDrawing => ({
   ...box,
   x: rect.x,
   y: rect.y,
   shape: { ...box.shape, width: rect.width, height: rect.height },
-  flags: own ? { ...box.flags, silk: { ...box.flags.silk, rect } } : box.flags,
+  flags: own ? { ...box.flags, garn: { ...box.flags.garn, rect } } : box.flags,
 });
 
 const padded = (padding: number | undefined) => (padding !== undefined ? { padding } : {});
@@ -180,7 +180,7 @@ export function ensureBox(scene: SceneData, opts: BoxOptions): BoxPlan {
 
 /**
  * A free slot for one more token, and what to write for it: the box made, or grown when full
- * (Silk's box by its layout, a GM's box by a row above), the padding raised as needed.
+ * (Garn's box by its layout, a GM's box by a row above), the padding raised as needed.
  */
 export function boxSlot(scene: SceneData, opts: BoxOptions): BoxPlan & { slot: Point } {
   const g = gridOf(scene);
@@ -197,7 +197,7 @@ export function boxSlot(scene: SceneData, opts: BoxOptions): BoxPlan & { slot: P
     tokens.some((t) => Math.abs(t.x - c.x) < g / 2 && Math.abs(t.y - c.y) < g / 2);
   const free = have.find((c) => !taken(c));
   if (free) return { slot: free };
-  const own = sameRect(rect, existing.flags.silk.rect);
+  const own = sameRect(rect, existing.flags.garn.rect);
   const laid = own ? layout(scene, have.length + 1) : undefined;
   const grown =
     laid && cells(laid.rect, g).length > have.length ? laid : { rect: withRow(rect, g) };
@@ -209,13 +209,13 @@ export function boxSlot(scene: SceneData, opts: BoxOptions): BoxPlan & { slot: P
 }
 
 /**
- * Load-time migration (1.1 §I): v1's Narrative box, known by its v1 rect, becomes Silk's box
+ * Load-time migration (1.1 §I): v1's Narrative box, known by its v1 rect, becomes Garn's box
  * in the padding, in the 1.1 look; the tokens in it move into its cells. `undefined` when
  * there is nothing to migrate.
  */
 export function migrateBox(scene: SceneData, opts: BoxOptions): BoxPlan | undefined {
   const existing = boxOf(scene);
-  if (!existing || existing.flags.silk.rect || !sameRect(rectOf(existing), V1_RECT))
+  if (!existing || existing.flags.garn.rect || !sameRect(rectOf(existing), V1_RECT))
     return undefined;
   const held = (scene.tokens ?? []).filter((t) => inside(t, V1_RECT));
   const { rect, padding } = layout(scene, Math.max(1, held.length));

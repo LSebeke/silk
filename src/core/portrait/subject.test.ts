@@ -15,14 +15,14 @@ function stage(ringEdges = edges) {
     ringEdges: async (size) => (sizes.push(size), ringEdges),
     renderSubject: async (uuid, spec) => (
       rendered.push({ uuid, spec }),
-      `silk/w/tokens/a-${rendered.length}.webp`
+      `garn/w/tokens/a-${rendered.length}.webp`
     ),
   };
   const update = async (_uuid: string, data: Record<string, unknown>) => void updates.push(data);
   return { s, update, rendered, tokens, updates, sizes };
 }
 
-const doc = (over: Partial<PortraitDoc['flags']['silk']> = {}, texture?: string): PortraitDoc => ({
+const doc = (over: Partial<PortraitDoc['flags']['garn']> = {}, texture?: string): PortraitDoc => ({
   img: 'a.webp',
   prototypeToken: {
     width: 2,
@@ -30,7 +30,7 @@ const doc = (over: Partial<PortraitDoc['flags']['silk']> = {}, texture?: string)
     texture: { src: 'a.webp' },
     ring: { enabled: true, subject: { texture: texture ?? null } },
   },
-  flags: { silk: over },
+  flags: { garn: over },
 });
 
 describe('Subject file (v1.1 §G.3, #171)', () => {
@@ -48,26 +48,26 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
     expect(t.updates).toEqual([
       {
         img: 'a.webp',
-        'flags.silk.subject': {
-          file: 'silk/w/tokens/a-1.webp',
+        'flags.garn.subject': {
+          file: 'garn/w/tokens/a-1.webp',
           src: 'a.webp',
           pose,
           order: 'ring',
           edges,
         },
-        'prototypeToken.ring.subject.texture': 'silk/w/tokens/a-1.webp',
+        'prototypeToken.ring.subject.texture': 'garn/w/tokens/a-1.webp',
       },
     ]);
     // `texture.src` keeps the uncropped image.
     expect(t.tokens).toEqual([
-      { 'texture.src': 'a.webp', 'ring.subject.texture': 'silk/w/tokens/a-1.webp' },
+      { 'texture.src': 'a.webp', 'ring.subject.texture': 'garn/w/tokens/a-1.webp' },
     ]);
   });
 
   const built = () =>
     doc(
-      { subject: { file: 'silk/w/tokens/a-0.webp', src: 'a.webp', pose, edges } },
-      'silk/w/tokens/a-0.webp',
+      { subject: { file: 'garn/w/tokens/a-0.webp', src: 'a.webp', pose, edges } },
+      'garn/w/tokens/a-0.webp',
     );
 
   it('the same image, pose and ring style: the file is kept, not rendered again', async () => {
@@ -79,7 +79,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
     });
     expect(t.rendered).toEqual([]);
     expect(t.updates).toEqual([]);
-    expect(t.tokens).toEqual([{ 'ring.subject.texture': 'silk/w/tokens/a-0.webp' }]);
+    expect(t.tokens).toEqual([{ 'ring.subject.texture': 'garn/w/tokens/a-0.webp' }]);
   });
 
   it('the draw order changed: rebuilt, and the flag records it (#170)', async () => {
@@ -89,7 +89,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
       subject: { src: 'a.webp', pose, order: 'illustration' },
     });
     expect(t.rendered.map((r) => r.spec.order)).toEqual(['illustration']);
-    expect(t.updates[0]).toMatchObject({ 'flags.silk.subject': { order: 'illustration' } });
+    expect(t.updates[0]).toMatchObject({ 'flags.garn.subject': { order: 'illustration' } });
   });
 
   it('the world ring style changed its edges: rebuilt', async () => {
@@ -100,7 +100,7 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
       subject: { src: 'a.webp', pose, order: 'ring' },
     });
     expect(t.rendered).toHaveLength(1);
-    expect(t.tokens[0]).toEqual({ 'ring.subject.texture': 'silk/w/tokens/a-1.webp' });
+    expect(t.tokens[0]).toEqual({ 'ring.subject.texture': 'garn/w/tokens/a-1.webp' });
   });
 
   it('a subject changed by hand: rebuilt', async () => {
@@ -117,11 +117,11 @@ describe('Subject file (v1.1 §G.3, #171)', () => {
     expect(t.rendered).toHaveLength(1);
   });
 
-  it("ring off: Silk's file is cleared everywhere", async () => {
+  it("ring off: Garn's file is cleared everywhere", async () => {
     const t = stage();
     await lookWriter(t.s, t.update)('Actor.a', built(), { doc: {}, tokens: {}, subject: null });
     expect(t.updates).toEqual([
-      { 'flags.silk.-=subject': null, 'prototypeToken.ring.subject.texture': null },
+      { 'flags.garn.-=subject': null, 'prototypeToken.ring.subject.texture': null },
     ]);
     expect(t.tokens).toEqual([{ 'ring.subject.texture': null }]);
   });

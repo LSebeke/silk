@@ -32,7 +32,7 @@ describe('Round 2 look migration on the first GM load (v1.1 §G.3.2)', () => {
     return { t, id, doc, sweep, isDone: () => done };
   }
 
-  it('one sweep over every Silk actor: subject file built, prototype scale 1, tokens the size factor', async () => {
+  it('one sweep over every Garn actor: subject file built, prototype scale 1, tokens the size factor', async () => {
     const { t, id, sweep, isDone } = await world();
     t.tokens.length = 0;
     await sweep.reconcile?.();
@@ -41,7 +41,7 @@ describe('Round 2 look migration on the first GM load (v1.1 §G.3.2)', () => {
       { anchorX: 0.4, anchorY: 0.5, scale: 1.5 },
     ]);
     expect(doc.prototypeToken.texture).toMatchObject({ fit: 'contain', anchorX: 0.5, scaleX: 1 });
-    expect(doc.flags.silk.pose).toEqual({ anchorX: 0.4, anchorY: 0.5, scale: 1.5 });
+    expect(doc.flags.garn.pose).toEqual({ anchorX: 0.4, anchorY: 0.5, scale: 1.5 });
     expect(t.tokens.at(-1)?.data).toMatchObject({ 'texture.scaleX': 0.8, 'texture.scaleY': 0.8 });
     expect(isDone()).toBe(true);
   });

@@ -47,19 +47,19 @@ export async function resolveSubject(
 ): Promise<Omit<PortraitWrites, 'subject'>> {
   const { subject, ...rest } = writes;
   if (subject === undefined) return rest;
-  const flag = doc.flags.silk.subject;
+  const flag = doc.flags.garn.subject;
   const current = doc.prototypeToken?.ring?.subject?.texture ?? null;
   const data = { ...rest.doc };
   let file: string | null = null;
   if (subject === null) {
-    if (flag) data['flags.silk.-=subject'] = null;
+    if (flag) data['flags.garn.-=subject'] = null;
   } else {
     const edges = await stage.ringEdges(tokenSize(doc.prototypeToken));
     const spec: SubjectSpec = { ...subject, edges };
     if (flag && current === flag.file && sameSpec(flag, spec)) file = flag.file;
     else {
       file = await stage.renderSubject(uuid, spec);
-      data['flags.silk.subject'] = { file, ...spec };
+      data['flags.garn.subject'] = { file, ...spec };
     }
   }
   if (current !== file) data['prototypeToken.ring.subject.texture'] = file;

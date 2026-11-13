@@ -63,7 +63,7 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
   const holder = blockJournal(main, companion);
   const blocks = holder ? infoBlockPages(holder) : [];
   const blockOn = (id: string) => revealed && isRevealed(map, 'infoBlock', id);
-  const notesCategory = holder?.flags.silk.playerNotes;
+  const notesCategory = holder?.flags.garn.playerNotes;
   const notes = notesCategory
     ? (holder.pages ?? []).filter((p) => p.category === notesCategory)
     : [];
@@ -88,8 +88,8 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
 
   if (main.documentName === 'JournalEntry') {
     docLevel(main, on(revealed));
-    pageLevel(main, main.flags.silk.cover, on(revealed));
-    const { quest, questKey } = main.flags.silk;
+    pageLevel(main, main.flags.garn.cover, on(revealed));
+    const { quest, questKey } = main.flags.garn;
     const questPage = quest ? main.pages?.find((p) => p._id === quest) : undefined;
     if (questPage && questKey) {
       pageLevel(main, quest, on(revealed));
@@ -119,7 +119,7 @@ export function ownershipWrites(input: OwnershipInput): RevealWrite[] {
   }
   if (holder) {
     for (const b of blocks) pageLevel(holder, b._id, on(blockOn(b._id)));
-    pageLevel(holder, holder.flags.silk.connections, on(anyConnection));
+    pageLevel(holder, holder.flags.garn.connections, on(anyConnection));
     for (const n of notes) pageLevel(holder, n._id, on(noteOn(n._id), PLAYER_NOTE_LEVEL));
   }
   return writes;

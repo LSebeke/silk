@@ -23,13 +23,13 @@ import {
   ringFlag,
 } from './writes';
 
-/** The look to keep as `flags.silk.original` when `doc` is imported (v1.1 §G.3.1). */
+/** The look to keep as `flags.garn.original` when `doc` is imported (v1.1 §G.3.1). */
 export function originalLook(doc: Pick<PortraitDoc, 'img' | 'prototypeToken'>): OriginalLook {
   const { texture = {}, ring = {} } = structuredClone(doc.prototypeToken ?? {});
   return { ...(doc.img ? { img: doc.img } : {}), texture, ring };
 }
 
-/** Keys Silk's look writes on a token, with Foundry's defaults: a restore resets them all. */
+/** Keys Garn's look writes on a token, with Foundry's defaults: a restore resets them all. */
 const LOOK_DEFAULTS = Object.fromEntries(
   Object.entries(TOKEN_DEFAULTS).filter(([k]) => k.startsWith('texture.') || k.startsWith('ring.')),
 );
@@ -53,13 +53,13 @@ const without = (keys: Record<string, unknown>, drop: ReadonlySet<string>) =>
 
 /**
  * `element.restoreImages` (v1.1 §G.3.1): the original look back on `img`, the prototype and
- * every placed token (their size factor stays), Silk's pose, draw order and subject file
+ * every placed token (their size factor stays), Garn's pose, draw order and subject file
  * cleared. Hooded: the originals become the real look; the hood stays until Reveal.
  */
 export function restoreWrites({ doc }: LookSource): PortraitWrites {
-  const flags = doc.flags.silk;
+  const flags = doc.flags.garn;
   const original = flags.original;
-  if (!original) throw new Error('Silk: no imported images to restore');
+  if (!original) throw new Error('Garn: no imported images to restore');
   const img = original.img ?? '';
   const token = {
     texture: { src: img, ...original.texture },
@@ -69,7 +69,7 @@ export function restoreWrites({ doc }: LookSource): PortraitWrites {
   // After the restore the draw order is the default; the hood's subject is cut for it.
   const order = DEFAULT_ORDER;
   const cleared = {
-    ...(flags.pose ? { 'flags.silk.-=pose': null } : {}),
+    ...(flags.pose ? { 'flags.garn.-=pose': null } : {}),
     ...orderFlag(doc, order),
   };
   if (!isHooded(doc)) {
@@ -78,7 +78,7 @@ export function restoreWrites({ doc }: LookSource): PortraitWrites {
         ...(doc.img !== img ? { img } : {}),
         ...prototypeUpdate(doc, originalKeys),
         ...cleared,
-        ...(flags.subject ? { 'flags.silk.-=subject': null } : {}),
+        ...(flags.subject ? { 'flags.garn.-=subject': null } : {}),
       },
       tokens: without(originalKeys, SIZE_KEYS),
     };
@@ -91,8 +91,8 @@ export function restoreWrites({ doc }: LookSource): PortraitWrites {
   };
   return {
     doc: {
-      'flags.silk.img': img,
-      'flags.silk.token': token.texture.src ?? img,
+      'flags.garn.img': img,
+      'flags.garn.token': token.texture.src ?? img,
       ...unhoodedFlag(doc, hoodSnapshot(token, false)),
       ...ringFlag(doc, ringOf(token)),
       ...prototypeUpdate(doc, hooded),

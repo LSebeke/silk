@@ -29,7 +29,7 @@ import {
 
 /**
  * What the hood is about to overwrite on `token` (prototype or placed). `own`: the image and
- * ring too (a placed token's own; the actor's real ones wait in `flags.silk.token` / `.ring`).
+ * ring too (a placed token's own; the actor's real ones wait in `flags.garn.token` / `.ring`).
  */
 export function hoodSnapshot(token: TokenData | undefined, own = true): HoodSnapshot {
   return {
@@ -61,30 +61,30 @@ export function snapshotData(snapshot: HoodSnapshot): Record<string, unknown> {
   };
 }
 
-/** The actor's Unhooded: the prototype's snapshot and the Silk flags the hood replaces. */
+/** The actor's Unhooded: the prototype's snapshot and the Garn flags the hood replaces. */
 export function unhoodedOf(doc: PortraitDoc): Unhooded {
-  const { pose, subject } = doc.flags.silk;
+  const { pose, subject } = doc.flags.garn;
   return {
     ...hoodSnapshot(doc.prototypeToken, false),
     ...(pose ? { pose: { ...pose } } : {}),
-    ...(subject ? { silkSubject: structuredClone(subject) } : {}),
+    ...(subject ? { garnSubject: structuredClone(subject) } : {}),
   };
 }
 
-/** `flags.silk.unhooded` set to `value`: an update merges, so stale optional keys go. */
+/** `flags.garn.unhooded` set to `value`: an update merges, so stale optional keys go. */
 export function unhoodedFlag(doc: PortraitDoc, value: Unhooded): Record<string, unknown> {
-  const stale = (['pose', 'silkSubject'] as const).filter(
-    (k) => doc.flags.silk.unhooded?.[k] !== undefined && value[k] === undefined,
+  const stale = (['pose', 'garnSubject'] as const).filter(
+    (k) => doc.flags.garn.unhooded?.[k] !== undefined && value[k] === undefined,
   );
   return {
-    'flags.silk.unhooded': value,
-    ...Object.fromEntries(stale.map((k) => [`flags.silk.unhooded.-=${k}`, null])),
+    'flags.garn.unhooded': value,
+    ...Object.fromEntries(stale.map((k) => [`flags.garn.unhooded.-=${k}`, null])),
   };
 }
 
 /** Makes the actor show `hood`. Hooding a hooded actor again writes only what changed. */
 export function hoodWrites({ doc, recordImg }: LookSource, hood: string): PortraitWrites {
-  const flags = doc.flags.silk;
+  const flags = doc.flags.garn;
   const real = realPortrait(doc, recordImg);
   const ring = realRing(doc);
   const hooded = isHooded(doc);
@@ -94,9 +94,9 @@ export function hoodWrites({ doc, recordImg }: LookSource, hood: string): Portra
     ? {}
     : {
         img: hood,
-        'flags.silk.img': real.img,
-        'flags.silk.token': real.token,
-        'flags.silk.hood': hood,
+        'flags.garn.img': real.img,
+        'flags.garn.token': real.token,
+        'flags.garn.hood': hood,
         ...(hooded ? {} : unhoodedFlag(doc, unhoodedOf(doc))),
       };
   const token = hoodTokenData(hood);

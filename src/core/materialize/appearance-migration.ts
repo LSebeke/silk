@@ -1,7 +1,7 @@
 /**
- * Load-time migration to Silk 1.1 (spec v1.1 §C.3): a Person/Creature Info Block named the
+ * Load-time migration to Garn 1.1 (spec v1.1 §C.3): a Person/Creature Info Block named the
  * localised "Appearance" without the flag becomes the Appearance block
- * (`flags.silk.appearance`). Once per element: the migrated ids are World-only Working Copy
+ * (`flags.garn.appearance`). Once per element: the migrated ids are World-only Working Copy
  * meta, so a block later named "Appearance" by hand stays a plain block. An element whose
  * doc or journal is not found stays pending until a load finds it.
  */
@@ -29,7 +29,7 @@ export function appearanceMigration(deps: AppearanceMigrationDeps): LifecycleCon
       const wc = deps.workingCopy();
       const stored = wc.meta(APPEARANCE_MIGRATED);
       const done = new Set(Array.isArray(stored) ? stored.map(String) : []);
-      const name = deps.localize('SILK.InfoBlock.Appearance');
+      const name = deps.localize('GARN.InfoBlock.Appearance');
       const before = done.size;
       for (const record of wc.records().values()) {
         const el = readElement(record);
@@ -52,7 +52,7 @@ export function appearanceMigration(deps: AppearanceMigrationDeps): LifecycleCon
         const found = deps.materializer.docsOf(el.id);
         const holder = found && blockJournal(found.main, found.companion);
         if (!holder) continue;
-        await deps.docs.updatePage(holder.uuid, block._id, { 'flags.silk.appearance': true });
+        await deps.docs.updatePage(holder.uuid, block._id, { 'flags.garn.appearance': true });
         await deps.materializer.sync(el.id);
         done.add(el.id);
       }

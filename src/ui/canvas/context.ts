@@ -47,7 +47,7 @@ export interface CanvasContext {
   reveal: Pick<Reveal, 'subscribe' | 'isRevealed'>;
   /** Legend open/closed (1.1 §E.3, client setting `legendOpen`); `legend.toggle` writes it. */
   legend: LegendState;
-  /** Silk's Foundry keybindings as bound now (`game.keybindings`), for the legend. */
+  /** Garn's Foundry keybindings as bound now (`game.keybindings`), for the legend. */
   keybindings(): LiveKeybinding[];
   /** Warning toast. */
   warn(message: string): void;
@@ -56,7 +56,7 @@ export interface CanvasContext {
 }
 
 /** Svelte context key for `CanvasContext` (cards read it). */
-export const CANVAS_CONTEXT = Symbol('silk-canvas');
+export const CANVAS_CONTEXT = Symbol('garn-canvas');
 
 /** Palette drag (§10.3): `DataTransfer` type carrying the class id. */
-export const PALETTE_MIME = 'application/x-silk-class';
+export const PALETTE_MIME = 'application/x-garn-class';

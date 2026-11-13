@@ -14,10 +14,10 @@
   }: { name: string; variant: 'title' | 'block' } & HTMLAttributes<HTMLDivElement> = $props();
 </script>
 
-<div class="silk-card-name {variant}" data-silk-card-name={variant} {...rest}>{name}</div>
+<div class="garn-card-name {variant}" data-garn-card-name={variant} {...rest}>{name}</div>
 
 <style>
-  .silk-card-name {
+  .garn-card-name {
     font-weight: 700;
     white-space: normal;
     overflow-wrap: anywhere;

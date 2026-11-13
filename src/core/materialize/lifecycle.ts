@@ -36,7 +36,7 @@ import {
   type DocSnapshot,
   type DocumentName,
   type FoundryDocs,
-  type SilkDocFlags,
+  type GarnDocFlags,
   type SystemMapping,
 } from './port';
 
@@ -59,7 +59,7 @@ export function readSheet(record: CanonRecord | undefined): SheetData | undefine
 /** A doc Foundry deleted, as its delete hook saw it. Scenes etc. go to contributors. */
 export type DeletedDoc = Omit<DocSnapshot, 'documentName' | 'flags'> & {
   documentName: string;
-  flags: { silk?: SilkDocFlags };
+  flags: { garn?: GarnDocFlags };
 };
 
 export interface DeletedElement {
@@ -85,7 +85,7 @@ export interface LifecycleContributor {
   rematerialized?(el: StoryElement): Promise<void>;
   /** After every Materialize (fresh or from the snapshot), after `rematerialized`. */
   materialized?(el: StoryElement): Promise<void>;
-  /** `element.delete`, before Silk deletes the element's docs and records. */
+  /** `element.delete`, before Garn deletes the element's docs and records. */
   deleted?(info: DeletedElement): Promise<void>;
   /** A doc that is not an element's doc or Companion was deleted in Foundry. True = handled. */
   docDeleted?(doc: DeletedDoc): Promise<boolean>;
@@ -132,7 +132,7 @@ export interface Lifecycle {
   unmaterialize(ids: readonly string[]): Promise<string[]>;
   /** `element.delete`: returns the ids deleted (none on cancel). */
   deleteElements(ids: readonly string[], keepFoundryDoc?: boolean): Promise<string[]>;
-  /** A Foundry delete hook (not Silk's own write). */
+  /** A Foundry delete hook (not Garn's own write). */
   docDeleted(doc: DeletedDoc): Promise<void>;
   /** Before a Commit: capture Materialized docs into `sheet` records. */
   capture(): Promise<void>;
@@ -232,21 +232,21 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
     await writeElement(el, { uuid: undefined });
   }
 
-  function companionOf(main: { flags: { silk?: SilkDocFlags } }) {
-    const id = main.flags.silk?.companion;
+  function companionOf(main: { flags: { garn?: GarnDocFlags } }) {
+    const id = main.flags.garn?.companion;
     return id ? docs.journal(id) : undefined;
   }
 
   /** The element's Companion Journal from the last Commit, else fresh from the record. */
   async function restoreCompanion(el: StoryElement, main: DocSnapshot) {
-    const id = main.flags.silk.companion;
+    const id = main.flags.garn.companion;
     if (!id) return;
     const commit = await deps.lastCommit();
     const sheet = readSheet(commit?.snapshot.get(sheetId(el.id)));
     const folder = await docs.ensureFolder(
       'JournalEntry',
       'companions',
-      deps.localize('SILK.Folder.companions'),
+      deps.localize('GARN.Folder.companions'),
     );
     const data: DocData = sheet?.companion
       ? json(sheet.companion)
@@ -254,9 +254,9 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
     data._id = id;
     data.folder = folder;
     data.ownership = NONE();
-    data.flags = { ...data.flags, silk: { ...data.flags?.silk, companionOf: el.id } };
+    data.flags = { ...data.flags, garn: { ...data.flags?.garn, companionOf: el.id } };
     await docs.create('JournalEntry', data);
-    deps.warn(deps.localize('SILK.Lifecycle.CompanionRestored', { name: el.name }));
+    deps.warn(deps.localize('GARN.Lifecycle.CompanionRestored', { name: el.name }));
     await materializer.sync(el.id);
   }
 
@@ -267,14 +267,14 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
     await each('unmaterialize', el);
     if (sheet) await wc().set([sheet]);
     // The Companion Journal of an Actor/Item may have survived.
-    const linked = readSheet(sheet)?.doc.flags.silk.companion;
+    const linked = readSheet(sheet)?.doc.flags.garn.companion;
     if (linked) await deleteDoc(docs.journal(linked)?.uuid);
     await writeElement(el, {
       uuid: undefined,
       ...(sheet && commit ? { restoredFrom: commit.hash } : {}),
     });
     deps.warn(
-      deps.localize('SILK.Lifecycle.Restored', {
+      deps.localize('GARN.Lifecycle.Restored', {
         name: el.name,
         commit: commit?.hash.slice(0, 8) ?? '–',
       }),
@@ -287,7 +287,7 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
     if (!sheet || sheet.documentName !== name) return undefined;
     const main: DocData = json(sheet.doc);
     Object.assign(main, { name: el.name, folder: folders.main, ownership: NONE() });
-    main.flags = { ...main.flags, silk: { ...main.flags?.silk, id: el.id } };
+    main.flags = { ...main.flags, garn: { ...main.flags?.garn, id: el.id } };
 
     let companion: DocData | undefined;
     if (name !== 'JournalEntry') {
@@ -308,12 +308,12 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
         companion.ownership = NONE();
         companion.flags = {
           ...companion.flags,
-          silk: { ...companion.flags?.silk, companionOf: el.id },
+          garn: { ...companion.flags?.garn, companionOf: el.id },
         };
-        main.flags.silk.companion = companion._id;
+        main.flags.garn.companion = companion._id;
       }
     } else {
-      const { cover, quest, questKey } = main.flags.silk;
+      const { cover, quest, questKey } = main.flags.garn;
       const coverPage = main.pages?.find((p) => p._id === cover);
       if (coverPage) coverPage.src = el.img ?? null;
       const questPage = main.pages?.find((p) => p._id === quest);
@@ -338,7 +338,7 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
       const add = missingLayout(main, el, ctx);
       main.pages = [...(main.pages ?? []), ...add.pages];
       main.categories = [...(main.categories ?? []), ...add.categories];
-      main.flags.silk = { ...main.flags.silk, ...add.flags };
+      main.flags.garn = { ...main.flags.garn, ...add.flags };
     }
     restoring.add(el.id);
     return { documentName: name, main, ...(companion ? { companion } : {}) } satisfies DocPlan;
@@ -403,18 +403,18 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
     },
 
     async docDeleted(doc) {
-      const silk = doc.flags.silk ?? {};
-      if (silk.id) {
-        const el = read(silk.id);
+      const garn = doc.flags.garn ?? {};
+      if (garn.id) {
+        const el = read(garn.id);
         if (el?.uuid === doc.uuid) {
           await unmaterializeOne(el, doc, companionOf(doc));
           return;
         }
       }
-      if (silk.companionOf) {
-        const el = read(silk.companionOf);
+      if (garn.companionOf) {
+        const el = read(garn.companionOf);
         const main = el?.uuid ? docs.get(el.uuid) : undefined;
-        if (el && main?.flags.silk.companion === doc._id) {
+        if (el && main?.flags.garn.companion === doc._id) {
           await restoreCompanion(el, main);
           return;
         }
@@ -436,7 +436,7 @@ export function createLifecycle(deps: LifecycleDeps): Lifecycle {
         if (!el.uuid) continue;
         const main = docs.get(el.uuid);
         if (!main) await restoreMissing(el);
-        else if (hasCompanion(el.class) && main.flags.silk.companion && !companionOf(main))
+        else if (hasCompanion(el.class) && main.flags.garn.companion && !companionOf(main))
           await restoreCompanion(el, main);
         else await materializer.sync(el.id);
       }
@@ -454,7 +454,7 @@ export function lifecycleCommands(
   return [
     {
       name: 'materialize.unmaterialize',
-      title: 'SILK.Commands.materialize.unmaterialize',
+      title: 'GARN.Commands.materialize.unmaterialize',
       available: gm,
       run: async (args: { ids?: string[] } = {}) => ({
         ids: await lifecycle.unmaterialize(args.ids ?? selection()),
@@ -462,7 +462,7 @@ export function lifecycleCommands(
     },
     {
       name: 'element.delete',
-      title: 'SILK.Commands.element.delete',
+      title: 'GARN.Commands.element.delete',
       available: gm,
       run: async (args: { ids?: string[]; keepFoundryDoc?: boolean } = {}) => ({
         ids: await lifecycle.deleteElements(args.ids ?? selection(), args.keepFoundryDoc),

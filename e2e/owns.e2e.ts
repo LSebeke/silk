@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
@@ -12,12 +12,12 @@ const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
 async function ready(page: Page, mode: 'immediate' | 'onDemand') {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
-  await page.evaluate((m) => game.settings?.set('silk', 'materializeMode', m), mode);
+  await page.evaluate((m) => game.settings?.set('garn', 'materializeMode', m), mode);
 }
 
 const create = async (page: Page, cls: string, name: string, from?: string) =>
@@ -29,23 +29,23 @@ const create = async (page: Page, cls: string, name: string, from?: string) =>
     })
   ).id;
 
-/** Where the element's doc lives: its uuid, parent actor uuid, and Silk flags. */
+/** Where the element's doc lives: its uuid, parent actor uuid, and Garn flags. */
 const where = (page: Page, id: string) =>
   page.evaluate((elementId) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data['uuid'];
     const doc = typeof uuid === 'string' ? (fromUuidSync(uuid) as any) : null;
     return {
       uuid: typeof uuid === 'string' ? uuid : null,
       exists: !!doc,
       parent: doc?.parent?.uuid ?? null,
-      flags: doc ? { ...doc.flags.silk } : null,
+      flags: doc ? { ...doc.flags.garn } : null,
     };
   }, id);
 
 /** Owner element ids of `item` per the owns Connections. */
 const owners = (page: Page, item: string) =>
   page.evaluate((itemId) => {
-    const records = game.modules?.get('silk')?.session?.().workingCopy.records() as Map<
+    const records = game.modules?.get('garn')?.session?.().workingCopy.records() as Map<
       string,
       any
     >;
@@ -56,13 +56,13 @@ const owners = (page: Page, item: string) =>
 
 const uuidOf = async (page: Page, id: string) => (await where(page, id)).uuid as string;
 
-/** Items in an actor's inventory carrying a Silk id. */
-const silkItems = (page: Page, actorUuid: string) =>
+/** Items in an actor's inventory carrying a Garn id. */
+const garnItems = (page: Page, actorUuid: string) =>
   page.evaluate(
     (uuid) =>
       [...(fromUuidSync(uuid) as any).items]
-        .filter((i: any) => i.flags.silk?.id)
-        .map((i: any) => i.flags.silk.id as string),
+        .filter((i: any) => i.flags.garn?.id)
+        .map((i: any) => i.flags.garn.id as string),
     actorUuid,
   );
 
@@ -90,7 +90,7 @@ test('owned Items Materialize in the owner’s inventory; unowned as world Items
   const alrikUuid = await uuidOf(gm, alrik);
   await expect.poll(() => where(gm, sword)).toMatchObject({ exists: true, parent: alrikUuid });
   expect(await where(gm, ring)).toMatchObject({ exists: true, parent: null });
-  expect(await silkItems(gm, alrikUuid)).toEqual([sword]);
+  expect(await garnItems(gm, alrikUuid)).toEqual([sword]);
 
   // A canvas owns between Materialized elements moves the world Item into the inventory.
   await api(gm, 'connection.create', { from: alrik, to: ring, type: 'owns' });
@@ -111,9 +111,9 @@ test('on demand: a new owns with a Materialized actor Materializes the Ghost Ite
   await gm.evaluate(() => {
     const n = ui.notifications as any;
     const info = n.info.bind(n);
-    (window as any).silkToasts = [];
+    (window as any).garnToasts = [];
     n.info = (message: string, options?: object) => {
-      (window as any).silkToasts.push(message);
+      (window as any).garnToasts.push(message);
       return info(message, options);
     };
   });
@@ -124,12 +124,12 @@ test('on demand: a new owns with a Materialized actor Materializes the Ghost Ite
       exists: true,
       parent: await uuidOf(gm, wolf),
     });
-  expect(await gm.evaluate(() => (window as any).silkToasts)).toEqual([
+  expect(await gm.evaluate(() => (window as any).garnToasts)).toEqual([
     expect.stringContaining('Demand Bone'),
   ]);
 });
 
-test('dsa5 drag between actors: copies get no Silk id; a move takes id and owns along', async ({
+test('dsa5 drag between actors: copies get no Garn id; a move takes id and owns along', async ({
   gm,
 }) => {
   test.setTimeout(150_000);
@@ -153,7 +153,7 @@ test('dsa5 drag between actors: copies get no Silk id; a move takes id and owns 
       actor,
     );
   await expect.poll(async () => (await swords(wolfUuid)).length).toBe(1);
-  await expect.poll(() => silkItems(gm, wolfUuid)).toEqual([]);
+  await expect.poll(() => garnItems(gm, wolfUuid)).toEqual([]);
   expect(await where(gm, sword)).toMatchObject({ uuid: original.uuid, exists: true });
   expect(await owners(gm, sword)).toEqual([alrik]);
   await gm.evaluate(([u, ids]) => (fromUuidSync(u) as any).deleteEmbeddedDocuments('Item', ids), [
@@ -169,7 +169,7 @@ test('dsa5 drag between actors: copies get no Silk id; a move takes id and owns 
     companion: original.flags?.['companion'],
   });
   await expect.poll(() => owners(gm, sword)).toEqual([wolf]);
-  expect(await silkItems(gm, alrikUuid)).toEqual([]);
+  expect(await garnItems(gm, alrikUuid)).toEqual([]);
   expect(await swords(wolfUuid)).toHaveLength(1);
   expect(await swords(alrikUuid)).toEqual([]);
 

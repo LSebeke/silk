@@ -43,14 +43,14 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
   async function store(id: string, data: ConnectionData) {
     const wc = deps.workingCopy();
     const result = check(wc.records(), data, id);
-    if (!result.ok) throw new Error(`Silk: ${result.reason}`);
+    if (!result.ok) throw new Error(`Garn: ${result.reason}`);
     await wc.set([connectionRecord(id, data)]);
     if (result.replaces.length) await wc.delete(result.replaces);
   }
 
   function existing(id: string): Connection {
     const connection = readConnection(deps.workingCopy().get(id));
-    if (!connection) throw new Error(`Silk: no Connection "${id}"`);
+    if (!connection) throw new Error(`Garn: no Connection "${id}"`);
     return connection;
   }
 
@@ -60,20 +60,20 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
 
   const create: Command<ConnectionCreateArgs, { id: string }> = {
     name: 'connection.create',
-    title: 'SILK.Commands.connection.create',
+    title: 'GARN.Commands.connection.create',
     available: (ctx) => ctx.isGM,
     async run(args) {
       const wc = deps.workingCopy();
       const classOf = (end: string) => {
         const element = readElement(wc.get(end));
-        if (!element) throw new Error(`Silk: no element "${end}"`);
+        if (!element) throw new Error(`Garn: no element "${end}"`);
         return element.class;
       };
       const requireEnds = (...ends: string[]) => ends.forEach(classOf);
       requireEnds(args.from, args.to);
-      if (args.from === args.to) throw new Error('Silk: an element cannot connect to itself');
+      if (args.from === args.to) throw new Error('Garn: an element cannot connect to itself');
       if (args.type !== undefined && !isType(args.type))
-        throw new Error(`Silk: unknown Connection type "${String(args.type)}"`);
+        throw new Error(`Garn: unknown Connection type "${String(args.type)}"`);
       const mutual = args.direction === 'mutual';
       // The asked pair. Without a type, the default Connection (v1.1 §F.3); only without a
       // direction (no modifier) may it swap the pair. An explicit direction it does not fit
@@ -105,7 +105,7 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
 
   const setLabel: Command<{ id: string; label: string }, void> = {
     name: 'connection.setLabel',
-    title: 'SILK.Commands.connection.setLabel',
+    title: 'GARN.Commands.connection.setLabel',
     available: (ctx) => ctx.isGM,
     async run({ id, label }) {
       const c = existing(id);
@@ -116,7 +116,7 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
 
   const setNotes: Command<{ id: string; notes: string }, void> = {
     name: 'connection.setNotes',
-    title: 'SILK.Commands.connection.setNotes',
+    title: 'GARN.Commands.connection.setNotes',
     available: (ctx) => ctx.isGM,
     async run({ id, notes }) {
       const c = existing(id);
@@ -142,9 +142,9 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
   /** Writes `type` if `typeOptions` offers it, replacing what it conflicts with. */
   async function writeType(c: Connection, type: ConnectionType) {
     const options = typeOptions(deps.workingCopy().records(), c);
-    if (!options.length) throw new Error(`Silk: Connection "${c.id}" has a missing endpoint`);
+    if (!options.length) throw new Error(`Garn: Connection "${c.id}" has a missing endpoint`);
     if (!options.includes(type))
-      throw new Error(`Silk: Connection "${c.id}" cannot be ${String(type)}`);
+      throw new Error(`Garn: Connection "${c.id}" cannot be ${String(type)}`);
     if (type === c.type) return;
     await store(c.id, {
       ...strip(c),
@@ -157,12 +157,12 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
   /** v1.1 §F.2 select. Mutual → directed points in id order (A→B); directed stays as is. */
   const setDirection: Command<{ id: string; direction: ConnectionDirection }, void> = {
     name: 'connection.setDirection',
-    title: 'SILK.Commands.connection.setDirection',
+    title: 'GARN.Commands.connection.setDirection',
     available: (ctx) => ctx.isGM,
     async run({ id, direction }) {
       const c = existing(id);
       if (direction !== 'directed' && direction !== 'mutual')
-        throw new Error(`Silk: unknown direction "${String(direction)}"`);
+        throw new Error(`Garn: unknown direction "${String(direction)}"`);
       if (c.direction === direction) return;
       await writeDirection(c, direction, direction === 'directed' ? ordered(c) : undefined);
     },
@@ -174,7 +174,7 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
    */
   const toggleDirection: Command<{ id: string }, void> = {
     name: 'connection.toggleDirection',
-    title: 'SILK.Commands.connection.toggleDirection',
+    title: 'GARN.Commands.connection.toggleDirection',
     available: (ctx) => ctx.isGM,
     async run({ id }) {
       const c = existing(id);
@@ -186,39 +186,39 @@ export function connectionCommands(deps: ConnectionCommandDeps): Command[] {
   /** v1.1 §F.2 select: one of `typeOptions`. */
   const setType: Command<{ id: string; type: ConnectionType }, void> = {
     name: 'connection.setType',
-    title: 'SILK.Commands.connection.setType',
+    title: 'GARN.Commands.connection.setType',
     available: (ctx) => ctx.isGM,
     run: ({ id, type }) => writeType(existing(id), type),
   };
 
   const cycleType: Command<{ id: string }, void> = {
     name: 'connection.cycleType',
-    title: 'SILK.Commands.connection.cycleType',
+    title: 'GARN.Commands.connection.cycleType',
     available: (ctx) => ctx.isGM,
     async run({ id }) {
       const c = existing(id);
       const options = typeOptions(deps.workingCopy().records(), c);
-      if (!options.length) throw new Error(`Silk: Connection "${id}" has a missing endpoint`);
+      if (!options.length) throw new Error(`Garn: Connection "${id}" has a missing endpoint`);
       await writeType(c, options[(options.indexOf(c.type) + 1) % options.length] ?? 'free');
     },
   };
 
   const flip: Command<{ id: string }, void> = {
     name: 'connection.flip',
-    title: 'SILK.Commands.connection.flip',
+    title: 'GARN.Commands.connection.flip',
     available: (ctx) => ctx.isGM,
     async run({ id }) {
       const c = existing(id);
       const next = { ...strip(c), from: c.to, to: c.from };
       if (c.type !== 'free' && !check(deps.workingCopy().records(), next, id).ok)
-        throw new Error(`Silk: cannot flip ${c.type}: the reversed pair is not valid`);
+        throw new Error(`Garn: cannot flip ${c.type}: the reversed pair is not valid`);
       await store(id, next);
     },
   };
 
   const remove: Command<{ ids: string[] }, void> = {
     name: 'connection.delete',
-    title: 'SILK.Commands.connection.delete',
+    title: 'GARN.Commands.connection.delete',
     available: (ctx) => ctx.isGM,
     async run({ ids }) {
       const wc = deps.workingCopy();

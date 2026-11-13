@@ -67,10 +67,10 @@ describe('NSC Zucht Source Step provider (spec 1.1 §B.3)', () => {
 
   it('greyed without the module, or for a non-GM', () => {
     expect(setup({ active: () => false }).zucht.unavailable('person')).toBe(
-      'SILK.Source.GeneratorMissing',
+      'GARN.Source.GeneratorMissing',
     );
     expect(setup({ isGM: () => false }).zucht.unavailable('person')).toBe(
-      'SILK.Source.GeneratorGMOnly',
+      'GARN.Source.GeneratorGMOnly',
     );
   });
 
@@ -90,13 +90,13 @@ describe('NSC Zucht Source Step provider (spec 1.1 §B.3)', () => {
     expect(t.listeners.size).toBe(0);
   });
 
-  it("ignores other users' Actors, Silk's own and non-NPCs", async () => {
+  it("ignores other users' Actors, Garn's own and non-NPCs", async () => {
     const t = setup();
     const { req } = t.request();
     const picking = t.zucht.pick(req);
     await tick();
     t.create({ uuid: 'Actor.other' }, 'someone');
-    t.create({ uuid: 'Actor.silk', silk: true });
+    t.create({ uuid: 'Actor.garn', garn: true });
     t.create({ uuid: 'Actor.pc', type: 'character' });
     t.create({ uuid: 'Actor.ok' });
     expect(await picking).toMatchObject({ source: { actorUuid: 'Actor.ok' } });
@@ -131,8 +131,8 @@ describe('NSC Zucht Source Step provider (spec 1.1 §B.3)', () => {
     });
     const { req } = t.request();
     expect(await t.zucht.pick(req)).toBeUndefined();
-    expect(t.zucht.unavailable('person')).toBe('SILK.Source.GeneratorFailed');
-    expect(t.warnings).toEqual(['SILK.Source.GeneratorFailed']);
+    expect(t.zucht.unavailable('person')).toBe('GARN.Source.GeneratorFailed');
+    expect(t.warnings).toEqual(['GARN.Source.GeneratorFailed']);
   });
 
   it('probe: a module that does not load greys the Generator before any click', async () => {
@@ -142,7 +142,7 @@ describe('NSC Zucht Source Step provider (spec 1.1 §B.3)', () => {
       },
     });
     await t.zucht.probe();
-    expect(t.zucht.unavailable('person')).toBe('SILK.Source.GeneratorFailed');
+    expect(t.zucht.unavailable('person')).toBe('GARN.Source.GeneratorFailed');
     expect(t.warnings).toEqual([]);
   });
 });

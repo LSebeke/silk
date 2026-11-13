@@ -58,7 +58,7 @@ export function layoutCommands(deps: LayoutCommandDeps): Command[] {
 
   const group: Command<{ ids?: string[]; label?: string }, { id: string } | undefined> = {
     name: 'canvas.group',
-    title: 'SILK.Commands.canvas.group',
+    title: 'GARN.Commands.canvas.group',
     available: (ctx) => ctx.isGM,
     async run(args) {
       const wc = deps.workingCopy();
@@ -96,13 +96,13 @@ export function layoutCommands(deps: LayoutCommandDeps): Command[] {
 
   const groupOf = (id: string) => {
     const record = deps.workingCopy().get(id);
-    if (!record || !readGroup(record)) throw new Error(`Silk: no Visual Group "${id}"`);
+    if (!record || !readGroup(record)) throw new Error(`Garn: no Visual Group "${id}"`);
     return record;
   };
 
   const ungroup: Command<{ groupId: string }, void> = {
     name: 'canvas.ungroup',
-    title: 'SILK.Commands.canvas.ungroup',
+    title: 'GARN.Commands.canvas.ungroup',
     available: (ctx) => ctx.isGM,
     async run({ groupId }) {
       const wc = deps.workingCopy();
@@ -120,7 +120,7 @@ export function layoutCommands(deps: LayoutCommandDeps): Command[] {
 
   const renameGroup: Command<{ groupId: string; label: string }, void> = {
     name: 'canvas.renameGroup',
-    title: 'SILK.Commands.canvas.renameGroup',
+    title: 'GARN.Commands.canvas.renameGroup',
     available: (ctx) => ctx.isGM,
     async run({ groupId, label }) {
       const record = groupOf(groupId);
@@ -139,7 +139,7 @@ export function layoutCommands(deps: LayoutCommandDeps): Command[] {
 
   const untangle: Command<{ ids?: string[] }, void> = {
     name: 'canvas.untangle',
-    title: 'SILK.Commands.canvas.untangle',
+    title: 'GARN.Commands.canvas.untangle',
     available: (ctx) => ctx.isGM,
     async run(args) {
       const wc = deps.workingCopy();
@@ -163,7 +163,7 @@ export function layoutCommands(deps: LayoutCommandDeps): Command[] {
 
   const undo: Command<object, void> = {
     name: 'canvas.undo',
-    title: 'SILK.Commands.canvas.undo',
+    title: 'GARN.Commands.canvas.undo',
     available: (ctx) => ctx.isGM && undoStack.length > 0,
     async run() {
       const restore = undoStack.pop();

@@ -4,14 +4,14 @@ import CanvasRoot from './CanvasRoot.svelte';
 import type { CanvasContext } from './context';
 
 export class CanvasWindow extends SvelteApplication<{ ctx: CanvasContext }> {
-  static readonly ID = 'silk-canvas';
+  static readonly ID = 'garn-canvas';
 
   static override persistWindowState = true;
 
   static override DEFAULT_OPTIONS = {
     id: CanvasWindow.ID,
-    classes: ['silk', 'silk-canvas-window'],
-    window: { title: 'SILK.Canvas.Title', resizable: true, icon: 'fa-solid fa-diagram-project' },
+    classes: ['garn', 'garn-canvas-window'],
+    window: { title: 'GARN.Canvas.Title', resizable: true, icon: 'fa-solid fa-diagram-project' },
     position: { width: 1100, height: 700 },
   };
 

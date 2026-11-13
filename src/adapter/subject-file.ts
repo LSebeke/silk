@@ -1,7 +1,7 @@
 /**
  * Ring subject files (v1.1 §G.3 "Files", #171): the image, posed and cut to the ring's edge
  * the draw order picks (#170) by the one subject geometry (core/portrait), as WebP in
- * `Data/silk/<worldId>/tokens/<actorId>-<hash>.webp`, named by content so no cache shows a
+ * `Data/garn/<worldId>/tokens/<actorId>-<hash>.webp`, named by content so no cache shows a
  * stale one. Replaced files stay (Foundry has no delete).
  */
 import { sha256Hex } from '../core/canon/portability';
@@ -24,7 +24,7 @@ export function createSubjectFiles(deps: SubjectFileDeps) {
     const bytes = await deps.draw(spec);
     const hash = (await sha256Hex(bytes)).slice(0, 16);
     const actorId = actorUuid.split('.').pop() ?? actorUuid;
-    const path = `silk/${deps.worldId()}/tokens/${actorId}-${hash}.webp`;
+    const path = `garn/${deps.worldId()}/tokens/${actorId}-${hash}.webp`;
     await deps.write(path, bytes);
     return path;
   };
@@ -42,7 +42,7 @@ export async function drawSubject(spec: SubjectSpec): Promise<Uint8Array> {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Silk: no 2D canvas for the token subject');
+  if (!ctx) throw new Error('Garn: no 2D canvas for the token subject');
   ctx.drawImage(image, box.left * n, box.top * n, box.width * n, box.height * n);
   // Cut to the circle (anti-aliased, unlike a clip path).
   ctx.globalCompositeOperation = 'destination-in';
@@ -52,6 +52,6 @@ export async function drawSubject(spec: SubjectSpec): Promise<Uint8Array> {
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, 'image/webp', 0.92),
   );
-  if (!blob) throw new Error('Silk: token subject not encoded');
+  if (!blob) throw new Error('Garn: token subject not encoded');
   return new Uint8Array(await blob.arrayBuffer());
 }

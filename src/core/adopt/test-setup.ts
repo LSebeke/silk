@@ -228,7 +228,7 @@ export function setup() {
   ])
     registry.register(command);
 
-  /** Puts an existing (non-Silk) Foundry doc into the World. */
+  /** Puts an existing (non-Garn) Foundry doc into the World. */
   function foundryDoc(
     documentName: 'Actor' | 'Item' | 'JournalEntry',
     data: Partial<DocSnapshot> & { name: string },
@@ -239,7 +239,7 @@ export function setup() {
     const doc = {
       _id: id,
       folder: 'userFolder',
-      flags: { silk: {} },
+      flags: { garn: {} },
       ownership: { default: 0 },
       ...data,
       uuid,

@@ -16,22 +16,22 @@ test.use({ worldKey: 'nsc-zucht', modules: installed ? MODULES : [] });
 test.skip(!installed, 'dsa5-mastersworkshop is not installed locally');
 
 const api = (page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [name, args] as const);
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [name, args] as const);
 
 async function ready(page: Page) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
-  await page.evaluate(() => game.settings?.set('silk', 'materializeMode', 'onDemand'));
+  await page.evaluate(() => game.settings?.set('garn', 'materializeMode', 'onDemand'));
 }
 
 const elements = (page: Page) =>
   page.evaluate(() =>
-    [...(game.modules?.get('silk')?.session?.().workingCopy.records().values() ?? [])]
+    [...(game.modules?.get('garn')?.session?.().workingCopy.records().values() ?? [])]
       .filter((r) => r.kind === 'element')
       .map((r) => ({ id: r.id, data: r.data as Record<string, any> })),
   );
@@ -59,15 +59,15 @@ test('Generator: open from the compass, generate, bind the Actor on demand; clos
       ] as never);
   });
   await api(gm, 'canvas.open');
-  const canvas = gm.locator('[data-silk-canvas]');
+  const canvas = gm.locator('[data-garn-canvas]');
   await expect(canvas).toBeVisible();
-  const compass = gm.locator('[data-silk-source-step]');
-  const generator = gm.locator('[data-silk-source-choice="generator"]');
+  const compass = gm.locator('[data-garn-source-step]');
+  const generator = gm.locator('[data-garn-source-choice="generator"]');
 
   // Available: GM, module active, import probe passed.
   await canvas.focus();
   await gm.keyboard.press('Digit1');
-  await expect(compass).toHaveAttribute('data-silk-source-step', 'person');
+  await expect(compass).toHaveAttribute('data-garn-source-step', 'person');
   await expect(generator).toHaveAttribute('aria-disabled', 'false');
 
   // Closed without generating → back to the Source Step, nothing created.
@@ -77,7 +77,7 @@ test('Generator: open from the compass, generate, bind the Actor on demand; clos
     for (const app of foundry.applications.instances.values())
       if (app.constructor.name === 'NPCGenerator') await app.close();
   });
-  await expect(compass).toHaveAttribute('data-silk-source-step', 'person');
+  await expect(compass).toHaveAttribute('data-garn-source-step', 'person');
   await expect(generator).toHaveAttribute('aria-disabled', 'false');
   expect(await elements(gm)).toHaveLength(0);
 
@@ -103,7 +103,7 @@ test('Generator: open from the compass, generate, bind the Actor on demand; clos
     )
     .toBe(true);
   await click('generateNPC');
-  const nameInput = gm.locator('[data-silk-name-input]');
+  const nameInput = gm.locator('[data-garn-name-input]');
   await expect(nameInput).toBeFocused({ timeout: 90_000 });
   await expect.poll(() => generatorOpen(gm)).toBe(false);
   const prefilled = await nameInput.inputValue();
@@ -122,25 +122,25 @@ test('Generator: open from the compass, generate, bind the Actor on demand; clos
   expect(await gm.evaluate(() => game.actors?.size ?? 0)).toBe(actorsBefore + 1);
   const bound = await gm.evaluate((uuid) => {
     const actor = fromUuidSync(uuid) as any;
-    const companion = game.journal?.get(actor.flags.silk.companion) as any;
+    const companion = game.journal?.get(actor.flags.garn.companion) as any;
     return {
       name: actor.name,
       type: actor.type,
-      silkId: actor.flags.silk.id,
+      garnId: actor.flags.garn.id,
       folder: actor.folder?.name,
       ownership: actor.ownership.default,
       items: actor.items.size,
-      hooded: actor.img === actor.flags.silk.hood,
-      companionOf: companion?.flags.silk.companionOf,
+      hooded: actor.img === actor.flags.garn.hood,
+      companionOf: companion?.flags.garn.companionOf,
       pages: [...(companion?.pages ?? [])]
         .sort((a: any, b: any) => a.sort - b.sort)
-        .map((p: any) => ({ name: p.name, appearance: !!p.flags.silk?.appearance })),
+        .map((p: any) => ({ name: p.name, appearance: !!p.flags.garn?.appearance })),
     };
   }, el?.data['uuid'] as string);
   expect(bound).toMatchObject({
     name: prefilled,
     type: 'npc',
-    silkId: el?.id,
+    garnId: el?.id,
     ownership: 0,
     hooded: true,
     companionOf: el?.id,

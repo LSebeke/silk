@@ -26,12 +26,12 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
       deps(),
     );
     expect(labels(entries)).toEqual([
-      'SILK.Reveal.Reveal',
-      'SILK.Reveal.RevealAppearance',
+      'GARN.Reveal.Reveal',
+      'GARN.Reveal.RevealAppearance',
       'T(reveal.showToPlayers)',
       'T(element.toggleStatus)',
       'T(element.openDetail)',
-      'SILK.Detail.AddInfoBlockMenu',
+      'GARN.Detail.AddInfoBlockMenu',
       'T(element.openSheet)',
       'T(element.openJournal)',
       'T(element.rename)',
@@ -54,7 +54,7 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
       },
       deps(),
     );
-    expect(labels(entries)).not.toContain('SILK.Reveal.RevealAppearance');
+    expect(labels(entries)).not.toContain('GARN.Reveal.RevealAppearance');
   });
 
   it('a Revealed Ghost Location: Un-reveal, Materialize, no Appearance or Status', () => {
@@ -62,9 +62,9 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
       { id: 'a', class: 'location', name: 'A' },
       deps({ isRevealed: (kind) => kind === 'element' }),
     );
-    expect(labels(entries)).toContain('SILK.Reveal.Unreveal');
+    expect(labels(entries)).toContain('GARN.Reveal.Unreveal');
     expect(labels(entries)).toContain('T(materialize.elements)');
-    expect(labels(entries)).not.toContain('SILK.Reveal.RevealAppearance');
+    expect(labels(entries)).not.toContain('GARN.Reveal.RevealAppearance');
     expect(labels(entries)).not.toContain('T(element.toggleStatus)');
     expect(entries[0]).toMatchObject({ args: { id: 'a', revealed: false } });
   });
@@ -77,7 +77,7 @@ describe('Node context menu (spec §8 Controls, §10.3)', () => {
     const reveal = entries.filter((e) => e.command?.startsWith('reveal.'));
     expect(reveal.length).toBe(2);
     for (const e of reveal)
-      expect(e).toMatchObject({ disabled: true, hint: 'SILK.Reveal.NeedsAdventure' });
+      expect(e).toMatchObject({ disabled: true, hint: 'GARN.Reveal.NeedsAdventure' });
   });
 
   it('with several selected (incl. this one): Untangle, and Delete acts on the selection', () => {
@@ -111,7 +111,7 @@ describe('Node context menu: Add Info Block… (v1.1 §C.1)', () => {
   it('opens Element Detail with a new block, for every class', () => {
     for (const cls of ['note', 'item', 'playerCharacter'] as const) {
       const entry = nodeMenu({ id: 'a', class: cls, name: 'A' }, deps()).find(
-        (e) => e.label === 'SILK.Detail.AddInfoBlockMenu',
+        (e) => e.label === 'GARN.Detail.AddInfoBlockMenu',
       );
       expect(entry).toMatchObject({
         command: 'element.openDetail',
@@ -125,7 +125,7 @@ describe('Node context menu: Add Info Block… (v1.1 §C.1)', () => {
       { id: 'a', class: 'note', name: 'A' },
       deps({ available: (name) => name !== 'element.openDetail' }),
     );
-    expect(entries.find((e) => e.label === 'SILK.Detail.AddInfoBlockMenu')?.disabled).toBe(true);
+    expect(entries.find((e) => e.label === 'GARN.Detail.AddInfoBlockMenu')?.disabled).toBe(true);
   });
 });
 
@@ -135,12 +135,12 @@ describe('Connection edge context menu', () => {
   it('Open details, Reveal, the Connection commands (spec 1.1 §F.1)', () => {
     const entries = edgeMenu(free, deps({ isRevealed: () => true }));
     expect(labels(entries)).toEqual([
-      'SILK.Canvas.EdgeMenu.OpenDetails',
-      'SILK.Reveal.Unreveal',
+      'GARN.Canvas.EdgeMenu.OpenDetails',
+      'GARN.Reveal.Unreveal',
       'T(connection.setLabel)',
       'T(connection.toggleDirection)',
       'T(connection.cycleType)',
-      'SILK.Canvas.EdgeMenu.Reverse',
+      'GARN.Canvas.EdgeMenu.Reverse',
       'T(connection.delete)',
     ]);
     expect(entries[0]).toMatchObject({ command: 'connection.openDetail', args: { id: 'c1' } });

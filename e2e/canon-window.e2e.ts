@@ -3,15 +3,15 @@ import type { Session } from '../src/adapter/session';
 import type { CommandRegistry } from '../src/core/commands/registry';
 import { expect, test } from './fixtures';
 
-/** Runs `fn` in the page with Silk's api and session. */
-function silk<A, R>(
+/** Runs `fn` in the page with Garn's api and session. */
+function garn<A, R>(
   page: Page,
   fn: (s: { api: CommandRegistry; session: Session }, arg: A) => R | Promise<R>,
   arg?: A,
 ): Promise<R> {
   return page.evaluate(
     ([src, a]) => {
-      const mod = game.modules?.get('silk') as unknown as {
+      const mod = game.modules?.get('garn') as unknown as {
         api: CommandRegistry;
         session(): Session;
       };
@@ -51,54 +51,54 @@ test('Canon window: Campaigns, start an Adventure, history and Revelation Map', 
   // `ready` is async: wait for the session.
   await gm.waitForFunction(() => {
     try {
-      (game.modules?.get('silk') as unknown as { session(): unknown }).session();
+      (game.modules?.get('garn') as unknown as { session(): unknown }).session();
       return true;
     } catch {
       return false;
     }
   });
   // The World may already be bound by an earlier test in this worker; then use that Canon.
-  const canonId = await silk(gm, async ({ api, session }) => {
+  const canonId = await garn(gm, async ({ api, session }) => {
     const bound = session.workingCopy.binding;
     if (bound) return bound.canonId;
     return (await api.run<{ canonId: string }>('canon.create', { name: 'E2E' })).canonId;
   });
-  await silk(gm, async ({ api, session }) => {
+  await garn(gm, async ({ api, session }) => {
     await session.workingCopy.set([{ kind: 'element', id: 'el-t15', data: { name: 'T15' } }]);
     await api.run('history.commit', { label: 'T15 start' });
   });
 
   await closePopups(gm);
-  await silk(gm, ({ api }) => api.run('canon.openWindow'));
-  const win = gm.locator('[data-silk-canon]');
+  await garn(gm, ({ api }) => api.run('canon.openWindow'));
+  const win = gm.locator('[data-garn-canon]');
   await expect(win).toBeVisible();
-  await expect(win.locator('[data-silk-checkout]')).toContainText('main');
-  await expect(win.locator('[data-silk-history]')).toContainText('T15 start');
+  await expect(win.locator('[data-garn-checkout]')).toContainText('main');
+  await expect(win.locator('[data-garn-history]')).toContainText('T15 start');
 
   // Campaign lifecycle through the UI.
-  await fill(win.locator('[data-silk-campaign-name]'), 'Phileasson');
-  await win.locator('[data-silk-campaign-create]').click();
-  const created = win.locator('[data-silk-campaign]', { hasText: 'Phileasson' });
+  await fill(win.locator('[data-garn-campaign-name]'), 'Phileasson');
+  await win.locator('[data-garn-campaign-create]').click();
+  const created = win.locator('[data-garn-campaign]', { hasText: 'Phileasson' });
   await expect(created).toBeVisible();
-  const campaignId = (await created.getAttribute('data-silk-campaign')) ?? '';
-  const campaign = win.locator(`[data-silk-campaign="${campaignId}"]`);
-  await campaign.locator('[data-silk-campaign-rename]').click();
-  await fill(campaign.locator('[data-silk-campaign-rename-input]'), 'Phileasson-Saga');
-  await campaign.locator('[data-silk-campaign-rename-confirm]').click();
-  await campaign.locator('[data-silk-campaign-close]').click();
-  await expect(campaign.locator('[data-silk-campaign-reopen]')).toBeVisible();
+  const campaignId = (await created.getAttribute('data-garn-campaign')) ?? '';
+  const campaign = win.locator(`[data-garn-campaign="${campaignId}"]`);
+  await campaign.locator('[data-garn-campaign-rename]').click();
+  await fill(campaign.locator('[data-garn-campaign-rename-input]'), 'Phileasson-Saga');
+  await campaign.locator('[data-garn-campaign-rename-confirm]').click();
+  await campaign.locator('[data-garn-campaign-close]').click();
+  await expect(campaign.locator('[data-garn-campaign-reopen]')).toBeVisible();
   expect(
-    await fetchJson(gm, `/silk/${canonId}/campaigns/${campaignId}/campaign.json`),
+    await fetchJson(gm, `/garn/${canonId}/campaigns/${campaignId}/campaign.json`),
   ).toMatchObject({ id: campaignId, name: 'Phileasson-Saga', closed: true, formatVersion: 1 });
   // A closed Campaign is not offered for new Adventures.
   await expect(
-    win.locator(`[data-silk-adventure-campaign] option[value="${campaignId}"]`),
+    win.locator(`[data-garn-adventure-campaign] option[value="${campaignId}"]`),
   ).toHaveCount(0);
-  await campaign.locator('[data-silk-campaign-reopen]').click();
-  await expect(campaign.locator('[data-silk-campaign-close]')).toBeVisible();
+  await campaign.locator('[data-garn-campaign-reopen]').click();
+  await expect(campaign.locator('[data-garn-campaign-close]')).toBeVisible();
 
   // Revelation Map read/write API, stored next to campaign.json.
-  await silk(
+  await garn(
     gm,
     ({ session }, id) =>
       session.campaigns.writeRevelationMap(id, {
@@ -111,22 +111,22 @@ test('Canon window: Campaigns, start an Adventure, history and Revelation Map', 
     campaignId,
   );
   expect(
-    await fetchJson(gm, `/silk/${canonId}/campaigns/${campaignId}/revelation-map.json`),
+    await fetchJson(gm, `/garn/${canonId}/campaigns/${campaignId}/revelation-map.json`),
   ).toMatchObject({ formatVersion: 1, elements: ['el-t15'] });
 
   // Start an Adventure through the UI.
-  await fill(win.locator('[data-silk-adventure-name]'), 'Chapter 1');
-  await win.locator('[data-silk-adventure-campaign]').selectOption(campaignId);
-  await win.locator('[data-silk-adventure-start]').click();
-  await expect(win.locator('[data-silk-checkout]')).toContainText('Chapter 1');
-  await expect(win.locator('[data-silk-checkout]')).toContainText('Phileasson-Saga');
-  await expect(win.locator('[data-silk-adventure-start]')).toHaveCount(0);
+  await fill(win.locator('[data-garn-adventure-name]'), 'Chapter 1');
+  await win.locator('[data-garn-adventure-campaign]').selectOption(campaignId);
+  await win.locator('[data-garn-adventure-start]').click();
+  await expect(win.locator('[data-garn-checkout]')).toContainText('Chapter 1');
+  await expect(win.locator('[data-garn-checkout]')).toContainText('Phileasson-Saga');
+  await expect(win.locator('[data-garn-adventure-start]')).toHaveCount(0);
 
-  const binding = await silk(gm, ({ session }) => session.workingCopy.binding);
+  const binding = await garn(gm, ({ session }) => session.workingCopy.binding);
   const checkout = binding?.checkout as { adventure: string };
-  const main = (await fetchJson(gm, `/silk/${canonId}/refs/main.json`)) as { head: string };
+  const main = (await fetchJson(gm, `/garn/${canonId}/refs/main.json`)) as { head: string };
   expect(
-    await fetchJson(gm, `/silk/${canonId}/refs/adventures/${checkout.adventure}.json`),
+    await fetchJson(gm, `/garn/${canonId}/refs/adventures/${checkout.adventure}.json`),
   ).toEqual({
     id: checkout.adventure,
     name: 'Chapter 1',

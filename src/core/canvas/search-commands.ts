@@ -46,7 +46,7 @@ export function createCanvasSearch(deps: CanvasSearchDeps): CanvasSearch {
   return {
     search: (query) => searchIndex(current(), query),
     jumpTo(id) {
-      if (!readElement(deps.workingCopy().get(id))) throw new Error(`Silk: no element "${id}"`);
+      if (!readElement(deps.workingCopy().get(id))) throw new Error(`Garn: no element "${id}"`);
       showIfHidden(id);
       deps.state.select([id]);
       for (const l of listeners) l(id);
@@ -65,13 +65,13 @@ export function createCanvasSearch(deps: CanvasSearchDeps): CanvasSearch {
 export function searchCommands(search: CanvasSearch): Command[] {
   const find: Command<{ query: string }, SearchHit[]> = {
     name: 'canvas.search',
-    title: 'SILK.Commands.canvas.search',
+    title: 'GARN.Commands.canvas.search',
     available: (ctx) => ctx.isGM,
     run: async ({ query }) => search.search(query ?? ''),
   };
   const jumpTo: Command<{ id: string }, void> = {
     name: 'canvas.jumpTo',
-    title: 'SILK.Commands.canvas.jumpTo',
+    title: 'GARN.Commands.canvas.jumpTo',
     available: (ctx) => ctx.isGM,
     run: async ({ id }) => search.jumpTo(id),
   };

@@ -12,7 +12,7 @@ describe('Unmaterialize (spec §6)', () => {
       to: inn,
       label: 'drinks at',
     });
-    // A Foundry-side edit: sheet data Silk has no field for.
+    // A Foundry-side edit: sheet data Garn has no field for.
     const actor = t.doc(alrik);
     actor.system = { ...actor.system, status: { wounds: { value: 7 } } };
     const companionUuid = t.companion(alrik).uuid;
@@ -63,8 +63,8 @@ describe('Unmaterialize (spec §6)', () => {
         .sort(),
     ).toEqual([...pageIds].sort());
     expect(page(t.companion(alrik), secrets._id).text?.content).toBe('<p>Spy</p>');
-    expect(t.companion(alrik).flags.silk.companionOf).toBe(alrik);
-    expect(doc.flags.silk.companion).toBe(t.companion(alrik)._id);
+    expect(t.companion(alrik).flags.garn.companionOf).toBe(alrik);
+    expect(doc.flags.garn.companion).toBe(t.companion(alrik)._id);
   });
 
   it('a journal element restores its pages; a class change while a Ghost adds the layout', async () => {
@@ -85,7 +85,7 @@ describe('Unmaterialize (spec §6)', () => {
     const restored = t.doc(note);
     expect(restored.pages.some((p) => p._id === 'handout0000000001')).toBe(true);
     expect(pageNames(restored)).toContain('Connections');
-    expect(restored.flags.silk.cover).toBeTruthy();
+    expect(restored.flags.garn.cover).toBeTruthy();
   });
 
   it('a Revealed element warns first (client setting); cancel keeps it Materialized', async () => {

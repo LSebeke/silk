@@ -1,5 +1,5 @@
 /**
- * Silk's scene-control button (v14 `getSceneControlButtons` record shape). One button for
+ * Garn's scene-control button (v14 `getSceneControlButtons` record shape). One button for
  * everyone: `canvas.open` opens the World Canvas for a GM, the Player Canvas for a player (§9).
  */
 
@@ -15,16 +15,16 @@ export interface SceneControlTool {
 
 export type SceneControls = Record<string, { tools?: Record<string, SceneControlTool> }>;
 
-export function addSilkSceneControl(
+export function addGarnSceneControl(
   controls: SceneControls,
   { run }: { run: (command: string) => Promise<unknown> },
 ): void {
   const notes = controls['notes'];
   if (!notes) return;
   const tools = (notes.tools ??= {});
-  tools['silk'] = {
-    name: 'silk',
-    title: 'SILK.Commands.canvas.open',
+  tools['garn'] = {
+    name: 'garn',
+    title: 'GARN.Commands.canvas.open',
     icon: 'fa-solid fa-diagram-project',
     order: Object.keys(tools).length,
     button: true,

@@ -39,24 +39,24 @@
   }
 </script>
 
-<div class="silk-palette" data-silk-palette>
+<div class="garn-palette" data-garn-palette>
   <input
     type="search"
     value={query}
-    placeholder={ctx.localize('SILK.Canvas.SearchPlaceholder')}
+    placeholder={ctx.localize('GARN.Canvas.SearchPlaceholder')}
     oninput={(e) => void onInput(e.currentTarget.value).catch(console.error)}
     onkeydown={(e) => e.stopPropagation()}
-    data-silk-palette-input
+    data-garn-palette-input
   />
-  <div class="hint">{ctx.localize('SILK.Canvas.PaletteHint')}</div>
+  <div class="hint">{ctx.localize('GARN.Canvas.PaletteHint')}</div>
   {#each classes as cls (cls.id)}
     <div
       class="cls"
       role="listitem"
       draggable="true"
-      style:--silk-class={cls.color}
+      style:--garn-class={cls.color}
       ondragstart={(e) => onDragStart(e, cls.id)}
-      data-silk-palette-class={cls.id}
+      data-garn-palette-class={cls.id}
     >
       <img src={cls.icon} alt="" draggable="false" />
       <span>{ctx.localize(classLabelKey(cls.id))}</span>
@@ -64,14 +64,14 @@
     </div>
   {/each}
   {#each elements as e, i (`${e.id}-${i}`)}
-    <button type="button" onclick={() => onjump(e.id)} data-silk-palette-hit={e.id}>
+    <button type="button" onclick={() => onjump(e.id)} data-garn-palette-hit={e.id}>
       {e.name}
     </button>
   {/each}
 </div>
 
 <style>
-  .silk-palette {
+  .garn-palette {
     position: absolute;
     top: 44px;
     right: 8px;
@@ -108,7 +108,7 @@
     padding: 0 6px;
     background: #fff;
     border: 1px solid #ddd;
-    border-left: 4px solid var(--silk-class);
+    border-left: 4px solid var(--garn-class);
     border-radius: 4px;
     cursor: grab;
     user-select: none;
@@ -121,7 +121,7 @@
     height: 18px;
     border: 0;
     border-radius: 3px;
-    background: var(--silk-class);
+    background: var(--garn-class);
   }
   kbd {
     font-size: 10px;

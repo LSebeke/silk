@@ -29,7 +29,7 @@ function fakeGame(): CatalogGame & { indexed: object[] } {
     i18n: { lang: 'de' },
     actors: [
       { uuid: 'Actor.ulf', name: 'Ulf', img: 'ulf.webp', type: 'npc', flags: {} },
-      { uuid: 'Actor.el', name: 'Known', type: 'npc', flags: { silk: { id: 'e1' } } },
+      { uuid: 'Actor.el', name: 'Known', type: 'npc', flags: { garn: { id: 'e1' } } },
     ],
     scenes: [
       {
@@ -39,8 +39,8 @@ function fakeGame(): CatalogGame & { indexed: object[] } {
         thumb: null,
         background: { src: 'maps/punin.webp' },
       },
-      { uuid: 'Scene.linked', name: 'Linked', flags: { silk: { id: 'e2' } } },
-      { uuid: 'Scene.overview', name: 'Overview', flags: { silk: { sceneOf: 'e3' } } },
+      { uuid: 'Scene.linked', name: 'Linked', flags: { garn: { id: 'e2' } } },
+      { uuid: 'Scene.overview', name: 'Overview', flags: { garn: { sceneOf: 'e3' } } },
     ],
     packs: [
       pack('dsa5.npcs', 'Actor', 'NSC', 'de'),

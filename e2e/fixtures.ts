@@ -1,5 +1,5 @@
 /**
- * Playwright fixtures. One headless Foundry + `silk-test-<run>` world per worker (silk
+ * Playwright fixtures. One headless Foundry + `garn-test-<run>` world per worker (garn
  * enabled, users `Gamemaster` and `Player`); `gm` and `player` are joined, ready pages.
  */
 import { test as base, expect, type Browser, type Page } from '@playwright/test';
@@ -67,21 +67,21 @@ async function join(browser: Browser, url: string, userName: string): Promise<Pa
   if (status !== 'ok') throw new Error(`Join as ${userName} failed: ${status}`);
   await page.goto('/game');
   await page.waitForFunction(() => game.ready === true, undefined, { timeout: 60_000 });
-  await waitForSilk(page);
+  await waitForGarn(page);
   return page;
 }
 
 /**
- * `game.ready` flips before Silk's async `ready` hook has started its session; wait for
- * that too when Silk is enabled (it isn't on the first, setup join).
+ * `game.ready` flips before Garn's async `ready` hook has started its session; wait for
+ * that too when Garn is enabled (it isn't on the first, setup join).
  */
-export async function waitForSilk(page: Page): Promise<void> {
+export async function waitForGarn(page: Page): Promise<void> {
   await page.waitForFunction(
     () => {
       try {
         if (game.ready !== true) return false;
-        if (!game.modules?.get('silk')?.active) return true;
-        return !!game.modules.get('silk')?.session?.();
+        if (!game.modules?.get('garn')?.active) return true;
+        return !!game.modules.get('garn')?.session?.();
       } catch {
         return false;
       }
@@ -91,7 +91,7 @@ export async function waitForSilk(page: Page): Promise<void> {
   );
 }
 
-/** First GM session: add the player and enable silk (takes effect on next load). */
+/** First GM session: add the player and enable garn (takes effect on next load). */
 async function setUpWorld(page: Page, modules: readonly string[]): Promise<void> {
   await page.evaluate(
     async ([playerName, extra]) => {
@@ -103,7 +103,7 @@ async function setUpWorld(page: Page, modules: readonly string[]): Promise<void>
       await game.settings?.set('core', 'moduleConfiguration', {
         ...config,
         ...enabled,
-        silk: true,
+        garn: true,
       });
     },
     [PLAYER, modules] as const,

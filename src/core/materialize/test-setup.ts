@@ -10,18 +10,18 @@ import { appearanceMigration } from './appearance-migration';
 import { createLifecycle, lifecycleCommands, type DeleteAnswer, type Lifecycle } from './lifecycle';
 import { createMaterializer, materializeCommands, type MaterializeMode } from './materializer';
 import { createMemoryDocs } from './memory-docs';
-import type { CategoryData, DocSnapshot, PageData, SilkDocFlags } from './port';
+import type { CategoryData, DocSnapshot, PageData, GarnDocFlags } from './port';
 
 export function must<T>(value: T | null | undefined, what = 'value'): T {
   if (value === null || value === undefined) throw new Error(`missing ${what}`);
   return value;
 }
 
-/** A created doc as tests read it: embedded arrays and Silk flags present. */
+/** A created doc as tests read it: embedded arrays and Garn flags present. */
 export type TestDoc = DocSnapshot & {
   pages: PageData[];
   categories: CategoryData[];
-  flags: { silk: Required<SilkDocFlags> };
+  flags: { garn: Required<GarnDocFlags> };
 };
 export type TestElement = StoryElement & { infoBlocks: InfoBlock[] };
 
@@ -143,7 +143,7 @@ export function setup(
     return live as TestDoc;
   };
   const companion = (id: string) => {
-    const live = must(docs.docs.get(`JournalEntry.${doc(id).flags.silk.companion}`), 'companion');
+    const live = must(docs.docs.get(`JournalEntry.${doc(id).flags.garn.companion}`), 'companion');
     return live as TestDoc;
   };
   return {

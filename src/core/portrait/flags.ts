@@ -1,12 +1,12 @@
 /**
- * The look's flags (v1.1 §C.2, §G.3, §G.3.1): the exceptions to v1 §2 "`flags.silk` holds
- * ids only" that the Portrait owns. Types only; `SilkDocFlags` (materialize/port) extends it.
+ * The look's flags (v1.1 §C.2, §G.3, §G.3.1): the exceptions to v1 §2 "`flags.garn` holds
+ * ids only" that the Portrait owns. Types only; `GarnDocFlags` (materialize/port) extends it.
  */
 import type { Edges, Order, Pose } from './geometry';
 import type { Ring } from './portrait';
 
 /**
- * Subject file (glossary): the file Silk wrote to `ring.subject.texture` and what it was
+ * Subject file (glossary): the file Garn wrote to `ring.subject.texture` and what it was
  * rendered from: image, pose, draw order and the ring style's edges (a changed style
  * rebuilds it). Files from before the draw order have none: Ring in front.
  */
@@ -46,8 +46,8 @@ export interface OriginalLook {
 
 /**
  * What showing the hood overwrites on one token (prototype or placed), to put back exactly.
- * `src` and `ring` only for a placed token's own; the actor's wait in `flags.silk.token` and
- * `flags.silk.ring`.
+ * `src` and `ring` only for a placed token's own; the actor's wait in `flags.garn.token` and
+ * `flags.garn.ring`.
  */
 export interface HoodSnapshot {
   texture: { src?: string | null; fit: string; anchorX: number; anchorY: number };
@@ -56,12 +56,12 @@ export interface HoodSnapshot {
 }
 
 /**
- * Unhooded (glossary) on the actor: what the hood overwrote on the prototype, and Silk's
- * flags it replaced. Dropped by a token edit while hooded (the real look is then Silk's).
+ * Unhooded (glossary) on the actor: what the hood overwrote on the prototype, and Garn's
+ * flags it replaced. Dropped by a token edit while hooded (the real look is then Garn's).
  */
 export interface Unhooded extends HoodSnapshot {
   pose?: Pose;
-  silkSubject?: SubjectFlag;
+  garnSubject?: SubjectFlag;
 }
 
 export interface LookFlags {
@@ -88,7 +88,7 @@ export interface LookFlags {
   unhooded?: Unhooded;
 }
 
-/** `flags.silk` on a placed token: its own Unhooded snapshot while the hood shows. */
+/** `flags.garn` on a placed token: its own Unhooded snapshot while the hood shows. */
 export interface PlacedTokenFlags {
   unhooded?: HoodSnapshot;
 }

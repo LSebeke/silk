@@ -1,9 +1,9 @@
 /**
  * Load-time migration of round 2 looks (spec v1.1 §G.3.2): on the first GM load, one sweep
- * over every Silk-managed actor builds the subject files and puts the texture scale back
+ * over every Garn-managed actor builds the subject files and puts the texture scale back
  * (`round2Writes`). Done once per World (`done` / `markDone`, a world setting): later loads
  * never check again, and no other write migrates on its own. An actor that failed keeps the
- * sweep pending for the next load. Imported actors without a Silk look are left alone.
+ * sweep pending for the next load. Imported actors without a Garn look are left alone.
  */
 import { readElement } from '../elements';
 import { lookSource, round2Writes, type LookWriter, type PortraitDoc } from '../portrait';
@@ -40,7 +40,7 @@ export function lookMigration(deps: LookMigrationDeps): LifecycleContributor {
           await deps.writeLook(main.uuid, main as PortraitDoc, writes);
         } catch (error) {
           failed = true;
-          console.error(`Silk: round 2 look of ${main.uuid} not migrated`, error);
+          console.error(`Garn: round 2 look of ${main.uuid} not migrated`, error);
         }
       }
       // A failure is tried again on the next load; the migrated looks are no longer round 2's.

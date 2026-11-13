@@ -1,6 +1,6 @@
 /**
  * Base of every detail window (Element Detail; Connection Detail, v1.1 §F.2; image & token
- * editor, §G.3): one window per record, `silk-detail` styling, resizable. Its component
+ * editor, §G.3): one window per record, `garn-detail` styling, resizable. Its component
  * renders `DetailShell` and gets the context and the record id.
  */
 import type { DeepPartial } from 'fvtt-types/utils';
@@ -18,13 +18,13 @@ export abstract class DetailWindow<
 > extends SvelteApplication<Props> {
   static override DEFAULT_OPTIONS: DeepPartial<foundry.applications.api.ApplicationV2.Configuration> =
     {
-      classes: ['silk', 'silk-detail-window'],
+      classes: ['garn', 'garn-detail-window'],
       window: { resizable: true, icon: 'fa-solid fa-eye' },
       position: { width: 420, height: 560 },
     };
 
   /** Window id prefix: the window of record `id` is `<prefix>-<id>`. */
-  static prefix = 'silk-detail';
+  static prefix = 'garn-detail';
 
   protected readonly ctx: DetailContext;
   protected readonly recordId: string;

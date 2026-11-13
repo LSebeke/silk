@@ -15,7 +15,7 @@ export type Dsa5MerchantType = 'none' | 'merchant' | 'loot' | 'epic';
 /** `DSA5.tokenSizeCategories` keys. */
 export type Dsa5Size = 'tiny' | 'small' | 'average' | 'big' | 'giant';
 
-/** The slice of actor `system` Silk reads/writes. */
+/** The slice of actor `system` Garn reads/writes. */
 export interface Dsa5ActorSystem {
   merchant?: { merchantType?: Dsa5MerchantType };
   status?: { size?: { value?: Dsa5Size } };
@@ -39,7 +39,7 @@ export interface Dsa5Quest {
   linkedPages?: Record<string, { uuid: string; visible: boolean; sort?: number }>;
 }
 
-/** `dsaquestlog` page system data: a TypedObject of quests (Silk uses one per page). */
+/** `dsaquestlog` page system data: a TypedObject of quests (Garn uses one per page). */
 export interface Dsa5QuestlogSystem {
   quests: Record<string, Dsa5Quest>;
 }
@@ -116,7 +116,7 @@ export const dsa5Mapping: SystemMapping = {
   },
 };
 
-const SECTION = 'SILK.Merge.Section';
+const SECTION = 'GARN.Merge.Section';
 /** Actor `system` top-level keys → the DSA5 sheet part they show on (dsa5 8.1 data models). */
 const ACTOR_SECTIONS: Record<string, string> = {
   characteristics: 'characteristics',

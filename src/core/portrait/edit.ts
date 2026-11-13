@@ -31,12 +31,12 @@ import {
 export function imageWrites(source: LookSource, edit: ImageEdit): PortraitWrites {
   const { doc } = source;
   const hooded = isHooded(doc);
-  const flags = doc.flags.silk;
+  const flags = doc.flags.garn;
   const look = lookOf(source);
   const img = edit.img ?? look.img;
   const data: Record<string, unknown> = {};
   if (edit.img !== undefined && edit.img !== (hooded ? flags.img : doc.img))
-    data[hooded ? 'flags.silk.img' : 'img'] = edit.img;
+    data[hooded ? 'flags.garn.img' : 'img'] = edit.img;
   // #166: a token "same as sheet image" follows a new sheet image. The doc, not the record,
   // says what the token follows: on the merge path the record already has the new image.
   const onDoc = realPortrait(doc);
@@ -66,16 +66,16 @@ export function imageWrites(source: LookSource, edit: ImageEdit): PortraitWrites
   const flagData = { ...poseFlag(doc, pose), ...orderFlag(doc, order) };
 
   if (hooded) {
-    if (src !== flags.token) data['flags.silk.token'] = src;
-    // A token edit (the editor) makes the real look Silk's: Reveal builds it, no restore.
-    const silkLook = edited;
-    if (silkLook && flags.unhooded) data['flags.silk.-=unhooded'] = null;
+    if (src !== flags.token) data['flags.garn.token'] = src;
+    // A token edit (the editor) makes the real look Garn's: Reveal builds it, no restore.
+    const garnLook = edited;
+    if (garnLook && flags.unhooded) data['flags.garn.-=unhooded'] = null;
     const hood = flags.hood ?? HOODED_DEFAULT;
     const token = { ...rotation, ...hoodTokenData(hood) };
     return {
       doc: { ...data, ...ringFlag(doc, ring), ...prototypeUpdate(doc, token), ...flagData },
       tokens: token,
-      ...(silkLook ? { snapshot: 'drop' as const } : {}),
+      ...(garnLook ? { snapshot: 'drop' as const } : {}),
       subject: hoodSubject(hood, order),
     };
   }

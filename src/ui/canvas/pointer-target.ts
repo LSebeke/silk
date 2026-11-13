@@ -1,7 +1,7 @@
 /**
  * What a pointer event on the World Canvas lands on (spec 1.1 §F.1, #138): one classifier for
  * right-press, context menu and double-click. xyflow renders edge labels in a portal outside
- * the edge, so the label is found by its own marker (`data-silk-edge`), not by the edge.
+ * the edge, so the label is found by its own marker (`data-garn-edge`), not by the edge.
  */
 export type PointerTarget =
   | { kind: 'node'; id: string }
@@ -17,14 +17,14 @@ export interface TargetElement {
 }
 
 /** Text fields and the inline Connection editor keep their own pointer handling. */
-const OWN_POINTER = 'input, textarea, select, [contenteditable], [data-silk-connection-editor]';
+const OWN_POINTER = 'input, textarea, select, [contenteditable], [data-garn-connection-editor]';
 
 /** `undefined`: not on the canvas (toolbar, menus, overlays) or on a control that owns it. */
 export function pointerTarget(target: TargetElement | null): PointerTarget | undefined {
   if (!target?.closest?.('.svelte-flow__pane') || target.closest(OWN_POINTER)) return undefined;
-  const node = target.closest('[data-silk-node]')?.getAttribute('data-silk-node');
+  const node = target.closest('[data-garn-node]')?.getAttribute('data-garn-node');
   if (node) return { kind: 'node', id: node };
-  const label = target.closest('[data-silk-edge]')?.getAttribute('data-silk-edge');
+  const label = target.closest('[data-garn-edge]')?.getAttribute('data-garn-edge');
   if (label) return { kind: 'edgeLabel', id: label };
   const edge = target.closest('.svelte-flow__edge')?.getAttribute('data-id');
   if (edge) return { kind: 'edge', id: edge };
@@ -54,7 +54,7 @@ const pointerGesture = (
   gesture,
   target,
   ...(command ? { command } : {}),
-  label: `SILK.Canvas.Gesture.${gesture}-${target}`,
+  label: `GARN.Canvas.Gesture.${gesture}-${target}`,
 });
 
 /** `doubleClickCommand` reads the double-click rows, so the legend cannot drift. */

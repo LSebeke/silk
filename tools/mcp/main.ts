@@ -1,5 +1,5 @@
 /**
- * Dev/test-only MCP server (stdio) over Silk's command API. Not shipped.
+ * Dev/test-only MCP server (stdio) over Garn's command API. Not shipped.
  *
  *   node tools/mcp/main.ts --url http://localhost:30001 [--cdp http://localhost:9222]
  *     [--user Gamemaster] [--password ...] [--executable /usr/bin/chromium] [--headed]
@@ -11,14 +11,14 @@ import type { Page } from 'playwright-core';
 import { parseArgs } from 'node:util';
 import { connectFoundryPage } from './connect.ts';
 import { pageBridge } from './page-bridge.ts';
-import { createSilkMcpServer, type SilkBridge } from './server.ts';
+import { createGarnMcpServer, type GarnBridge } from './server.ts';
 
 const { values } = parseArgs({
   options: {
-    url: { type: 'string', default: process.env.SILK_FOUNDRY_URL ?? 'http://localhost:30000' },
+    url: { type: 'string', default: process.env.GARN_FOUNDRY_URL ?? 'http://localhost:30000' },
     cdp: { type: 'string' },
     user: { type: 'string' },
-    password: { type: 'string', default: process.env.SILK_FOUNDRY_PASSWORD },
+    password: { type: 'string', default: process.env.GARN_FOUNDRY_PASSWORD },
     executable: { type: 'string' },
     headed: { type: 'boolean', default: false },
   },
@@ -46,9 +46,9 @@ const getPage = () => {
   return page;
 };
 
-const bridge: SilkBridge = {
+const bridge: GarnBridge = {
   listCommands: async () => pageBridge(await getPage()).listCommands(),
   run: async (name, args) => pageBridge(await getPage()).run(name, args),
 };
 
-await createSilkMcpServer(bridge).connect(new StdioServerTransport());
+await createGarnMcpServer(bridge).connect(new StdioServerTransport());

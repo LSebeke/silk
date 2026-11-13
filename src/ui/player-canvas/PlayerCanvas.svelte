@@ -76,7 +76,7 @@
   }
 </script>
 
-<div class="silk-player-canvas lod-{lod}" data-silk-player-canvas data-silk-lod={lod}>
+<div class="garn-player-canvas lod-{lod}" data-garn-player-canvas data-garn-lod={lod}>
   <SvelteFlow
     bind:nodes
     bind:edges
@@ -98,19 +98,19 @@
     <Background gap={40} />
   </SvelteFlow>
   {#if !nodes.length}
-    <div class="empty" data-silk-player-empty>{ctx.localize('SILK.PlayerCanvas.Empty')}</div>
+    <div class="empty" data-garn-player-empty>{ctx.localize('GARN.PlayerCanvas.Empty')}</div>
   {/if}
 </div>
 
 <style>
-  .silk-player-canvas {
+  .garn-player-canvas {
     position: relative;
     width: 100%;
     height: 100%;
     color: #222;
     background: #f4efe4;
   }
-  .silk-player-canvas :global(.svelte-flow) {
+  .garn-player-canvas :global(.svelte-flow) {
     background: #f4efe4;
   }
   .empty {

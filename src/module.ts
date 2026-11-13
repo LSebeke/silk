@@ -1,6 +1,6 @@
 /**
  * Entry point. Wires the pure core to Foundry through the adapter and exposes the
- * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
+ * command registry at `game.modules.get('garn').api` (spec §2, ADR 0003).
  */
 import {
   adoptDialogs,
@@ -23,7 +23,7 @@ import { createSocketRelay, registerPlayerNoteHooks, textToHtml } from './adapte
 import { foundryRevealStage, registerRevealHooks, updatePlacedTokens } from './adapter/reveal';
 import { foundryOwnershipRevealed } from './adapter/revealed';
 import { createSceneDocs, registerSceneBar, registerSceneHooks } from './adapter/scenes';
-import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
+import { addGarnSceneControl, type SceneControls } from './adapter/scene-controls';
 import {
   getSession,
   setBeforeCommit,
@@ -106,7 +106,7 @@ import { pickImage } from './adapter/file-picker';
 import { foundryRingStyle } from './adapter/ring-style';
 import { createSubjectFiles, drawSubject } from './adapter/subject-file';
 import { createFilePickerAssets, foundryFilePicker } from './adapter/canon-files';
-import './ui/silk.css';
+import './ui/garn.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
 const registry = createRegistry(() => ({ isGM: game.user?.isGM ?? false }));
@@ -129,7 +129,7 @@ const compendium = compendiumSource({
   },
   thumbnail: (src) => sceneThumbnail(src),
   catalog: (kind) =>
-    readPickerCatalog(game as unknown as CatalogGame, kind, localize('SILK.Picker.World')),
+    readPickerCatalog(game as unknown as CatalogGame, kind, localize('GARN.Picker.World')),
   async open(picker) {
     const { openCompendiumPicker } = await import('./ui/canvas/CompendiumPickerWindow');
     return openCompendiumPicker(picker, {
@@ -140,7 +140,7 @@ const compendium = compendiumSource({
 });
 const pipeline = createCreationPipeline({
   run: (name, args) => registry.run(name, args),
-  label: (id) => localize(`SILK.Class.${id}`),
+  label: (id) => localize(`GARN.Class.${id}`),
   sources: { compendium, generator: nscZucht },
 });
 const viewState = createViewState({
@@ -199,7 +199,7 @@ const lookStage: LookStage = {
     worldId: () => {
       // No silent fallback: a file under another world's folder would be found by none.
       const id = game.world?.id;
-      if (!id) throw new Error('Silk: no world id for the token subject file');
+      if (!id) throw new Error('Garn: no world id for the token subject file');
       return id;
     },
   }),
@@ -218,8 +218,8 @@ const materializer = createMaterializer({
   notify: (message) => void ui.notifications?.info(message),
   confirm: async (count) =>
     !!(await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize('SILK.Materialize.VisibleTitle') },
-      content: `<p>${game.i18n?.format('SILK.Materialize.VisibleConfirm', { count: String(count) })}</p>`,
+      window: { title: localize('GARN.Materialize.VisibleTitle') },
+      content: `<p>${game.i18n?.format('GARN.Materialize.VisibleConfirm', { count: String(count) })}</p>`,
     })),
   // The rendered Nodes: Canvas Filters / Focus View (§10.5, §10.6).
   visibleIds: () => canvasFilter.visibleIds(),
@@ -662,7 +662,7 @@ for (const command of [
     workingCopy,
     state: canvasState,
     newId: () => foundry.utils.randomID(16),
-    groupLabel: () => localize('SILK.Canvas.NewGroup'),
+    groupLabel: () => localize('GARN.Canvas.NewGroup'),
     tween: (from) => layoutTween.start(from),
   }),
   ...filterCommands(canvasFilter),
@@ -695,9 +695,9 @@ for (const command of [
 ])
   registry.register(command);
 
-// Dev-only commands (spec §14): `__SILK_DEV__` is false in release builds, so they and the
+// Dev-only commands (spec §14): `__GARN_DEV__` is false in release builds, so they and the
 // fixture/bench code are dropped from dist.
-if (__SILK_DEV__)
+if (__GARN_DEV__)
   for (const command of [
     ...devCoreCommands({ workingCopy }),
     ...devUiCommands({ run: (name, args) => registry.run(name, args), workingCopy, viewState }),
@@ -773,10 +773,10 @@ Hooks.once('ready', async () => {
     available: () => registry.isAvailable('playerNote.create'),
     prompt: async () => {
       const text: unknown = await foundry.applications.api.DialogV2.prompt({
-        window: { title: localize('SILK.PlayerNote.Add') },
-        content: `<label>${localize('SILK.PlayerNote.Prompt')}<textarea name="text" rows="6" data-silk-player-note-text></textarea></label>`,
+        window: { title: localize('GARN.PlayerNote.Add') },
+        content: `<label>${localize('GARN.PlayerNote.Prompt')}<textarea name="text" rows="6" data-garn-player-note-text></textarea></label>`,
         ok: {
-          label: localize('SILK.PlayerNote.Save'),
+          label: localize('GARN.PlayerNote.Save'),
           callback: (
             _event: unknown,
             button: { form: { elements: { text: { value: string } } } },
@@ -838,7 +838,7 @@ Hooks.once('ready', async () => {
     error: (message) => void ui.notifications?.error(message),
   });
   // Reconcile on load (§7): missed hooks are never replayed, Foundry is re-read. Missing
-  // docs first, then the contributors (Connections pages written while Silk was off, …).
+  // docs first, then the contributors (Connections pages written while Garn was off, …).
   // Canon edit mode (§11.3): main moved in another World → fast-forward (which reconciles) or
   // the merge window.
   if (isActiveGM(game as never))
@@ -846,7 +846,7 @@ Hooks.once('ready', async () => {
       const sync = await getMerges()
         .syncMain()
         .catch((error: unknown) => (console.error(error), 'current' as const));
-      if (sync === 'fastForward') ui.notifications?.info(localize('SILK.Canon.Synced'));
+      if (sync === 'fastForward') ui.notifications?.info(localize('GARN.Canon.Synced'));
       else {
         if (sync === 'merge') await mergeUi.open();
         await lifecycle.reconcile();
@@ -864,7 +864,7 @@ Hooks.once('ready', async () => {
 });
 
 Hooks.on('getSceneControlButtons', (controls) => {
-  addSilkSceneControl(controls as unknown as SceneControls, {
+  addGarnSceneControl(controls as unknown as SceneControls, {
     run: (name) => registry.run(name),
   });
 });

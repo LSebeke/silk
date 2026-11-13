@@ -19,14 +19,14 @@ function setup(activeGM = true) {
 const doc = (uuid: string, extra: object = {}) => ({
   uuid,
   documentName: uuid.split('.')[0],
-  toObject: () => ({ _id: uuid.split('.')[1], name: 'X', flags: { silk: { id: 'el' } } }),
+  toObject: () => ({ _id: uuid.split('.')[1], name: 'X', flags: { garn: { id: 'el' } } }),
   ...extra,
 });
 
 const snapshot = (uuid: string) => ({
   _id: uuid.split('.')[1],
   name: 'X',
-  flags: { silk: { id: 'el' } },
+  flags: { garn: { id: 'el' } },
   uuid,
   documentName: uuid.split('.')[0],
 });
@@ -46,9 +46,9 @@ describe('Foundry-side deletion hooks (spec §6)', () => {
     expect(deleted).toEqual([snapshot('Actor.a1'), snapshot('Scene.s1')]);
   });
 
-  it('ignores Silk’s own deletes, non-active GMs and unlinked token actors', () => {
+  it('ignores Garn’s own deletes, non-active GMs and unlinked token actors', () => {
     const { fire, deleted } = setup();
-    fire('deleteActor', doc('Actor.a1'), { silk: { internal: true } }, 'user');
+    fire('deleteActor', doc('Actor.a1'), { garn: { internal: true } }, 'user');
     fire('deleteActor', doc('Actor.a1', { isToken: true }), {}, 'user');
     const other = setup(false);
     other.fire('deleteActor', doc('Actor.a1'), {}, 'user');

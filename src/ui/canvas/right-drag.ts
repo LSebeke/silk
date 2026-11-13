@@ -29,7 +29,7 @@ const gesture = (
   start: RightDragGesture['start'],
   end: RightDragGesture['end'],
   result: RightDragGesture['result'],
-): RightDragGesture => ({ start, end, result, label: `SILK.Canvas.Gesture.${start}-${end}` });
+): RightDragGesture => ({ start, end, result, label: `GARN.Canvas.Gesture.${start}-${end}` });
 
 /**
  * The §A table, for the legend (1.1 §E.3). `rightDragAction` decides every row

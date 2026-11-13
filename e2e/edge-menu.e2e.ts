@@ -2,16 +2,16 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
 
 async function resetCanvas(page: Page) {
   await page.evaluate(async () => {
-    const wc = game.modules?.get('silk')?.session?.().workingCopy;
+    const wc = game.modules?.get('garn')?.session?.().workingCopy;
     await wc?.delete([...(wc.records().keys() ?? [])]);
-    await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
+    await game.settings?.set('garn', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
   });
 }
 
@@ -55,9 +55,9 @@ test('Edge menu (spec 1.1 §F.1): right-click on edge and label, entries', async
   });
   await closePopups(gm);
   await api(gm, 'canvas.open');
-  const label = gm.locator(`[data-silk-edge="${id}"]`);
+  const label = gm.locator(`[data-garn-edge="${id}"]`);
   const path = gm.locator(`.svelte-flow__edge[data-id="${id}"] .svelte-flow__edge-path`);
-  const menu = gm.locator(`[data-silk-menu="${id}"]`);
+  const menu = gm.locator(`[data-garn-menu="${id}"]`);
   // The window opens with a scale animation: wait until the edge has its full length.
   await expect.poll(async () => (await path.boundingBox())?.width ?? 0).toBeGreaterThan(300);
   const l = await label.boundingBox();
@@ -85,8 +85,8 @@ test('Edge menu (spec 1.1 §F.1): right-click on edge and label, entries', async
   await rightClick(gm, centre);
   await expect(menu).toBeVisible();
   // Never the Creation Pipeline from the label (#138).
-  await expect(gm.locator('[data-silk-class-box]')).toHaveCount(0);
-  await expect(menu.locator('[data-silk-menu-item]')).toHaveText([
+  await expect(gm.locator('[data-garn-class-box]')).toHaveCount(0);
+  await expect(menu.locator('[data-garn-menu-item]')).toHaveText([
     'Open details',
     'Reveal',
     'Edit Connection label',
@@ -95,9 +95,9 @@ test('Edge menu (spec 1.1 §F.1): right-click on edge and label, entries', async
     'Reverse direction',
     'Delete Connection',
   ]);
-  await expect(menu.locator('[data-silk-menu-item="connection.openDetail"]')).toBeEnabled();
+  await expect(menu.locator('[data-garn-menu-item="connection.openDetail"]')).toBeEnabled();
 
   // An entry runs its command: Reverse direction swaps the endpoints.
-  await menu.locator('[data-silk-menu-item="connection.flip"]').click();
-  await expect(label).toHaveAttribute('data-silk-edge-from', b);
+  await menu.locator('[data-garn-menu-item="connection.flip"]').click();
+  await expect(label).toHaveAttribute('data-garn-edge-from', b);
 });

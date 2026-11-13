@@ -12,10 +12,10 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     expect(t.companion(person).name).toBe('Alrik');
     const q = t.doc(quest);
     expect(q.name).toBe('The Ring');
-    const system = page(q, q.flags.silk.quest).system as {
+    const system = page(q, q.flags.garn.quest).system as {
       quests: Record<string, { title: string }>;
     };
-    expect(system.quests[q.flags.silk.questKey]?.title).toBe('The Ring');
+    expect(system.quests[q.flags.garn.questKey]?.title).toBe('The Ring');
   });
 
   it('setImage: Actor/Item img, journal Cover page, Ghost and Note in the record', async () => {
@@ -31,7 +31,7 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     await t.registry.run('element.setImage', { id: place, img: 'map.webp' });
     await t.registry.run('element.setImage', { id: note, img: 'n.webp' });
     expect(t.doc(person).img).toBe('b.webp');
-    expect(page(t.doc(place), t.doc(place).flags.silk.cover).src).toBe('map.webp');
+    expect(page(t.doc(place), t.doc(place).flags.garn.cover).src).toBe('map.webp');
     expect([t.element(person).img, t.element(place).img, t.element(note).img]).toEqual([
       'b.webp',
       'map.webp',
@@ -98,7 +98,7 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     expect(t.toasts).toHaveLength(1);
     const doc = t.doc(id);
     expect(doc.img).toBe('wolf.webp');
-    expect(doc.flags.silk.pose).toEqual({ anchorX: 0.5, anchorY: 0.5, scale: 1.5 });
+    expect(doc.flags.garn.pose).toEqual({ anchorX: 0.5, anchorY: 0.5, scale: 1.5 });
   });
 
   it('setImage on a Ghost: a sheet image with the token same as it stays in the record', async () => {
@@ -203,12 +203,12 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
         type: 'text',
         sort: 1,
         ownership: { default: 3 },
-        category: companion.flags.silk.playerNotes,
+        category: companion.flags.garn.playerNotes,
         text: { content: 'player' },
       },
     );
     const journal = t.doc(place);
-    const cover = page(journal, journal.flags.silk.cover);
+    const cover = page(journal, journal.flags.garn.cover);
     cover.src = 'map.webp';
     await t.materializer.sync(person);
     await t.materializer.sync(place);
@@ -236,7 +236,7 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     expect(t.workingCopy.get(id)).toBe(before);
   });
 
-  it('tags are Silk-owned, sorted and unique', async () => {
+  it('tags are Garn-owned, sorted and unique', async () => {
     const t = setup();
     const a = await t.create('note', 'A');
     const b = await t.create('note', 'B');
@@ -279,7 +279,7 @@ describe('element.changeClass (spec §4 Class change)', () => {
     const id = await t.create('note', 'Job');
     await t.registry.run('element.changeClass', { id, class: 'quest' });
     const doc = t.doc(id);
-    expect(page(doc, doc.flags.silk.quest).type).toBe('dsaquestlog');
+    expect(page(doc, doc.flags.garn.quest).type).toBe('dsaquestlog');
   });
 
   it('Person → Creature changes the Actor type and keeps the Info Blocks', async () => {

@@ -1,12 +1,12 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, expect, it } from 'vitest';
-import { createSilkMcpServer, type SilkBridge } from './server';
+import { createGarnMcpServer, type GarnBridge } from './server';
 
-function fakeBridge(overrides: Partial<SilkBridge> = {}): SilkBridge {
+function fakeBridge(overrides: Partial<GarnBridge> = {}): GarnBridge {
   return {
     listCommands: async () => [
-      { name: 'canvas.open', title: 'SILK.Command.canvas.open', available: true },
+      { name: 'canvas.open', title: 'GARN.Command.canvas.open', available: true },
       { name: 'element.create', title: 'Create element', available: false },
     ],
     run: async (name, args) => ({ ran: name, args }),
@@ -14,15 +14,15 @@ function fakeBridge(overrides: Partial<SilkBridge> = {}): SilkBridge {
   };
 }
 
-async function connect(bridge: SilkBridge) {
-  const server = createSilkMcpServer(bridge);
+async function connect(bridge: GarnBridge) {
+  const server = createGarnMcpServer(bridge);
   const client = new Client({ name: 'test', version: '0' });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
   return client;
 }
 
-describe('Silk dev MCP server', () => {
+describe('Garn dev MCP server', () => {
   it('lists one tool per registry command, dots mapped to underscores', async () => {
     const client = await connect(fakeBridge());
     const { tools } = await client.listTools();
@@ -51,14 +51,14 @@ describe('Silk dev MCP server', () => {
     const client = await connect(
       fakeBridge({
         run: async () => {
-          throw new Error('Silk: command "element.create" is not available right now');
+          throw new Error('Garn: command "element.create" is not available right now');
         },
       }),
     );
     const result = await client.callTool({ name: 'element_create', arguments: {} });
     expect(result.isError).toBe(true);
     expect(result.content).toEqual([
-      { type: 'text', text: 'Silk: command "element.create" is not available right now' },
+      { type: 'text', text: 'Garn: command "element.create" is not available right now' },
     ]);
   });
 

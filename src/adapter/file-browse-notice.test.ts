@@ -22,14 +22,14 @@ describe('file-browse notice (spec §12)', () => {
   it('warns the GM when Foundry defaults give Trusted Players FILES_BROWSE', () => {
     const r = run({ permissions: {} });
     expect(r.shown).toBe(true);
-    expect(r.warnings).toEqual(['SILK.Notice.FileBrowse{"roles":"USER.RoleTrusted"}']);
+    expect(r.warnings).toEqual(['GARN.Notice.FileBrowse{"roles":"USER.RoleTrusted"}']);
     expect(r.marked).toBe(1);
   });
 
   it('names every non-GM role that can browse', () => {
     const r = run({ permissions: { FILES_BROWSE: [1, 2, 3, 4] } });
     expect(r.warnings).toEqual([
-      'SILK.Notice.FileBrowse{"roles":"USER.RolePlayer, USER.RoleTrusted"}',
+      'GARN.Notice.FileBrowse{"roles":"USER.RolePlayer, USER.RoleTrusted"}',
     ]);
   });
 

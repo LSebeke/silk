@@ -12,8 +12,8 @@ function setup(activeGM = true) {
   return { fire, refreshed };
 }
 
-const journal = { flags: { silk: { id: 'el1', connections: 'pg1' } } };
-const companion = { flags: { silk: { companionOf: 'el2', connections: 'pg2' } } };
+const journal = { flags: { garn: { id: 'el1', connections: 'pg1' } } };
+const companion = { flags: { garn: { companionOf: 'el2', connections: 'pg2' } } };
 
 describe('Connections page stays generated (spec §5 In journals)', () => {
   it('a hand edit of a Connections page is regenerated', () => {
@@ -23,14 +23,14 @@ describe('Connections page stays generated (spec §5 In journals)', () => {
     expect(refreshed).toEqual([['el1'], ['el2']]);
   });
 
-  it('ignores other pages, Silk’s own writes and non-active GMs', () => {
+  it('ignores other pages, Garn’s own writes and non-active GMs', () => {
     const { fire, refreshed } = setup();
     fire('updateJournalEntryPage', { id: 'other', parent: journal }, {}, {}, 'user');
     fire(
       'updateJournalEntryPage',
       { id: 'pg1', parent: journal },
       {},
-      { silk: { internal: true } },
+      { garn: { internal: true } },
     );
     expect(refreshed).toEqual([]);
     const other = setup(false);

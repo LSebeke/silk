@@ -35,7 +35,7 @@ function chain(...els: Fake[]): TargetElement {
 }
 
 const pane: Fake = { cls: ['svelte-flow__pane'] };
-const card = (id: string): Fake => ({ attrs: { 'data-silk-node': id } });
+const card = (id: string): Fake => ({ attrs: { 'data-garn-node': id } });
 const edgePath: Fake = { tag: 'path', cls: ['svelte-flow__edge-interaction'] };
 const edge = (id: string): Fake => ({
   tag: 'g',
@@ -44,7 +44,7 @@ const edge = (id: string): Fake => ({
 });
 const label = (id: string): Fake => ({
   cls: ['svelte-flow__edge-label'],
-  attrs: { 'data-silk-edge': id },
+  attrs: { 'data-garn-edge': id },
 });
 const labels: Fake = { cls: ['svelte-flow__edge-labels'] };
 
@@ -78,7 +78,7 @@ describe('canvas pointer targets (spec 1.1 §F.1, #138)', () => {
 
   it('anything else in the pane is the empty canvas (frames too)', () => {
     expect(pointerTarget(chain(pane))).toEqual({ kind: 'pane' });
-    expect(pointerTarget(chain({ attrs: { 'data-silk-group': 'g' } }, pane))).toEqual({
+    expect(pointerTarget(chain({ attrs: { 'data-garn-group': 'g' } }, pane))).toEqual({
       kind: 'pane',
     });
   });
@@ -86,7 +86,7 @@ describe('canvas pointer targets (spec 1.1 §F.1, #138)', () => {
   it('text fields and the Connection editor keep their own pointer: no target', () => {
     expect(pointerTarget(chain({ tag: 'input' }, card('a'), pane))).toBeUndefined();
     expect(pointerTarget(chain({ tag: 'textarea' }, pane))).toBeUndefined();
-    const editor = { attrs: { 'data-silk-connection-editor': '' } };
+    const editor = { attrs: { 'data-garn-connection-editor': '' } };
     expect(
       pointerTarget(chain({ tag: 'button' }, editor, label('c1'), labels, pane)),
     ).toBeUndefined();

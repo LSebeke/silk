@@ -53,18 +53,18 @@ export interface ElementCommandDeps {
 export function elementCommands(deps: ElementCommandDeps): Command[] {
   const create: Command<ElementCreateArgs, ElementCreateResult> = {
     name: 'element.create',
-    title: 'SILK.Commands.element.create',
+    title: 'GARN.Commands.element.create',
     available: (ctx) => ctx.isGM,
     async run(args) {
       const cls = elementClass(args.class);
-      if (!cls) throw new Error(`Silk: unknown Element class "${args.class}"`);
+      if (!cls) throw new Error(`Garn: unknown Element class "${args.class}"`);
       if (!cls.creatable)
-        throw new Error(`Silk: ${cls.id} elements are never created, only Adopted`);
+        throw new Error(`Garn: ${cls.id} elements are never created, only Adopted`);
       const source = args.source;
       if (source && !classTakesSource(cls.id, source.kind))
-        throw new Error(`Silk: ${cls.id} elements take no ${source.kind} source`);
+        throw new Error(`Garn: ${cls.id} elements take no ${source.kind} source`);
       if (source?.kind === 'generator' && typeof source.actorUuid !== 'string')
-        throw new Error('Silk: a generator source needs the actorUuid of the Actor it created');
+        throw new Error('Garn: a generator source needs the actorUuid of the Actor it created');
       const id = deps.newId();
       const data: ElementData = {
         class: cls.id,
@@ -84,12 +84,12 @@ export function elementCommands(deps: ElementCommandDeps): Command[] {
 
   const rename: Command<{ id: string; name: string }, void> = {
     name: 'element.rename',
-    title: 'SILK.Commands.element.rename',
+    title: 'GARN.Commands.element.rename',
     available: (ctx) => ctx.isGM,
     async run({ id, name }) {
       const wc = deps.workingCopy();
       const record = wc.get(id);
-      if (!record || !readElement(record)) throw new Error(`Silk: no element "${id}"`);
+      if (!record || !readElement(record)) throw new Error(`Garn: no element "${id}"`);
       const renamed = { ...record, data: { ...record.data, name: name.trim() } };
       await wc.set([renamed]);
       for (const hook of deps.afterRename ?? []) await hook(readElement(renamed) as StoryElement);

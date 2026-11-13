@@ -1,6 +1,6 @@
 {
-  "SILK": {
-    "Title": "Silk",
+  "GARN": {
+    "Title": "Garn",
     "Settings": {
       "materializeMode": {
         "Name": "Materialize mode",
@@ -156,9 +156,9 @@
         "cancel": "Cancel merge"
       },
       "adopt": {
-        "doc": "Adopt into Silk",
-        "folder": "Adopt folder into Silk",
-        "ignore": "Ignore for Silk"
+        "doc": "Adopt into Garn",
+        "folder": "Adopt folder into Garn",
+        "ignore": "Ignore for Garn"
       },
       "playerNote": {
         "create": "Add Player Note",
@@ -296,7 +296,7 @@
       "Checkout": "Checkout",
       "Main": "main (Canon edit mode)",
       "Dirty": "uncommitted changes",
-      "ReadOnly": "read-only, update Silk",
+      "ReadOnly": "read-only, update Garn",
       "Adventures": "Adventures",
       "AdventureName": "Adventure name",
       "PickCampaign": "Campaign…",
@@ -338,7 +338,7 @@
       "ChipMain": "main"
     },
     "Notice": {
-      "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
+      "FileBrowse": "Garn spoiler secrecy: {roles} can browse files, so they can find the Garn Canon under Data/garn/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Garn README, section \"Spoiler secrecy\". Shown once."
     },
     "Class": {
       "person": "Person",
@@ -378,8 +378,8 @@
       "event": "Events",
       "quest": "Quests",
       "note": "Notes",
-      "companions": "Silk Companions",
-      "scene": "Silk Scenes"
+      "companions": "Garn Companions",
+      "scene": "Garn Scenes"
     },
     "Materialize": {
       "CompendiumMissing": "{name}: its compendium entry is gone; Materialized blank.",
@@ -431,7 +431,7 @@
       }
     },
     "Lifecycle": {
-      "Restored": "The Foundry doc of {name} was deleted while Silk was not running. It is a Ghost again, restored from commit {commit}.",
+      "Restored": "The Foundry doc of {name} was deleted while Garn was not running. It is a Ghost again, restored from commit {commit}.",
       "RestoredBadge": "Restored from commit {commit}",
       "CompanionRestored": "The Companion Journal of {name} was restored from the last commit. Uncommitted Info Block edits are lost.",
       "DeleteTitle": "Delete elements",
@@ -612,9 +612,9 @@
       "CanonEditConfirmBody": "Commit the merged result to main and rewrite this World? There is no undo."
     },
     "Adopt": {
-      "Adopt": "Adopt into Silk",
-      "AdoptFolder": "Adopt folder into Silk",
-      "Refused": "{name} can't be adopted: Silk adopts Actors (character, npc, creature), Items, Journals and Scenes.",
+      "Adopt": "Adopt into Garn",
+      "AdoptFolder": "Adopt folder into Garn",
+      "Refused": "{name} can't be adopted: Garn adopts Actors (character, npc, creature), Items, Journals and Scenes.",
       "WrongClass": "{name} can't become a {class}.",
       "Missing": "No Foundry doc \"{uuid}\".",
       "NoFolder": "That folder no longer exists.",
@@ -631,7 +631,7 @@
       "Ignore": "Ignore",
       "Close": "Close",
       "AdHocTitle": "New docs this session",
-      "AdHocIntro": "Created since the last commit and not in Silk yet. Ignored docs never show up again.",
+      "AdHocIntro": "Created since the last commit and not in Garn yet. Ignored docs never show up again.",
       "EndPlaySessionLabel": "End of play session"
     },
     "PlayerNote": {

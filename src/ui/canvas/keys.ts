@@ -44,12 +44,12 @@ export const MODIFIER_CONNECTIONS: readonly {
   connection: CreateFromConnection;
   label: string;
 }[] = [
-  { modifier: 'shiftKey', connection: { direction: 'in' }, label: 'SILK.Canvas.Modifier.shift' },
-  { modifier: 'ctrlKey', connection: { direction: 'mutual' }, label: 'SILK.Canvas.Modifier.ctrl' },
+  { modifier: 'shiftKey', connection: { direction: 'in' }, label: 'GARN.Canvas.Modifier.shift' },
+  { modifier: 'ctrlKey', connection: { direction: 'mutual' }, label: 'GARN.Canvas.Modifier.ctrl' },
   {
     modifier: 'altKey',
     connection: { type: 'free', direction: 'out' },
-    label: 'SILK.Canvas.Modifier.alt',
+    label: 'GARN.Canvas.Modifier.alt',
   },
 ];
 
@@ -67,10 +67,10 @@ export interface Selected {
 export type KeyCondition = 'always' | 'node' | 'edge' | 'nodeOrEdge';
 
 export const KEY_CONDITION_LABELS: Record<KeyCondition, string> = {
-  always: 'SILK.Canvas.KeyWhen.always',
-  node: 'SILK.Canvas.KeyWhen.node',
-  edge: 'SILK.Canvas.KeyWhen.edge',
-  nodeOrEdge: 'SILK.Canvas.KeyWhen.nodeOrEdge',
+  always: 'GARN.Canvas.KeyWhen.always',
+  node: 'GARN.Canvas.KeyWhen.node',
+  edge: 'GARN.Canvas.KeyWhen.edge',
+  nodeOrEdge: 'GARN.Canvas.KeyWhen.nodeOrEdge',
 };
 
 const MET: Record<KeyCondition, (s: Selected) => boolean> = {
@@ -124,7 +124,7 @@ const row = (
   mods,
   when,
   action,
-  label: `SILK.Canvas.Key.${label}`,
+  label: `GARN.Canvas.Key.${label}`,
 });
 
 /**

@@ -6,26 +6,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate over untyped Foundry docs */
 import type { Page } from '@playwright/test';
 import { ensureAdventure } from './adventure';
-import { expect, test, waitForSilk } from './fixtures';
+import { expect, test, waitForGarn } from './fixtures';
 
 /** Player sync is slow under load (e2e.md): never poll it below 20 s. */
 const SYNC = { timeout: 45_000 };
 const HOODED = 'icons/svg/mystery-man-black.svg';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
 
 const uuidOf = (page: Page, id: string) =>
   page.evaluate(
-    (i) => game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['uuid'] as string,
+    (i) => game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data['uuid'] as string,
     id,
   );
 
 const storedView = (page: Page) =>
-  page.evaluate(() => game.settings?.get('silk', 'playerView') as any);
+  page.evaluate(() => game.settings?.get('garn', 'playerView') as any);
 
 async function closePopups(page: Page) {
   await page.waitForTimeout(1500);
@@ -54,9 +54,9 @@ test('Player View follows Reveal and moves; the player canvas shows it read-only
   player,
 }) => {
   test.setTimeout(420_000);
-  await waitForSilk(gm);
+  await waitForGarn(gm);
   await ensureAdventure(gm);
-  await gm.evaluate(() => game.settings?.set('silk', 'materializeMode', 'immediate'));
+  await gm.evaluate(() => game.settings?.set('garn', 'materializeMode', 'immediate'));
   const create = async (cls: string, name: string, x: number, y: number) =>
     (await api<{ id: string }>(gm, 'element.create', { class: cls, name, at: { x, y } })).id;
   const gareth = await create('location', 'Gareth-T17', 600, 200);
@@ -92,36 +92,36 @@ test('Player View follows Reveal and moves; the player canvas shows it read-only
   const view = JSON.stringify(await storedView(gm));
   for (const secret of [spy, serves, 'Spy-T17', 'Gareth-T17']) expect(view).not.toContain(secret);
 
-  // Player: the same Silk scene-control button, which runs `canvas.open`.
-  await waitForSilk(player);
+  // Player: the same Garn scene-control button, which runs `canvas.open`.
+  await waitForGarn(player);
   await closePopups(player);
-  await player.evaluate(() => game.settings?.set('silk', 'playerViewState', {}));
+  await player.evaluate(() => game.settings?.set('garn', 'playerViewState', {}));
   const tool = await player.evaluate(() => {
-    const t = (ui.controls as any)?.controls?.notes?.tools?.silk;
+    const t = (ui.controls as any)?.controls?.notes?.tools?.garn;
     return t ? { visible: t.visible, button: t.button } : null;
   });
   expect(tool).toEqual({ visible: true, button: true });
   await api(player, 'canvas.open');
-  const canvas = player.locator('[data-silk-player-canvas]');
+  const canvas = player.locator('[data-garn-player-canvas]');
   await expect(canvas).toBeVisible();
-  const card = (name: string) => canvas.locator('[data-silk-player-node]', { hasText: name });
+  const card = (name: string) => canvas.locator('[data-garn-player-node]', { hasText: name });
   await expect(card('Gareth-T17')).toBeVisible(SYNC);
   await expect(card('Alrik-T17')).toBeVisible(SYNC);
-  await expect(canvas.locator('[data-silk-player-node]')).toHaveCount(2);
+  await expect(canvas.locator('[data-garn-player-node]')).toHaveCount(2);
   // Names wrap like the GM's cards (spec 1.1 §G.5, §E.1): one shared card-name style.
-  await expect(card('Alrik-T17').locator('[data-silk-card-name="title"]')).toHaveCSS(
+  await expect(card('Alrik-T17').locator('[data-garn-card-name="title"]')).toHaveCSS(
     'white-space',
     'normal',
   );
-  await expect(canvas.locator(`[data-silk-player-edge="${livesIn}"]`)).toHaveText('lives in');
-  await expect(canvas.locator('[data-silk-player-edge]')).toHaveCount(1);
+  await expect(canvas.locator(`[data-garn-player-edge="${livesIn}"]`)).toHaveText('lives in');
+  await expect(canvas.locator('[data-garn-player-edge]')).toHaveCount(1);
   // Hooded until Appearance; no Status chip, eye toggle or Connection Points.
-  await expect(card('Alrik-T17')).toHaveAttribute('data-silk-img', HOODED);
+  await expect(card('Alrik-T17')).toHaveAttribute('data-garn-img', HOODED);
   await expect(
-    canvas.locator('[data-silk-eye], [data-silk-status], [data-silk-point]'),
+    canvas.locator('[data-garn-eye], [data-garn-status], [data-garn-point]'),
   ).toHaveCount(0);
   // Players never get the GM World Canvas.
-  await expect(player.locator('[data-silk-canvas]')).toHaveCount(0);
+  await expect(player.locator('[data-garn-canvas]')).toHaveCount(0);
 
   // Read-only: dragging a card moves nothing.
   const before = await card('Gareth-T17').boundingBox();
@@ -147,22 +147,22 @@ test('Player View follows Reveal and moves; the player canvas shows it read-only
   await expect
     .poll(async () => (await storedView(player)).nodes?.find((n: any) => n.id === gareth), SYNC)
     .toMatchObject({ x: 900, y: 300 });
-  await expect.poll(() => card('Alrik-T17').getAttribute('data-silk-img'), SYNC).not.toBe(HOODED);
+  await expect.poll(() => card('Alrik-T17').getAttribute('data-garn-img'), SYNC).not.toBe(HOODED);
 
   // Pan/zoom is per client.
   const area = await canvas.boundingBox();
   if (area) await player.mouse.move(area.x + area.width / 2, area.y + area.height / 2);
   await player.mouse.wheel(0, -300);
   await expect
-    .poll(() => player.evaluate(() => (game.settings?.get('silk', 'playerViewState') as any)?.zoom))
+    .poll(() => player.evaluate(() => (game.settings?.get('garn', 'playerViewState') as any)?.zoom))
     .toBeGreaterThan(0);
 
   // Clicks open the docs: the journal entry; the LIMITED actor sheet + Companion Journal
   // (OBSERVER since its Connection is Revealed).
   // Reopen fitted (Gareth moved off-screen): no saved view → fit.
   await player.evaluate(async () => {
-    await foundry.applications.instances.get('silk-player-canvas')?.close();
-    await game.settings?.set('silk', 'playerViewState', {});
+    await foundry.applications.instances.get('garn-player-canvas')?.close();
+    await game.settings?.set('garn', 'playerViewState', {});
   });
   await expect(canvas).toHaveCount(0);
   await api(player, 'canvas.open');
@@ -177,7 +177,7 @@ test('Player View follows Reveal and moves; the player canvas shows it read-only
   await card('Alrik-T17').click();
   await expect.poll(() => openSheets(player), SYNC).toContain(alrikUuid);
   const companion = await player.evaluate(
-    (u) => `JournalEntry.${(fromUuidSync(u) as any).flags.silk.companion}`,
+    (u) => `JournalEntry.${(fromUuidSync(u) as any).flags.garn.companion}`,
     alrikUuid,
   );
   await expect.poll(() => openSheets(player), SYNC).toContain(companion);

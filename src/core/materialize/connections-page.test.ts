@@ -39,7 +39,7 @@ function world(mode: 'immediate' | 'onDemand' = 'immediate') {
   const content = async (id: string) => {
     await pages.idle();
     const journal: TestDoc = t.element(id).class === 'location' ? t.doc(id) : t.companion(id);
-    return page(journal, journal.flags.silk.connections).text?.content;
+    return page(journal, journal.flags.garn.connections).text?.content;
   };
   const connect = async (from: string, to: string, extra: object = {}) =>
     (await t.registry.run<{ id: string }>('connection.create', { from, to, ...extra })).id;

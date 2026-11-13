@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readSheet, sheetId } from './lifecycle';
 import { must, page, setup } from './test-setup';
 
-/** Foundry deleted the doc (not Silk): what the delete hook hands over. */
+/** Foundry deleted the doc (not Garn): what the delete hook hands over. */
 function foundryDelete(t: ReturnType<typeof setup>, uuid: string) {
   const doc = must(t.docs.docs.get(uuid), uuid);
   t.docs.docs.delete(uuid);
@@ -39,8 +39,8 @@ describe('Foundry-side deletion (spec §6)', () => {
     await foundryDelete(t, t.companion(alrik).uuid);
 
     const restored = t.companion(alrik);
-    expect(restored._id).toBe(t.doc(alrik).flags.silk.companion);
-    expect(restored.flags.silk.companionOf).toBe(alrik);
+    expect(restored._id).toBe(t.doc(alrik).flags.garn.companion);
+    expect(restored.flags.garn.companionOf).toBe(alrik);
     expect(page(restored, appearance._id).text?.content).toBe('<p>Tall</p>');
     expect(t.element(alrik).infoBlocks[0]?.text).toBe('<p>Tall</p>');
     expect(t.warnings).toEqual([expect.stringContaining('CompanionRestored')]);

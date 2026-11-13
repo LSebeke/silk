@@ -29,29 +29,29 @@
 
 {#if box}
   <div
-    class="silk-class-box"
+    class="garn-class-box"
     style:left="{box.anchor?.x ?? 40}px"
     style:top="{box.anchor?.y ?? 40}px"
     role="menu"
     tabindex="-1"
-    data-silk-class-box
+    data-garn-class-box
   >
     <input
       type="search"
       value={box.query}
-      placeholder={ctx.localize('SILK.Canvas.ClassSearch')}
+      placeholder={ctx.localize('GARN.Canvas.ClassSearch')}
       oninput={(e) => ctx.run('pipeline.search', { query: e.currentTarget.value }).catch(fail)}
       onkeydown={onKeydown}
       use:focus
-      data-silk-class-search
+      data-garn-class-search
     />
     {#each options as cls (cls.id)}
       <button
         type="button"
         role="menuitem"
-        style:--silk-class={cls.color}
+        style:--garn-class={cls.color}
         onclick={() => pick(cls.id)}
-        data-silk-class-option={cls.id}
+        data-garn-class-option={cls.id}
       >
         <img src={cls.icon} alt="" />
         <span>{ctx.localize(classLabelKey(cls.id))}</span>
@@ -62,7 +62,7 @@
 {/if}
 
 <style>
-  .silk-class-box {
+  .garn-class-box {
     position: absolute;
     z-index: 20;
     display: flex;
@@ -91,7 +91,7 @@
     color: #222;
     background: #fff;
     border: 1px solid #ddd;
-    border-left: 4px solid var(--silk-class);
+    border-left: 4px solid var(--garn-class);
     border-radius: 4px;
     cursor: pointer;
   }
@@ -107,7 +107,7 @@
     height: 18px;
     border: 0;
     border-radius: 3px;
-    background: var(--silk-class);
+    background: var(--garn-class);
   }
   kbd {
     font-size: 10px;

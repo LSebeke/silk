@@ -23,7 +23,7 @@ export interface ElementClass {
   color: string;
   /** Foundry core icon path, shown until the element has an image. */
   icon: string;
-  /** False for Player Characters: Adopt only, never created by Silk. */
+  /** False for Player Characters: Adopt only, never created by Garn. */
   creatable: boolean;
 }
 
@@ -52,4 +52,4 @@ export function elementClass(id: string): ElementClass | undefined {
 }
 
 /** i18n key of a class's display name. */
-export const classLabelKey = (id: ElementClassId) => `SILK.Class.${id}`;
+export const classLabelKey = (id: ElementClassId) => `GARN.Class.${id}`;

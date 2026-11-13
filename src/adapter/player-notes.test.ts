@@ -50,7 +50,7 @@ describe('socket relay (spec §9: socket → activeGM)', () => {
       isActiveGM: () => true,
       run: async (name) => {
         ran.push(name);
-        throw new Error('Silk: no Player Note "x"');
+        throw new Error('Garn: no Player Note "x"');
       },
     }).listen();
     const player = createSocketRelay({
@@ -76,8 +76,8 @@ describe('Add Player Note header control', () => {
     registerPlayerNoteHooks({
       on: (name, fn) => hooks.set(name, fn),
       elementIdOf: (doc) =>
-        (doc as { flags?: { silk?: { id?: string; companionOf?: string } } }).flags?.silk?.id ??
-        (doc as { flags?: { silk?: { companionOf?: string } } }).flags?.silk?.companionOf,
+        (doc as { flags?: { garn?: { id?: string; companionOf?: string } } }).flags?.garn?.id ??
+        (doc as { flags?: { garn?: { companionOf?: string } } }).flags?.garn?.companionOf,
       isRevealed: () => opts.revealed ?? true,
       available: () => opts.available ?? true,
       prompt: async () => '<p>note</p>',
@@ -94,17 +94,17 @@ describe('Add Player Note header control', () => {
 
   it('on a Revealed element (or its Companion Journal) it prompts and runs playerNote.create', async () => {
     const t = rig();
-    const [control] = t.controls({ flags: { silk: { companionOf: 'el1' } } });
-    expect(control?.label).toBe('SILK.PlayerNote.Add');
+    const [control] = t.controls({ flags: { garn: { companionOf: 'el1' } } });
+    expect(control?.label).toBe('GARN.PlayerNote.Add');
     control?.onClick();
     await new Promise((r) => setTimeout(r, 0));
     expect(t.ran).toEqual([['playerNote.create', { elementId: 'el1', text: '<p>note</p>' }]]);
   });
 
-  it('not on unrevealed elements, non-Silk docs, or with no GM online', () => {
-    expect(rig({ revealed: false }).controls({ flags: { silk: { id: 'el1' } } })).toEqual([]);
+  it('not on unrevealed elements, non-Garn docs, or with no GM online', () => {
+    expect(rig({ revealed: false }).controls({ flags: { garn: { id: 'el1' } } })).toEqual([]);
     expect(rig().controls({ flags: {} })).toEqual([]);
-    expect(rig({ available: false }).controls({ flags: { silk: { id: 'el1' } } })).toEqual([]);
+    expect(rig({ available: false }).controls({ flags: { garn: { id: 'el1' } } })).toEqual([]);
   });
 });
 

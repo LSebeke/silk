@@ -20,11 +20,11 @@
 </script>
 
 <div
-  class="silk-player-card"
-  style:--silk-class={cls?.color ?? '#666'}
-  data-silk-player-node={id}
-  data-silk-class={data.class}
-  data-silk-img={data.img ?? ''}
+  class="garn-player-card"
+  style:--garn-class={cls?.color ?? '#666'}
+  data-garn-player-node={id}
+  data-garn-class={data.class}
+  data-garn-img={data.img ?? ''}
 >
   <CardName {name} variant="block" />
   <img
@@ -36,20 +36,20 @@
   />
   <div class="body">
     <div class="cls">{label}</div>
-    <CardName {name} variant="title" data-silk-player-title />
+    <CardName {name} variant="title" data-garn-player-title />
   </div>
   <!-- Hidden anchors only: edges attach on the facing side themselves (PlayerEdge). -->
   <Handle
     type="source"
     position={Position.Right}
-    class="silk-player-anchor"
+    class="garn-player-anchor"
     isConnectable={false}
   />
-  <Handle type="target" position={Position.Left} class="silk-player-anchor" isConnectable={false} />
+  <Handle type="target" position={Position.Left} class="garn-player-anchor" isConnectable={false} />
 </div>
 
 <style>
-  .silk-player-card {
+  .garn-player-card {
     position: relative;
     display: flex;
     gap: 8px;
@@ -60,12 +60,12 @@
     color: #222;
     background: #fffdf8;
     border: 1px solid #c9bfa8;
-    border-left: 6px solid var(--silk-class);
+    border-left: 6px solid var(--garn-class);
     border-radius: 6px;
     box-shadow: 0 1px 2px #0002;
     cursor: pointer;
   }
-  .silk-player-card :global(.silk-player-anchor) {
+  .garn-player-card :global(.garn-player-anchor) {
     visibility: hidden;
   }
   .portrait {
@@ -78,7 +78,7 @@
   }
   .portrait.icon {
     padding: 4px;
-    background: var(--silk-class);
+    background: var(--garn-class);
   }
   .body {
     display: flex;
@@ -92,16 +92,16 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--silk-class);
+    color: var(--garn-class);
   }
   :global(.lod-title) .cls {
     display: none;
   }
-  :global(.lod-block) .silk-player-card {
-    background: var(--silk-class);
-    border-color: var(--silk-class);
+  :global(.lod-block) .garn-player-card {
+    background: var(--garn-class);
+    border-color: var(--garn-class);
   }
-  :global(.lod-block) .silk-player-card > :not(:global(.silk-card-name)) {
+  :global(.lod-block) .garn-player-card > :not(:global(.garn-card-name)) {
     display: none;
   }
 </style>

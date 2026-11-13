@@ -1,20 +1,20 @@
-/* Global Silk styles. Component styles live in their .svelte files. */
-.silk .window-content {
+/* Global Garn styles. Component styles live in their .svelte files. */
+.garn .window-content {
   padding: 0;
 }
 
 /* Event Scene bar on Event / Location journals (GM, adapter/scenes.ts). */
-.silk-scene-bar {
+.garn-scene-bar {
   display: flex;
   gap: 0.5rem;
   align-items: center;
   padding: 0.25rem 0.5rem;
   border-bottom: 1px solid var(--color-border, #7a7971);
 }
-.silk-scene-bar a {
+.garn-scene-bar a {
   cursor: pointer;
 }
-.silk-scene-bar button {
+.garn-scene-bar button {
   flex: 0 0 auto;
   width: auto;
 }

@@ -23,9 +23,9 @@ describe('reveal.element (spec §8)', () => {
     await t.run('reveal.element', { id, revealed: true });
     const doc = t.doc(id);
     expect(t.level(doc)).toBe(OBSERVER);
-    expect(t.level(page(doc, doc.flags.silk.cover))).toBe(OBSERVER);
+    expect(t.level(page(doc, doc.flags.garn.cover))).toBe(OBSERVER);
     for (const block of t.element(id).infoBlocks) expect(t.level(page(doc, block._id))).toBe(NONE);
-    expect(t.level(page(doc, doc.flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(doc, doc.flags.garn.connections))).toBe(NONE);
     expect(t.map().elements).toEqual([id]);
     expect(t.world().elements).toEqual([id]);
     expect(t.reveal.isRevealed('element', id)).toBe(true);
@@ -90,7 +90,7 @@ describe('reveal.infoBlock', () => {
     const resolution = blockId(t, id, 'Resolution');
     await t.run('reveal.infoBlock', { id: hook });
     const doc = t.doc(id);
-    const { quest, questKey } = doc.flags.silk;
+    const { quest, questKey } = doc.flags.garn;
     const q = (page(doc, quest).system as { quests: Record<string, Record<string, unknown>> })
       .quests[questKey];
     expect(q?.['visible']).toBe(true);
@@ -117,8 +117,8 @@ describe('reveal.connection', () => {
     expect(t.level(t.doc(b))).toBe(OBSERVER);
     expect(t.level(t.doc(c))).toBe(NONE);
     expect(t.level(t.companion(a))).toBe(OBSERVER);
-    expect(t.level(page(t.companion(a), t.companion(a).flags.silk.connections))).toBe(OBSERVER);
-    expect(t.level(page(t.doc(b), t.doc(b).flags.silk.connections))).toBe(OBSERVER);
+    expect(t.level(page(t.companion(a), t.companion(a).flags.garn.connections))).toBe(OBSERVER);
+    expect(t.level(page(t.doc(b), t.doc(b).flags.garn.connections))).toBe(OBSERVER);
     expect(t.pageRefreshes.flat()).toEqual(expect.arrayContaining([a, b]));
   });
 
@@ -152,9 +152,9 @@ describe('un-reveal', () => {
     await t.run('reveal.element', { id: b, revealed: false });
     const doc = t.doc(b);
     expect(t.level(doc)).toBe(NONE);
-    expect(t.level(page(doc, doc.flags.silk.cover))).toBe(NONE);
+    expect(t.level(page(doc, doc.flags.garn.cover))).toBe(NONE);
     expect(t.level(page(doc, desc))).toBe(NONE);
-    expect(t.level(page(doc, doc.flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(doc, doc.flags.garn.connections))).toBe(NONE);
     // A stays Revealed, but its only Revealed Connection is gone.
     expect(t.level(t.doc(a))).toBe(LIMITED);
     expect(t.level(t.companion(a))).toBe(NONE);
@@ -172,8 +172,8 @@ describe('un-reveal', () => {
     await t.reveal.idle();
     expect(t.map().connections).toEqual([]);
     expect(t.world().connections).toEqual([]);
-    expect(t.level(page(t.doc(a), t.doc(a).flags.silk.connections))).toBe(NONE);
-    expect(t.level(page(t.doc(b), t.doc(b).flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(a), t.doc(a).flags.garn.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(b), t.doc(b).flags.garn.connections))).toBe(NONE);
     expect(t.level(t.doc(a))).toBe(OBSERVER);
   });
 
@@ -186,7 +186,7 @@ describe('un-reveal', () => {
     await t.run('reveal.connection', { id: ab, revealed: false });
     expect(t.map().elements).toEqual([a, b].sort());
     expect(t.map().connections).toEqual([]);
-    expect(t.level(page(t.doc(a), t.doc(a).flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(a), t.doc(a).flags.garn.connections))).toBe(NONE);
   });
 });
 
@@ -200,7 +200,7 @@ describe('Appearance (Person/Creature)', () => {
       prototypeToken: { texture: { src: string }; displayName: number };
     };
     expect(doc.img).toBe(HOOD);
-    expect(doc.flags.silk.img).toBe('alrik.webp');
+    expect(doc.flags.garn.img).toBe('alrik.webp');
     expect(doc.prototypeToken.texture.src).toBe(HOOD);
     expect(doc.prototypeToken.displayName).toBe(40); // OWNER before the element Reveal
     await t.materializer.sync(id);
@@ -219,7 +219,7 @@ describe('Appearance (Person/Creature)', () => {
     expect(doc.img).toBe('alrik.webp');
     expect(doc.prototypeToken.texture.src).toBe('alrik.webp');
     expect(doc.prototypeToken.displayName).toBe(30); // HOVER after
-    expect(doc.flags.silk.hood).toBeUndefined();
+    expect(doc.flags.garn.hood).toBeUndefined();
     expect(t.level(page(t.companion(id), blockId(t, id, 'Appearance')))).toBe(OBSERVER);
     expect(t.tokens.at(-1)).toEqual({
       actor: doc.uuid,
@@ -268,7 +268,7 @@ describe('Appearance (Person/Creature)', () => {
       src: 'dragon-token.webp',
       pose: { anchorX: 0.3, anchorY: 0.5, scale: 1 },
     });
-    expect(shown.flags.silk.pose).toEqual({ anchorX: 0.3, anchorY: 0.5, scale: 1 });
+    expect(shown.flags.garn.pose).toEqual({ anchorX: 0.3, anchorY: 0.5, scale: 1 });
   });
 
   it('Restore imported images while hooded (v1.1 §G.3.1): the real look at Reveal', async () => {
@@ -276,7 +276,7 @@ describe('Appearance (Person/Creature)', () => {
     const id = await materialized(t, 'creature', 'Wolf');
     const uuid = t.doc(id).uuid;
     await t.docs.update(uuid, {
-      'flags.silk.original': {
+      'flags.garn.original': {
         img: 'wolf.webp',
         texture: { src: 'wolf-token.webp', fit: 'cover' },
         ring: { enabled: false },
@@ -298,7 +298,7 @@ describe('Appearance (Person/Creature)', () => {
     expect(shown.img).toBe('wolf.webp');
     expect(shown.prototypeToken.texture).toMatchObject({ src: 'wolf-token.webp', fit: 'cover' });
     expect(shown.prototypeToken.texture.anchorX ?? 0.5).toBe(0.5);
-    expect(shown.flags.silk.pose).toBeUndefined();
+    expect(shown.flags.garn.pose).toBeUndefined();
   });
 });
 
@@ -346,7 +346,7 @@ describe('Appearance by flag, deleted and re-added (v1.1 §C.2)', () => {
     const doc = t.doc(id) as ActorDoc;
     expect(doc.img).toBe(PERSON_ICON);
     expect(doc.prototypeToken.texture.src).toBe(PERSON_ICON);
-    expect(doc.flags.silk.img).toBe('alrik.webp');
+    expect(doc.flags.garn.img).toBe('alrik.webp');
     expect(t.tokens.at(-1)?.data['texture.src']).toBe(PERSON_ICON);
     expect(t.element(id).img).toBe('alrik.webp');
     // Nothing left to Reveal: the element Reveal keeps the icon.
@@ -368,7 +368,7 @@ describe('Appearance by flag, deleted and re-added (v1.1 §C.2)', () => {
     const block = t.element(id).infoBlocks.find((b) => b.appearance);
     expect(block?.name).toBe('Appearance');
     expect(t.doc(id).img).toBe(HOOD);
-    expect(t.doc(id).flags.silk.img).toBe('alrik.webp');
+    expect(t.doc(id).flags.garn.img).toBe('alrik.webp');
     await t.run('reveal.appearance', { id });
     expect(t.doc(id).img).toBe('alrik.webp');
   });
@@ -413,7 +413,7 @@ describe('Truth: World ownership mirrored in the Revelation Map', () => {
     const b = await materialized(t, 'location', 'B');
     const ab = await t.connect(a, b);
     await t.run('reveal.connection', { id: ab });
-    // Drift while Silk was off: the GM hid B by hand, and opened A's Description.
+    // Drift while Garn was off: the GM hid B by hand, and opened A's Description.
     t.doc(b).ownership = { default: NONE };
     const desc = blockId(t, a, 'Description');
     page(t.doc(a), desc).ownership = { default: OBSERVER };
@@ -422,8 +422,8 @@ describe('Truth: World ownership mirrored in the Revelation Map', () => {
     expect(t.map().connections).toEqual([]);
     expect(t.map().infoBlocks).toEqual([desc]);
     expect(t.world()).toEqual(t.map());
-    expect(t.level(page(t.doc(a), t.doc(a).flags.silk.connections))).toBe(NONE);
-    expect(t.level(page(t.doc(b), t.doc(b).flags.silk.cover))).toBe(NONE);
+    expect(t.level(page(t.doc(a), t.doc(a).flags.garn.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(b), t.doc(b).flags.garn.cover))).toBe(NONE);
   });
 
   it('reconcile under main: the World state follows ownership, no Campaign map is written', async () => {

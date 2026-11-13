@@ -163,9 +163,9 @@ describe('merge rows: Event Scenes (spec §11.4)', () => {
 
     expect(record.owner).toBe('el-brawl');
     expect(rowsOf(view, 'el-brawl-scene')).toEqual([
-      { section: 'SILK.Merge.Section.sceneContents', label: 'lights', kind: 'count' },
-      { section: 'SILK.Merge.Section.tokens', label: 'Ulf', kind: 'token' },
-      { section: 'SILK.Merge.Section.sceneContents', label: 'walls', kind: 'count' },
+      { section: 'GARN.Merge.Section.sceneContents', label: 'lights', kind: 'count' },
+      { section: 'GARN.Merge.Section.tokens', label: 'Ulf', kind: 'token' },
+      { section: 'GARN.Merge.Section.sceneContents', label: 'walls', kind: 'count' },
     ]);
     const [lights, ulfToken, walls] = record.rows;
     expect(ulfToken).toMatchObject({
@@ -208,7 +208,7 @@ describe('layout (spec §11.4)', () => {
     expect(view.counts.open).toBe(0);
     const move = recordOf(view, 'el-ulf').rows[0];
     expect(move).toMatchObject({
-      section: 'SILK.Merge.Section.layout',
+      section: 'GARN.Merge.Section.layout',
       layout: true,
       conflict: false,
       result: { x: 400, y: 400 },

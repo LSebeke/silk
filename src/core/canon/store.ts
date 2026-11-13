@@ -1,6 +1,6 @@
 /**
  * Canon store (spec §11.1): content-addressed JSON blobs, commits and refs
- * under `Data/silk/<canon-id>/`. Pure core over an injected `CanonFiles`.
+ * under `Data/garn/<canon-id>/`. Pure core over an injected `CanonFiles`.
  */
 import type { CanonFiles } from './files';
 
@@ -68,7 +68,7 @@ export interface AdventureRef {
 export interface CanonStore {
   /** Migrated to the current format in memory. */
   readonly manifest: Manifest;
-  /** True when any file read so far is from a newer Silk; all writes then throw. */
+  /** True when any file read so far is from a newer Garn; all writes then throw. */
   readonly readOnly: boolean;
   /**
    * Write `snapshot` as a commit and move `ref` to it. Order: changed blobs,
@@ -114,7 +114,7 @@ export interface Migration {
 export const MIGRATIONS: Readonly<Record<number, Migration>> = {};
 
 export interface FormatOptions {
-  /** The version this Silk writes. Default `FORMAT_VERSION`. */
+  /** The version this Garn writes. Default `FORMAT_VERSION`. */
   formatVersion?: number;
   /** Default `MIGRATIONS`. */
   migrations?: Readonly<Record<number, Migration>>;
@@ -184,7 +184,7 @@ function storeFor(files: CanonFiles, stored: Manifest, options: FormatOptions): 
   async function beginWrite() {
     if (readOnly)
       throw new Error(
-        'Silk: this Canon was written by a newer Silk and is read-only. Update Silk.',
+        'Garn: this Canon was written by a newer Garn and is read-only. Update Garn.',
       );
     if (diskVersion < current) {
       manifest = { ...manifest, formatVersion: current };
@@ -217,7 +217,7 @@ function storeFor(files: CanonFiles, stored: Manifest, options: FormatOptions): 
       const adventure =
         args.ref && 'adventure' in args.ref ? await store.getAdventure(args.ref.adventure) : null;
       if (args.ref && 'adventure' in args.ref && !adventure)
-        throw new Error(`Silk: no Adventure "${args.ref.adventure}" in this Canon`);
+        throw new Error(`Garn: no Adventure "${args.ref.adventure}" in this Canon`);
       // Blobs already referenced by a parent are on disk; upload only the rest.
       const known = new Set<string>();
       for (const parent of args.parents)
@@ -328,7 +328,7 @@ function storeFor(files: CanonFiles, stored: Manifest, options: FormatOptions): 
 
 async function readJson<T>(files: CanonFiles, path: string): Promise<T> {
   const text = await files.read(path);
-  if (text === null) throw new Error(`Silk: Canon file missing: ${path}`);
+  if (text === null) throw new Error(`Garn: Canon file missing: ${path}`);
   return JSON.parse(text) as T;
 }
 

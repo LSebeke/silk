@@ -3,8 +3,8 @@
  *
  * - Ghost: the element record in the working copy is the truth.
  * - Materialized: the Foundry doc is the truth for title, image, Info Blocks and class fields.
- *   Silk writes those to Foundry, and `sync` mirrors Foundry back into the record so the
- *   canvas and Commits see them. Tags, class and layout stay Silk-owned.
+ *   Garn writes those to Foundry, and `sync` mirrors Foundry back into the record so the
+ *   canvas and Commits see them. Tags, class and layout stay Garn-owned.
  *
  * Pure core: Foundry is the injected `FoundryDocs` port, DSA5 the `SystemMapping`.
  */
@@ -128,7 +128,7 @@ export interface Materializer {
   setImage(id: string, edit: ImageEdit): Promise<void>;
   /** The real look for the image & token editor (v1.1 §G.3); a Ghost's is its record image. */
   look(id: string): Look | undefined;
-  /** `element.restoreImages` (v1.1 §G.3.1); rejected without `flags.silk.original`. */
+  /** `element.restoreImages` (v1.1 §G.3.1); rejected without `flags.garn.original`. */
   restoreImages(id: string): Promise<void>;
   setFields(id: string, fields: ClassFields): Promise<void>;
   changeClass(id: string, cls: string): Promise<void>;
@@ -156,7 +156,7 @@ export interface Materializer {
   openJournal(id: string): Promise<void>;
   /** Foundry → record mirror for a Materialized element (Foundry edits flow back, §7). */
   sync(id: string): Promise<void>;
-  /** The Story Element a Silk doc (or Companion Journal) belongs to. */
+  /** The Story Element a Garn doc (or Companion Journal) belongs to. */
   elementIdOf(doc: { flags?: unknown }): string | undefined;
   /** The element's docs, if Materialized and present. */
   docsOf(id: string): { main: DocSnapshot; companion?: DocSnapshot } | undefined;
@@ -179,7 +179,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
 
   function element(id: string): StoryElement {
     const el = readElement(deps.workingCopy().get(id));
-    if (!el) throw new Error(`Silk: no element "${id}"`);
+    if (!el) throw new Error(`Garn: no element "${id}"`);
     return el;
   }
 
@@ -195,7 +195,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
   }
 
   function folderName(key: FolderKey) {
-    return deps.localize(`SILK.Folder.${key}`);
+    return deps.localize(`GARN.Folder.${key}`);
   }
 
   function docsOf(id: string) {
@@ -203,14 +203,14 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     if (!el?.uuid) return undefined;
     const main = docs.get(el.uuid);
     if (!main) return undefined;
-    const companionId = main.flags.silk.companion;
+    const companionId = main.flags.garn.companion;
     const companion = companionId ? docs.journal(companionId) : undefined;
     return companion ? { main, companion } : { main };
   }
 
   function requireDocs(id: string) {
     const found = docsOf(id);
-    if (!found) throw new Error(`Silk: the Foundry doc of "${id}" is missing`);
+    if (!found) throw new Error(`Garn: the Foundry doc of "${id}" is missing`);
     return found;
   }
 
@@ -227,7 +227,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const el = element(id);
     if (el.uuid) return el.uuid;
     if (!elementClass(el.class)?.creatable)
-      throw new Error(`Silk: ${el.class} elements are never created, only Adopted`);
+      throw new Error(`Garn: ${el.class} elements are never created, only Adopted`);
     const name = FOLDER_DOC(el.class);
     const main = await docs.ensureFolder(name, el.class, folderName(el.class));
     const companion = hasCompanion(el.class)
@@ -260,10 +260,10 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const uuid = generatedActor(el.source);
     const doc = uuid ? docs.get(uuid) : undefined;
     if (!doc || doc.documentName !== documentName(el.class) || doc.parent) return undefined;
-    return doc.flags.silk?.id ? undefined : doc.uuid;
+    return doc.flags.garn?.id ? undefined : doc.uuid;
   }
 
-  /** The existing doc takes the plan's Silk-owned parts; what the generator made stays. */
+  /** The existing doc takes the plan's Garn-owned parts; what the generator made stays. */
   async function bind(uuid: string, main: DocPlan['main']) {
     const doc = docs.get(uuid) as PortraitDoc | undefined;
     // v1.1 §G.3.1: no compendium source, so this flag is the only copy of its look.
@@ -272,21 +272,21 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       name: main.name,
       folder: main.folder,
       ownership: main.ownership,
-      flags: { silk: { ...main.flags.silk, ...original } },
+      flags: { garn: { ...main.flags.garn, ...original } },
     });
     return uuid;
   }
 
   /**
    * Ghost worlds (1.1 §B.1): a Compendium-sourced element imports its entry now. The entry's
-   * data replaces the blank main doc; Silk's id, name, folder, ownership and flags stay.
+   * data replaces the blank main doc; Garn's id, name, folder, ownership and flags stay.
    * A Scene source (Location, Event; §B.2.1) is not the main doc: Event Scenes import it.
    */
   async function fromSource(el: StoryElement, plan: DocPlan): Promise<DocPlan> {
     if (el.source?.kind !== 'compendium' || sceneSource(el.class, el.source)) return plan;
     const data = await docs.importData(el.source.uuid);
     if (!data) {
-      deps.notify(deps.localize('SILK.Materialize.CompendiumMissing', { name: el.name }));
+      deps.notify(deps.localize('GARN.Materialize.CompendiumMissing', { name: el.name }));
       return plan;
     }
     const blank = plan.main;
@@ -299,8 +299,8 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       ...(blank.ownership ? { ownership: blank.ownership } : {}),
       flags: {
         ...data.flags,
-        silk: {
-          ...blank.flags.silk,
+        garn: {
+          ...blank.flags.garn,
           // v1.1 §G.3.1: the entry's look, before a Ghost image edit or the hood.
           ...(plan.documentName === 'Actor'
             ? { original: originalLook(data as Pick<PortraitDoc, 'img' | 'prototypeToken'>) }
@@ -350,7 +350,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const el = element(id);
     if (el.uuid) return el.uuid;
     const uuid = await materializeOne(id);
-    deps.notify(deps.localize('SILK.Materialize.Implicit', { name: el.name }));
+    deps.notify(deps.localize('GARN.Materialize.Implicit', { name: el.name }));
     return uuid;
   }
 
@@ -360,13 +360,13 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const block = el?.infoBlocks?.find((b) => b._id === blockId);
       if (el && block) return { el, block };
     }
-    throw new Error(`Silk: no Info Block "${blockId}"`);
+    throw new Error(`Garn: no Info Block "${blockId}"`);
   }
 
   function holderOf(id: string) {
     const { main, companion } = requireDocs(id);
     const holder = blockJournal(main, companion);
-    if (!holder) throw new Error(`Silk: "${id}" has no journal for Info Blocks`);
+    if (!holder) throw new Error(`Garn: "${id}" has no journal for Info Blocks`);
     return holder;
   }
 
@@ -376,18 +376,18 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
    */
   async function questJournal(uuid: string, name: string) {
     await docs.registerQuestJournal(uuid, name);
-    deps.notify(deps.localize('SILK.Materialize.QuestNativeFields', { name }));
+    deps.notify(deps.localize('GARN.Materialize.QuestNativeFields', { name }));
   }
 
   function quest(main: DocSnapshot) {
-    const { quest: page, questKey: key } = main.flags.silk;
+    const { quest: page, questKey: key } = main.flags.garn;
     return page && key ? { page, key } : undefined;
   }
 
   async function setStatus(id: string, status: string) {
     const el = element(id);
     const value = statusesOf(el.class).find((s) => s === status);
-    if (!value) throw new Error(`Silk: "${status}" is not a Status of ${el.class} elements`);
+    if (!value) throw new Error(`Garn: "${status}" is not a Status of ${el.class} elements`);
     const found = el.uuid ? docsOf(id) : undefined;
     if (found && (el.class === 'person' || el.class === 'creature')) {
       await docs.setStatusEffect(found.main.uuid, system.deadEffect, value === 'dead');
@@ -396,7 +396,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const index = statusesOf('quest').indexOf(value);
       await docs.updatePage(found.main.uuid, page, system.questStatusUpdate(key, index));
     } else {
-      // Ghost or Event: Silk holds the Status.
+      // Ghost or Event: Garn holds the Status.
       await write(id, { status: storedStatus(el.class, value) });
       return;
     }
@@ -437,7 +437,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const { main, companion } = requireDocs(id);
       await docs.update(main.uuid, { name: el.name });
       if (companion) await docs.update(companion.uuid, { name: el.name });
-      const { quest, questKey } = main.flags.silk;
+      const { quest, questKey } = main.flags.garn;
       if (quest && questKey)
         await docs.updatePage(main.uuid, quest, system.questTitleUpdate(questKey, el.name));
       await sync(id);
@@ -449,7 +449,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const edit = el.uuid ? imageEdit : ghostEdit(imageEdit);
       if (edit.token) {
         if (documentName(el.class) !== 'Actor')
-          throw new Error(`Silk: ${el.class} elements have no token`);
+          throw new Error(`Garn: ${el.class} elements have no token`);
         if (!el.uuid) {
           if (edit.img !== undefined) await write(id, { img: edit.img || undefined });
           await ensureMaterialized(id);
@@ -457,9 +457,9 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
         }
       }
       const img = edit.img;
-      const cover = el.uuid ? requireDocs(id).main.flags.silk.cover : undefined;
+      const cover = el.uuid ? requireDocs(id).main.flags.garn.cover : undefined;
       if (!el.uuid || (documentName(el.class) === 'JournalEntry' && !cover)) {
-        // Ghost, or a Note (no Cover page): Silk holds the image.
+        // Ghost, or a Note (no Cover page): Garn holds the image.
         if (img !== undefined) await write(id, { img: img || undefined });
         return;
       }
@@ -483,7 +483,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const el = readElement(deps.workingCopy().get(id));
       if (!el) return undefined;
       // A Ghost has no doc yet: its record image, no ring, centred.
-      const main = (el.uuid && docsOf(id)?.main) || { img: el.img, flags: { silk: {} } };
+      const main = (el.uuid && docsOf(id)?.main) || { img: el.img, flags: { garn: {} } };
       return lookOf(lookSource(main as PortraitDoc, system, el.img));
     },
 
@@ -502,13 +502,13 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const el = element(id);
       const target = elementClass(cls);
       const from = elementClass(el.class);
-      if (!target || !from) throw new Error(`Silk: unknown Element class "${cls}"`);
+      if (!target || !from) throw new Error(`Garn: unknown Element class "${cls}"`);
       if (target.id === el.class) return;
       if (!target.creatable || !from.creatable)
-        throw new Error('Silk: Player Characters can only be Adopted, not changed into or from');
+        throw new Error('Garn: Player Characters can only be Adopted, not changed into or from');
       if (target.docKind !== from.docKind)
         throw new Error(
-          `Silk: a ${from.id} can only become a class backed by the same kind of Foundry doc`,
+          `Garn: a ${from.id} can only become a class backed by the same kind of Foundry doc`,
         );
       if (el.uuid) {
         const { main } = requireDocs(id);
@@ -520,7 +520,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
           if (add.categories.length) await docs.createCategories(main.uuid, add.categories);
           if (add.pages.length) await docs.createPages(main.uuid, add.pages);
           if (Object.keys(add.flags).length)
-            await docs.update(main.uuid, { flags: { silk: add.flags } });
+            await docs.update(main.uuid, { flags: { garn: add.flags } });
         }
         const folder = await docs.ensureFolder(
           FOLDER_DOC(target.id),
@@ -539,8 +539,8 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const el = element(elementId);
       // v1.1 §C.2: the Appearance preset, on an actor class that has none.
       if (appearance && (!hasAppearanceClass(el.class) || appearanceBlock(el)))
-        throw new Error(`Silk: "${el.name}" cannot get an Appearance block`);
-      const fallback = appearance ? 'SILK.InfoBlock.Appearance' : 'SILK.InfoBlock.New';
+        throw new Error(`Garn: "${el.name}" cannot get an Appearance block`);
+      const fallback = appearance ? 'GARN.InfoBlock.Appearance' : 'GARN.InfoBlock.New';
       const block: InfoBlock = {
         _id: deps.newId(),
         name: name?.trim() || deps.localize(fallback),
@@ -617,7 +617,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
 
     async tag(ids, tag, on) {
       const name = tag.trim();
-      if (!name) throw new Error('Silk: empty Tag');
+      if (!name) throw new Error('Garn: empty Tag');
       for (const id of ids) {
         const el = element(id);
         const tags = new Set(el.tags ?? []);
@@ -645,9 +645,9 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     },
 
     elementIdOf(doc) {
-      const silk = (doc.flags as { silk?: { id?: unknown; companionOf?: unknown } } | undefined)
-        ?.silk;
-      const id = silk?.id ?? silk?.companionOf;
+      const garn = (doc.flags as { garn?: { id?: unknown; companionOf?: unknown } } | undefined)
+        ?.garn;
+      const id = garn?.id ?? garn?.companionOf;
       return typeof id === 'string' ? id : undefined;
     },
   };
@@ -662,7 +662,7 @@ export function materializeCommands(m: Materializer): Command[] {
     keys?: Command['keys'],
   ): Command<A, R> => ({
     name,
-    title: `SILK.Commands.${name}`,
+    title: `GARN.Commands.${name}`,
     available: gm,
     run,
     ...(keys ? { keys } : {}),

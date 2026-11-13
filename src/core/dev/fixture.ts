@@ -41,7 +41,7 @@ const FREE: [string, ConnectionData['direction']][] = [
   ['are allies', 'mutual'],
   ['are rivals', 'mutual'],
 ];
-/** Class weights (%) as in the prototype; Player Characters are never created by Silk. */
+/** Class weights (%) as in the prototype; Player Characters are never created by Garn. */
 const WEIGHTS: [ElementClassId, number][] = [
   ['person', 31],
   ['creature', 6],

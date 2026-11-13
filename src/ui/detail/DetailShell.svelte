@@ -19,15 +19,15 @@
   } = $props();
 </script>
 
-<div class="silk-detail" bind:this={root} {...rest}>
+<div class="garn-detail" bind:this={root} {...rest}>
   {#if header}
     <header>{@render header()}</header>
   {/if}
-  <div class="body" data-silk-detail-body>{@render children()}</div>
+  <div class="body" data-garn-detail-body>{@render children()}</div>
 </div>
 
 <style>
-  .silk-detail {
+  .garn-detail {
     display: flex;
     flex-direction: column;
     gap: 8px;

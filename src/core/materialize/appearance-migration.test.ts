@@ -3,11 +3,11 @@ import { elementRecord } from '../elements';
 import { appearanceMigration } from './appearance-migration';
 import { page, setup, type TestElement } from './test-setup';
 
-/** A Silk 1.0 element: its Appearance block carries no flag. */
+/** A Garn 1.0 element: its Appearance block carries no flag. */
 async function unflag(t: ReturnType<typeof setup>, id: string) {
   const el = t.element(id);
   if (el.uuid) {
-    for (const p of t.companion(id).pages) delete p.flags?.silk?.appearance;
+    for (const p of t.companion(id).pages) delete p.flags?.garn?.appearance;
     await t.materializer.sync(id);
   } else {
     const infoBlocks = el.infoBlocks.map((b) => ({ _id: b._id, name: b.name, text: b.text }));
@@ -34,7 +34,7 @@ describe('Appearance migration on load (v1.1 §C.3)', () => {
     await t.lifecycle.reconcile();
     expect(flagged(t.element(id))).toEqual(['Appearance']);
     const block = t.element(id).infoBlocks.find((b) => b.appearance);
-    expect(page(t.companion(id), block?._id ?? '').flags?.silk?.appearance).toBe(true);
+    expect(page(t.companion(id), block?._id ?? '').flags?.garn?.appearance).toBe(true);
   });
 
   it('other classes and other names are left alone', async () => {

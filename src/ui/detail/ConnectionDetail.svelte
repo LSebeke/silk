@@ -49,8 +49,8 @@
 
   async function remove() {
     const yes = await ctx.confirm(
-      ctx.localize('SILK.ConnectionDetail.DeleteTitle'),
-      ctx.format('SILK.ConnectionDetail.DeleteConfirm', { sentence: sentence ?? '' }),
+      ctx.localize('GARN.ConnectionDetail.DeleteTitle'),
+      ctx.format('GARN.ConnectionDetail.DeleteConfirm', { sentence: sentence ?? '' }),
     );
     if (!yes) return;
     await run('connection.delete', { ids: [id] });
@@ -64,7 +64,7 @@
     class="end"
     title={ctx.title('element.openDetail')}
     onclick={() => run('element.openDetail', { id: end })}
-    data-silk-connection-detail-end={role}>{name(end)}</button
+    data-garn-connection-detail-end={role}>{name(end)}</button
   >
 {/snippet}
 
@@ -78,10 +78,10 @@
   <h2 class="title">{sentence}</h2>
 {/snippet}
 
-<DetailShell data-silk-connection-detail={id} header={connection ? header : undefined}>
+<DetailShell data-garn-connection-detail={id} header={connection ? header : undefined}>
   {#if connection}
     {#if !canReveal}
-      <p class="hint">{ctx.localize('SILK.Reveal.NeedsAdventure')}</p>
+      <p class="hint">{ctx.localize('GARN.Reveal.NeedsAdventure')}</p>
     {/if}
     <DetailSection>
       <div class="row">
@@ -94,12 +94,12 @@
     <DetailSection>
       {#if free}
         <label class="field">
-          <span>{ctx.localize('SILK.ConnectionDetail.Label')}</span>
+          <span>{ctx.localize('GARN.ConnectionDetail.Label')}</span>
           <input
             type="text"
             value={connection.label}
             disabled={!canEdit}
-            placeholder={ctx.localize('SILK.Canvas.LabelPlaceholder')}
+            placeholder={ctx.localize('GARN.Canvas.LabelPlaceholder')}
             onkeydown={(e) => {
               if (e.key === 'Enter') e.currentTarget.blur();
               else if (e.key === 'Escape') {
@@ -111,37 +111,37 @@
               }
             }}
             onblur={(e) => saveLabel(e.currentTarget)}
-            data-silk-connection-detail-label
+            data-garn-connection-detail-label
           />
         </label>
       {/if}
       <label class="field">
-        <span>{ctx.localize('SILK.ConnectionDetail.Type')}</span>
+        <span>{ctx.localize('GARN.ConnectionDetail.Type')}</span>
         <select
           value={connection.type}
           disabled={!canEdit}
           onchange={(e) => setType(e.currentTarget.value as ConnectionType)}
-          data-silk-connection-detail-type
+          data-garn-connection-detail-type
         >
           {#each types as type (type)}
-            <option value={type}>{ctx.localize(`SILK.Connection.Type.${type}`)}</option>
+            <option value={type}>{ctx.localize(`GARN.Connection.Type.${type}`)}</option>
           {/each}
         </select>
       </label>
       <div class="field">
-        <label for="silk-connection-direction-{id}"
-          >{ctx.localize('SILK.ConnectionDetail.Direction')}</label
+        <label for="garn-connection-direction-{id}"
+          >{ctx.localize('GARN.ConnectionDetail.Direction')}</label
         >
         <div class="row">
           <select
-            id="silk-connection-direction-{id}"
+            id="garn-connection-direction-{id}"
             value={connection.direction}
             disabled={!canEdit || !free}
             onchange={(e) => setDirection(e.currentTarget.value as ConnectionDirection)}
-            data-silk-connection-detail-direction
+            data-garn-connection-detail-direction
           >
-            <option value="directed">{ctx.localize('SILK.ConnectionDetail.Directed')}</option>
-            <option value="mutual">{ctx.localize('SILK.ConnectionDetail.Mutual')}</option>
+            <option value="directed">{ctx.localize('GARN.ConnectionDetail.Directed')}</option>
+            <option value="mutual">{ctx.localize('GARN.ConnectionDetail.Mutual')}</option>
           </select>
           <button
             type="button"
@@ -149,21 +149,21 @@
             disabled={!canEdit || connection.direction === 'mutual'}
             title={ctx.title('connection.flip')}
             onclick={() => run('connection.flip', { id })}
-            data-silk-connection-detail-reverse
+            data-garn-connection-detail-reverse
             ><i class="fa-solid fa-right-left"></i>
-            {ctx.localize('SILK.ConnectionDetail.Reverse')}</button
+            {ctx.localize('GARN.ConnectionDetail.Reverse')}</button
           >
         </div>
       </div>
     </DetailSection>
-    <DetailSection title={ctx.localize('SILK.ConnectionDetail.Notes')}>
-      <p class="hint">{ctx.localize('SILK.ConnectionDetail.NotesHint')}</p>
+    <DetailSection title={ctx.localize('GARN.ConnectionDetail.Notes')}>
+      <p class="hint">{ctx.localize('GARN.ConnectionDetail.NotesHint')}</p>
       {#if ctx.available('connection.setNotes')}
         <RichText
           mount={ctx.editor}
           html={connection.notes ?? ''}
           save={(notes) => void run('connection.setNotes', { id, notes })}
-          data-silk-connection-detail-notes
+          data-garn-connection-detail-notes
         />
       {/if}
     </DetailSection>
@@ -173,12 +173,12 @@
         class="delete danger"
         disabled={!ctx.available('connection.delete')}
         onclick={remove}
-        data-silk-connection-detail-delete
+        data-garn-connection-detail-delete
         ><i class="fa-solid fa-trash"></i> {ctx.title('connection.delete')}</button
       >
     </DetailSection>
   {:else}
-    <p class="hint">{ctx.localize('SILK.ConnectionDetail.Gone')}</p>
+    <p class="hint">{ctx.localize('GARN.ConnectionDetail.Gone')}</p>
   {/if}
 </DetailShell>
 

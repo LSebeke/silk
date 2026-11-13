@@ -1,11 +1,11 @@
 /**
  * Foundry side of Materialize (spec §6, §7): the real `FoundryApi`, and the hooks that let
  * Foundry edits flow back into Story Elements. Hooks fire on every client; only the
- * active GM mirrors, and Silk's own writes (tagged `SILK_WRITE`) are skipped.
+ * active GM mirrors, and Garn's own writes (tagged `GARN_WRITE`) are skipped.
  */
 import type { Materializer } from '../core/materialize';
 import type { FoundryApi, FoundryDoc, FoundryDocumentClass } from './foundry-docs';
-import { isSilkWrite } from './working-copy-journal';
+import { isGarnWrite } from './working-copy-journal';
 
 /** `FoundryApi` over the running Foundry. Globals are read lazily, per call. */
 export function foundryApi(): FoundryApi {
@@ -63,7 +63,7 @@ export function registerMaterializeHooks(
   },
 ): void {
   const handle = (doc: unknown, options: unknown, embedded: boolean) => {
-    if (!deps.isActiveGM() || isSilkWrite(options)) return;
+    if (!deps.isActiveGM() || isGarnWrite(options)) return;
     const id = hookedElementId(materializer, doc as Doc, embedded);
     if (id) materializer.sync(id).catch((error: unknown) => console.error(error));
   };

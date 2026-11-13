@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { CanonRecord } from '../core/canon';
 import { createWorkingCopy } from '../core/working-copy';
 import {
-  SILK_WRITE,
+  GARN_WRITE,
   ensureWorkingCopyJournal,
   isActiveGM,
-  isSilkWrite,
+  isGarnWrite,
   journalBackend,
   remotePatch,
   type JournalLike,
@@ -18,16 +18,16 @@ const binding = { canonId: 'c1', checkout: { main: true as const }, head: null }
 function fakeEntry(): JournalLike & { updates: [object, object][] } {
   const entry = {
     id: 'j1',
-    flags: { silk: { workingCopy: true, records: {} } } as JournalLike['flags'],
+    flags: { garn: { workingCopy: true, records: {} } } as JournalLike['flags'],
     updates: [] as [object, object][],
-    async update(data: { flags: { silk: Record<string, unknown> } }, options: object) {
+    async update(data: { flags: { garn: Record<string, unknown> } }, options: object) {
       entry.updates.push([data, options]);
-      const silk = entry.flags.silk as Record<string, unknown>;
-      for (const [key, value] of Object.entries(data.flags.silk)) {
-        if (key !== 'records' && key !== 'meta') silk[key] = value;
+      const garn = entry.flags.garn as Record<string, unknown>;
+      for (const [key, value] of Object.entries(data.flags.garn)) {
+        if (key !== 'records' && key !== 'meta') garn[key] = value;
         else
           for (const [id, v] of Object.entries(value as object)) {
-            const records = (silk[key] ??= {}) as Record<string, unknown>;
+            const records = (garn[key] ??= {}) as Record<string, unknown>;
             if (id.startsWith('-=')) Reflect.deleteProperty(records, id.slice(2));
             else records[id] = v;
           }
@@ -37,8 +37,8 @@ function fakeEntry(): JournalLike & { updates: [object, object][] } {
   return entry;
 }
 
-describe('Silk Working Copy journal', () => {
-  it('round-trips records and binding through journal flags, tagged as Silk writes', async () => {
+describe('Garn Working Copy journal', () => {
+  it('round-trips records and binding through journal flags, tagged as Garn writes', async () => {
     const entry = fakeEntry();
     const wc = createWorkingCopy(
       journalBackend(() => entry),
@@ -55,7 +55,7 @@ describe('Silk Working Copy journal', () => {
     );
     expect(reloaded.binding).toEqual(binding);
     expect(reloaded.records()).toEqual(new Map([[gareth.id, { ...gareth, data: { name: 'G' } }]]));
-    expect(entry.updates.every(([, options]) => isSilkWrite(options))).toBe(true);
+    expect(entry.updates.every(([, options]) => isGarnWrite(options))).toBe(true);
   });
 
   it('round-trips World-only meta values (merge draft) and their removal', async () => {
@@ -74,7 +74,7 @@ describe('Silk Working Copy journal', () => {
       picks: [{ recordId: 'a', field: '/name', side: 'ours' }],
     });
     const [changed] = entry.updates.at(-1) ?? [{}];
-    expect(remotePatch(entry, changed, SILK_WRITE, 'gm', 'player')).toEqual({
+    expect(remotePatch(entry, changed, GARN_WRITE, 'gm', 'player')).toEqual({
       meta: { mergeDraft: { picks: [{ recordId: 'a', field: '/name', side: 'ours' }] } },
     });
 
@@ -82,20 +82,20 @@ describe('Silk Working Copy journal', () => {
     expect(reload().meta('mergeDraft')).toBeUndefined();
   });
 
-  it('turns another client’s update into a patch and ignores its own Silk writes', async () => {
+  it('turns another client’s update into a patch and ignores its own Garn writes', async () => {
     const entry = fakeEntry();
     await journalBackend(() => entry).write({ binding, set: [gareth], delete: ['old'] });
     const [changed] = entry.updates[0] ?? [{}];
 
-    expect(remotePatch(entry, changed, SILK_WRITE, 'gm', 'player')).toEqual({
+    expect(remotePatch(entry, changed, GARN_WRITE, 'gm', 'player')).toEqual({
       binding,
       set: [gareth],
       delete: ['old'],
     });
-    expect(remotePatch(entry, changed, SILK_WRITE, 'gm', 'gm')).toBeNull();
+    expect(remotePatch(entry, changed, GARN_WRITE, 'gm', 'gm')).toBeNull();
     // v14 delivers deletions to other clients as a ForcedDeletion operator, not `-=key`.
-    const forced = { flags: { silk: { records: { gone: { __$OPERATOR$__: 'ForcedDeletion' } } } } };
-    expect(remotePatch(entry, forced, SILK_WRITE, 'gm', 'player')).toEqual({ delete: ['gone'] });
+    const forced = { flags: { garn: { records: { gone: { __$OPERATOR$__: 'ForcedDeletion' } } } } };
+    expect(remotePatch(entry, forced, GARN_WRITE, 'gm', 'player')).toEqual({ delete: ['gone'] });
     expect(remotePatch({ ...entry, flags: {} }, changed, {}, 'gm', 'player')).toBeNull();
   });
 
@@ -115,13 +115,13 @@ describe('Silk Working Copy journal', () => {
     await ensureWorkingCopyJournal(deps);
     await ensureWorkingCopyJournal(deps);
 
-    expect(created.folders).toEqual([{ name: 'Silk (internal)', type: 'JournalEntry' }]);
+    expect(created.folders).toEqual([{ name: 'Garn (internal)', type: 'JournalEntry' }]);
     expect(created.entries).toEqual([
       {
-        name: 'Silk Working Copy',
+        name: 'Garn Working Copy',
         folder: 'f1',
         ownership: { default: 0 },
-        flags: { silk: { workingCopy: true, records: {} } },
+        flags: { garn: { workingCopy: true, records: {} } },
       },
     ]);
   });

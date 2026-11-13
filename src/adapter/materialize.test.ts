@@ -6,7 +6,7 @@ function setup(activeGM = true) {
   const hooks = new Map<string, (...args: unknown[]) => void>();
   const synced: string[] = [];
   const materializer = {
-    elementIdOf: (doc: { flags?: { silk?: { id?: string } } }) => doc.flags?.silk?.id,
+    elementIdOf: (doc: { flags?: { garn?: { id?: string } } }) => doc.flags?.garn?.id,
     sync: async (id: string) => void synced.push(id),
   } as unknown as Materializer;
   registerMaterializeHooks(materializer, {
@@ -17,7 +17,7 @@ function setup(activeGM = true) {
   return { fire, synced };
 }
 
-const actor = { flags: { silk: { id: 'el1' } } };
+const actor = { flags: { garn: { id: 'el1' } } };
 
 describe('Foundry edits flow back (spec §7)', () => {
   it('syncs the element of an updated doc, or of an edited page’s journal', () => {
@@ -29,9 +29,9 @@ describe('Foundry edits flow back (spec §7)', () => {
     expect(synced).toEqual(['el1', 'el1', 'el1']);
   });
 
-  it('ignores Silk’s own writes, non-active GMs and unlinked token actors', () => {
+  it('ignores Garn’s own writes, non-active GMs and unlinked token actors', () => {
     const { fire, synced } = setup();
-    fire('updateActor', actor, {}, { silk: { internal: true } }, 'user');
+    fire('updateActor', actor, {}, { garn: { internal: true } }, 'user');
     fire('updateActor', { ...actor, isToken: true }, {}, {}, 'user');
     expect(synced).toEqual([]);
     const other = setup(false);

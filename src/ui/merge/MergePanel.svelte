@@ -128,65 +128,65 @@
       ? `${a.adventure} · ${a.campaign ?? ''} · ${date(a.date)}`
       : `${a.label} · ${date(a.date)}`;
   const recordTitle = (r: RecordView) =>
-    t(`SILK.Merge.Record.${r.kind}`) +
-    (r.badge === 'same' ? '' : ` · ${t(`SILK.Merge.Badge.${r.badge}`)}`);
+    t(`GARN.Merge.Record.${r.kind}`) +
+    (r.badge === 'same' ? '' : ` · ${t(`GARN.Merge.Badge.${r.badge}`)}`);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="silk-merge" data-silk-merge onkeydown={onKeydown} tabindex="-1">
+<div class="garn-merge" data-garn-merge onkeydown={onKeydown} tabindex="-1">
   {#if !view}
-    <p class="empty">{t('SILK.Merge.NoChanges')}</p>
+    <p class="empty">{t('GARN.Merge.NoChanges')}</p>
   {:else}
     <header class="bar">
-      <div class="title" data-silk-merge-title data-silk-merge-kind={view.draft.kind}>
+      <div class="title" data-garn-merge-title data-garn-merge-kind={view.draft.kind}>
         {#if join}
-          {t('SILK.Merge.JoinHeading')}
+          {t('GARN.Merge.JoinHeading')}
           <strong class="adv">{view.title.adventure}</strong>
-          {t('SILK.Merge.JoinInto')}
+          {t('GARN.Merge.JoinInto')}
           <strong class="canon">{view.title.campaign}</strong>
         {:else if view.draft.kind === 'canonEdit'}
-          {t('SILK.Merge.CanonEditHeading')}
+          {t('GARN.Merge.CanonEditHeading')}
           <strong class="adv">{view.title.adventure}</strong>
         {:else}
-          {t('SILK.Merge.Heading')}
+          {t('GARN.Merge.Heading')}
           <strong class="adv">{view.title.adventure}</strong>
           <span class="muted">({view.title.campaign})</span>
-          {t('SILK.Merge.Into')}
+          {t('GARN.Merge.Into')}
         {/if}
       </div>
       <div class="chips">
         {#each badges as b (b)}
           {#if countOf(b) && (b !== 'canonOnly' || showCanonOnly)}
-            <span class="chip {b}" data-silk-merge-count={b}
-              >{t(`SILK.Merge.Badge.${b}`)} {countOf(b)}</span
+            <span class="chip {b}" data-garn-merge-count={b}
+              >{t(`GARN.Merge.Badge.${b}`)} {countOf(b)}</span
             >
           {/if}
         {/each}
         {#if view.counts.moves}
-          <span class="chip layout" data-silk-merge-moves={view.counts.moves}
-            >{view.counts.moves} {t('SILK.Merge.Layout')}</span
+          <span class="chip layout" data-garn-merge-moves={view.counts.moves}
+            >{view.counts.moves} {t('GARN.Merge.Layout')}</span
           >
         {/if}
       </div>
       <span class="grow"></span>
       {#if !join}
         <label class="toggle">
-          <input type="checkbox" bind:checked={showCanonOnly} data-silk-merge-canon-only />
-          {t('SILK.Merge.ShowCanonOnly')}
+          <input type="checkbox" bind:checked={showCanonOnly} data-garn-merge-canon-only />
+          {t('GARN.Merge.ShowCanonOnly')}
         </label>
-        <button type="button" onclick={() => run('merge.nextConflict')} data-silk-merge-next>
-          {t('SILK.Commands.merge.nextConflict')} ⏎
+        <button type="button" onclick={() => run('merge.nextConflict')} data-garn-merge-next>
+          {t('GARN.Commands.merge.nextConflict')} ⏎
         </button>
       {/if}
     </header>
-    <div class="received" data-silk-merge-received hidden={join}>
+    <div class="received" data-garn-merge-received hidden={join}>
       {#if view.received.length}
-        {t('SILK.Merge.Received')}:
+        {t('GARN.Merge.Received')}:
         {#each view.received as m (m.commit)}
           <span class="chip canon">{m.adventure} · {m.campaign} · {date(m.date)}</span>
         {/each}
       {:else}
-        <span class="muted">{t('SILK.Merge.NoneReceived')}</span>
+        <span class="muted">{t('GARN.Merge.NoneReceived')}</span>
       {/if}
     </div>
 
@@ -208,17 +208,17 @@
         >
           <Background gap={40} />
         </SvelteFlow>
-        <div class="legend muted">{t('SILK.Merge.ResultHint')}</div>
+        <div class="legend muted">{t('GARN.Merge.ResultHint')}</div>
       </div>
 
-      <aside class="drawer" data-silk-merge-drawer={record?.id ?? ''}>
+      <aside class="drawer" data-garn-merge-drawer={record?.id ?? ''}>
         {#if !record}
-          <p class="muted">{t('SILK.Merge.ClickNode')}</p>
+          <p class="muted">{t('GARN.Merge.ClickNode')}</p>
         {:else}
           <h3>{name(record)}</h3>
           <div class="muted">
             {record.kind} · {t(
-              `SILK.Merge.Badge.${record.badge === 'same' ? 'changed' : record.badge}`,
+              `GARN.Merge.Badge.${record.badge === 'same' ? 'changed' : record.badge}`,
             )}
           </div>
 
@@ -233,19 +233,19 @@
               : w.open
                 ? null
                 : w.auto}
-            <div class="whole" class:open={w.open} data-silk-merge-field="">
-              <span>{t('SILK.Merge.Whole')}</span>
+            <div class="whole" class:open={w.open} data-garn-merge-field="">
+              <span>{t('GARN.Merge.Whole')}</span>
               <button
                 type="button"
                 class:sel={sel === keep}
                 onclick={() => pickWhole(record, keep)}
-                data-silk-merge-whole="keep">{t('SILK.Merge.Keep')}</button
+                data-garn-merge-whole="keep">{t('GARN.Merge.Keep')}</button
               >
               <button
                 type="button"
                 class:sel={sel === drop}
                 onclick={() => pickWhole(record, drop)}
-                data-silk-merge-whole="delete">{t('SILK.Merge.Delete')}</button
+                data-garn-merge-whole="delete">{t('GARN.Merge.Delete')}</button
               >
             </div>
           {/if}
@@ -254,7 +254,7 @@
             {@const own = decisions(r)}
             {@const rest = autos(r)}
             {#if own.length || rest.length}
-              <section class="record" data-silk-merge-record={r.id}>
+              <section class="record" data-garn-merge-record={r.id}>
                 {#if r !== record}<h4>{recordTitle(r)}</h4>{/if}
                 {#if r.kind === 'eventScene' && r.rows.some((row) => row.kind === 'token')}
                   <MergeMinimap record={r} {t} />
@@ -264,7 +264,7 @@
                 {/if}
                 {#if rest.length}
                   <details class="auto" open={!anyDecision && !record.whole}>
-                    <summary>{t('SILK.Merge.AutoMerged')} ({rest.length})</summary>
+                    <summary>{t('GARN.Merge.AutoMerged')} ({rest.length})</summary>
                     {@render table(r, rest)}
                   </details>
                 {/if}
@@ -272,7 +272,7 @@
             {/if}
           {/each}
           {#if !record.whole && drawer.every((r) => !decisions(r).length && !autos(r).length)}
-            <p class="muted">{t('SILK.Merge.NoChanges')}</p>
+            <p class="muted">{t('GARN.Merge.NoChanges')}</p>
           {/if}
         {/if}
       </aside>
@@ -282,26 +282,26 @@
       <span class="muted"
         >{t(
           join
-            ? 'SILK.Merge.JoinFooter'
+            ? 'GARN.Merge.JoinFooter'
             : view.draft.kind === 'canonEdit'
-              ? 'SILK.Merge.CanonEditFooter'
-              : 'SILK.Merge.Footer',
+              ? 'GARN.Merge.CanonEditFooter'
+              : 'GARN.Merge.Footer',
         )}</span
       >
       <span class="grow"></span>
-      <button type="button" onclick={() => run('merge.cancel')} data-silk-merge-cancel>
-        {t('SILK.Commands.merge.cancel')}
+      <button type="button" onclick={() => run('merge.cancel')} data-garn-merge-cancel>
+        {t('GARN.Commands.merge.cancel')}
       </button>
       <button
         type="button"
         class="primary"
         disabled={view.counts.open > 0}
         onclick={() => run('merge.confirm')}
-        data-silk-merge-confirm
+        data-garn-merge-confirm
       >
         {view.counts.open
-          ? t('SILK.Merge.ConflictsLeft', { n: String(view.counts.open) })
-          : t('SILK.Commands.merge.confirm')}
+          ? t('GARN.Merge.ConflictsLeft', { n: String(view.counts.open) })
+          : t('GARN.Commands.merge.confirm')}
       </button>
     </footer>
   {/if}
@@ -313,17 +313,17 @@
     class="pick {side}"
     class:sel={chosen(row) === side}
     onclick={() => pick(row, side)}
-    data-silk-merge-cell={side}
+    data-garn-merge-cell={side}
   >
-    {#if value === undefined}<span class="none">{t('SILK.Merge.None')}</span>{:else}{shown(
+    {#if value === undefined}<span class="none">{t('GARN.Merge.None')}</span>{:else}{shown(
         value,
       )}{/if}
     {#if side === 'ours' && row.by}
-      <span class="chip canon by" data-silk-merge-by>{by(row.by)}</span>
+      <span class="chip canon by" data-garn-merge-by>{by(row.by)}</span>
     {/if}
     {#if side === 'theirs' && row.from}
-      <span class="chip adv by" data-silk-merge-from
-        >{t('SILK.Merge.From', { name: row.from })}</span
+      <span class="chip adv by" data-garn-merge-from
+        >{t('GARN.Merge.From', { name: row.from })}</span
       >
     {/if}
   </td>
@@ -333,15 +333,15 @@
   <table class="fields">
     <thead>
       <tr>
-        <th>{t('SILK.Merge.Field')}</th>
+        <th>{t('GARN.Merge.Field')}</th>
         {#if sides.includes('base')}<th>{t(view?.columns.base ?? '')}</th>{/if}
         <th class="canon">{t(view?.columns.ours ?? '')}</th>
         <th class="adv">{t(view?.columns.theirs ?? '')}</th>
-        <th>{t('SILK.Merge.Result')}</th>
+        <th>{t('GARN.Merge.Result')}</th>
       </tr>
     </thead>
     {#each sectionsOf(rows) as group (group.section)}
-      <tbody data-silk-merge-section={group.section}>
+      <tbody data-garn-merge-section={group.section}>
         <tr class="section"><th colspan={sides.length + 2}>{t(group.section)}</th></tr>
         {#each group.rows as row (row.field)}
           {@const result = formatRowValue(row, row.result)}
@@ -349,25 +349,25 @@
             class:open={row.open}
             class:focused={focus?.recordId === r.id &&
               (focus.field === row.field || focus.field?.startsWith(`${row.field}/`))}
-            data-silk-merge-field={row.field}
-            data-silk-merge-kind={row.kind}
-            data-silk-merge-open={row.open ? '' : undefined}
+            data-garn-merge-field={row.field}
+            data-garn-merge-kind={row.kind}
+            data-garn-merge-open={row.open ? '' : undefined}
           >
             <th scope="row">{row.label}</th>
             {#each sides as side (side)}
               {@render cell(row, side)}
             {/each}
-            <td class="result" data-silk-merge-result>
+            <td class="result" data-garn-merge-result>
               {#if editing && editing.recordId === r.id && editing.field === row.field}
-                <textarea bind:value={editing.text} data-silk-merge-text></textarea>
-                <button type="button" onclick={useText} data-silk-merge-use-text>
-                  {t('SILK.Merge.UseText')}
+                <textarea bind:value={editing.text} data-garn-merge-text></textarea>
+                <button type="button" onclick={useText} data-garn-merge-use-text>
+                  {t('GARN.Merge.UseText')}
                 </button>
               {:else}
                 {#if row.open}
-                  <span class="chip conflict">{t('SILK.Merge.Open')}</span>
+                  <span class="chip conflict">{t('GARN.Merge.Open')}</span>
                 {:else if result === undefined}
-                  <span class="none">{t('SILK.Merge.None')}</span>
+                  <span class="none">{t('GARN.Merge.None')}</span>
                 {:else}
                   {shown(result)}
                 {/if}
@@ -377,7 +377,7 @@
                     class="ghost"
                     onclick={() =>
                       (editing = { recordId: r.id, field: row.field, text: combinedText(row) })}
-                    data-silk-merge-combine>✎ {t('SILK.Merge.WriteCombined')}</button
+                    data-garn-merge-combine>✎ {t('GARN.Merge.WriteCombined')}</button
                   >
                 {/if}
               {/if}
@@ -390,7 +390,7 @@
 {/snippet}
 
 <style>
-  .silk-merge {
+  .garn-merge {
     --merge-canon: #6fa8dc;
     --merge-adv: #e8915a;
     --merge-conf: #f1c232;

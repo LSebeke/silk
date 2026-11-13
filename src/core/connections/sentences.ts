@@ -1,7 +1,7 @@
 /**
  * Connection sentences for the Connections journal page (spec §5 "In journals"). Pure.
  * Free-form: directed "A loves B", mutual "A and B are friends". Behavioural types use
- * fixed localised phrases (`SILK.Connection.Sentence.<type>`).
+ * fixed localised phrases (`GARN.Connection.Sentence.<type>`).
  */
 import type { Snapshot } from '../canon';
 import { readElement } from '../elements';
@@ -11,7 +11,7 @@ import { connectionsIn } from './rules';
 /** Foundry `i18n.format`: `{from}`/`{to}`/`{label}` placeholders. */
 export type Format = (key: string, data: Record<string, string>) => string;
 
-const KEY = 'SILK.Connection.Sentence';
+const KEY = 'GARN.Connection.Sentence';
 
 export function connectionSentence(
   c: Connection,

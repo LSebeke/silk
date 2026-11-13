@@ -1,7 +1,7 @@
 /**
  * The world's token ring style (`core.dynamicTokenRing`, v1.1 §G.3): its spritesheet, read
  * once per session, for the editor preview (#135) and the ring edges the subject file is cut
- * to (#171). Silk never changes the style; Foundry draws the ring.
+ * to (#171). Garn never changes the style; Foundry draws the ring.
  */
 import { DEFAULT_EDGES, type Edges } from '../core/portrait';
 
@@ -121,7 +121,7 @@ export function foundryRingStyle() {
         const response = await fetch(url);
         return response.ok ? ((await response.json()) as SheetJson) : undefined;
       } catch (error) {
-        console.warn('Silk | ring style not loaded', error);
+        console.warn('Garn | ring style not loaded', error);
         return undefined;
       }
     },
