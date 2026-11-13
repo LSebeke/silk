@@ -1,5 +1,5 @@
 /**
- * Shared base for every Silk window (spec §2): an ApplicationV2 whose content is a
+ * Shared base for every Garn window (spec §2): an ApplicationV2 whose content is a
  * Svelte 5 component, mounted once in `_replaceHTML`. Later renders only refresh props.
  *
  * Windows that set `persistWindowState` keep position and detached state in the client

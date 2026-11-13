@@ -23,7 +23,7 @@ function fileJson(files: MemoryFiles, path: string) {
 describe('canon store', () => {
   it('reads back a committed snapshot after reopening the canon', async () => {
     const files = createMemoryFiles();
-    const canon = await createCanon(files, { name: 'Aventurien', createdWith: 'silk 0.1.0' });
+    const canon = await createCanon(files, { name: 'Aventurien', createdWith: 'garn 0.1.0' });
 
     const head = await canon.commit({
       snapshot: snapshot(gareth, knows),
@@ -43,8 +43,8 @@ describe('canon store', () => {
 
   it('gives each canon a random 128-bit id and writes its manifest', async () => {
     const files = createMemoryFiles();
-    const a = await createCanon(files, { name: 'A', createdWith: 'silk 0.1.0' });
-    const b = await createCanon(files, { name: 'B', createdWith: 'silk 0.1.0' });
+    const a = await createCanon(files, { name: 'A', createdWith: 'garn 0.1.0' });
+    const b = await createCanon(files, { name: 'B', createdWith: 'garn 0.1.0' });
 
     expect(a.manifest.id).toMatch(/^[0-9a-f]{32}$/);
     expect(a.manifest.id).not.toBe(b.manifest.id);
@@ -52,13 +52,13 @@ describe('canon store', () => {
       id: a.manifest.id,
       name: 'A',
       formatVersion: 1,
-      createdWith: 'silk 0.1.0',
+      createdWith: 'garn 0.1.0',
     });
   });
 
   it('uploads only changed blobs, then the commit, then the ref last', async () => {
     const files = createMemoryFiles();
-    const canon = await createCanon(files, { name: 'A', createdWith: 'silk 0.1.0' });
+    const canon = await createCanon(files, { name: 'A', createdWith: 'garn 0.1.0' });
     const id = canon.manifest.id;
     const first = await canon.commit({
       snapshot: snapshot(gareth, knows),
@@ -88,7 +88,7 @@ describe('canon store', () => {
 
   it('keeps Adventures as refs that commits move without touching main', async () => {
     const files = createMemoryFiles();
-    const canon = await createCanon(files, { name: 'A', createdWith: 'silk 0.1.0' });
+    const canon = await createCanon(files, { name: 'A', createdWith: 'garn 0.1.0' });
     const base = await canon.commit({
       snapshot: snapshot(gareth),
       parents: [],
@@ -139,7 +139,7 @@ describe('canon store', () => {
 
     async function v1Canon() {
       const files = createMemoryFiles();
-      const canon = await createCanon(files, { name: 'Old', createdWith: 'silk 0.1.0' });
+      const canon = await createCanon(files, { name: 'Old', createdWith: 'garn 0.1.0' });
       const legacy = { kind: 'element', id: 'el-gareth', data: { title: 'Gareth' } } as const;
       const head = await canon.commit({
         snapshot: snapshot(legacy as unknown as CanonRecord),
@@ -186,7 +186,7 @@ describe('canon store', () => {
       expect(canon.manifest.formatVersion).toBe(2);
     });
 
-    it('opens a canon written by a newer Silk read-only', async () => {
+    it('opens a canon written by a newer Garn read-only', async () => {
       const { files, id, head } = await v1Canon();
       const manifest = fileJson(files, `${id}/canon.json`);
       files.contents.set(`${id}/canon.json`, JSON.stringify({ ...manifest, formatVersion: 3 }));
@@ -210,7 +210,7 @@ describe('canon store', () => {
       expect(files.writes).toEqual([]);
     });
 
-    it('turns read-only when it meets a blob from a newer Silk', async () => {
+    it('turns read-only when it meets a blob from a newer Garn', async () => {
       const { files, id, head } = await v1Canon();
       const canon = await openCanon(files, id, v2);
       const [blobHash] = Object.values((await canon.readCommit(head)).tree);
@@ -224,7 +224,7 @@ describe('canon store', () => {
   });
 
   it('refuses to commit to an Adventure that does not exist', async () => {
-    const canon = await createCanon(createMemoryFiles(), { name: 'A', createdWith: 'silk 0.1.0' });
+    const canon = await createCanon(createMemoryFiles(), { name: 'A', createdWith: 'garn 0.1.0' });
     await expect(
       canon.commit({
         snapshot: snapshot(gareth),
@@ -275,7 +275,7 @@ describe('canon store', () => {
 
   it('stores Campaigns and their Revelation Maps outside the history, overwritten in place', async () => {
     const files = createMemoryFiles();
-    const canon = await createCanon(files, { name: 'A', createdWith: 'silk 0.1.0' });
+    const canon = await createCanon(files, { name: 'A', createdWith: 'garn 0.1.0' });
     const id = canon.manifest.id;
     const campaign = { id: 'cmp-1', name: 'Gruppe 1', closed: false, createdAt: '2026-10-01' };
 

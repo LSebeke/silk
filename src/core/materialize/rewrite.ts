@@ -105,12 +105,12 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
     const gone = pages.filter((p) => !wanted.has(p._id)).map((p) => p._id);
     if (gone.length) await docs.deletePages(holder.uuid, gone);
     if (!notes.length) return;
-    let category = holder.flags.silk.playerNotes;
+    let category = holder.flags.garn.playerNotes;
     if (!category || !holder.categories?.some((c) => c._id === category)) {
       if (!deps.newId || !deps.localize) return;
       const created = playerNotesCategory(deps.newId(), { localize: deps.localize });
       await docs.createCategories(holder.uuid, [created]);
-      await docs.update(holder.uuid, { 'flags.silk.playerNotes': created._id });
+      await docs.update(holder.uuid, { 'flags.garn.playerNotes': created._id });
       category = created._id;
     }
     let last = pages.at(-1)?.sort ?? 0;
@@ -122,14 +122,14 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
       } else if (
         current.name !== note.name ||
         (current.text?.content ?? '') !== note.text ||
-        current.flags?.silk?.campaign !== note.campaign
+        current.flags?.garn?.campaign !== note.campaign
       )
         await docs.updatePage(holder.uuid, note._id, {
           name: note.name,
           'text.content': note.text,
           ...(note.campaign
-            ? { 'flags.silk.campaign': note.campaign }
-            : { 'flags.silk.-=campaign': null }),
+            ? { 'flags.garn.campaign': note.campaign }
+            : { 'flags.garn.-=campaign': null }),
         });
     }
   }
@@ -146,7 +146,7 @@ export function createDocRewriter(deps: DocRewriterDeps): DocRewriter {
     if (sheetChanged && sheet?.documentName === 'Actor')
       await writeItems(found.main.uuid, readSheet(before.get(id))?.doc.items, sheet.doc.items);
     await materializer.writeName(el.id);
-    await materializer.setImage(el.id, el.img ?? '');
+    await materializer.setImage(el.id, { img: el.img ?? '' });
     if (el.fields) await materializer.setFields(el.id, el.fields);
     await writeBlocks(el);
     await writeNotes(el);

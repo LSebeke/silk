@@ -1,6 +1,6 @@
 /**
  * One-time GM notice when a non-GM role can browse files (spec §12, ADR 0002):
- * file browsing lists `Data/silk/`, which exposes the unguessable Canon path.
+ * file browsing lists `Data/garn/`, which exposes the unguessable Canon path.
  */
 
 /** Foundry `CONST.USER_ROLES` below Assistant GM, with their core label keys. */
@@ -29,7 +29,7 @@ export function showFileBrowseNotice(deps: FileBrowseNoticeDeps): boolean {
   const exposed = NON_GM_ROLES.filter(({ role }) => granted.includes(role));
   if (exposed.length === 0) return false;
   const roles = exposed.map(({ label }) => deps.localize(label)).join(', ');
-  deps.warn(deps.localize('SILK.Notice.FileBrowse', { roles }));
+  deps.warn(deps.localize('GARN.Notice.FileBrowse', { roles }));
   deps.markShown();
   return true;
 }

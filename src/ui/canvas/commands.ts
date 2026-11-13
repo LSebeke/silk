@@ -15,7 +15,7 @@ export function canvasUiCommands(
   return [
     {
       name: 'canvas.open',
-      title: 'SILK.Commands.canvas.open',
+      title: 'GARN.Commands.canvas.open',
       available: (ctx) => ctx.isGM || !!player,
       async run() {
         if (player && !player.isGM()) return player.open();

@@ -114,7 +114,7 @@ export function setup(opts: { mode?: MaterializeMode } = {}) {
   /** The element's Scene (live). */
   const scene = (id: string): SceneSnapshot =>
     must(
-      [...scenes.all.values()].find((s) => s.flags.silk?.sceneOf === id),
+      [...scenes.all.values()].find((s) => s.flags.garn?.sceneOf === id),
       `Scene of ${id}`,
     );
   const actorId = (id: string) => must(element(id).uuid).replace(/^Actor\./, '');

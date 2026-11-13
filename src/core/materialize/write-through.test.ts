@@ -12,10 +12,10 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     expect(t.companion(person).name).toBe('Alrik');
     const q = t.doc(quest);
     expect(q.name).toBe('The Ring');
-    const system = page(q, q.flags.silk.quest).system as {
+    const system = page(q, q.flags.garn.quest).system as {
       quests: Record<string, { title: string }>;
     };
-    expect(system.quests[q.flags.silk.questKey]?.title).toBe('The Ring');
+    expect(system.quests[q.flags.garn.questKey]?.title).toBe('The Ring');
   });
 
   it('setImage: Actor/Item img, journal Cover page, Ghost and Note in the record', async () => {
@@ -31,12 +31,99 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     await t.registry.run('element.setImage', { id: place, img: 'map.webp' });
     await t.registry.run('element.setImage', { id: note, img: 'n.webp' });
     expect(t.doc(person).img).toBe('b.webp');
-    expect(page(t.doc(place), t.doc(place).flags.silk.cover).src).toBe('map.webp');
+    expect(page(t.doc(place), t.doc(place).flags.garn.cover).src).toBe('map.webp');
     expect([t.element(person).img, t.element(place).img, t.element(note).img]).toEqual([
       'b.webp',
       'map.webp',
       'n.webp',
     ]);
+  });
+
+  it('setImage token (v1.1 §G.3): prototype, subject file and the placed tokens', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.setImage', {
+      id,
+      img: 'alrik.webp',
+      token: { sameAsImage: true, ring: { enabled: true }, anchor: { x: 0.4, y: 0.3 } },
+    });
+    const doc = t.doc(id) as ReturnType<typeof t.doc> & {
+      prototypeToken: {
+        texture: { src: string };
+        ring: { enabled: boolean; subject: { texture: string } };
+      };
+    };
+    expect(doc.img).toBe('alrik.webp');
+    // The pose is baked into the subject file; the texture stays the uncropped image.
+    expect(doc.prototypeToken.texture).toEqual({ src: 'alrik.webp' });
+    expect(doc.prototypeToken.ring.enabled).toBe(true);
+    const [subject] = t.subjects;
+    expect(subject?.spec).toMatchObject({
+      src: 'alrik.webp',
+      pose: { anchorX: 0.4, anchorY: 0.3, scale: 1 },
+    });
+    expect(doc.prototypeToken.ring.subject.texture).toBe(subject?.file);
+    expect(t.tokens).toEqual([
+      {
+        actor: doc.uuid,
+        data: expect.objectContaining({
+          'texture.src': 'alrik.webp',
+          'ring.subject.texture': subject?.file,
+        }),
+      },
+    ]);
+  });
+
+  it('setImage image only, token same as sheet image (#166): the tokens follow', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.setImage', { id, img: 'a.webp', token: { sameAsImage: true } });
+    await t.registry.run('element.setImage', { id, img: 'b.webp' });
+    const doc = t.doc(id) as ReturnType<typeof t.doc> & {
+      prototypeToken: { texture: { src: string } };
+    };
+    expect(doc.prototypeToken.texture.src).toBe('b.webp');
+    expect(t.tokens.at(-1)).toEqual({
+      actor: doc.uuid,
+      data: expect.objectContaining({ 'texture.src': 'b.webp' }),
+    });
+  });
+
+  it('setImage on a Ghost: the image to the record; a token change Materializes first', async () => {
+    const t = setup();
+    const id = await t.create('creature', 'Wolf');
+    await t.registry.run('element.setImage', { id, img: 'wolf.webp' });
+    expect(t.element(id).uuid).toBeUndefined();
+    await t.registry.run('element.setImage', { id, token: { scale: 1.5 } });
+    expect(t.toasts).toHaveLength(1);
+    const doc = t.doc(id);
+    expect(doc.img).toBe('wolf.webp');
+    expect(doc.flags.garn.pose).toEqual({ anchorX: 0.5, anchorY: 0.5, scale: 1.5 });
+  });
+
+  it('setImage on a Ghost: a sheet image with the token same as it stays in the record', async () => {
+    const t = setup();
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.setImage', {
+      id,
+      img: 'alrik.webp',
+      token: { sameAsImage: true },
+    });
+    expect(t.element(id)).toMatchObject({ img: 'alrik.webp' });
+    expect(t.element(id).uuid).toBeUndefined();
+    expect(t.toasts).toHaveLength(0);
+    expect(t.materializer.look(id)).toMatchObject({
+      img: 'alrik.webp',
+      token: 'alrik.webp',
+      sameAsImage: true,
+      ring: { enabled: false },
+    });
+  });
+
+  it('setImage token on a class without tokens is rejected', async () => {
+    const t = setup();
+    const id = await t.create('location', 'L');
+    await expect(t.registry.run('element.setImage', { id, token: { scale: 2 } })).rejects.toThrow();
   });
 
   it('Info Blocks of a Materialized element are pages: create, edit, delete', async () => {
@@ -116,12 +203,12 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
         type: 'text',
         sort: 1,
         ownership: { default: 3 },
-        category: companion.flags.silk.playerNotes,
+        category: companion.flags.garn.playerNotes,
         text: { content: 'player' },
       },
     );
     const journal = t.doc(place);
-    const cover = page(journal, journal.flags.silk.cover);
+    const cover = page(journal, journal.flags.garn.cover);
     cover.src = 'map.webp';
     await t.materializer.sync(person);
     await t.materializer.sync(place);
@@ -149,7 +236,7 @@ describe('write-through and Foundry edits flowing back (spec §7)', () => {
     expect(t.workingCopy.get(id)).toBe(before);
   });
 
-  it('tags are Silk-owned, sorted and unique', async () => {
+  it('tags are Garn-owned, sorted and unique', async () => {
     const t = setup();
     const a = await t.create('note', 'A');
     const b = await t.create('note', 'B');
@@ -192,7 +279,7 @@ describe('element.changeClass (spec §4 Class change)', () => {
     const id = await t.create('note', 'Job');
     await t.registry.run('element.changeClass', { id, class: 'quest' });
     const doc = t.doc(id);
-    expect(page(doc, doc.flags.silk.quest).type).toBe('dsaquestlog');
+    expect(page(doc, doc.flags.garn.quest).type).toBe('dsaquestlog');
   });
 
   it('Person → Creature changes the Actor type and keeps the Info Blocks', async () => {
@@ -205,5 +292,54 @@ describe('element.changeClass (spec §4 Class change)', () => {
       'Personality',
       'Secrets',
     ]);
+  });
+});
+
+describe('infoBlock.move: reorder among Info Blocks (v1.1 §C.1)', () => {
+  it('a Ghost reorders its record; `index` is the new 0-based position among Info Blocks', async () => {
+    const t = setup();
+    const id = await t.create('person', 'Alrik');
+    const [appearance, , secrets] = t.element(id).infoBlocks.map((b) => b._id);
+    await t.registry.run('infoBlock.move', { id: secrets, index: 0 });
+    expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual([
+      'Secrets',
+      'Appearance',
+      'Personality',
+    ]);
+    await t.registry.run('infoBlock.move', { id: appearance, index: 2 });
+    expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual([
+      'Secrets',
+      'Personality',
+      'Appearance',
+    ]);
+  });
+
+  it('a Materialized journal moves the page; Cover, quest and Connections keep their places', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('quest', 'Ring');
+    const [hook] = t.element(id).infoBlocks.map((b) => b._id);
+    await t.registry.run('infoBlock.move', { id: hook, index: 5 });
+    expect(pageNames(t.doc(id))).toEqual(['Cover', 'Ring', 'Resolution', 'Hook', 'Connections']);
+    expect(t.element(id).infoBlocks.map((b) => b.name)).toEqual(['Resolution', 'Hook']);
+  });
+
+  it('a Materialized actor moves the Companion Journal page', async () => {
+    const t = setup({ mode: 'immediate' });
+    const id = await t.create('creature', 'Wolf');
+    const [, description] = t.element(id).infoBlocks.map((b) => b._id);
+    await t.registry.run('infoBlock.move', { id: description, index: 0 });
+    expect(pageNames(t.companion(id))).toEqual(['Description', 'Appearance', 'Connections']);
+  });
+});
+
+describe('infoBlock.open: the "open in Foundry" link (v1.1 §C.1)', () => {
+  it('opens the journal at the block page, Materializing a Ghost first', async () => {
+    const t = setup();
+    const id = await t.create('creature', 'Wolf');
+    const [, description] = t.element(id).infoBlocks.map((b) => b._id);
+    await t.registry.run('infoBlock.open', { id: description });
+    const companion = t.companion(id);
+    expect(t.docs.opened).toEqual([`${companion.uuid}.JournalEntryPage.${description}`]);
+    expect(t.toasts.length).toBe(1);
   });
 });

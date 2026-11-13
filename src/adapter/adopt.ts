@@ -3,13 +3,13 @@
  * sheet header, dsa5 inventory item menu; canvas drops live in the canvas), copied-id
  * stripping on create, the prompts, and `AdoptFoundry` over the running Foundry.
  * Thin: decisions live in `src/core/adopt`. Hooks fire on every client; menus are GM only,
- * create reactions run on the active GM and skip Silk's own writes.
+ * create reactions run on the active GM and skip Garn's own writes.
  */
 import type { Adopt, AdoptFolder, AdHocDoc, AdoptFoundry, UseForAnswer } from '../core/adopt';
 import type { PipelineOrigin } from '../core/canvas';
 import type { ElementClassId, Point } from '../core/elements';
 import { snapshot, type FoundryDoc } from './foundry-docs';
-import { SILK_WRITE, isSilkWrite } from './working-copy-journal';
+import { GARN_WRITE, isGarnWrite } from './working-copy-journal';
 
 const ICON = 'fa-solid fa-diagram-project';
 /** Docs Adopt accepts (§6 Class inference). */
@@ -24,7 +24,7 @@ export interface StarterDeps {
   run(name: string, args?: object): Promise<unknown>;
   pipeline: {
     open(origin: PipelineOrigin): void;
-    create(origin: PipelineOrigin, id: ElementClassId): Promise<string>;
+    create(origin: PipelineOrigin, id: ElementClassId): Promise<string | undefined>;
   };
   /** Canvas viewport centre (after `canvas.open`). */
   center(): Point;
@@ -51,7 +51,7 @@ export function createAdoptStarter(deps: StarterDeps) {
   return async function start(uuid: string, options: StartOptions = {}): Promise<void> {
     const worldUuid = uuid.startsWith('Compendium.') ? await deps.importFromCompendium(uuid) : uuid;
     const info = deps.inspect(worldUuid);
-    if (!info) throw new Error(deps.localize('SILK.Adopt.Missing', { uuid }));
+    if (!info) throw new Error(deps.localize('GARN.Adopt.Missing', { uuid }));
     if (info.existing) {
       // Selects and flashes its Node.
       await deps.run('canvas.open', {});
@@ -59,7 +59,7 @@ export function createAdoptStarter(deps: StarterDeps) {
       return;
     }
     if ('refused' in info.inference) {
-      deps.error(deps.localize('SILK.Adopt.Refused', { name: info.name }));
+      deps.error(deps.localize('GARN.Adopt.Refused', { name: info.name }));
       return;
     }
     let alsoAdoptActor: boolean | undefined;
@@ -106,7 +106,7 @@ export interface AdoptHookDeps {
   isActiveGM(): boolean;
   start(uuid: string): Promise<void>;
   run(name: string, args: object): Promise<unknown>;
-  /** The doc is a Story Element already (no "Adopt into Silk" entry). */
+  /** The doc is a Story Element already (no "Adopt into Garn" entry). */
   isStoryElement(uuid: string): boolean;
   /** Folder type (`Actor`, …) by folder id. */
   folderType(id: string): string | undefined;
@@ -119,7 +119,7 @@ export function registerAdoptHooks(deps: AdoptHookDeps): void {
     deps.error(error instanceof Error ? error.message : String(error));
   const start = (uuid: string) => void deps.start(uuid).catch(report);
 
-  // Sidebar context menus: "Adopt into Silk".
+  // Sidebar context menus: "Adopt into Garn".
   for (const name of ADOPTABLE)
     deps.on(`get${name}ContextOptions`, (_app, options) => {
       const uuidOf = (li: HTMLElement) => {
@@ -127,7 +127,7 @@ export function registerAdoptHooks(deps: AdoptHookDeps): void {
         return id ? `${name}.${id}` : undefined;
       };
       (options as MenuEntry[]).push({
-        label: 'SILK.Adopt.Adopt',
+        label: 'GARN.Adopt.Adopt',
         icon: ICON,
         visible: (li) => {
           const uuid = uuidOf(li);
@@ -140,14 +140,14 @@ export function registerAdoptHooks(deps: AdoptHookDeps): void {
       });
     });
 
-  // Folder context menu: "Adopt folder into Silk" (bulk, one confirmation).
+  // Folder context menu: "Adopt folder into Garn" (bulk, one confirmation).
   deps.on('getFolderContextOptions', (_app, options) => {
     const folderOf = (header: HTMLElement) => {
       const uuid = header.closest<HTMLElement>('.directory-item')?.dataset['uuid'];
       return uuid?.startsWith('Folder.') ? uuid.slice('Folder.'.length) : undefined;
     };
     (options as MenuEntry[]).push({
-      label: 'SILK.Adopt.AdoptFolder',
+      label: 'GARN.Adopt.AdoptFolder',
       icon: ICON,
       visible: (header) => {
         const id = folderOf(header);
@@ -170,9 +170,9 @@ export function registerAdoptHooks(deps: AdoptHookDeps): void {
     if (deps.isStoryElement(doc.uuid)) return;
     const uuid = doc.uuid;
     (controls as HeaderControl[]).push({
-      action: 'silkAdopt',
+      action: 'garnAdopt',
       icon: ICON,
-      label: 'SILK.Adopt.Adopt',
+      label: 'GARN.Adopt.Adopt',
       onClick: () => start(uuid),
     });
   });
@@ -183,16 +183,16 @@ export function registerAdoptHooks(deps: AdoptHookDeps): void {
       const uuid = (item as { uuid?: string }).uuid;
       if (!deps.isGM() || !uuid || deps.isStoryElement(uuid)) return;
       (items as MenuEntry[]).push({
-        label: 'SILK.Adopt.Adopt',
+        label: 'GARN.Adopt.Adopt',
         icon: `<i class="${ICON} fa-fw"></i>`,
         onClick: () => start(uuid),
       });
     });
 
-  // Copied Silk ids are stripped (§6 Duplicates). Items: owns (T12) handles their copies.
+  // Copied Garn ids are stripped (§6 Duplicates). Items: owns (T12) handles their copies.
   for (const name of ['Actor', 'JournalEntry', 'Scene'])
     deps.on(`create${name}`, (doc, options) => {
-      if (!deps.isActiveGM() || isSilkWrite(options)) return;
+      if (!deps.isActiveGM() || isGarnWrite(options)) return;
       const snap =
         name === 'Scene'
           ? sceneSnapshot(doc as { id: string | null; toObject(): object })
@@ -202,12 +202,12 @@ export function registerAdoptHooks(deps: AdoptHookDeps): void {
 }
 
 function sceneSnapshot(scene: { id: string | null; toObject(): object }) {
-  const data = scene.toObject() as { flags?: { silk?: object } };
+  const data = scene.toObject() as { flags?: { garn?: object } };
   if (!scene.id) return undefined;
   return {
     uuid: `Scene.${scene.id}`,
     documentName: 'Scene',
-    flags: { silk: { ...data.flags?.silk } },
+    flags: { garn: { ...data.flags?.garn } },
   };
 }
 
@@ -225,7 +225,7 @@ export function adoptDialogs(deps: {
   localize(key: string, data?: Record<string, string>): string;
 }) {
   const L = (key: string, data?: Record<string, string>) =>
-    deps.localize(`SILK.Adopt.${key}`, data);
+    deps.localize(`GARN.Adopt.${key}`, data);
   return {
     async chooseUseFor(args: { doc: string; element: string }): Promise<UseForAnswer> {
       const result = await deps.wait({
@@ -251,7 +251,7 @@ export function adoptDialogs(deps: {
         .join('');
       const result = await deps.wait({
         window: { title: L('FolderTitle') },
-        content: `<p>${L('FolderConfirm', { count: String(rows.length) })}</p><ul data-silk-adopt-rows>${list}</ul>`,
+        content: `<p>${L('FolderConfirm', { count: String(rows.length) })}</p><ul data-garn-adopt-rows>${list}</ul>`,
         buttons: [
           { action: 'adopt', label: L('Adopt'), default: true, callback: () => true },
           { action: 'cancel', label: L('Cancel'), callback: () => false },
@@ -282,28 +282,28 @@ export function adoptDialogs(deps: {
       const list = rows
         .map(
           (r) =>
-            `<li data-silk-adhoc="${escape(r.uuid)}"><span>${escape(r.name)}</span> ` +
+            `<li data-garn-adhoc="${escape(r.uuid)}"><span>${escape(r.name)}</span> ` +
             `<span class="muted">${escape(r.documentName)}</span> ` +
-            `<button type="button" data-silk-adhoc-adopt>${L('Adopt')}</button>` +
-            `<button type="button" data-silk-adhoc-ignore>${L('Ignore')}</button></li>`,
+            `<button type="button" data-garn-adhoc-adopt>${L('Adopt')}</button>` +
+            `<button type="button" data-garn-adhoc-ignore>${L('Ignore')}</button></li>`,
         )
         .join('');
       void deps
         .wait({
           window: { title: L('AdHocTitle') },
-          content: `<p>${L('AdHocIntro')}</p><ul class="silk-adhoc" data-silk-adhoc-list>${list}</ul>`,
+          content: `<p>${L('AdHocIntro')}</p><ul class="garn-adhoc" data-garn-adhoc-list>${list}</ul>`,
           buttons: [{ action: 'close', label: L('Close'), default: true }],
           rejectClose: false,
           render: (_event, dialog) => {
-            for (const li of dialog.element.querySelectorAll<HTMLElement>('[data-silk-adhoc]')) {
-              const uuid = li.dataset['silkAdhoc'] ?? '';
+            for (const li of dialog.element.querySelectorAll<HTMLElement>('[data-garn-adhoc]')) {
+              const uuid = li.dataset['garnAdhoc'] ?? '';
               const done = (job: Promise<unknown>) =>
                 job.then(() => li.remove()).catch((error: unknown) => console.error(error));
-              li.querySelector('[data-silk-adhoc-adopt]')?.addEventListener('click', () => {
+              li.querySelector('[data-garn-adhoc-adopt]')?.addEventListener('click', () => {
                 void dialog.close();
                 void actions.adopt(uuid).catch(fail);
               });
-              li.querySelector('[data-silk-adhoc-ignore]')?.addEventListener('click', () =>
+              li.querySelector('[data-garn-adhoc-ignore]')?.addEventListener('click', () =>
                 done(actions.ignore(uuid)),
               );
             }
@@ -326,7 +326,7 @@ interface WorldDocument {
   uuid: string;
   name: string;
   documentName: string;
-  flags: { silk?: object };
+  flags: { garn?: object };
   _stats?: { createdTime?: number | null };
 }
 
@@ -356,15 +356,15 @@ export function foundryAdopt(): AdoptFoundry {
             ): Promise<{ uuid: string }>;
           })
         : undefined;
-      if (!source || !pack || !collection) throw new Error(`Silk: no compendium entry "${uuid}"`);
-      // A fresh copy (no id clash with a Story Element's doc); Silk's own hooks skip it.
+      if (!source || !pack || !collection) throw new Error(`Garn: no compendium entry "${uuid}"`);
+      // A fresh copy (no id clash with a Story Element's doc); Garn's own hooks skip it.
       const doc = await collection.importFromCompendium(
         pack,
         source.id,
         {},
         {
           keepId: false,
-          ...SILK_WRITE,
+          ...GARN_WRITE,
         },
       );
       return doc.uuid;
@@ -386,7 +386,7 @@ export function foundryAdopt(): AdoptFoundry {
           name: d.name,
           documentName: d.documentName,
           createdTime: d._stats?.createdTime ?? 0,
-          flags: { silk: { ...d.flags.silk } },
+          flags: { garn: { ...d.flags.garn } },
         })),
       );
     },

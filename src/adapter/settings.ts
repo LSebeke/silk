@@ -1,5 +1,6 @@
-/** Silk settings (spec §13). Registered on `init` by the adapter. */
+/** Garn settings (spec §13). Registered on `init` by the adapter. */
 import { MODULE_ID } from '../constants';
+import { HOODED_DEFAULT } from '../core/portrait';
 
 export interface SettingData {
   scope: 'world' | 'client';
@@ -15,8 +16,8 @@ export interface SettingData {
 export type RegisterSetting = (namespace: typeof MODULE_ID, key: string, data: SettingData) => void;
 
 const label = (key: string) => ({
-  name: `SILK.Settings.${key}.Name`,
-  hint: `SILK.Settings.${key}.Hint`,
+  name: `GARN.Settings.${key}.Name`,
+  hint: `GARN.Settings.${key}.Hint`,
 });
 
 export const SETTINGS: Record<string, SettingData> = {
@@ -27,8 +28,8 @@ export const SETTINGS: Record<string, SettingData> = {
     type: String,
     default: 'immediate',
     choices: {
-      immediate: 'SILK.Settings.materializeMode.Immediate',
-      onDemand: 'SILK.Settings.materializeMode.OnDemand',
+      immediate: 'GARN.Settings.materializeMode.Immediate',
+      onDemand: 'GARN.Settings.materializeMode.OnDemand',
     },
   },
   hoodedImage: {
@@ -36,7 +37,7 @@ export const SETTINGS: Record<string, SettingData> = {
     scope: 'world',
     config: true,
     type: String,
-    default: `modules/${MODULE_ID}/assets/hooded.svg`,
+    default: HOODED_DEFAULT,
     filePicker: 'image',
   },
   /** Internal, written by the active GM only (§9). */
@@ -76,14 +77,54 @@ export const SETTINGS: Record<string, SettingData> = {
     type: Boolean,
     default: true,
   },
+  /** Internal: canvas legend open, per client (1.1 §E.3); toggled by `legend.toggle`. */
+  legendOpen: { scope: 'client', config: false, type: Boolean, default: true },
   /** Internal: Player Canvas pan/zoom, per client (§9). */
   playerViewState: { scope: 'client', config: false, type: Object, default: {} },
   /** Internal: window position and detached state per window (§2). */
   windowState: { scope: 'client', config: false, type: Object, default: {} },
   /** Internal: a GM has seen the one-time FILES_BROWSE notice (§12). */
   fileBrowseNoticeShown: { scope: 'world', config: false, type: Boolean, default: false },
+  /** Internal: the round 2 look migration ran in this World (v1.1 §G.3.2). */
+  lookMigrated: { scope: 'world', config: false, type: Boolean, default: false },
 };
 
 export function registerSettings(register: RegisterSetting): void {
   for (const [key, data] of Object.entries(SETTINGS)) register(MODULE_ID, key, data);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TS mixin constructor shape
+type AppClass = new (...args: any[]) => { render(...args: never[]): Promise<unknown> };
+
+/** `game.settings.registerMenu` data. */
+export interface MenuData<T extends AppClass> {
+  name: string;
+  label: string;
+  hint: string;
+  icon: string;
+  type: T;
+  restricted: boolean;
+}
+
+/**
+ * Module Settings button "Open Canon window" (v1.1 §H), GM only. Foundry constructs and
+ * renders an ApplicationV2 subclass; this one only runs `canon.openWindow`.
+ */
+export function canonWindowMenu<T extends AppClass>(
+  Base: T,
+  run: (command: string) => Promise<unknown>,
+): MenuData<T> {
+  class CanonWindowLauncher extends Base {
+    override render() {
+      return run('canon.openWindow').then(() => this);
+    }
+  }
+  return {
+    name: 'GARN.Settings.canonWindow.Name',
+    label: 'GARN.Commands.canon.openWindow',
+    hint: 'GARN.Settings.canonWindow.Hint',
+    icon: 'fa-solid fa-book-atlas',
+    type: CanonWindowLauncher,
+    restricted: true,
+  };
 }

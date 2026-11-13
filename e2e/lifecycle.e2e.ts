@@ -1,10 +1,10 @@
 /** Unmaterialize, Foundry-side deletion, element delete, reconcile on real dsa5 (spec §6, §7). */
 /* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate over untyped dsa5/Foundry docs */
 import type { Page } from '@playwright/test';
-import { expect, test, waitForSilk } from './fixtures';
+import { expect, test, waitForGarn } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
@@ -12,7 +12,7 @@ const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
 const record = (page: Page, id: string) =>
   page.evaluate(
     (i) =>
-      (game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data ?? null) as Record<
+      (game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data ?? null) as Record<
         string,
         any
       > | null,
@@ -22,14 +22,14 @@ const record = (page: Page, id: string) =>
 async function ready(page: Page) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
   await page.evaluate(async () => {
-    await game.settings?.set('silk', 'materializeMode', 'immediate');
-    await game.settings?.set('silk', 'confirmDelete', false);
+    await game.settings?.set('garn', 'materializeMode', 'immediate');
+    await game.settings?.set('garn', 'confirmDelete', false);
   });
 }
 
@@ -39,9 +39,9 @@ const create = async (page: Page, cls: string, name: string) =>
 /** Actor of the element plus its Companion Journal, or nulls. */
 const docs = (page: Page, id: string) =>
   page.evaluate((elementId) => {
-    const data = game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data;
+    const data = game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data;
     const actor = data?.['uuid'] ? (fromUuidSync(data['uuid'] as string) as any) : null;
-    const companion = actor ? (game.journal?.get(actor.flags.silk.companion) as any) : null;
+    const companion = actor ? (game.journal?.get(actor.flags.garn.companion) as any) : null;
     return {
       uuid: (data?.['uuid'] as string | undefined) ?? null,
       actor: actor && {
@@ -115,7 +115,7 @@ test('element.delete: confirm dialog; Adopted keeps its doc unflagged', async ({
   const { id: link } = await api<{ id: string }>(gm, 'connection.create', { from: a, to: b });
   const doomed = await docs(gm, a);
 
-  await gm.evaluate(() => game.settings?.set('silk', 'confirmDelete', true));
+  await gm.evaluate(() => game.settings?.set('garn', 'confirmDelete', true));
   const run = api(gm, 'element.delete', { ids: [a] });
   const dialog = gm.locator('.application.dialog', { hasText: 'Doomed' });
   await expect(dialog).toBeVisible();
@@ -133,43 +133,43 @@ test('element.delete: confirm dialog; Adopted keeps its doc unflagged', async ({
   // Adopted (T14 sets the flag): Keep Foundry doc is the default answer.
   const kept = (await record(gm, b))?.['uuid'] as string;
   await gm.evaluate(async (id) => {
-    const wc = game.modules?.get('silk')?.session?.().workingCopy;
+    const wc = game.modules?.get('garn')?.session?.().workingCopy;
     const rec = wc?.get(id);
     if (rec) await wc?.set([{ ...rec, data: { ...rec.data, adopted: true } }]);
   }, b);
   const run2 = api(gm, 'element.delete', { ids: [b] });
   const dialog2 = gm.locator('.application.dialog', { hasText: 'Keep' });
   await expect(dialog2.locator('button[data-action="everything"]')).toBeVisible();
-  await dialog2.locator('[data-silk-dont-ask]').check();
+  await dialog2.locator('[data-garn-dont-ask]').check();
   await dialog2.locator('button[data-action="keep"]').click();
   await run2;
   const state = await gm.evaluate((uuid) => {
     const doc = fromUuidSync(uuid) as any;
-    return { exists: !!doc, silk: doc?.flags?.silk ?? null };
+    return { exists: !!doc, garn: doc?.flags?.garn ?? null };
   }, kept);
-  expect(state).toEqual({ exists: true, silk: null });
-  expect(await gm.evaluate(() => game.settings?.get('silk', 'confirmDelete'))).toBe(false);
+  expect(state).toEqual({ exists: true, garn: null });
+  expect(await gm.evaluate(() => game.settings?.get('garn', 'confirmDelete'))).toBe(false);
 });
 
-test('reconcile on load restores a doc deleted behind Silk’s back from the last Commit', async ({
+test('reconcile on load restores a doc deleted behind Garn’s back from the last Commit', async ({
   gm,
 }) => {
   test.setTimeout(150_000);
   await ready(gm);
   await gm.evaluate(async () => {
-    const silk = game.modules?.get('silk');
-    if (!silk?.session?.().workingCopy.binding)
-      await silk?.api?.run('canon.create', { name: 'T9' });
+    const garn = game.modules?.get('garn');
+    if (!garn?.session?.().workingCopy.binding)
+      await garn?.api?.run('canon.create', { name: 'T9' });
   });
   const id = await create(gm, 'item', 'Ring');
   const uuid = (await record(gm, id))?.['uuid'] as string;
   const hash = await api<string>(gm, 'history.commit', { label: 'before loss' });
-  // A delete Silk never hears about (its own write tag makes the hooks skip it).
-  await gm.evaluate((u) => (fromUuidSync(u) as any).delete({ silk: { internal: true } }), uuid);
+  // A delete Garn never hears about (its own write tag makes the hooks skip it).
+  await gm.evaluate((u) => (fromUuidSync(u) as any).delete({ garn: { internal: true } }), uuid);
   expect((await record(gm, id))?.['uuid']).toBe(uuid);
 
   await gm.reload();
-  await waitForSilk(gm);
+  await waitForGarn(gm);
   await ready(gm);
   await expect.poll(async () => (await record(gm, id))?.['restoredFrom'] ?? null).toBe(hash);
   expect((await record(gm, id))?.['uuid']).toBeUndefined();

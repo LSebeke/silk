@@ -5,6 +5,7 @@
  */
 import type { CanonRecord, JsonObject } from '../canon';
 import type { ElementClassId } from './classes';
+import { isActorSourceClass, type ElementSource } from './sources';
 
 export interface Point {
   x: number;
@@ -25,6 +26,11 @@ export interface ElementData {
    * (spec §7) and these mirror it (`src/core/materialize`); for a Ghost they are the truth.
    */
   img?: string;
+  /**
+   * Card image of a Scene-sourced Location/Event (1.1 §B.2.1, §E.1): the Scene's `thumb`, or
+   * Garn's WebP data URL of its background. Garn-owned; Foundry's thumbs are never changed.
+   */
+  thumb?: string;
   infoBlocks?: InfoBlock[];
   /**
    * Player Notes (§9): pages in the "Player Notes" category, mirrored like Info Blocks and
@@ -33,16 +39,22 @@ export interface ElementData {
   playerNotes?: PlayerNote[];
   /** Class fields (§4): only those carrying a mechanic, e.g. Person `merchantType`. */
   fields?: ClassFields;
-  /** GM-only Tags, never shown to players (§4). Silk-owned. */
+  /** GM-only Tags, never shown to players (§4). Garn-owned. */
   tags?: string[];
   /**
-   * Status (§4, `status.ts`), absent = the class default. Silk-owned for Ghosts and Events;
+   * Status (§4, `status.ts`), absent = the class default. Garn-owned for Ghosts and Events;
    * mirrors Foundry for a Materialized Person/Creature (`dead`) and Quest (quest `status`).
    */
   status?: string;
-  /** Adopted from an existing Foundry doc (T14), not created by Silk: delete can keep the doc (§6). */
+  /**
+   * Source Step pick (spec 1.1 §B.1), never blank: a compendium entry is imported from here
+   * when the element is Materialized (a Scene, for Location/Event, as its Scene, §B.2.1); a
+   * generator's Actor becomes the doc at once (§B.3).
+   */
+  source?: Exclude<ElementSource, { kind: 'blank' }>;
+  /** Adopted from an existing Foundry doc (T14), not created by Garn: delete can keep the doc (§6). */
   adopted?: boolean;
-  /** Its doc vanished while Silk wasn't listening: reconcile restored it from this Commit (§6). */
+  /** Its doc vanished while Garn wasn't listening: reconcile restored it from this Commit (§6). */
   restoredFrom?: string;
 }
 
@@ -52,6 +64,11 @@ export interface InfoBlock {
   name: string;
   /** HTML. */
   text: string;
+  /**
+   * Person/Creature: the Appearance block (v1.1 §C.2), which guards the image. Mirrors the
+   * page flag `flags.garn.appearance`; the flag, not the name, marks it.
+   */
+  appearance?: true;
 }
 
 /** A party note (§9): page id once Materialized; `campaign` = the authoring Campaign. */
@@ -79,6 +96,17 @@ export function readElement(record: CanonRecord | undefined): StoryElement | und
   if (record?.kind !== 'element') return undefined;
   const data = record.data as unknown as ElementData;
   return { ...data, position: data.position ?? { x: 0, y: 0 }, id: record.id };
+}
+
+/** Person and Creature (the Actor-source classes) have an Appearance (spec §8), as long as its block exists. */
+export const hasAppearanceClass = (cls: string) => isActorSourceClass(cls);
+
+/** The element's Appearance block (v1.1 §C.2): marked by its flag, not by its name. */
+export function appearanceBlock(
+  element: Pick<ElementData, 'class' | 'infoBlocks'>,
+): InfoBlock | undefined {
+  if (!hasAppearanceClass(element.class)) return undefined;
+  return element.infoBlocks?.find((b) => b.appearance);
 }
 
 /** Ghost = a Node whose Story Element is not Materialized in this World (glossary). */

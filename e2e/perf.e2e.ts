@@ -1,6 +1,6 @@
 /**
  * Perf checks (spec §14), tagged `@perf`: local only, not in the default e2e run. Needs a
- * build with the dev commands: `npm run test:perf` (SILK_DEV=1 build + SILK_PERF=1).
+ * build with the dev commands: `npm run test:perf` (GARN_DEV=1 build + GARN_PERF=1).
  */
 import type { Page } from '@playwright/test';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -10,36 +10,36 @@ import { benchVerdict, type BenchFile, type BenchResult } from '../src/core/dev/
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
 
 const records = (page: Page, kind: string): Promise<CanonRecord[]> =>
   page.evaluate((k) => {
-    const all = game.modules?.get('silk')?.session?.().workingCopy.records();
+    const all = game.modules?.get('garn')?.session?.().workingCopy.records();
     return [...(all?.values() ?? [])].filter((r) => r.kind === k);
   }, kind);
 
 async function ready(page: Page) {
-  // `game.ready` precedes Silk's async `ready` hook: wait for the session.
+  // `game.ready` precedes Garn's async `ready` hook: wait for the session.
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
   const dev = await page.evaluate(
-    () => !!game.modules?.get('silk')?.api?.get('dev.fixture.generate'),
+    () => !!game.modules?.get('garn')?.api?.get('dev.fixture.generate'),
   );
-  if (!dev) throw new Error('dev commands missing: run `npm run test:perf` (SILK_DEV=1 build)');
+  if (!dev) throw new Error('dev commands missing: run `npm run test:perf` (GARN_DEV=1 build)');
 }
 
 const closeCanvas = (page: Page) =>
   page.evaluate(async () => {
-    await foundry.applications.instances.get('silk-canvas')?.close();
-    while (foundry.applications.instances.get('silk-canvas'))
+    await foundry.applications.instances.get('garn-canvas')?.close();
+    while (foundry.applications.instances.get('garn-canvas'))
       await new Promise((r) => setTimeout(r, 20));
   });
 
@@ -68,16 +68,16 @@ test(
     await closeCanvas(gm);
     await api(gm, 'dev.fixture.generate', { count: 500, seed: 1 });
     const viewport = { x: -300, y: -200, zoom: 0.8 };
-    await gm.evaluate((v) => game.settings?.set('silk', 'viewState', { viewport: v }), viewport);
+    await gm.evaluate((v) => game.settings?.set('garn', 'viewState', { viewport: v }), viewport);
     const expected = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
 
     // Measured in the page: `canvas.open` → viewport restored and all 500 Nodes painted.
     const times = await gm.evaluate(
       async ({ expected, count, runs }) => {
-        const app = () => foundry.applications.instances.get('silk-canvas');
+        const app = () => foundry.applications.instances.get('garn-canvas');
         const frame = () => new Promise((r) => requestAnimationFrame(r));
         const restored = () => {
-          const root = app()?.element?.querySelector('[data-silk-canvas]');
+          const root = app()?.element?.querySelector('[data-garn-canvas]');
           const vp = root?.querySelector<HTMLElement>('.svelte-flow__viewport');
           const nodes = root?.querySelectorAll<HTMLElement>('.svelte-flow__node-element') ?? [];
           return (
@@ -94,7 +94,7 @@ test(
         // One warm-up open (lazy chunk loaded, caches hot), then `runs` measured.
         for (let i = 0; i <= runs; i++) {
           const t0 = performance.now();
-          await game.modules?.get('silk')?.api?.run('canvas.open');
+          await game.modules?.get('garn')?.api?.run('canvas.open');
           while (!restored()) {
             if (performance.now() - t0 > 30_000) throw new Error('canvas did not restore');
             await frame();
@@ -117,16 +117,16 @@ test(
 );
 
 test(
-  'create connected: ≤ 2 real input events per entry point',
+  'create connected: fastest path ≤ 2 real input events per entry point',
   { tag: '@perf' },
   async ({ gm }) => {
     test.setTimeout(240_000);
     await ready(gm);
     await closeCanvas(gm);
     await gm.evaluate(async () => {
-      const wc = game.modules?.get('silk')?.session?.().workingCopy;
+      const wc = game.modules?.get('garn')?.session?.().workingCopy;
       await wc?.delete([...(wc.records().keys() ?? [])]);
-      await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
+      await game.settings?.set('garn', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
     });
     const { id: origin } = await api<{ id: string }>(gm, 'element.create', {
       class: 'person',
@@ -135,21 +135,21 @@ test(
     });
     await closePopups(gm);
     await api(gm, 'canvas.open');
-    const alrik = gm.locator('[data-silk-node]', { hasText: 'Alrik' });
+    const alrik = gm.locator('[data-garn-node]', { hasText: 'Alrik' });
     await expect(alrik).toBeVisible();
 
     // Trusted pointerdown / keydown events = real user inputs.
     await gm.evaluate(() => {
-      const w = window as unknown as { silkInputs: number };
-      w.silkInputs = 0;
+      const w = window as unknown as { garnInputs: number };
+      w.garnInputs = 0;
       const count = (e: Event) => {
-        if (e.isTrusted && !(e as KeyboardEvent).repeat) w.silkInputs++;
+        if (e.isTrusted && !(e as KeyboardEvent).repeat) w.garnInputs++;
       };
       window.addEventListener('pointerdown', count, true);
       window.addEventListener('keydown', count, true);
     });
     const inputs = () =>
-      gm.evaluate(() => (window as unknown as { silkInputs: number }).silkInputs);
+      gm.evaluate(() => (window as unknown as { garnInputs: number }).garnInputs);
     const connected = async () =>
       (await records(gm, 'connection')).filter(
         (c) => c.data['from'] === origin || c.data['to'] === origin,
@@ -164,34 +164,46 @@ test(
       console.log(`create connected via ${name}: ${used} inputs`);
       expect(used, name).toBeLessThanOrEqual(2);
       // Finish the pipeline (not counted): name, then close the Connection editor.
-      await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
+      await expect(gm.locator('[data-garn-name-input]')).toBeFocused();
       await gm.keyboard.type(name);
       await gm.keyboard.press('Enter');
-      await expect(gm.locator('[data-silk-label-input]')).toBeFocused();
+      await expect(gm.locator('[data-garn-label-input]')).toBeFocused();
       await gm.keyboard.press('Escape');
-      await expect(gm.locator('[data-silk-class-box]')).toHaveCount(0);
+      await expect(gm.locator('[data-garn-class-box]')).toHaveCount(0);
     }
 
-    await entryPoint('drag-out', async () => {
-      const point = alrik.locator('[data-silk-point="out"][data-silk-point-side="right"]');
-      const p = await point.boundingBox();
-      if (!p) throw new Error('no connection point');
+    await entryPoint('right-drag Node → canvas', async () => {
+      const p = await alrik.boundingBox();
+      if (!p) throw new Error('no card');
       await gm.mouse.move(p.x + p.width / 2, p.y + p.height / 2);
-      await gm.mouse.down();
-      await gm.mouse.move(p.x + 150, p.y + 200, { steps: 5 });
-      await gm.mouse.move(p.x + 300, p.y + 300, { steps: 5 });
-      await gm.mouse.up();
-      await gm.locator('[data-silk-class-option="note"]').click();
+      await gm.mouse.down({ button: 'right' });
+      await gm.mouse.move(p.x + 250, p.y + 200, { steps: 5 });
+      await gm.mouse.move(p.x + 400, p.y + 300, { steps: 5 });
+      await gm.mouse.up({ button: 'right' });
+      await gm.locator('[data-garn-class-option="note"]').click();
+    });
+
+    await entryPoint('right-drag canvas → Node', async () => {
+      const p = await alrik.boundingBox();
+      if (!p) throw new Error('no card');
+      await gm.mouse.move(p.x - 200, p.y + 300);
+      await gm.mouse.down({ button: 'right' });
+      await gm.mouse.move(p.x, p.y + 100, { steps: 5 });
+      await gm.mouse.move(p.x + p.width / 2, p.y + p.height / 2, { steps: 5 });
+      await gm.mouse.up({ button: 'right' });
+      await gm.locator('[data-garn-class-option="note"]').click();
     });
 
     await entryPoint('right-click', async () => {
       await alrik.click({ button: 'right' });
-      await gm.locator('[data-silk-class-option="note"]').click();
+      await gm.locator('[data-garn-class-option="note"]').click();
     });
 
+    // Spec 1.1 §B.4: digit + → (Person takes the Source Step); selecting the origin is not counted.
+    await alrik.click();
     await entryPoint('digit key', async () => {
-      await alrik.click();
       await gm.keyboard.press('Digit1');
+      await gm.keyboard.press('ArrowRight');
     });
   },
 );
@@ -257,15 +269,15 @@ test('filters at 2000: filter.set re-renders < 500 ms', { tag: '@perf' }, async 
   await closeCanvas(gm);
   await api(gm, 'dev.fixture.generate', { count: 2000, seed: 1 });
   await gm.evaluate(() =>
-    game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 0.1 } }),
+    game.settings?.set('garn', 'viewState', { viewport: { x: 0, y: 0, zoom: 0.1 } }),
   );
   await api(gm, 'canvas.open');
   const times = await gm.evaluate(async () => {
-    const api = game.modules?.get('silk')?.api;
+    const api = game.modules?.get('garn')?.api;
     const root = () =>
       foundry.applications.instances
-        .get('silk-canvas')
-        ?.element?.querySelector('[data-silk-canvas]');
+        .get('garn-canvas')
+        ?.element?.querySelector('[data-garn-canvas]');
     const count = () => root()?.querySelectorAll('.svelte-flow__node-element').length ?? 0;
     const frame = () => new Promise((r) => requestAnimationFrame(r));
     const until = async (ok: () => boolean) => {

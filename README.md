@@ -1,26 +1,26 @@
-# Silk
+# Garn
 
-FoundryVTT v14 module for DSA5: map a Story on a World Canvas, branch Adventures from a Canon, Reveal content to players. Spec: [`docs/spec/v1.md`](docs/spec/v1.md). Vocabulary: [`GLOSSARY.md`](GLOSSARY.md).
+FoundryVTT v14 module for DSA5: map a Story on a World Canvas, branch Adventures from a Canon, Reveal content to players. Spec: [`docs/spec/v1.md`](docs/spec/v1.md). Vocabulary: [`GLOSSARY.md`](GLOSSARY.md). Working title until 1.1: Silk.
 
-Install: manifest URL `https://github.com/LSebeke/silk/releases/latest/download/module.json`.
+Install: manifest URL `https://github.com/LSebeke/garn/releases/latest/download/module.json`.
 
 ## Spoiler secrecy
 
-Silk keeps unrevealed content out of the **player UI**. It does not stop a player who opens the browser console ([ADR 0002](docs/adr/0002-spoiler-secrecy-casual-player-only.md)).
+Garn keeps unrevealed content out of the **player UI**. It does not stop a player who opens the browser console ([ADR 0002](docs/adr/0002-spoiler-secrecy-casual-player-only.md)).
 
-- **Console leak**: Foundry sends every journal page to every client, NONE ownership included. Unrevealed Info Blocks, Silk flags (incl. the real image behind a hooded one) and Canon JSON loaded for the player canvas can be read from the console. Core Foundry and DSA5 leak GM content the same way.
-- **Data folder exposure**: Foundry serves the Data folder without login. The Canon lives under an unguessable `Data/silk/<random 128-bit id>/`, which keeps out people who don't know the path. Players learn the path when their client loads Canon data.
-- **FILES_BROWSE**: a role with "Use File Browser" can list `Data/silk/` and open the Canon directly. Foundry grants it to Trusted Players by default. Silk shows the GM a one-time notice on load if any non-GM role has it; remove it in _Configure Permissions_ if that matters to your table.
+- **Console leak**: Foundry sends every journal page to every client, NONE ownership included. Unrevealed Info Blocks, Garn flags (incl. the real image behind a hooded one) and Canon JSON loaded for the player canvas can be read from the console. Core Foundry and DSA5 leak GM content the same way.
+- **Data folder exposure**: Foundry serves the Data folder without login. The Canon lives under an unguessable `Data/garn/<random 128-bit id>/`, which keeps out people who don't know the path. Players learn the path when their client loads Canon data.
+- **FILES_BROWSE**: a role with "Use File Browser" can list `Data/garn/` and open the Canon directly. Foundry grants it to Trusted Players by default. Garn shows the GM a one-time notice on load if any non-GM role has it; remove it in _Configure Permissions_ if that matters to your table.
 
 ## Backup, Share and git
 
 The Canon window's **Backup and Share** section (spec §11.6):
 
-- **Canon Backup** zips everything reachable from the Canon's refs: history, all Adventures, Campaigns and Revelation Maps, plus every referenced `Data/` file (core, system and module files are skipped) with a SHA-256 each. Importing it on a server that has the same Canon fast-forwards; if the histories diverged, Silk offers to import it as a copy with a new id. Files that differ on the server are listed and overwritten only on confirm.
-- **Canon Share** zips one Commit or Adventure head as a single root Commit, without Adventures, Campaigns, Revelation Maps or uncommitted work. The import gets a new Canon id; a file that differs on the server is written as `<name>.silk-<hash8>.<ext>` and references are rewritten.
+- **Canon Backup** zips everything reachable from the Canon's refs: history, all Adventures, Campaigns and Revelation Maps, plus every referenced `Data/` file (core, system and module files are skipped) with a SHA-256 each. Importing it on a server that has the same Canon fast-forwards; if the histories diverged, Garn offers to import it as a copy with a new id. Files that differ on the server are listed and overwritten only on confirm.
+- **Canon Share** zips one Commit or Adventure head as a single root Commit, without Adventures, Campaigns, Revelation Maps or uncommitted work. The import gets a new Canon id; a file that differs on the server is written as `<name>.garn-<hash8>.<ext>` and references are rewritten.
 - **Garbage collection**: FilePicker can't delete, so files a crash or an Abandon left behind stay on disk. Exports hold only reachable files; export → import into a fresh server is the clean-up. The export dialog shows the orphan count.
 - **Server move**: copy the World folders and import a Canon Backup.
-- **git**: the Canon folder `Data/silk/<canon-id>/` is plain JSON, written append-only (objects and commits never change, refs are small files). You can `git init` it and commit after play sessions; no Silk feature is involved. Restore with `git checkout` while Foundry is stopped.
+- **git**: the Canon folder `Data/garn/<canon-id>/` is plain JSON, written append-only (objects and commits never change, refs are small files). You can `git init` it and commit after play sessions; no Garn feature is involved. Restore with `git checkout` while Foundry is stopped.
 
 ## Development
 
@@ -37,14 +37,14 @@ npm run test:e2e   # build + Playwright against headless Foundry (local only)
 npm run test:perf  # dev build + @perf Playwright tests and fast-pan bench (local only)
 ```
 
-**E2E** (`e2e/`, spec §14): each worker starts headless Foundry on a free port with a throwaway data dir (license copied, `dsa5` and `dist/` symlinked), creates and launches world `silk-test-<run>`, enables Silk, adds user `Player`, and deletes everything afterwards. It never sees `silk-dev`. Tests are `*.e2e.ts` and use the `gm` / `player` page fixtures from `e2e/fixtures.ts`. Env overrides: `FOUNDRY_MAIN`, `FOUNDRY_USER_DATA`. One-time: `npx playwright install chromium`.
+**E2E** (`e2e/`, spec §14): each worker starts headless Foundry on a free port with a throwaway data dir (license copied, `dsa5` and `dist/` symlinked), creates and launches world `garn-test-<run>`, enables Garn, adds user `Player`, and deletes everything afterwards. It never sees `garn-dev`. Tests are `*.e2e.ts` and use the `gm` / `player` page fixtures from `e2e/fixtures.ts`. Env overrides: `FOUNDRY_MAIN`, `FOUNDRY_USER_DATA`. One-time: `npx playwright install chromium`.
 
-**Perf** (spec §14): `@perf` tests in `e2e/perf.e2e.ts` are skipped by `test:e2e` and run by `test:perf`, which builds with the dev-only commands `dev.fixture.generate { count, seed }` (seeded Canon in the working copy) and `dev.bench.fastPan { count, epf, ms }`. Dev commands exist only when `__SILK_DEV__` is true (`npm run dev` or `SILK_DEV=1`); release builds drop them (CI checks). Results format and release gate: [bench/README.md](bench/README.md).
+**Perf** (spec §14): `@perf` tests in `e2e/perf.e2e.ts` are skipped by `test:e2e` and run by `test:perf`, which builds with the dev-only commands `dev.fixture.generate { count, seed }` (seeded Canon in the working copy) and `dev.bench.fastPan { count, epf, ms }`. Dev commands exist only when `__GARN_DEV__` is true (`npm run dev` or `GARN_DEV=1`); release builds drop them (CI checks). Results format and release gate: [bench/README.md](bench/README.md).
 
 **Dev loop** (no HMR): symlink `dist/` into Foundry once, run `npm run dev`, press F5 after each rebuild.
 
 ```sh
-ln -s "$PWD/dist" ~/.local/share/FoundryVTT/Data/modules/silk
+ln -s "$PWD/dist" ~/.local/share/FoundryVTT/Data/modules/garn
 ```
 
 ### Layout and conventions
@@ -56,16 +56,18 @@ ln -s "$PWD/dist" ~/.local/share/FoundryVTT/Data/modules/silk
 - `public/` copied as-is into `dist/`: `module.json`, `lang/{en,de}.json`, `assets/`.
 - Tests sit next to the code as `*.test.ts`.
 
-**Commands** ([ADR 0003](docs/adr/0003-every-ui-action-is-a-command.md)): every UI action is a command `{ name, title, keys?, available(ctx), run(args) }`, named `area.verb` per spec §15. A feature exports its commands (e.g. `src/ui/canvas/commands.ts`), `module.ts` registers them. Buttons, menus and keys only call `registry.run(name, args)`; `keys` become Foundry keybindings automatically. Interactive elements get a `data-silk-*` attribute. The registry is `game.modules.get('silk').api`.
+**Commands** ([ADR 0003](docs/adr/0003-every-ui-action-is-a-command.md)): every UI action is a command `{ name, title, keys?, available(ctx), run(args) }`, named `area.verb` per spec §15. A feature exports its commands (e.g. `src/ui/canvas/commands.ts`), `module.ts` registers them. Buttons, menus and keys only call `registry.run(name, args)`; `keys` become Foundry keybindings automatically. Interactive elements get a `data-garn-*` attribute. The registry is `game.modules.get('garn').api`.
 
-**Settings**: add to `SETTINGS` in `src/adapter/settings.ts`, its type to `src/types/silk.d.ts`, and DE + EN strings (a test checks both).
+**Windows**: no scroll container inside a scroll container (spec 1.1 §G.1). Only the window body scrolls; rich-text editors grow with their content.
+
+**Settings**: add to `SETTINGS` in `src/adapter/settings.ts`, its type to `src/types/garn.d.ts`, and DE + EN strings (a test checks both).
 
 ### Dev MCP server
 
-`tools/mcp/` is a dev/test-only MCP server (stdio) over the command API; it is not part of `dist/`. Each registry command becomes a tool, dots mapped to underscores (`canvas.open` → `canvas_open`); tool args are the command's args object. It drives a Foundry page with Playwright and calls `game.modules.get('silk').api`, connecting on the first tool call, so start Foundry with Silk enabled first.
+`tools/mcp/` is a dev/test-only MCP server (stdio) over the command API; it is not part of `dist/`. Each registry command becomes a tool, dots mapped to underscores (`canvas.open` → `canvas_open`); tool args are the command's args object. It drives a Foundry page with Playwright and calls `game.modules.get('garn').api`, connecting on the first tool call, so start Foundry with Garn enabled first.
 
 ```sh
-claude mcp add silk -- node tools/mcp/main.ts --url http://localhost:30000 --executable /usr/bin/chromium
+claude mcp add garn -- node tools/mcp/main.ts --url http://localhost:30000 --executable /usr/bin/chromium
 # options: --cdp <endpoint> (attach to a running browser's /game tab instead of launching),
 #          --user <name> (default Gamemaster), --password, --headed
 ```
@@ -76,26 +78,26 @@ CI (`.github/workflows/ci.yml`) runs on every PR and every push to `main`: versi
 
 `.github/workflows/audit.yml` checks dependencies for known vulnerabilities (moderate and above; reviewed exceptions, each with its reason, in `scripts/audit.mjs`), registry signatures, new install scripts and tarballs from outside the registry, also weekly. `.npmrc` turns install scripts off, so `npm install` runs no package code. Dependabot proposes npm and Actions updates a week after release; `fvtt-types` is bumped by hand (below). Actions are pinned to commit SHAs.
 
-**Versions** live in the repo: `version` in `package.json` and `public/module.json` must agree, and the module's `download` must be `…/releases/download/v<version>/silk.zip` (`node scripts/versions.mjs`, run by CI). `manifest` stays `…/releases/latest/download/module.json`, which Foundry reads for its update check. Bump the minor version at least when the Canon `formatVersion` changes (spec §11.1), since older Silk then opens the Canon read-only.
+**Versions** live in the repo: `version` in `package.json` and `public/module.json` must agree, and the module's `download` must be `…/releases/download/v<version>/garn.zip` (`node scripts/versions.mjs`, run by CI). `manifest` stays `…/releases/latest/download/module.json`, which Foundry reads for its update check. Bump the minor version at least when the Canon `formatVersion` changes (spec §11.1), since older Garn then opens the Canon read-only.
 
 **Release checklist**:
 
 1. Locally on the reference machine: `npm run test:e2e` and the `test:perf` release gate ([bench/README.md](bench/README.md)).
 2. Raise `compatibility.verified` in `public/module.json` (Foundry, `dsa5`) only to versions you tested.
 3. In one PR: `npm version X.Y.Z --no-git-tag-version` (package.json and lockfile), the same `version` and the `download` URL in `public/module.json`, and the bench baseline `bench/results/X.Y.Z.json` from step 1 (run it with `BENCH_VERSION=X.Y.Z`). Merge to `main`.
-4. Push the tag from that commit: `git tag v1.2.3 && git push origin v1.2.3`. `.github/workflows/release.yml` checks that the tag equals the module version, reruns the audit and CI gates, packages `silk.zip`, records SHA-256 checksums, signs a provenance attestation and opens a **draft** release.
+4. Push the tag from that commit: `git tag v1.2.3 && git push origin v1.2.3`. `.github/workflows/release.yml` checks that the tag equals the module version, reruns the audit and CI gates, packages `garn.zip`, records SHA-256 checksums, signs a provenance attestation and opens a **draft** release.
 5. Read the draft and press Publish. Foundry's update check reads `releases/latest`, which skips drafts, so no world sees the version before that. For a backport to an older line, untick "Set as latest release", or Foundry offers worlds a downgrade.
 
 If the release workflow fails (for example a new advisory), no release exists yet: fix it on `main`, then move the tag to the fixed commit (`git push --delete origin vX.Y.Z && git tag -f vX.Y.Z && git push origin vX.Y.Z`) or bump the patch version.
 
 ### Verifying a release
 
-Releases are built by `release.yml` from the tagged commit, never on a laptop. From v1.0.1 on, the released `module.json` is the committed one, byte for byte. Each release lists SHA-256 checksums (`SHA256SUMS`) and, while the repo is public, carries a signed provenance attestation for `silk.zip` and `module.json`. The attestation is the trust anchor: release notes and assets can be edited by anyone with write access, the signature cannot. Foundry itself checks neither; verify a download by hand, with `SHA256SUMS` from the same release:
+Releases are built by `release.yml` from the tagged commit, never on a laptop. From v1.0.1 on, the released `module.json` is the committed one, byte for byte. Each release lists SHA-256 checksums (`SHA256SUMS`) and, while the repo is public, carries a signed provenance attestation for `garn.zip` and `module.json`. The attestation is the trust anchor: release notes and assets can be edited by anyone with write access, the signature cannot. Foundry itself checks neither; verify a download by hand, with `SHA256SUMS` from the same release:
 
 ```sh
 sha256sum -c --ignore-missing SHA256SUMS   # macOS: shasum -a 256 -c --ignore-missing SHA256SUMS
-gh attestation verify silk.zip --repo LSebeke/silk
-gh attestation verify module.json --repo LSebeke/silk
+gh attestation verify garn.zip --repo LSebeke/garn
+gh attestation verify module.json --repo LSebeke/garn
 ```
 
 `fvtt-types` pulls `pixi.js` from GitHub; `package.json` `overrides` swap those for registry versions so `npm ci` needs no git access.

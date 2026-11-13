@@ -15,8 +15,8 @@ interface Socket {
 }
 
 type Message =
-  | { silk: 'request'; id: string; from: string; name: string; args: object }
-  | { silk: 'response'; id: string; to: string; result?: unknown; error?: string };
+  | { garn: 'request'; id: string; from: string; name: string; args: object }
+  | { garn: 'response'; id: string; to: string; result?: unknown; error?: string };
 
 export interface SocketRelay {
   /** Player: run `name` on the active GM; resolves with its result. */
@@ -35,37 +35,37 @@ export function createSocketRelay(deps: {
   let n = 0;
   const send = (m: Message) => deps.socket.emit(CHANNEL, m);
 
-  async function answer(m: Extract<Message, { silk: 'request' }>) {
+  async function answer(m: Extract<Message, { garn: 'request' }>) {
     try {
-      if (!RELAYED.has(m.name)) throw new Error(`Silk: "${m.name}" is not relayed`);
+      if (!RELAYED.has(m.name)) throw new Error(`Garn: "${m.name}" is not relayed`);
       const result = await deps.run(m.name, m.args);
-      send({ silk: 'response', id: m.id, to: m.from, result: result ?? null });
+      send({ garn: 'response', id: m.id, to: m.from, result: result ?? null });
     } catch (error) {
-      send({ silk: 'response', id: m.id, to: m.from, error: (error as Error).message });
+      send({ garn: 'response', id: m.id, to: m.from, error: (error as Error).message });
     }
   }
 
   return {
     relay(name, args) {
-      if (!RELAYED.has(name)) return Promise.reject(new Error(`Silk: "${name}" is not relayed`));
+      if (!RELAYED.has(name)) return Promise.reject(new Error(`Garn: "${name}" is not relayed`));
       const id = `${deps.userId()}-${Date.now()}-${++n}`;
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           pending.delete(id);
-          reject(new Error('Silk: no answer from the GM'));
+          reject(new Error('Garn: no answer from the GM'));
         }, TIMEOUT_MS);
         pending.set(id, {
           resolve: (v) => (clearTimeout(timer), resolve(v)),
           reject: (e) => (clearTimeout(timer), reject(e)),
         });
-        send({ silk: 'request', id, from: deps.userId(), name, args });
+        send({ garn: 'request', id, from: deps.userId(), name, args });
       });
     },
     listen() {
       deps.socket.on(CHANNEL, (data) => {
         const m = data as Message | undefined;
-        if (m?.silk === 'request' && deps.isActiveGM()) void answer(m);
-        else if (m?.silk === 'response' && m.to === deps.userId()) {
+        if (m?.garn === 'request' && deps.isActiveGM()) void answer(m);
+        else if (m?.garn === 'response' && m.to === deps.userId()) {
           const p = pending.get(m.id);
           if (!p) return;
           pending.delete(m.id);
@@ -102,9 +102,9 @@ export function registerPlayerNoteHooks(deps: {
     const id = doc ? deps.elementIdOf(doc) : undefined;
     if (!id || !deps.isRevealed(id) || !deps.available()) return;
     (controls as HeaderControl[]).push({
-      action: 'silk-player-note',
+      action: 'garn-player-note',
       icon: 'fa-solid fa-note-sticky',
-      label: deps.localize('SILK.PlayerNote.Add'),
+      label: deps.localize('GARN.PlayerNote.Add'),
       onClick: () =>
         void (async () => {
           const text = await deps.prompt();

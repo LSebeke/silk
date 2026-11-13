@@ -51,6 +51,92 @@ describe('element commands', () => {
     expect(workingCopy.records().size).toBe(0);
   });
 
+  it('element.create takes a source (spec 1.1 §D); blank is the default and writes nothing', async () => {
+    const { registry, workingCopy } = setup();
+    const { id } = await registry.run<{ id: string }>('element.create', {
+      class: 'person',
+      name: 'Alrik',
+      source: { kind: 'blank' },
+    });
+    expect(workingCopy.get(id)?.data).toEqual({
+      class: 'person',
+      name: 'Alrik',
+      position: { x: 0, y: 0 },
+    });
+  });
+
+  it('element.create stores a compendium source on the element (Ghost worlds, §B.1)', async () => {
+    const { registry, workingCopy } = setup();
+    const source = { kind: 'compendium', uuid: 'Compendium.dsa5.npcs.Actor.abc' };
+    const { id } = await registry.run<{ id: string }>('element.create', {
+      class: 'creature',
+      name: 'Wolf',
+      source,
+    });
+    expect(workingCopy.get(id)?.data['source']).toEqual(source);
+  });
+
+  it('element.create stores a given image (the portrait of a compendium pick, on the Ghost)', async () => {
+    const { registry, workingCopy } = setup();
+    const { id } = await registry.run<{ id: string }>('element.create', {
+      class: 'person',
+      name: 'Alrik',
+      img: 'alrik.webp',
+      source: { kind: 'compendium', uuid: 'Compendium.dsa5.npcs.Actor.a' },
+    });
+    expect(workingCopy.get(id)?.data['img']).toBe('alrik.webp');
+  });
+
+  it('element.create takes a Scene source for Location and Event, with its card thumb (1.1 §B.2.1)', async () => {
+    const { registry, workingCopy } = setup();
+    for (const cls of ['location', 'event']) {
+      const source = { kind: 'compendium', uuid: 'Compendium.dsa5-core.coremaps.Scene.a' };
+      const { id } = await registry.run<{ id: string }>('element.create', {
+        class: cls,
+        name: 'Gareth',
+        source,
+        img: 'maps/gareth.webp',
+        thumb: 'data:image/webp;base64,AAA',
+      });
+      expect(workingCopy.get(id)?.data).toMatchObject({
+        source,
+        img: 'maps/gareth.webp',
+        thumb: 'data:image/webp;base64,AAA',
+      });
+    }
+  });
+
+  it('element.create refuses a source the class does not offer', async () => {
+    const { registry, workingCopy } = setup();
+    await expect(
+      registry.run('element.create', {
+        class: 'creature',
+        name: 'x',
+        source: { kind: 'generator', id: 'nsc-zucht' },
+      }),
+    ).rejects.toThrow(/source/);
+    await expect(
+      registry.run('element.create', {
+        class: 'note',
+        name: 'x',
+        source: { kind: 'compendium', uuid: 'Compendium.a.b.Actor.c' },
+      }),
+    ).rejects.toThrow(/source/);
+    expect(workingCopy.records().size).toBe(0);
+  });
+
+  it('element.create refuses a generator source without the Actor it created', async () => {
+    const { registry, workingCopy } = setup();
+    await expect(
+      registry.run('element.create', {
+        class: 'person',
+        name: 'x',
+        source: { kind: 'generator', id: 'nsc-zucht' },
+      }),
+    ).rejects.toThrow(/actorUuid/);
+    expect(workingCopy.records().size).toBe(0);
+  });
+
   it('element.rename changes only the name', async () => {
     const { registry, workingCopy } = setup();
     const { id } = await registry.run<{ id: string }>('element.create', {

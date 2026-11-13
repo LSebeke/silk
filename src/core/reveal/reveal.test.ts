@@ -23,9 +23,9 @@ describe('reveal.element (spec §8)', () => {
     await t.run('reveal.element', { id, revealed: true });
     const doc = t.doc(id);
     expect(t.level(doc)).toBe(OBSERVER);
-    expect(t.level(page(doc, doc.flags.silk.cover))).toBe(OBSERVER);
+    expect(t.level(page(doc, doc.flags.garn.cover))).toBe(OBSERVER);
     for (const block of t.element(id).infoBlocks) expect(t.level(page(doc, block._id))).toBe(NONE);
-    expect(t.level(page(doc, doc.flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(doc, doc.flags.garn.connections))).toBe(NONE);
     expect(t.map().elements).toEqual([id]);
     expect(t.world().elements).toEqual([id]);
     expect(t.reveal.isRevealed('element', id)).toBe(true);
@@ -90,7 +90,7 @@ describe('reveal.infoBlock', () => {
     const resolution = blockId(t, id, 'Resolution');
     await t.run('reveal.infoBlock', { id: hook });
     const doc = t.doc(id);
-    const { quest, questKey } = doc.flags.silk;
+    const { quest, questKey } = doc.flags.garn;
     const q = (page(doc, quest).system as { quests: Record<string, Record<string, unknown>> })
       .quests[questKey];
     expect(q?.['visible']).toBe(true);
@@ -117,8 +117,8 @@ describe('reveal.connection', () => {
     expect(t.level(t.doc(b))).toBe(OBSERVER);
     expect(t.level(t.doc(c))).toBe(NONE);
     expect(t.level(t.companion(a))).toBe(OBSERVER);
-    expect(t.level(page(t.companion(a), t.companion(a).flags.silk.connections))).toBe(OBSERVER);
-    expect(t.level(page(t.doc(b), t.doc(b).flags.silk.connections))).toBe(OBSERVER);
+    expect(t.level(page(t.companion(a), t.companion(a).flags.garn.connections))).toBe(OBSERVER);
+    expect(t.level(page(t.doc(b), t.doc(b).flags.garn.connections))).toBe(OBSERVER);
     expect(t.pageRefreshes.flat()).toEqual(expect.arrayContaining([a, b]));
   });
 
@@ -152,9 +152,9 @@ describe('un-reveal', () => {
     await t.run('reveal.element', { id: b, revealed: false });
     const doc = t.doc(b);
     expect(t.level(doc)).toBe(NONE);
-    expect(t.level(page(doc, doc.flags.silk.cover))).toBe(NONE);
+    expect(t.level(page(doc, doc.flags.garn.cover))).toBe(NONE);
     expect(t.level(page(doc, desc))).toBe(NONE);
-    expect(t.level(page(doc, doc.flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(doc, doc.flags.garn.connections))).toBe(NONE);
     // A stays Revealed, but its only Revealed Connection is gone.
     expect(t.level(t.doc(a))).toBe(LIMITED);
     expect(t.level(t.companion(a))).toBe(NONE);
@@ -172,8 +172,8 @@ describe('un-reveal', () => {
     await t.reveal.idle();
     expect(t.map().connections).toEqual([]);
     expect(t.world().connections).toEqual([]);
-    expect(t.level(page(t.doc(a), t.doc(a).flags.silk.connections))).toBe(NONE);
-    expect(t.level(page(t.doc(b), t.doc(b).flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(a), t.doc(a).flags.garn.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(b), t.doc(b).flags.garn.connections))).toBe(NONE);
     expect(t.level(t.doc(a))).toBe(OBSERVER);
   });
 
@@ -186,7 +186,7 @@ describe('un-reveal', () => {
     await t.run('reveal.connection', { id: ab, revealed: false });
     expect(t.map().elements).toEqual([a, b].sort());
     expect(t.map().connections).toEqual([]);
-    expect(t.level(page(t.doc(a), t.doc(a).flags.silk.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(a), t.doc(a).flags.garn.connections))).toBe(NONE);
   });
 });
 
@@ -200,7 +200,7 @@ describe('Appearance (Person/Creature)', () => {
       prototypeToken: { texture: { src: string }; displayName: number };
     };
     expect(doc.img).toBe(HOOD);
-    expect(doc.flags.silk.img).toBe('alrik.webp');
+    expect(doc.flags.garn.img).toBe('alrik.webp');
     expect(doc.prototypeToken.texture.src).toBe(HOOD);
     expect(doc.prototypeToken.displayName).toBe(40); // OWNER before the element Reveal
     await t.materializer.sync(id);
@@ -219,11 +219,11 @@ describe('Appearance (Person/Creature)', () => {
     expect(doc.img).toBe('alrik.webp');
     expect(doc.prototypeToken.texture.src).toBe('alrik.webp');
     expect(doc.prototypeToken.displayName).toBe(30); // HOVER after
-    expect(doc.flags.silk.hood).toBeUndefined();
+    expect(doc.flags.garn.hood).toBeUndefined();
     expect(t.level(page(t.companion(id), blockId(t, id, 'Appearance')))).toBe(OBSERVER);
     expect(t.tokens.at(-1)).toEqual({
       actor: doc.uuid,
-      data: { 'texture.src': 'alrik.webp', displayName: 30 },
+      data: expect.objectContaining({ 'texture.src': 'alrik.webp', displayName: 30 }),
     });
     await t.run('reveal.infoBlock', { id: blockId(t, id, 'Appearance'), revealed: false });
     expect(t.doc(id).img).toBe(HOOD);
@@ -239,6 +239,149 @@ describe('Appearance (Person/Creature)', () => {
     expect(t.element(id).img).toBe('dragon.webp');
     await t.run('reveal.appearance', { id });
     expect(t.doc(id).img).toBe('dragon.webp');
+  });
+
+  it('image editor while hooded (v1.1 §G.3): token and pose wait for Reveal, ring at once', async () => {
+    const t = setup();
+    const id = await materialized(t, 'creature', 'Drache');
+    type Doc = ReturnType<typeof t.doc> & {
+      prototypeToken: {
+        texture: { src: string; anchorX?: number };
+        ring: { enabled: boolean };
+      };
+    };
+    await t.registry.run('element.setImage', {
+      id,
+      token: { src: 'dragon-token.webp', ring: { enabled: true }, anchor: { x: 0.3, y: 0.5 } },
+    });
+    const hooded = t.doc(id) as Doc;
+    expect(hooded.prototypeToken.texture.src).toBe(HOOD);
+    expect(hooded.prototypeToken.texture.anchorX ?? 0.5).toBe(0.5);
+    expect(hooded.prototypeToken.ring.enabled).toBe(true);
+    // The hood went through the subject crop (#171).
+    expect(t.subjects.map((s) => s.spec.src)).toEqual([HOOD]);
+    await t.run('reveal.appearance', { id });
+    const shown = t.doc(id) as Doc;
+    expect(shown.prototypeToken.texture.src).toBe('dragon-token.webp');
+    expect(shown.prototypeToken.texture.anchorX ?? 0.5).toBe(0.5);
+    expect(t.subjects.at(-1)?.spec).toMatchObject({
+      src: 'dragon-token.webp',
+      pose: { anchorX: 0.3, anchorY: 0.5, scale: 1 },
+    });
+    expect(shown.flags.garn.pose).toEqual({ anchorX: 0.3, anchorY: 0.5, scale: 1 });
+  });
+
+  it('Restore imported images while hooded (v1.1 §G.3.1): the real look at Reveal', async () => {
+    const t = setup();
+    const id = await materialized(t, 'creature', 'Wolf');
+    const uuid = t.doc(id).uuid;
+    await t.docs.update(uuid, {
+      'flags.garn.original': {
+        img: 'wolf.webp',
+        texture: { src: 'wolf-token.webp', fit: 'cover' },
+        ring: { enabled: false },
+      },
+    });
+    await t.registry.run('element.setImage', {
+      id,
+      img: 'mine.webp',
+      token: { sameAsImage: true, anchor: { x: 0.3, y: 0.5 } },
+    });
+    await t.registry.run('element.restoreImages', { id });
+    type Doc = ReturnType<typeof t.doc> & {
+      prototypeToken: { texture: { src: string; fit?: string; anchorX?: number } };
+    };
+    expect(t.doc(id).img).toBe(HOOD);
+    expect(t.element(id).img).toBe('wolf.webp');
+    await t.run('reveal.appearance', { id });
+    const shown = t.doc(id) as Doc;
+    expect(shown.img).toBe('wolf.webp');
+    expect(shown.prototypeToken.texture).toMatchObject({ src: 'wolf-token.webp', fit: 'cover' });
+    expect(shown.prototypeToken.texture.anchorX ?? 0.5).toBe(0.5);
+    expect(shown.flags.garn.pose).toBeUndefined();
+  });
+});
+
+describe('Appearance by flag, deleted and re-added (v1.1 §C.2)', () => {
+  type ActorDoc = ReturnType<ReturnType<typeof setup>['doc']> & {
+    prototypeToken: { texture: { src: string } };
+  };
+  const PERSON_ICON = 'icons/svg/mystery-man.svg';
+  const appearanceOf = (t: ReturnType<typeof setup>, id: string) =>
+    must(t.element(id).infoBlocks.find((b) => b.appearance)?._id, 'Appearance');
+
+  async function alrik() {
+    const t = setup();
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.setImage', { id, img: 'alrik.webp' });
+    await t.registry.run('materialize.elements', { ids: [id] });
+    return { t, id };
+  }
+
+  it('a renamed Appearance block still guards the image', async () => {
+    const { t, id } = await alrik();
+    await t.registry.run('infoBlock.edit', { id: appearanceOf(t, id), name: 'Aussehen' });
+    await t.run('reveal.infoBlock', { id: appearanceOf(t, id) });
+    expect(t.map().appearance).toEqual([id]);
+    expect(t.doc(id).img).toBe('alrik.webp');
+  });
+
+  it('a block merely named "Appearance" does not guard the image', async () => {
+    const { t, id } = await alrik();
+    await t.registry.run('infoBlock.delete', { id: appearanceOf(t, id) });
+    const { id: block } = await t.registry.run<{ id: string }>('infoBlock.create', {
+      elementId: id,
+      name: 'Appearance',
+    });
+    await t.run('reveal.infoBlock', { id: block });
+    expect(t.map().appearance).toEqual([]);
+    expect(t.doc(id).img).toBe(PERSON_ICON);
+  });
+
+  it('deleted: players see the class icon as img and token, permanently; the real image waits', async () => {
+    const { t, id } = await alrik();
+    await t.run('reveal.appearance', { id });
+    await t.registry.run('infoBlock.delete', { id: appearanceOf(t, id) });
+    await t.reveal.idle();
+    const doc = t.doc(id) as ActorDoc;
+    expect(doc.img).toBe(PERSON_ICON);
+    expect(doc.prototypeToken.texture.src).toBe(PERSON_ICON);
+    expect(doc.flags.garn.img).toBe('alrik.webp');
+    expect(t.tokens.at(-1)?.data['texture.src']).toBe(PERSON_ICON);
+    expect(t.element(id).img).toBe('alrik.webp');
+    // Nothing left to Reveal: the element Reveal keeps the icon.
+    await t.run('reveal.element', { id });
+    await t.run('reveal.appearance', { id });
+    expect(t.doc(id).img).toBe(PERSON_ICON);
+    expect(t.map().appearance).toEqual([]);
+    await t.lifecycle.reconcile();
+    expect(t.doc(id).img).toBe(PERSON_ICON);
+  });
+
+  it('re-added with the preset: the hood behaviour is back', async () => {
+    const { t, id } = await alrik();
+    await t.registry.run('infoBlock.delete', { id: appearanceOf(t, id) });
+    await t.reveal.idle();
+    expect(t.doc(id).img).toBe(PERSON_ICON);
+    await t.registry.run('infoBlock.create', { elementId: id, appearance: true });
+    await t.reveal.idle();
+    const block = t.element(id).infoBlocks.find((b) => b.appearance);
+    expect(block?.name).toBe('Appearance');
+    expect(t.doc(id).img).toBe(HOOD);
+    expect(t.doc(id).flags.garn.img).toBe('alrik.webp');
+    await t.run('reveal.appearance', { id });
+    expect(t.doc(id).img).toBe('alrik.webp');
+  });
+
+  it('the preset is only for actor classes without an Appearance', async () => {
+    const { t, id } = await alrik();
+    await expect(
+      t.registry.run('infoBlock.create', { elementId: id, appearance: true }),
+    ).rejects.toThrow();
+    const place = await t.create('location', 'Gareth');
+    await expect(
+      t.registry.run('infoBlock.create', { elementId: place, appearance: true }),
+    ).rejects.toThrow();
   });
 });
 
@@ -270,7 +413,7 @@ describe('Truth: World ownership mirrored in the Revelation Map', () => {
     const b = await materialized(t, 'location', 'B');
     const ab = await t.connect(a, b);
     await t.run('reveal.connection', { id: ab });
-    // Drift while Silk was off: the GM hid B by hand, and opened A's Description.
+    // Drift while Garn was off: the GM hid B by hand, and opened A's Description.
     t.doc(b).ownership = { default: NONE };
     const desc = blockId(t, a, 'Description');
     page(t.doc(a), desc).ownership = { default: OBSERVER };
@@ -279,8 +422,8 @@ describe('Truth: World ownership mirrored in the Revelation Map', () => {
     expect(t.map().connections).toEqual([]);
     expect(t.map().infoBlocks).toEqual([desc]);
     expect(t.world()).toEqual(t.map());
-    expect(t.level(page(t.doc(a), t.doc(a).flags.silk.connections))).toBe(NONE);
-    expect(t.level(page(t.doc(b), t.doc(b).flags.silk.cover))).toBe(NONE);
+    expect(t.level(page(t.doc(a), t.doc(a).flags.garn.connections))).toBe(NONE);
+    expect(t.level(page(t.doc(b), t.doc(b).flags.garn.cover))).toBe(NONE);
   });
 
   it('reconcile under main: the World state follows ownership, no Campaign map is written', async () => {

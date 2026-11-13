@@ -1,5 +1,5 @@
 /**
- * Playwright fixtures. One headless Foundry + `silk-test-<run>` world per worker (silk
+ * Playwright fixtures. One headless Foundry + `garn-test-<run>` world per worker (garn
  * enabled, users `Gamemaster` and `Player`); `gm` and `player` are joined, ready pages.
  */
 import { test as base, expect, type Browser, type Page } from '@playwright/test';
@@ -12,6 +12,7 @@ import {
   deleteWorld,
   freePort,
   prepareDataPath,
+  relaunchWorld,
   startFoundry,
 } from './harness';
 
@@ -66,21 +67,21 @@ async function join(browser: Browser, url: string, userName: string): Promise<Pa
   if (status !== 'ok') throw new Error(`Join as ${userName} failed: ${status}`);
   await page.goto('/game');
   await page.waitForFunction(() => game.ready === true, undefined, { timeout: 60_000 });
-  await waitForSilk(page);
+  await waitForGarn(page);
   return page;
 }
 
 /**
- * `game.ready` flips before Silk's async `ready` hook has started its session; wait for
- * that too when Silk is enabled (it isn't on the first, setup join).
+ * `game.ready` flips before Garn's async `ready` hook has started its session; wait for
+ * that too when Garn is enabled (it isn't on the first, setup join).
  */
-export async function waitForSilk(page: Page): Promise<void> {
+export async function waitForGarn(page: Page): Promise<void> {
   await page.waitForFunction(
     () => {
       try {
         if (game.ready !== true) return false;
-        if (!game.modules?.get('silk')?.active) return true;
-        return !!game.modules.get('silk')?.session?.();
+        if (!game.modules?.get('garn')?.active) return true;
+        return !!game.modules.get('garn')?.session?.();
       } catch {
         return false;
       }
@@ -90,37 +91,56 @@ export async function waitForSilk(page: Page): Promise<void> {
   );
 }
 
-/** First GM session: add the player and enable silk (takes effect on next load). */
-async function setUpWorld(page: Page): Promise<void> {
-  await page.evaluate(async (playerName) => {
-    if (!game.users?.getName(playerName)) {
-      await User.implementation.create({ name: playerName, role: CONST.USER_ROLES.PLAYER });
-    }
-    const config = game.settings?.get('core', 'moduleConfiguration') ?? {};
-    await game.settings?.set('core', 'moduleConfiguration', { ...config, silk: true });
-  }, PLAYER);
+/** First GM session: add the player and enable garn (takes effect on next load). */
+async function setUpWorld(page: Page, modules: readonly string[]): Promise<void> {
+  await page.evaluate(
+    async ([playerName, extra]) => {
+      if (!game.users?.getName(playerName)) {
+        await User.implementation.create({ name: playerName, role: CONST.USER_ROLES.PLAYER });
+      }
+      const config = game.settings?.get('core', 'moduleConfiguration') ?? {};
+      const enabled = Object.fromEntries(extra.map((id) => [id, true]));
+      await game.settings?.set('core', 'moduleConfiguration', {
+        ...config,
+        ...enabled,
+        garn: true,
+      });
+    },
+    [PLAYER, modules] as const,
+  );
 }
 
-export const test = base.extend<{ gm: Page; player: Page }, { world: World; worldKey: string }>({
+export const test = base.extend<
+  { gm: Page; player: Page },
+  { world: World; worldKey: string; modules: string[] }
+>({
   /**
    * The World is shared by every test in a worker. A file that needs a fresh one (e.g. an
    * unbound World) sets its own key with `test.use({ worldKey })`: Playwright gives it a
    * separate worker, hence a separate World.
    */
   worldKey: ['shared', { scope: 'worker', option: true }],
+  /** More installed modules (and their dependencies) to enable; set with `worldKey`. */
+  modules: [[], { scope: 'worker', option: true }],
   world: [
-    async ({ browser, worldKey }, use) => {
+    async ({ browser, worldKey, modules }, use) => {
       const run = `${Date.now().toString(36)}-${randomBytes(2).toString('hex')}-${worldKey}`;
       const dataPath = prepareDataPath({
         source: FOUNDRY_USER_DATA,
         dist: resolve(import.meta.dirname, '../dist'),
+        modules,
       });
       const foundry = await startFoundry({ dataPath, port: await freePort() });
       let id: string | undefined;
       try {
         id = await createAndLaunchWorld(foundry, run);
         const setup = await join(browser, foundry.url, GM);
-        await setUpWorld(setup);
+        await setUpWorld(setup, modules);
+        if (modules.length) {
+          // Their compendium packs load only at World launch.
+          await setup.evaluate(() => game.shutDown?.()).catch(() => undefined);
+          await relaunchWorld(foundry, id);
+        }
         await setup.context().close();
         await use({ url: foundry.url, id, join: (b, name) => join(b, foundry.url, name) });
       } finally {

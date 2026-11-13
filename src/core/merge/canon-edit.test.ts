@@ -101,9 +101,9 @@ describe('Canon edit mode load sync (spec §11.3)', () => {
     const view = await w.merges.view();
     expect(view?.draft).toMatchObject({ kind: 'canonEdit', base: w.head, ours: moved });
     expect(view?.columns).toEqual({
-      base: 'SILK.Merge.Base',
-      ours: 'SILK.Merge.CanonIncoming',
-      theirs: 'SILK.Merge.ThisWorld',
+      base: 'GARN.Merge.Base',
+      ours: 'GARN.Merge.CanonIncoming',
+      theirs: 'GARN.Merge.ThisWorld',
     });
     expect(view?.records.find((r) => r.id === 'el-gareth')?.badge).toBe('changed');
     expect(view?.records.find((r) => r.id === 'el-ulf')?.badge).toBe('canonOnly');

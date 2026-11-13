@@ -1,6 +1,6 @@
 /**
  * Entry point. Wires the pure core to Foundry through the adapter and exposes the
- * command registry at `game.modules.get('silk').api` (spec §2, ADR 0003).
+ * command registry at `game.modules.get('garn').api` (spec §2, ADR 0003).
  */
 import {
   adoptDialogs,
@@ -8,31 +8,34 @@ import {
   foundryAdopt,
   registerAdoptHooks,
 } from './adapter/adopt';
+import { readPickerCatalog, sceneThumbnail, type CatalogGame } from './adapter/compendium';
 import { registerConnectionsPageHooks } from './adapter/connections-page';
 import { dsa5Mapping, dsa5Sections } from './adapter/dsa5';
 import { showFileBrowseNotice } from './adapter/file-browse-notice';
 import { activeScene, registerFocusHooks } from './adapter/focus';
 import { createFoundryDocs } from './adapter/foundry-docs';
-import { registerKeybindings } from './adapter/keybindings';
+import { liveKeybindings, registerKeybindings } from './adapter/keybindings';
 import { lifecycleDialogs, registerLifecycleHooks } from './adapter/lifecycle';
 import { foundryApi, registerMaterializeHooks } from './adapter/materialize';
+import { foundryNscZucht } from './adapter/nsc-zucht';
 import { registerOwnsHooks } from './adapter/owns';
 import { createSocketRelay, registerPlayerNoteHooks, textToHtml } from './adapter/player-notes';
-import { foundryRevealStage, registerRevealHooks } from './adapter/reveal';
+import { foundryRevealStage, registerRevealHooks, updatePlacedTokens } from './adapter/reveal';
 import { foundryOwnershipRevealed } from './adapter/revealed';
 import { createSceneDocs, registerSceneBar, registerSceneHooks } from './adapter/scenes';
-import { addSilkSceneControl, type SceneControls } from './adapter/scene-controls';
+import { addGarnSceneControl, type SceneControls } from './adapter/scene-controls';
 import {
   getSession,
   setBeforeCommit,
   setRevelationMapApplier,
   startSession,
 } from './adapter/session';
-import { registerSettings } from './adapter/settings';
+import { canonWindowMenu, registerSettings } from './adapter/settings';
 import { isActiveGM } from './adapter/working-copy-journal';
 import { MODULE_ID } from './constants';
 import {
   canvasCoreCommands,
+  compendiumSource,
   createCanvasFilter,
   createCanvasSearch,
   createCanvasState,
@@ -45,6 +48,8 @@ import {
   focusCommands,
   joinFrameOnCreate,
   layoutCommands,
+  pickerCommands,
+  pipelineCommands,
   readViewState,
   searchCommands,
 } from './core/canvas';
@@ -60,10 +65,17 @@ import {
   serializeRevelationMap,
 } from './core/campaigns';
 import { connectionCommands, connectOnCreate } from './core/connections';
-import { elementCommands, readElement, type ElementCommandDeps } from './core/elements';
+import {
+  compendiumDocument,
+  elementCommands,
+  readElement,
+  type ElementCommandDeps,
+} from './core/elements';
 import { createEventScenes, eventSceneCommands } from './core/event-scenes';
 import { historyCommands } from './core/history';
 import {
+  appearanceMigration,
+  lookMigration,
   createConnectionsPages,
   createDocRewriter,
   createLifecycle,
@@ -74,20 +86,27 @@ import {
 import { createMerges, mergeCommands, routeMainMoved, type Merges } from './core/merge';
 import { createOwns, type Owns } from './core/owns';
 import { createPlayerNotes, playerNoteCommands } from './core/player-notes';
+import { hoodImage, lookWriter, type LookStage } from './core/portrait';
 import { createReveal, revealCommands } from './core/reveal';
 import { canonCommands } from './ui/canon/commands';
 import { canvasBridge } from './ui/canvas/bridge';
 import { canvasUiCommands } from './ui/canvas/commands';
+import { createLegendState, legendCommands } from './ui/canvas/legend';
 import type { CanvasContext } from './ui/canvas/context';
 import { devUiCommands } from './ui/dev/commands';
 import { createMergeUi } from './ui/merge/ui';
+import { mountProseEditor } from './adapter/prose-editor';
 import { detailUiCommands } from './ui/detail/commands';
 import type { DetailContext } from './ui/detail/context';
 import { playerCanvasCommands } from './ui/player-canvas/commands';
 import type { PlayerCanvasContext } from './ui/player-canvas/context';
 import { createPlayerViewPublisher, parsePlayerView } from './core/player-view';
 import { openPlayerDoc, resolvePlayerNode, type PlayerDoc } from './adapter/player-docs';
-import './ui/silk.css';
+import { pickImage } from './adapter/file-picker';
+import { foundryRingStyle } from './adapter/ring-style';
+import { createSubjectFiles, drawSubject } from './adapter/subject-file';
+import { createFilePickerAssets, foundryFilePicker } from './adapter/canon-files';
+import './ui/garn.css';
 
 const localize = (key: string) => game.i18n?.localize(key) ?? key;
 const registry = createRegistry(() => ({ isGM: game.user?.isGM ?? false }));
@@ -95,9 +114,34 @@ const workingCopy = () => getSession().workingCopy;
 
 /** Client-local canvas state (selection) and the Creation Pipeline, shared by every entry point. */
 const canvasState = createCanvasState();
+/** Spec 1.1 §B.3: the Source Step Generator, NSC Zucht (dsa5-mastersworkshop). */
+const nscZucht = foundryNscZucht((key) => localize(key));
+/**
+ * Spec 1.1 §B.2: World actors and Actor packs of the class's DSA5 type; §B.2.1: Scenes for
+ * Location and Event.
+ */
+const compendium = compendiumSource({
+  kind: (cls) => {
+    const documentName = compendiumDocument(cls);
+    if (documentName === 'Scene') return { documentName };
+    const type = documentName === 'Actor' ? dsa5Mapping.docType(cls) : undefined;
+    return type ? { documentName: 'Actor', type } : undefined;
+  },
+  thumbnail: (src) => sceneThumbnail(src),
+  catalog: (kind) =>
+    readPickerCatalog(game as unknown as CatalogGame, kind, localize('GARN.Picker.World')),
+  async open(picker) {
+    const { openCompendiumPicker } = await import('./ui/canvas/CompendiumPickerWindow');
+    return openCompendiumPicker(picker, {
+      run: (name, args) => registry.run(name, args),
+      localize,
+    });
+  },
+});
 const pipeline = createCreationPipeline({
   run: (name, args) => registry.run(name, args),
-  label: (id) => localize(`SILK.Class.${id}`),
+  label: (id) => localize(`GARN.Class.${id}`),
+  sources: { compendium, generator: nscZucht },
 });
 const viewState = createViewState({
   load: () => game.settings?.get(MODULE_ID, 'viewState'),
@@ -141,6 +185,25 @@ afterCreate.push((element) => canvasSearch.afterCreate(element));
 const layoutTween = createLayoutTween();
 
 const foundryDocs = createFoundryDocs(foundryApi());
+/** The world's token ring style (v1.1 §G.3): editor preview and subject edges. */
+const ringStyle = foundryRingStyle();
+let subjectAssets: ReturnType<typeof createFilePickerAssets> | undefined;
+/** Look writes (v1.1 §G.3): every placed token, linked and unlinked (#166); subject files. */
+const lookStage: LookStage = {
+  updateTokens: updatePlacedTokens,
+  ringEdges: (size) => ringStyle.edges(size),
+  renderSubject: createSubjectFiles({
+    draw: drawSubject,
+    write: (path, bytes) =>
+      (subjectAssets ??= createFilePickerAssets(foundryFilePicker())).write(path, bytes),
+    worldId: () => {
+      // No silent fallback: a file under another world's folder would be found by none.
+      const id = game.world?.id;
+      if (!id) throw new Error('Garn: no world id for the token subject file');
+      return id;
+    },
+  }),
+};
 /** T12 owns ↔ inventory; created below, after the materializer it uses. */
 // eslint-disable-next-line prefer-const -- the materializer's deps reach it lazily
 let owns: Owns;
@@ -155,16 +218,17 @@ const materializer = createMaterializer({
   notify: (message) => void ui.notifications?.info(message),
   confirm: async (count) =>
     !!(await foundry.applications.api.DialogV2.confirm({
-      window: { title: localize('SILK.Materialize.VisibleTitle') },
-      content: `<p>${game.i18n?.format('SILK.Materialize.VisibleConfirm', { count: String(count) })}</p>`,
+      window: { title: localize('GARN.Materialize.VisibleTitle') },
+      content: `<p>${game.i18n?.format('GARN.Materialize.VisibleConfirm', { count: String(count) })}</p>`,
     })),
   // The rendered Nodes: Canvas Filters / Focus View (§10.5, §10.6).
   visibleIds: () => canvasFilter.visibleIds(),
   selection: () => canvasState.get().selection,
-  // The pipeline is still in the class box while `element.create` runs.
-  deferImmediate: () => pipeline.get().step === 'classBox',
+  // The pipeline is still in the class box / Source Step while `element.create` runs.
+  deferImmediate: () => pipeline.deferringMaterialize(),
   parentOf: (id) => owns.parentOf(id),
   restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
+  look: lookStage,
   afterMaterialize: async (id) => {
     await owns.afterMaterialize(id);
     await lifecycle.afterMaterialize(id);
@@ -177,7 +241,7 @@ owns = createOwns({
   docs: foundryDocs,
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
-  deferImmediate: () => pipeline.get().step === 'classBox',
+  deferImmediate: () => pipeline.deferringMaterialize(),
   newId: () => foundry.utils.randomID(16),
   now: () => Date.now(),
   localize,
@@ -213,6 +277,21 @@ const lifecycle = createLifecycle({
   confirmDelete: (args) => dialogs.confirmDelete(args),
   lastCommit: () => getSession().history.lastCommit(),
 });
+// v1.1 §C.3: before Reveal's reconcile, which finds the Appearance by its flag.
+lifecycle.contribute(
+  appearanceMigration({ workingCopy, docs: foundryDocs, materializer, localize }),
+);
+// v1.1 §G.3.2: once per World, before Reveal's reconcile rewrites the looks.
+lifecycle.contribute(
+  lookMigration({
+    workingCopy,
+    materializer,
+    system: dsa5Mapping,
+    writeLook: lookWriter(lookStage, (uuid, data) => foundryDocs.update(uuid, data)),
+    done: () => game.settings?.get(MODULE_ID, 'lookMigrated') ?? false,
+    markDone: async () => void (await game.settings?.set(MODULE_ID, 'lookMigrated', true)),
+  }),
+);
 lifecycle.contribute(
   revelationMapCleanup(
     () => getSession().campaigns,
@@ -252,7 +331,7 @@ const eventScenes = createEventScenes({
   scenes: eventScenesDocs,
   materializer,
   mode: () => game.settings?.get(MODULE_ID, 'materializeMode') ?? 'immediate',
-  deferImmediate: () => pipeline.get().step === 'classBox',
+  deferImmediate: () => pipeline.deferringMaterialize(),
   newId: () => foundry.utils.randomID(16),
   localize: format,
   notify: (message) => void ui.notifications?.info(message),
@@ -348,9 +427,8 @@ const reveal = createReveal({
       )),
   },
   adventure: adventureCheckedOut,
-  hood: () =>
-    game.settings?.get(MODULE_ID, 'hoodedImage') ?? `modules/${MODULE_ID}/assets/hooded.svg`,
-  stage: foundryRevealStage(),
+  hood: () => hoodImage(game.settings?.get(MODULE_ID, 'hoodedImage')),
+  stage: foundryRevealStage(lookStage),
   localize,
   refreshPages: (ids) => connectionsPages.refresh(ids),
 });
@@ -436,6 +514,15 @@ const detailContext = (): DetailContext => ({
   localize,
   format: (key, data) => game.i18n?.format(key, data) ?? key,
   error: (message) => void ui.notifications?.error(message),
+  confirm: async (title, content) =>
+    !!(await foundry.applications.api.DialogV2.confirm({
+      window: { title },
+      content: `<p>${foundry.utils.escapeHTML(content)}</p>`,
+    })),
+  editor: mountProseEditor,
+  look: (id) => materializer.look(id),
+  pickImage,
+  ringPreview: (size) => ringStyle.preview(size),
 });
 
 /** T14 Adopt: existing Foundry docs become Story Elements (spec §6 Adopt). */
@@ -452,6 +539,7 @@ const adopt = createAdopt({
   newId: () => foundry.utils.randomID(16),
   localize: format,
   materializer,
+  thumbnail: (src) => sceneThumbnail(src),
   foundry: adoptFoundryApi,
   run: (name, args) => registry.run(name, args),
   afterAdopt: async (id) => {
@@ -460,22 +548,26 @@ const adopt = createAdopt({
   },
   // §6/§8: a doc players can already see counts as Revealed. Under main there is no map:
   // the Revealed filter reads ownership, which Adopt leaves unchanged.
-  async markRevealed({ elements, infoBlocks }) {
+  async markRevealed({ elements, infoBlocks, appearance }) {
     const campaigns = getSession().campaigns;
     const campaign = workingCopy().binding ? await campaigns.checkedOutCampaign() : null;
     if (!campaign) return;
     let map = await campaigns.readRevelationMap(campaign.id);
     for (const id of elements) map = setRevealed(map, 'element', id, true);
     for (const id of infoBlocks) map = setRevealed(map, 'infoBlock', id, true);
+    for (const id of appearance) map = setRevealed(map, 'appearance', id, true);
     await campaigns.writeRevelationMap(campaign.id, map);
     // The World mirror (T16 `revealState`) too; ownership already matches, nothing to apply.
     let world = parseRevelationMap((game.settings?.get(MODULE_ID, 'revealState') ?? null) as never);
     for (const id of elements) world = setRevealed(world, 'element', id, true);
     for (const id of infoBlocks) world = setRevealed(world, 'infoBlock', id, true);
+    for (const id of appearance) world = setRevealed(world, 'appearance', id, true);
     await game.settings?.set(MODULE_ID, 'revealState', serializeRevelationMap(world) as object);
     reveal.reload();
     await refreshRevealed();
   },
+  // v1.1 §C.2: a Person/Creature players can't see yet is hooded at Adopt.
+  hood: (id) => reveal.hood(id),
   viewCenter: () => canvasBridge.center?.() ?? { x: 0, y: 0 },
   select: async (ids) => void (await registry.run('canvas.select', { ids })),
   flash: (id) => canvasBridge.flash?.(id),
@@ -505,6 +597,12 @@ const startAdopt = createAdoptStarter({
   localize: format,
 });
 
+// Canvas legend (1.1 §E.3): open state is the client setting `legendOpen`.
+const legend = createLegendState({
+  get: () => game.settings?.get(MODULE_ID, 'legendOpen') ?? true,
+  set: async (open) => game.settings?.set(MODULE_ID, 'legendOpen', open),
+});
+
 const canvasContext = (): CanvasContext => ({
   run: (name, args) => registry.run(name, args),
   available: (name) => registry.isAvailable(name),
@@ -522,7 +620,15 @@ const canvasContext = (): CanvasContext => ({
   localize,
   title,
   reveal,
+  legend,
+  keybindings: () =>
+    liveKeybindings(
+      registry,
+      (action) => (game.keybindings?.get(MODULE_ID, action) ?? []) as never,
+      (code) => foundry.helpers.interaction.KeyboardManager.getKeycodeDisplayString(code),
+    ),
   warn: (message) => void ui.notifications?.warn(message),
+  checkoutSummary: () => getSession().campaigns.checkoutSummary(),
   adopt: (uuid, options) =>
     startAdopt(uuid, options).catch((error: unknown) => {
       ui.notifications?.error(error instanceof Error ? error.message : String(error));
@@ -545,18 +651,25 @@ for (const command of [
     owns.wrap(connectionCommands({ workingCopy, newId: () => foundry.utils.randomID(16) })),
   ),
   ...eventSceneCommands(eventScenes),
-  ...canvasCoreCommands({ workingCopy, state: canvasState }),
+  ...canvasCoreCommands({
+    workingCopy,
+    state: canvasState,
+    run: (name, args) => registry.run(name, args),
+  }),
+  ...pipelineCommands(pipeline),
+  ...pickerCommands(compendium),
   ...layoutCommands({
     workingCopy,
     state: canvasState,
     newId: () => foundry.utils.randomID(16),
-    groupLabel: () => localize('SILK.Canvas.NewGroup'),
+    groupLabel: () => localize('GARN.Canvas.NewGroup'),
     tween: (from) => layoutTween.start(from),
   }),
   ...filterCommands(canvasFilter),
   ...focusCommands(focus),
   ...searchCommands(canvasSearch),
   ...canvasUiCommands(canvasContext, playerCanvasEntry),
+  ...legendCommands(legend),
   ...playerCanvasCommands({
     view: playerView,
     openDoc: (node) =>
@@ -582,9 +695,9 @@ for (const command of [
 ])
   registry.register(command);
 
-// Dev-only commands (spec §14): `__SILK_DEV__` is false in release builds, so they and the
+// Dev-only commands (spec §14): `__GARN_DEV__` is false in release builds, so they and the
 // fixture/bench code are dropped from dist.
-if (__SILK_DEV__)
+if (__GARN_DEV__)
   for (const command of [
     ...devCoreCommands({ workingCopy }),
     ...devUiCommands({ run: (name, args) => registry.run(name, args), workingCopy, viewState }),
@@ -593,6 +706,11 @@ if (__SILK_DEV__)
 
 Hooks.once('init', () => {
   registerSettings((ns, key, data) => game.settings?.register(ns, key as never, data as never));
+  game.settings?.registerMenu(
+    MODULE_ID,
+    'canonWindow',
+    canonWindowMenu(foundry.applications.api.ApplicationV2, (name) => registry.run(name)) as never,
+  );
   registerKeybindings(registry, (ns, action, data) =>
     game.keybindings?.register(ns, action, data as never),
   );
@@ -624,6 +742,7 @@ Hooks.once('init', () => {
 
 Hooks.once('ready', async () => {
   await startSession();
+  void nscZucht.probe();
   registerMaterializeHooks(materializer, {
     on: (hook, fn) => void Hooks.on(hook as never, fn as never),
     isActiveGM: () => isActiveGM(game as never),
@@ -654,10 +773,10 @@ Hooks.once('ready', async () => {
     available: () => registry.isAvailable('playerNote.create'),
     prompt: async () => {
       const text: unknown = await foundry.applications.api.DialogV2.prompt({
-        window: { title: localize('SILK.PlayerNote.Add') },
-        content: `<label>${localize('SILK.PlayerNote.Prompt')}<textarea name="text" rows="6" data-silk-player-note-text></textarea></label>`,
+        window: { title: localize('GARN.PlayerNote.Add') },
+        content: `<label>${localize('GARN.PlayerNote.Prompt')}<textarea name="text" rows="6" data-garn-player-note-text></textarea></label>`,
         ok: {
-          label: localize('SILK.PlayerNote.Save'),
+          label: localize('GARN.PlayerNote.Save'),
           callback: (
             _event: unknown,
             button: { form: { elements: { text: { value: string } } } },
@@ -719,7 +838,7 @@ Hooks.once('ready', async () => {
     error: (message) => void ui.notifications?.error(message),
   });
   // Reconcile on load (§7): missed hooks are never replayed, Foundry is re-read. Missing
-  // docs first, then the contributors (Connections pages written while Silk was off, …).
+  // docs first, then the contributors (Connections pages written while Garn was off, …).
   // Canon edit mode (§11.3): main moved in another World → fast-forward (which reconciles) or
   // the merge window.
   if (isActiveGM(game as never))
@@ -727,7 +846,7 @@ Hooks.once('ready', async () => {
       const sync = await getMerges()
         .syncMain()
         .catch((error: unknown) => (console.error(error), 'current' as const));
-      if (sync === 'fastForward') ui.notifications?.info(localize('SILK.Canon.Synced'));
+      if (sync === 'fastForward') ui.notifications?.info(localize('GARN.Canon.Synced'));
       else {
         if (sync === 'merge') await mergeUi.open();
         await lifecycle.reconcile();
@@ -745,7 +864,7 @@ Hooks.once('ready', async () => {
 });
 
 Hooks.on('getSceneControlButtons', (controls) => {
-  addSilkSceneControl(controls as unknown as SceneControls, {
+  addGarnSceneControl(controls as unknown as SceneControls, {
     run: (name) => registry.run(name),
   });
 });

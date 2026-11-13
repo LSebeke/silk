@@ -1,7 +1,11 @@
 <script lang="ts">
-  /** Creation Pipeline step 1 (spec §10.3): searchable class selection box at the spot. */
+  /**
+   * Creation Pipeline step 1 (spec §10.3): searchable class selection box at the spot.
+   * Search, pick and cancel run as `pipeline.*` commands (ADR 0003).
+   */
   import { getContext } from 'svelte';
   import { classLabelKey, type ElementClassId } from '../../core/elements';
+  import { fail, focus } from './actions';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
 
   const ctx = getContext<CanvasContext>(CANVAS_CONTEXT);
@@ -9,48 +13,45 @@
   const box = $derived($pipeline.step === 'classBox' ? $pipeline : undefined);
   const options = $derived(box ? pipeline.options() : []);
 
-  const fail = (error: unknown) => console.error(error);
-  const pick = (id: ElementClassId) => pipeline.pickClass(id).catch(fail);
+  /** No class: the first option (Enter). */
+  const pick = (cls?: ElementClassId) =>
+    ctx.run('pipeline.pickClass', cls ? { class: cls } : {}).catch(fail);
 
   function onKeydown(event: KeyboardEvent) {
     event.stopPropagation();
-    if (event.key === 'Escape') pipeline.cancel();
+    if (event.key === 'Escape') ctx.run('pipeline.cancel').catch(fail);
     else if (event.key === 'Enter') {
       event.preventDefault();
-      pipeline.pickFirst().catch(fail);
+      void pick();
     }
   }
-
-  const focus = (el: HTMLInputElement) => {
-    queueMicrotask(() => el.focus());
-  };
 </script>
 
 {#if box}
   <div
-    class="silk-class-box"
+    class="garn-class-box"
     style:left="{box.anchor?.x ?? 40}px"
     style:top="{box.anchor?.y ?? 40}px"
     role="menu"
     tabindex="-1"
-    data-silk-class-box
+    data-garn-class-box
   >
     <input
       type="search"
       value={box.query}
-      placeholder={ctx.localize('SILK.Canvas.ClassSearch')}
-      oninput={(e) => pipeline.setQuery(e.currentTarget.value)}
+      placeholder={ctx.localize('GARN.Canvas.ClassSearch')}
+      oninput={(e) => ctx.run('pipeline.search', { query: e.currentTarget.value }).catch(fail)}
       onkeydown={onKeydown}
       use:focus
-      data-silk-class-search
+      data-garn-class-search
     />
     {#each options as cls (cls.id)}
       <button
         type="button"
         role="menuitem"
-        style:--silk-class={cls.color}
+        style:--garn-class={cls.color}
         onclick={() => pick(cls.id)}
-        data-silk-class-option={cls.id}
+        data-garn-class-option={cls.id}
       >
         <img src={cls.icon} alt="" />
         <span>{ctx.localize(classLabelKey(cls.id))}</span>
@@ -61,7 +62,7 @@
 {/if}
 
 <style>
-  .silk-class-box {
+  .garn-class-box {
     position: absolute;
     z-index: 20;
     display: flex;
@@ -90,7 +91,7 @@
     color: #222;
     background: #fff;
     border: 1px solid #ddd;
-    border-left: 4px solid var(--silk-class);
+    border-left: 4px solid var(--garn-class);
     border-radius: 4px;
     cursor: pointer;
   }
@@ -106,7 +107,7 @@
     height: 18px;
     border: 0;
     border-radius: 3px;
-    background: var(--silk-class);
+    background: var(--garn-class);
   }
   kbd {
     font-size: 10px;

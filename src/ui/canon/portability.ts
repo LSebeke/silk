@@ -19,7 +19,7 @@ import {
   type ImportResult,
 } from '../../core/canon';
 
-const K = 'SILK.Canon.Portability.';
+const K = 'GARN.Canon.Portability.';
 const t = (key: string, data?: Record<string, string>) =>
   (data ? game.i18n?.format(K + key, data) : game.i18n?.localize(K + key)) ?? key;
 
@@ -30,7 +30,7 @@ function io() {
 
 async function boundCanonId(): Promise<string> {
   const canon = await getSession().history.canon();
-  if (!canon) throw new Error('Silk: this World is not bound to a Canon yet');
+  if (!canon) throw new Error('Garn: this World is not bound to a Canon yet');
   return canon.manifest.id;
 }
 
@@ -39,7 +39,7 @@ const escape = (s: string) => foundry.utils.escapeHTML(s);
 async function confirm(title: string, html: string): Promise<boolean> {
   const ok = await foundry.applications.api.DialogV2.confirm({
     window: { title },
-    content: `<div class="silk-portability-dialog" data-silk-portability-dialog>${html}</div>`,
+    content: `<div class="garn-portability-dialog" data-garn-portability-dialog>${html}</div>`,
     rejectClose: false,
     modal: true,
   });
@@ -62,13 +62,13 @@ async function offerDownload(kind: 'backup' | 'share', result: ExportResult) {
     parts.push(`<p>${t('Missing')}</p>${list(manifest.missingAssets)}`);
   // Only this World's state is known here; other bound Worlds commit on their own.
   if (await getSession().history.isDirty())
-    parts.push(`<p class="warning" data-silk-uncommitted>${t('Uncommitted')}</p>`);
+    parts.push(`<p class="warning" data-garn-uncommitted>${t('Uncommitted')}</p>`);
   parts.push(`<p>${t('Download')}</p>`);
   const title = t(kind === 'backup' ? 'BackupTitle' : 'ShareTitle');
   if (!(await confirm(title, parts.join('')))) return null;
 
   const slug = manifest.name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'canon';
-  const fileName = `silk-${kind}-${slug}-${manifest.exportedAt.slice(0, 10)}.zip`;
+  const fileName = `garn-${kind}-${slug}-${manifest.exportedAt.slice(0, 10)}.zip`;
   download(zipArchive(entries), fileName);
   return {
     fileName,
@@ -97,7 +97,7 @@ export async function runExportBackup() {
 
 /** `canon.exportShare`: `commit` is a Commit hash or an Adventure id (its head). */
 export async function runExportShare({ commit }: { commit: string }) {
-  if (!commit) throw new Error('Silk: pick a Commit or Adventure to share');
+  if (!commit) throw new Error('Garn: pick a Commit or Adventure to share');
   const result = await exportShare({ ...io(), canonId: await boundCanonId(), commit });
   return offerDownload('share', result);
 }

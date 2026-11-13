@@ -61,17 +61,25 @@ describe('search', () => {
     ]);
   });
 
-  it('ignores Connection labels and empty queries', () => {
+  it('ignores Connection labels, Notes (v1.1 §F.2) and empty queries', () => {
     const records: CanonRecord[] = [
       el('a', 'Alrik'),
       el('b', 'Bosper'),
       {
         kind: 'connection',
         id: 'c',
-        data: { from: 'a', to: 'b', type: 'free', direction: 'directed', label: 'hates' },
+        data: {
+          from: 'a',
+          to: 'b',
+          type: 'free',
+          direction: 'directed',
+          label: 'hates',
+          notes: '<p>since the duel</p>',
+        },
       },
     ];
     expect(run(records, 'hates')).toEqual([]);
+    expect(run(records, 'duel')).toEqual([]);
     expect(run(records, '  ')).toEqual([]);
   });
 

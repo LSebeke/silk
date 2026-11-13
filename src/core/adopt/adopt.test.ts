@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { isBox } from '../event-scenes';
+import type { DocSnapshot } from '../materialize';
 import { must } from '../materialize/test-setup';
-import { setup } from './test-setup';
+import { HOOD, setup } from './test-setup';
 
 describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Element (spec §6)', () => {
-  it('adopts an npc as a Person in place: Silk id flag, empty Companion Journal', async () => {
+  it('adopts an npc as a Person in place: Garn id flag, Companion Journal with only an Appearance block', async () => {
     const t = setup();
     const actor = t.foundryDoc('Actor', { name: 'Alrik', type: 'npc', img: 'alrik.webp' });
     const { id, name } = await t.adoptDoc({ uuid: actor.uuid, at: { x: 10, y: 20 } });
@@ -15,15 +17,29 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
       uuid: actor.uuid,
       adopted: true,
       position: { x: 10, y: 20 },
-      infoBlocks: [],
     });
+    // v1.1 §C.2: hooded from the start; no other default blocks.
+    const blocks = t.element(id).infoBlocks ?? [];
+    expect(blocks.map((b) => [b.name, b.appearance])).toEqual([['Appearance', true]]);
     const live = t.doc(id);
-    expect(live.flags.silk.id).toBe(id);
+    expect(live.flags.garn.id).toBe(id);
     expect(live.folder).toBe('userFolder');
-    const companion = must(t.docs.journal(must(live.flags.silk.companion)));
-    expect(companion.flags.silk.companionOf).toBe(id);
-    // No default Info Blocks: only the generated Connections page.
-    expect(companion.pages?.map((p) => p._id)).toEqual([companion.flags.silk.connections]);
+    const companion = must(t.docs.journal(must(live.flags.garn.companion)));
+    expect(companion.flags.garn.companionOf).toBe(id);
+    expect(companion.pages?.map((p) => p._id)).toEqual([
+      blocks[0]?._id,
+      companion.flags.garn.connections,
+    ]);
+    expect(companion.pages?.[0]?.flags?.garn?.appearance).toBe(true);
+  });
+
+  it('an adopted Item gets an empty Companion Journal (no default Info Blocks)', async () => {
+    const t = setup();
+    const item = t.foundryDoc('Item', { name: 'Sword', type: 'meleeweapon' });
+    const { id } = await t.adoptDoc({ uuid: item.uuid });
+    expect(t.element(id).infoBlocks ?? []).toEqual([]);
+    const companion = must(t.docs.journal(must(t.doc(id).flags.garn.companion)));
+    expect(companion.pages?.map((p) => p._id)).toEqual([companion.flags.garn.connections]);
   });
 
   it('lands at the viewport centre without a drop point', async () => {
@@ -56,7 +72,7 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
     const { id } = await t.adoptDoc({ uuid: journal.uuid, class: 'location' });
     expect(t.element(id)).toMatchObject({ class: 'location', infoBlocks: [{ name: 'Streets' }] });
     const live = t.doc(id);
-    expect(live.pages?.some((p) => p._id === live.flags.silk.connections)).toBe(true);
+    expect(live.pages?.some((p) => p._id === live.flags.garn.connections)).toBe(true);
   });
 
   it('adopts a quest journal as a Quest linked to its existing quest', async () => {
@@ -72,7 +88,7 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
     const journal = t.foundryDoc('JournalEntry', { name: 'Find it', pages: [quest] });
     const { id } = await t.adoptDoc({ uuid: journal.uuid });
     expect(t.element(id)).toMatchObject({ class: 'quest', status: 'done' });
-    expect(t.doc(id).flags.silk).toMatchObject({ quest: quest._id, questKey: 'q1' });
+    expect(t.doc(id).flags.garn).toMatchObject({ quest: quest._id, questKey: 'q1' });
     expect(t.docs.questJournals.map((q) => q.uuid)).toEqual([journal.uuid]);
   });
 
@@ -99,6 +115,19 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
     expect(t.connections('owns')).toEqual([[alrik, ring]]);
   });
 
+  it('a wanted Connection direction (Compendium World pick from a Node) is kept', async () => {
+    const t = setup();
+    const owner = t.foundryDoc('Actor', { name: 'Alrik', type: 'npc' });
+    const { id: alrik } = await t.adoptDoc({ uuid: owner.uuid });
+    const other = t.foundryDoc('Actor', { name: 'Ulf', type: 'npc' });
+    const { id: ulf } = await t.adoptDoc({
+      uuid: other.uuid,
+      connectTo: alrik,
+      connection: { direction: 'in' },
+    });
+    expect(t.connections('free')).toEqual([[ulf, alrik]]);
+  });
+
   it('a doc players can already see counts as Revealed; its ownership is unchanged', async () => {
     const t = setup();
     const open = t.textPage('Open', 'x', { ownership: { default: -1 } });
@@ -109,17 +138,93 @@ describe('adopt.doc: an existing Foundry doc becomes a Materialized Story Elemen
       pages: [open, secret],
     });
     const { id } = await t.adoptDoc({ uuid: journal.uuid, class: 'location' });
-    expect(t.revealed).toEqual([{ elements: [id], infoBlocks: [open._id] }]);
+    expect(t.revealed).toEqual([{ elements: [id], infoBlocks: [open._id], appearance: [] }]);
     expect(t.doc(id).ownership).toEqual({ default: 0, player1: 2 });
 
     const hidden = t.foundryDoc('Actor', { name: 'Spy', type: 'npc' });
     await t.adoptDoc({ uuid: hidden.uuid });
     expect(t.revealed).toHaveLength(1);
   });
+
+  it('an actor players cannot see yet is hooded at Adopt; its ownership is unchanged', async () => {
+    const t = setup();
+    const spy = t.foundryDoc('Actor', {
+      name: 'Spy',
+      type: 'npc',
+      img: 'spy.webp',
+      ownership: { default: 0, player1: 0 } as { default: number },
+      prototypeToken: { texture: { src: 'spy-token.webp' } },
+    } as never);
+    const { id } = await t.adoptDoc({ uuid: spy.uuid });
+    const doc = t.doc(id) as DocSnapshot & { prototypeToken: { texture: { src: string } } };
+    expect(doc.img).toBe(HOOD);
+    expect(doc.prototypeToken.texture.src).toBe(HOOD);
+    // v1.1 §G.3.1: the look as adopted, kept before the hood.
+    expect(doc.flags.garn.original).toEqual({
+      img: 'spy.webp',
+      texture: { src: 'spy-token.webp' },
+      ring: {},
+    });
+    expect(doc.flags.garn.img).toBe('spy.webp');
+    expect(doc.flags.garn.token).toBe('spy-token.webp');
+    expect(doc.ownership).toEqual({ default: 0, player1: 0 });
+    expect(t.tokens).toContainEqual({
+      actor: spy.uuid,
+      data: expect.objectContaining({ 'texture.src': HOOD }),
+      snapshot: 'store',
+    });
+    // The record keeps the real image.
+    expect(t.element(id).img ?? 'spy.webp').toBe('spy.webp');
+  });
+
+  it('an actor players can already see: its Appearance counts as Revealed too, unhooded', async () => {
+    const t = setup();
+    const ally = t.foundryDoc('Actor', {
+      name: 'Ally',
+      type: 'npc',
+      img: 'ally.webp',
+      ownership: { default: 1 },
+    });
+    const { id } = await t.adoptDoc({ uuid: ally.uuid });
+    expect(t.revealed).toEqual([{ elements: [id], infoBlocks: [], appearance: [id] }]);
+    expect(t.doc(id).img).toBe('ally.webp');
+    expect(t.doc(id).flags.garn.hood).toBeUndefined();
+  });
+
+  it('every Adopt path hoods: bulk folder and the compendium', async () => {
+    const t = setup();
+    const a = t.foundryDoc('Actor', { name: 'A', type: 'npc', img: 'a.webp' });
+    t.folders.set('f', { id: 'f', name: 'F', docs: [a.uuid], children: [] });
+    const { ids } = await t.run<{ ids: string[] }>('adopt.folder', {
+      folderId: 'f',
+      confirmed: true,
+    });
+    expect(t.doc(ids[0] as string).img).toBe(HOOD);
+    t.compendium.set('Compendium.x.Actor.c', {
+      _id: 'c',
+      uuid: 'Compendium.x.Actor.c',
+      documentName: 'Actor',
+      type: 'creature',
+      name: 'Wolf',
+      img: 'wolf.webp',
+      flags: { garn: {} },
+      ownership: { default: 0 },
+    } as DocSnapshot);
+    const { id } = await t.adoptDoc({ uuid: 'Compendium.x.Actor.c' });
+    expect(t.doc(id).img).toBe(HOOD);
+    expect(t.doc(id).flags.garn.img).toBe('wolf.webp');
+  });
+
+  it('an Item is never hooded', async () => {
+    const t = setup();
+    const ring = t.foundryDoc('Item', { name: 'Ring', type: 'equipment', img: 'ring.webp' });
+    const { id } = await t.adoptDoc({ uuid: ring.uuid });
+    expect(t.doc(id).img).toBe('ring.webp');
+  });
 });
 
 describe('duplicates (spec §6 Duplicates)', () => {
-  it('a doc with a Silk id is not adopted again: its Node is selected and flashes', async () => {
+  it('a doc with a Garn id is not adopted again: its Node is selected and flashes', async () => {
     const t = setup();
     const actor = t.foundryDoc('Actor', { name: 'Alrik', type: 'npc' });
     const { id } = await t.adoptDoc({ uuid: actor.uuid });
@@ -130,14 +235,14 @@ describe('duplicates (spec §6 Duplicates)', () => {
     expect(t.elements()).toHaveLength(1);
   });
 
-  it('a Silk-created doc counts as a Story Element too', async () => {
+  it('a Garn-created doc counts as a Story Element too', async () => {
     const t = setup();
-    const id = await t.create('person', 'Made by Silk');
+    const id = await t.create('person', 'Made by Garn');
     const result = await t.adoptDoc({ uuid: t.doc(id).uuid });
     expect(result).toMatchObject({ id, existing: true });
   });
 
-  it('a duplicated doc has its copied Silk id stripped (on create, and on Adopt)', async () => {
+  it('a duplicated doc has its copied Garn id stripped (on create, and on Adopt)', async () => {
     const t = setup();
     const id = await t.create('location', 'Gareth');
     const original = t.doc(id);
@@ -147,8 +252,8 @@ describe('duplicates (spec §6 Duplicates)', () => {
       flags: structuredClone(original.flags),
     });
     await t.adopt.docCreated(copy);
-    expect(t.docs.get(copy.uuid)?.flags.silk).toEqual({});
-    expect(t.doc(id).flags.silk.id).toBe(id);
+    expect(t.docs.get(copy.uuid)?.flags.garn).toEqual({});
+    expect(t.doc(id).flags.garn.id).toBe(id);
 
     const other = t.foundryDoc('JournalEntry', {
       name: 'Late copy',
@@ -156,7 +261,7 @@ describe('duplicates (spec §6 Duplicates)', () => {
     });
     const { id: adopted } = await t.adoptDoc({ uuid: other.uuid });
     expect(adopted).not.toBe(id);
-    expect(t.docs.get(other.uuid)?.flags.silk.id).toBe(adopted);
+    expect(t.docs.get(other.uuid)?.flags.garn.id).toBe(adopted);
   });
 
   it('compendium entries are imported and the copy adopted', async () => {
@@ -168,7 +273,7 @@ describe('duplicates (spec §6 Duplicates)', () => {
       name: 'Bandit',
       type: 'npc',
       folder: null,
-      flags: { silk: {} },
+      flags: { garn: {} },
     });
     const { id } = await t.adoptDoc({ uuid: 'Compendium.dsa5.npcs.Actor.abc' });
     expect(t.element(id)).toMatchObject({ class: 'person', name: 'Bandit' });
@@ -185,7 +290,7 @@ describe('duplicates (spec §6 Duplicates)', () => {
       name: 'Bandit',
       type: 'npc',
       folder: null,
-      flags: { silk: {} },
+      flags: { garn: {} },
     });
     const first = await t.adoptDoc({ uuid: 'Compendium.dsa5.npcs.Actor.abc' });
     await t.run('infoBlock.create', { elementId: first?.id, name: 'Notes', text: 'mean' });
@@ -196,7 +301,7 @@ describe('duplicates (spec §6 Duplicates)', () => {
     expect(t.useForPrompts).toEqual([{ doc: 'Bandit', element: 'Bandit' }]);
     expect(second?.id).toBe(first.id);
     expect(t.element(first.id).uuid).toMatch(/^Actor\./);
-    expect(t.element(first.id).infoBlocks?.map((b) => b.name)).toEqual(['Notes']);
+    expect(t.element(first.id).infoBlocks?.map((b) => b.name)).toEqual(['Appearance', 'Notes']);
 
     t.answers.useFor = 'new';
     await t.run('materialize.unmaterialize', { ids: [first.id] });
@@ -261,10 +366,10 @@ describe('inferred Connections (spec §6 Connections)', () => {
     expect(t.element(id).uuid).toMatch(/^JournalEntry\./);
     expect(t.scenes.all.size).toBe(1);
     const live = t.scenes.all.get(scene._id);
-    expect(live?.flags.silk?.sceneOf).toBe(id);
+    expect(live?.flags.garn?.sceneOf).toBe(id);
     expect(live?.['grid']).toEqual({ type: 1, size: 77 });
     expect(live?.tokens.map((tk) => tk.actorId)).toEqual([actor._id]);
-    expect(t.doc(id).flags.silk.scene).toBe(scene._id);
+    expect(t.doc(id).flags.garn.scene).toBe(scene._id);
     expect(t.connections('presentAt')).toEqual([[bandit, id]]);
   });
 
@@ -273,8 +378,45 @@ describe('inferred Connections (spec §6 Connections)', () => {
     const scene = t.foundryScene('Gareth map');
     const { id } = await t.adoptDoc({ uuid: `Scene.${scene._id}`, class: 'location' });
     expect(t.element(id).class).toBe('location');
-    expect(t.doc(id).flags.silk.scene).toBe(scene._id);
+    expect(t.doc(id).flags.garn.scene).toBe(scene._id);
     expect(t.scenes.all.size).toBe(1);
+  });
+
+  it('the element takes the Scene background as img and its thumb as card image (1.1 §B.2.1)', async () => {
+    const t = setup();
+    const scene = t.foundryScene('Gareth map');
+    Object.assign(must(t.scenes.all.get(scene._id)), {
+      // v14: the background lives on the first Level.
+      levels: [{ _id: 'level0000000001', background: { src: 'maps/gareth.webp' } }],
+      thumb: 'maps/gareth-thumb.webp',
+    });
+    const { id } = await t.adoptDoc({ uuid: `Scene.${scene._id}`, class: 'location' });
+    expect(t.element(id)).toMatchObject({
+      img: 'maps/gareth.webp',
+      thumb: 'maps/gareth-thumb.webp',
+    });
+    // Foundry's Scene thumb is never changed.
+    expect(t.scenes.all.get(scene._id)?.['thumb']).toBe('maps/gareth-thumb.webp');
+  });
+
+  it('a Scene without a Foundry thumb gets one made from its background (1.1 §B.2.1)', async () => {
+    const t = setup();
+    const scene = t.foundryScene('Gareth map');
+    Object.assign(must(t.scenes.all.get(scene._id)), {
+      levels: [{ _id: 'level0000000001', background: { src: 'maps/gareth.webp' } }],
+    });
+    const { id } = await t.adoptDoc({ uuid: `Scene.${scene._id}`, class: 'location' });
+    expect(t.element(id).thumb).toBe('thumb:maps/gareth.webp');
+    expect(t.scenes.all.get(scene._id)?.['thumb']).toBeUndefined();
+  });
+
+  it('an Adopted Event Scene: Preset none, a Token Box at once (1.1 §I)', async () => {
+    const t = setup();
+    const scene = t.foundryScene('Bridge fight');
+    await t.adoptDoc({ uuid: `Scene.${scene._id}`, class: 'event' });
+    const live = must(t.scenes.all.get(scene._id));
+    expect(live.flags.garn?.preset).toBe('none');
+    expect((live.drawings ?? []).filter((d) => isBox(d))).toHaveLength(1);
   });
 });
 
@@ -336,7 +478,7 @@ describe('ad-hoc docs and End Play Session (spec §6, §11.3)', () => {
     await t.adoptDoc({ uuid: adopted.uuid });
     const scene = t.foundryScene('Tavern');
     scene['_stats'] = { createdTime: 180 };
-    await t.create('note', 'Silk note');
+    await t.create('note', 'Garn note');
     t.setLastCommitTime(100);
 
     const result = await t.run<{ commit: string; adHoc: { uuid: string }[] }>(

@@ -4,11 +4,12 @@
  * Decisions (which docs, pages, fields) live in the core; the port only executes them.
  */
 import type { ElementClassId } from '../elements';
+import type { LookFlags } from '../portrait/flags';
 
 export type DocumentName = 'Actor' | 'Item' | 'JournalEntry';
 
-/** `flags.silk` on Silk's docs. Ids only (spec §2). */
-export interface SilkDocFlags {
+/** `flags.garn` on Garn's docs. Ids only (spec §2), but for the look's (`LookFlags`). */
+export interface GarnDocFlags extends LookFlags {
   /** Story Element id, on the element's doc. */
   id?: string;
   /** On an Actor/Item: its Companion Journal's id. */
@@ -24,17 +25,12 @@ export interface SilkDocFlags {
   questKey?: string;
   /** Event / Location journal: its Event Scene's (Overview Scene's) id (T13). */
   scene?: string;
-  /** On a folder: which Silk folder it is (an Element Class id or `companions`). */
+  /** On a folder: which Garn folder it is (an Element Class id or `companions`). */
   folder?: string;
-  /**
-   * Person/Creature until Appearance is Revealed (§8): `img` and the prototype token show
-   * `hood`; the real image and token texture wait here.
-   */
-  img?: string;
-  token?: string;
-  hood?: string;
   /** On a Player Note page: its authoring Campaign (§9). */
   campaign?: string;
+  /** On an Info Block page: it is the Appearance block (v1.1 §C.2). */
+  appearance?: boolean;
 }
 
 export const OWNERSHIP_NONE = 0;
@@ -50,7 +46,7 @@ export interface PageData {
   text?: { content: string };
   system?: object;
   category?: string | null;
-  flags?: { silk?: SilkDocFlags };
+  flags?: { garn?: GarnDocFlags };
 }
 
 export interface CategoryData {
@@ -69,7 +65,7 @@ export interface DocData {
   folder: string | null;
   system?: Record<string, unknown>;
   ownership?: { default: number };
-  flags: { silk: SilkDocFlags };
+  flags: { garn: GarnDocFlags };
   pages?: PageData[];
   categories?: CategoryData[];
   /** Actor: its inventory (embedded Items), as Foundry's source data has it. */
@@ -85,11 +81,25 @@ export interface DocSnapshot extends DocData {
   parent?: string;
 }
 
-/** Silk folder identity: per Element Class plus "Silk Companions" (§8). */
+/**
+ * A compendium entry as a normal Foundry import prepares it (`fromCompendium`): no `_id`,
+ * folder, sort or ownership; foreign flags and `_stats.compendiumSource` kept.
+ */
+export interface ImportData {
+  name: string;
+  type?: string;
+  img?: string;
+  system?: Record<string, unknown>;
+  items?: (DocData & { _id: string })[];
+  flags?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** Garn folder identity: per Element Class plus "Garn Companions" (§8). */
 export type FolderKey = ElementClassId | 'companions';
 
 export interface FoundryDocs {
-  /** Id of Silk's folder for `key` in the `type` sidebar, created if missing. */
+  /** Id of Garn's folder for `key` in the `type` sidebar, created if missing. */
   ensureFolder(type: DocumentName, key: FolderKey, name: string): Promise<string>;
   /**
    * Creates with the given `_id`s (doc and embedded). Returns the doc uuid. With `parent`
@@ -99,6 +109,8 @@ export interface FoundryDocs {
   /** Deletes a doc (world or embedded). */
   delete(uuid: string): Promise<void>;
   get(uuid: string): DocSnapshot | undefined;
+  /** A compendium entry's import data (spec 1.1 §B.1 Ghost worlds); undefined if it is gone. */
+  importData(uuid: string): Promise<ImportData | undefined>;
   /** By world doc id (Companion Journals are linked by id). */
   journal(id: string): DocSnapshot | undefined;
   /** Foundry update data; dotted keys allowed. */
@@ -113,15 +125,15 @@ export interface FoundryDocs {
   setStatusEffect(uuid: string, statusId: string, active: boolean): Promise<void>;
   /** Registers a quest journal in the Game System's quest log (DSA5 `questlogJournals`). */
   registerQuestJournal(uuid: string, name: string): Promise<void>;
-  /** Removes `flags.silk` from the doc (element delete, Keep Foundry doc, §6). */
+  /** Removes `flags.garn` from the doc (element delete, Keep Foundry doc, §6). */
   unflag(uuid: string): Promise<void>;
-  /** Opens the doc's sheet. */
-  open(uuid: string): Promise<void>;
+  /** Opens the doc's sheet; a journal at page `pageId` if given. */
+  open(uuid: string, pageId?: string): Promise<void>;
 }
 
 /** Game System (DSA5) field mapping, hand-written in the adapter (spec §2). Pure. */
 export interface SystemMapping {
-  /** Actor/Item subtype Silk creates for a class; undefined for journals. */
+  /** Actor/Item subtype Garn creates for a class; undefined for journals. */
   docType(cls: ElementClassId): string | undefined;
   /** Class fields → `system` create/replace data. */
   toSystem(cls: ElementClassId, fields: Record<string, unknown>): Record<string, unknown>;
@@ -137,6 +149,11 @@ export interface SystemMapping {
   questStatusUpdate(questKey: string, status: number): Record<string, unknown>;
   /** The Actor status effect id meaning dead (§7 Dead). */
   deadEffect: string;
+  /**
+   * The token texture scale the system gives an actor of this `system` data (its size
+   * factor, v1.1 §G.3 #168); 1 when it gives none.
+   */
+  sizeFactor(system: unknown): number;
   /** Update data setting the quest title on its page. */
   questTitleUpdate(questKey: string, title: string): Record<string, unknown>;
   /**

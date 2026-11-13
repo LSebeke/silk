@@ -1,10 +1,18 @@
 /**
  * Headless Foundry for e2e (spec §14). Each run gets its own throwaway data dir that
- * links the installed dsa5 system and this checkout's `dist/` as module `silk`, so a
- * run can never see or touch `silk-dev` and parallel runs from other worktrees don't clash.
+ * links the installed dsa5 system and this checkout's `dist/` as module `garn`, so a
+ * run can never see or touch `garn-dev` and parallel runs from other worktrees don't clash.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import {
+  copyFileSync,
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+} from 'node:fs';
 import { createServer } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,20 +24,42 @@ export const FOUNDRY_USER_DATA =
 
 export function testWorldId(run: string): string {
   if (!/^[a-z0-9-]+$/.test(run)) throw new Error(`Invalid test run id: "${run}"`);
-  return `silk-test-${run}`;
+  return `garn-test-${run}`;
 }
 
-/** Throwaway data dir: license copied, dsa5 + built module symlinked, no worlds. */
-export function prepareDataPath(opts: { source: string; dist: string; parent?: string }): string {
-  const dataPath = mkdtempSync(join(opts.parent ?? tmpdir(), 'silk-foundry-'));
+/**
+ * Throwaway data dir: license copied, dsa5 + built module symlinked, no worlds. `modules`:
+ * more installed modules to symlink (enabled by the fixture).
+ */
+export function prepareDataPath(opts: {
+  source: string;
+  dist: string;
+  parent?: string;
+  modules?: readonly string[];
+}): string {
+  const dataPath = mkdtempSync(join(opts.parent ?? tmpdir(), 'garn-foundry-'));
   mkdirSync(join(dataPath, 'Config'));
   copyFileSync(join(opts.source, 'Config/license.json'), join(dataPath, 'Config/license.json'));
   for (const dir of ['systems', 'modules', 'worlds']) {
     mkdirSync(join(dataPath, 'Data', dir), { recursive: true });
   }
   symlinkSync(join(opts.source, 'Data/systems/dsa5'), join(dataPath, 'Data/systems/dsa5'));
-  symlinkSync(opts.dist, join(dataPath, 'Data/modules/silk'));
+  symlinkSync(opts.dist, join(dataPath, 'Data/modules/garn'));
+  for (const id of opts.modules ?? []) linkModule(join(opts.source, 'Data/modules', id), dataPath);
   return dataPath;
+}
+
+/**
+ * A module linked file by file, its `packs/` copied: a running `garn-dev` holds the LevelDB
+ * locks of the installed packs, and a second server could not open them.
+ */
+function linkModule(source: string, dataPath: string) {
+  const target = join(dataPath, 'Data/modules', source.split('/').at(-1) as string);
+  mkdirSync(target);
+  for (const entry of readdirSync(source)) {
+    if (entry === 'packs') cpSync(join(source, entry), join(target, entry), { recursive: true });
+    else symlinkSync(join(source, entry), join(target, entry));
+  }
 }
 
 export function freePort(): Promise<number> {
@@ -117,7 +147,7 @@ export async function startFoundry(opts: { dataPath: string; port: number }): Pr
   };
 }
 
-/** Creates `silk-test-<run>` (dsa5) and launches it. */
+/** Creates `garn-test-<run>` (dsa5) and launches it. */
 export async function createAndLaunchWorld(foundry: Foundry, run: string): Promise<string> {
   const id = testWorldId(run);
   await foundry.post('/create', { action: 'createWorld', id, title: id, system: 'dsa5' });
@@ -131,8 +161,25 @@ export async function createAndLaunchWorld(foundry: Foundry, run: string): Promi
   throw new Error(`World ${id} did not launch`);
 }
 
-/** Deletes a `silk-test-*` world dir; refuses any other id. */
+/**
+ * Launches `id` again once the GM has shut it down (`game.shutDown()`): the server loads a
+ * module's compendium packs only at launch, so modules enabled in a running World need it.
+ */
+export async function relaunchWorld(foundry: Foundry, id: string): Promise<void> {
+  const deadline = Date.now() + 60_000;
+  const world = async () =>
+    ((await (await fetch(`${foundry.url}/api/status`)).json()) as { world?: string }).world;
+  while ((await world()) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 250));
+  await foundry.post('/setup', { action: 'launchWorld', world: id });
+  while (Date.now() < deadline) {
+    if ((await world()) === id) return;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`World ${id} did not relaunch`);
+}
+
+/** Deletes a `garn-test-*` world dir; refuses any other id. */
 export function deleteWorld(foundry: Foundry, id: string): void {
-  if (!/^silk-test-[a-z0-9-]+$/.test(id)) throw new Error(`Refusing to delete world "${id}"`);
+  if (!/^garn-test-[a-z0-9-]+$/.test(id)) throw new Error(`Refusing to delete world "${id}"`);
   rmSync(join(foundry.dataPath, 'Data/worlds', id), { recursive: true, force: true });
 }

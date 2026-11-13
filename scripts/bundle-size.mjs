@@ -19,7 +19,9 @@ export function measureSizes(dist) {
     const name = file.name.replace(/-[\w-]{8}\.js$/, '');
     lazy[name] = (lazy[name] ?? 0) + gz(join(dist, 'chunks', file.name));
   }
-  return { entry: gz(join(dist, 'silk.js')), lazy };
+  // The entry is whatever module.json loads, so base and head may name it differently.
+  const [entry] = JSON.parse(readFileSync(join(dist, 'module.json'), 'utf8')).esmodules;
+  return { entry: gz(join(dist, entry)), lazy };
 }
 
 /**

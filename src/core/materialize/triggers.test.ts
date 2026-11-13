@@ -65,15 +65,29 @@ describe('Materialize triggers (spec §6)', () => {
     expect(t.registry.get('materialize.elements')?.keys).toEqual([{ key: 'KeyM' }]);
   });
 
-  it('opening the sheet of a Ghost Materializes it with a toast, then opens doc + Companion', async () => {
+  it('opening the sheet of a Ghost Materializes it with a toast, then opens the main doc only (v1.1 §G.2)', async () => {
     const t = setup();
     const id = await t.create('person', 'Alrik');
     await t.registry.run('element.openSheet', { id });
     expect(t.toasts).toEqual(['Implicit']);
-    const doc = t.doc(id);
-    expect(t.docs.opened).toEqual([doc.uuid, `JournalEntry.${doc.flags.silk.companion}`]);
+    expect(t.docs.opened).toEqual([t.doc(id).uuid]);
     await t.registry.run('element.openSheet', { id });
     expect(t.toasts).toHaveLength(1);
+  });
+
+  it('Open journal: the Companion Journal of an actor class, Materializing a Ghost first (v1.1 §G.2)', async () => {
+    const t = setup();
+    const id = await t.create('person', 'Alrik');
+    await t.registry.run('element.openJournal', { id });
+    expect(t.toasts).toEqual(['Implicit']);
+    expect(t.docs.opened).toEqual([`JournalEntry.${t.doc(id).flags.garn.companion}`]);
+  });
+
+  it('Open journal: the main journal of a journal class (v1.1 §G.2)', async () => {
+    const t = setup();
+    const id = await t.create('location', 'Gareth');
+    await t.registry.run('element.openJournal', { id });
+    expect(t.docs.opened).toEqual([t.doc(id).uuid]);
   });
 
   it('Materialize visible: confirms the count; skips PCs, Materialized and unrendered', async () => {

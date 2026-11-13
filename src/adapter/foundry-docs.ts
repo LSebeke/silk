@@ -1,7 +1,7 @@
 /**
  * `FoundryDocs` over real Foundry documents (spec §6, §7). Thin: every decision is in
  * `src/core/materialize`. Foundry calls come in through `FoundryApi` so this tests without
- * Foundry. Silk's writes carry `SILK_WRITE` so its own hooks skip them (spec §2).
+ * Foundry. Garn's writes carry `GARN_WRITE` so its own hooks skip them (spec §2).
  */
 import { MODULE_ID } from '../constants';
 import type {
@@ -10,10 +10,11 @@ import type {
   DocumentName,
   FolderKey,
   FoundryDocs,
+  ImportData,
 } from '../core/materialize/port';
-import { SILK_WRITE } from './working-copy-journal';
+import { GARN_WRITE } from './working-copy-journal';
 
-/** The slice of a Foundry document Silk uses. */
+/** The slice of a Foundry document Garn uses. */
 export interface FoundryDoc {
   id: string | null;
   uuid: string;
@@ -26,7 +27,7 @@ export interface FoundryDoc {
   delete?(options?: object): Promise<unknown>;
   /** Embedded docs: the parent doc (an Item's actor). */
   parent?: { uuid: string } | null;
-  sheet?: { render(force?: boolean): unknown } | null;
+  sheet?: { render(options?: { force?: boolean; pageId?: string }): unknown } | null;
   /** Actors: ActiveEffects, and the DSA5 condition API (§7 Dead). */
   effects?: Iterable<{ statuses: Set<string> }>;
   addCondition?(id: string): Promise<unknown>;
@@ -48,6 +49,8 @@ export interface FoundryDocumentClass {
 export interface FoundryApi {
   documentClass(name: DocumentName | 'Folder'): FoundryDocumentClass;
   fromUuid(uuid: string): FoundryDoc | null | undefined;
+  /** A compendium entry's data as `collection.fromCompendium` prepares it for import. */
+  importData(uuid: string): Promise<object | undefined>;
   journal(id: string): FoundryDoc | null | undefined;
   folders(): Iterable<{ id: string | null; type: string; flags: Record<string, unknown> }>;
   /** `foundry.data.operators.ForcedReplacement.create`. */
@@ -56,7 +59,7 @@ export interface FoundryApi {
   setSetting(namespace: string, key: string, value: unknown): Promise<unknown>;
 }
 
-/** Source data (`toObject` is already a copy) plus identity; `flags.silk` always present. */
+/** Source data (`toObject` is already a copy) plus identity; `flags.garn` always present. */
 export function snapshot(
   doc: Pick<FoundryDoc, 'uuid' | 'documentName' | 'toObject' | 'parent'> | null | undefined,
 ): DocSnapshot | undefined {
@@ -64,7 +67,7 @@ export function snapshot(
   const data = doc.toObject() as DocData;
   return {
     ...data,
-    flags: { ...data.flags, silk: { ...data.flags?.silk } },
+    flags: { ...data.flags, garn: { ...data.flags?.garn } },
     uuid: doc.uuid,
     documentName: doc.documentName as DocumentName,
     ...(doc.parent?.uuid ? { parent: doc.parent.uuid } : {}),
@@ -81,19 +84,19 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
 
   function must(uuid: string): FoundryDoc {
     const doc = api.fromUuid(uuid);
-    if (!doc) throw new Error(`Silk: no Foundry doc "${uuid}"`);
+    if (!doc) throw new Error(`Garn: no Foundry doc "${uuid}"`);
     return doc;
   }
 
   async function findOrCreateFolder(type: DocumentName, key: FolderKey, name: string) {
     for (const folder of api.folders()) {
-      const silk = folder.flags[MODULE_ID] as { folder?: string } | undefined;
-      if (folder.type === type && silk?.folder === key && folder.id) return folder.id;
+      const garn = folder.flags[MODULE_ID] as { folder?: string } | undefined;
+      if (folder.type === type && garn?.folder === key && folder.id) return folder.id;
     }
     const created = await api
       .documentClass('Folder')
-      .create({ name, type, flags: { [MODULE_ID]: { folder: key } } }, { ...SILK_WRITE });
-    if (!created?.id) throw new Error(`Silk: could not create folder "${name}"`);
+      .create({ name, type, flags: { [MODULE_ID]: { folder: key } } }, { ...GARN_WRITE });
+    if (!created?.id) throw new Error(`Garn: could not create folder "${name}"`);
     return created.id;
   }
 
@@ -112,47 +115,48 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
       const source = cls.migrateData(foundryClone(data));
       if (parent) {
         const created = (await must(parent).createEmbeddedDocuments(name, [source], {
-          ...SILK_WRITE,
+          ...GARN_WRITE,
           keepId: true,
         })) as { uuid: string }[] | undefined;
         const uuid = created?.[0]?.uuid;
-        if (!uuid) throw new Error(`Silk: Foundry refused to create ${name} "${data.name}"`);
+        if (!uuid) throw new Error(`Garn: Foundry refused to create ${name} "${data.name}"`);
         return uuid;
       }
-      const doc = await cls.create(source, { ...SILK_WRITE, keepId: true, keepEmbeddedIds: true });
-      if (!doc) throw new Error(`Silk: Foundry refused to create ${name} "${data.name}"`);
+      const doc = await cls.create(source, { ...GARN_WRITE, keepId: true, keepEmbeddedIds: true });
+      if (!doc) throw new Error(`Garn: Foundry refused to create ${name} "${data.name}"`);
       return doc.uuid;
     },
     get: (uuid) => snapshot(api.fromUuid(uuid)),
+    importData: async (uuid) => (await api.importData(uuid)) as ImportData | undefined,
     async delete(uuid) {
-      await must(uuid).delete?.({ ...SILK_WRITE });
+      await must(uuid).delete?.({ ...GARN_WRITE });
     },
     journal: (id) => snapshot(api.journal(id)),
     async update(uuid, data) {
-      await must(uuid).update(data, { ...SILK_WRITE });
+      await must(uuid).update(data, { ...GARN_WRITE });
     },
     async changeType(uuid, type, system) {
-      await must(uuid).update({ type, system: api.replace(system) }, { ...SILK_WRITE });
+      await must(uuid).update({ type, system: api.replace(system) }, { ...GARN_WRITE });
     },
     async createPages(uuid, pages) {
       await must(uuid).createEmbeddedDocuments('JournalEntryPage', pages, {
-        ...SILK_WRITE,
+        ...GARN_WRITE,
         keepId: true,
       });
     },
     async createCategories(uuid, categories) {
       await must(uuid).createEmbeddedDocuments('JournalEntryCategory', categories, {
-        ...SILK_WRITE,
+        ...GARN_WRITE,
         keepId: true,
       });
     },
     async updatePage(uuid, pageId, data) {
       await must(uuid).updateEmbeddedDocuments('JournalEntryPage', [{ ...data, _id: pageId }], {
-        ...SILK_WRITE,
+        ...GARN_WRITE,
       });
     },
     async deletePages(uuid, ids) {
-      await must(uuid).deleteEmbeddedDocuments('JournalEntryPage', ids, { ...SILK_WRITE });
+      await must(uuid).deleteEmbeddedDocuments('JournalEntryPage', ids, { ...GARN_WRITE });
     },
     async setStatusEffect(uuid, statusId, active) {
       const actor = must(uuid);
@@ -175,11 +179,11 @@ export function createFoundryDocs(api: FoundryApi): FoundryDocs {
       });
     },
     async unflag(uuid) {
-      await must(uuid).update({ flags: { [`-=${MODULE_ID}`]: null } }, { ...SILK_WRITE });
+      await must(uuid).update({ flags: { [`-=${MODULE_ID}`]: null } }, { ...GARN_WRITE });
     },
-    async open(uuid) {
+    async open(uuid, pageId) {
       // AppV2 sheets render asynchronously: resolve once the sheet is up.
-      await must(uuid).sheet?.render(true);
+      await must(uuid).sheet?.render({ force: true, ...(pageId ? { pageId } : {}) });
     },
   };
 }

@@ -7,7 +7,7 @@ import type { ActiveScene, Focus } from '../core/canvas';
 interface SceneLike {
   id: string | null;
   active?: boolean;
-  flags?: { silk?: { sceneOf?: string } };
+  flags?: { garn?: { sceneOf?: string } };
   tokens?: Iterable<{ actorId?: string | null }>;
 }
 
@@ -15,7 +15,7 @@ export function activeScene(scene: SceneLike | null | undefined): ActiveScene | 
   if (!scene?.id) return undefined;
   return {
     id: scene.id,
-    sceneOf: scene.flags?.silk?.sceneOf,
+    sceneOf: scene.flags?.garn?.sceneOf,
     actorIds: [...(scene.tokens ?? [])].map((t) => t.actorId ?? null),
   };
 }

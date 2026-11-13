@@ -5,10 +5,10 @@
   let { data }: { data: GroupNodeData } = $props();
 </script>
 
-<div class="silk-merge-frame"><span>{data.label}</span></div>
+<div class="garn-merge-frame"><span>{data.label}</span></div>
 
 <style>
-  .silk-merge-frame {
+  .garn-merge-frame {
     width: 100%;
     height: 100%;
     border: 1px dashed #8a8378;

@@ -5,6 +5,8 @@
 import { elementClass, type ElementClassId } from '../elements/classes';
 import type { ElementData, InfoBlock, PlayerNote, StoryElement } from '../elements/element';
 import { statusOf, statusesOf, storedStatus } from '../elements/status';
+import { withoutPortrait } from '../portrait/figure';
+import { realPortrait } from '../portrait/portrait';
 import {
   OWNERSHIP_NONE,
   type CategoryData,
@@ -15,7 +17,7 @@ import {
   type SystemMapping,
 } from './port';
 
-/** Default Info Blocks per class (§4). Names are `SILK.InfoBlock.<name>` keys. */
+/** Default Info Blocks per class (§4). Names are `GARN.InfoBlock.<name>` keys. */
 export const DEFAULT_INFO_BLOCKS: Record<ElementClassId, readonly string[]> = {
   person: ['Appearance', 'Personality', 'Secrets'],
   creature: ['Appearance', 'Description'],
@@ -43,8 +45,9 @@ export interface LayoutContext {
 export function defaultInfoBlocks(cls: ElementClassId, ctx: LayoutContext): InfoBlock[] {
   return DEFAULT_INFO_BLOCKS[cls].map((name) => ({
     _id: ctx.newId(),
-    name: ctx.localize(`SILK.InfoBlock.${name}`),
+    name: ctx.localize(`GARN.InfoBlock.${name}`),
     text: '',
+    ...(name === 'Appearance' ? { appearance: true as const } : {}),
   }));
 }
 
@@ -67,12 +70,13 @@ export const blockPage = (block: InfoBlock, sort: number): PageData => ({
   sort,
   ownership: { ...NONE },
   text: { content: block.text },
+  ...(block.appearance ? { flags: { garn: { appearance: true } } } : {}),
 });
 
 export function coverPage(id: string, src: string | undefined, ctx: LayoutContext): PageData {
   return {
     _id: id,
-    name: ctx.localize('SILK.Layout.Cover'),
+    name: ctx.localize('GARN.Layout.Cover'),
     type: 'image',
     sort: 0,
     ownership: { ...NONE },
@@ -84,7 +88,7 @@ export function coverPage(id: string, src: string | undefined, ctx: LayoutContex
 export function connectionsPage(id: string, ctx: LayoutContext): PageData {
   return {
     _id: id,
-    name: ctx.localize('SILK.Layout.Connections'),
+    name: ctx.localize('GARN.Layout.Connections'),
     type: 'text',
     sort: CONNECTIONS_SORT,
     ownership: { ...NONE },
@@ -97,7 +101,7 @@ export const playerNotesCategory = (
   ctx: Pick<LayoutContext, 'localize'>,
 ): CategoryData => ({
   _id: id,
-  name: ctx.localize('SILK.Layout.PlayerNotes'),
+  name: ctx.localize('GARN.Layout.PlayerNotes'),
   sort: 0,
 });
 
@@ -128,8 +132,8 @@ export interface DocPlan {
 }
 
 /**
- * Create data for an element's docs. `folders` are Silk's sidebar folders (§8): the
- * class folder and, for Actor/Item elements, "Silk Companions".
+ * Create data for an element's docs. `folders` are Garn's sidebar folders (§8): the
+ * class folder and, for Actor/Item elements, "Garn Companions".
  */
 export function planDocs(
   element: StoryElement,
@@ -151,7 +155,7 @@ export function planDocs(
       folder: folders.main,
       ownership: { ...NONE },
       system: ctx.system.toSystem(cls, { ...element.fields }),
-      flags: { silk: { id: element.id, companion: companionId } },
+      flags: { garn: { id: element.id, companion: companionId } },
     };
     const type = ctx.system.docType(cls);
     if (type) main.type = type;
@@ -165,7 +169,7 @@ export function planDocs(
         folder: folders.companion ?? null,
         ownership: { ...NONE },
         flags: {
-          silk: { companionOf: element.id, connections: connections._id, playerNotes: notes._id },
+          garn: { companionOf: element.id, connections: connections._id, playerNotes: notes._id },
         },
         pages: [...blockPages, connections, ...notePagesOf(element, notes._id)],
         categories: [notes],
@@ -178,17 +182,17 @@ export function planDocs(
     name: element.name,
     folder: folders.main,
     ownership: { ...NONE },
-    flags: { silk: { id: element.id } },
+    flags: { garn: { id: element.id } },
     pages: blockPages,
   };
   if (hasJournalLayout(cls)) addJournalLayout(main, element, ctx);
   if (element.playerNotes?.length) {
     // A Note has no layout: its category comes with its first note.
-    let category = main.flags.silk.playerNotes;
+    let category = main.flags.garn.playerNotes;
     if (!category) {
       const notes = playerNotesCategory(ctx.newId(), ctx);
       main.categories = [...(main.categories ?? []), notes];
-      main.flags.silk.playerNotes = category = notes._id;
+      main.flags.garn.playerNotes = category = notes._id;
     }
     main.pages = [...(main.pages ?? []), ...notePagesOf(element, category)];
   }
@@ -203,12 +207,12 @@ export function missingLayout(
   journal: Pick<DocData, 'flags' | 'pages' | 'categories'>,
   element: Pick<ElementData, 'class' | 'name' | 'img' | 'status'>,
   ctx: LayoutContext,
-): { pages: PageData[]; categories: CategoryData[]; flags: DocData['flags']['silk'] } {
-  const flags = journal.flags.silk;
+): { pages: PageData[]; categories: CategoryData[]; flags: DocData['flags']['garn'] } {
+  const flags = journal.flags.garn;
   const has = (id: string | undefined) => !!id && !!journal.pages?.some((p) => p._id === id);
   const pages: PageData[] = [];
   const categories: CategoryData[] = [];
-  const added: DocData['flags']['silk'] = {};
+  const added: DocData['flags']['garn'] = {};
   if (hasJournalLayout(element.class)) {
     if (!has(flags.cover)) {
       const cover = coverPage(ctx.newId(), element.img, ctx);
@@ -240,12 +244,12 @@ function addJournalLayout(main: DocData, element: StoryElement, ctx: LayoutConte
   const { pages, categories, flags } = missingLayout(main, element, ctx);
   main.pages = [...(main.pages ?? []), ...pages];
   main.categories = categories;
-  main.flags.silk = { ...main.flags.silk, ...flags };
+  main.flags.garn = { ...main.flags.garn, ...flags };
 }
 
-/** Pages that are Info Blocks: text pages that aren't Silk layout or Player Notes. */
+/** Pages that are Info Blocks: text pages that aren't Garn layout or Player Notes. */
 export function infoBlockPages(journal: DocSnapshot): PageData[] {
-  const flags = journal.flags.silk;
+  const flags = journal.flags.garn;
   const layout = new Set([flags.cover, flags.connections, flags.quest]);
   return (journal.pages ?? [])
     .filter(
@@ -259,7 +263,7 @@ export function infoBlockPages(journal: DocSnapshot): PageData[] {
 
 /** Player Note pages (§9): pages in the journal's "Player Notes" category, in sort order. */
 export function playerNotePages(journal: DocSnapshot): PageData[] {
-  const category = journal.flags.silk.playerNotes;
+  const category = journal.flags.garn.playerNotes;
   if (!category) return [];
   return (journal.pages ?? [])
     .filter((p) => p.category === category)
@@ -275,7 +279,7 @@ export const notePage = (note: PlayerNote, category: string, sort: number): Page
   category,
   ownership: { ...NONE },
   text: { content: note.text },
-  flags: { silk: note.campaign ? { campaign: note.campaign } : {} },
+  flags: { garn: note.campaign ? { campaign: note.campaign } : {} },
 });
 
 /** The journal holding the element's Info Blocks: itself, or its Companion Journal. */
@@ -295,20 +299,19 @@ export function readBack(
 ): Partial<ElementData> {
   const out: Partial<ElementData> = { name: main.name };
   if (main.documentName !== 'JournalEntry') {
-    // Hooded until Appearance is Revealed (§8): the real image waits in the flag.
-    const { hood, img } = main.flags.silk;
-    out.img = (hood && main.img === hood ? img : main.img) || undefined;
+    // The real image, also while hooded (§8).
+    out.img = realPortrait(main).img || undefined;
     const fields = system.fromSystem(cls, main.system);
     out.fields = Object.keys(fields).length ? fields : undefined;
     if (cls === 'person' || cls === 'creature') {
       const dead = (main.effects ?? []).some((e) => e.statuses?.includes(system.deadEffect));
       out.status = storedStatus(cls, dead ? 'dead' : 'alive');
     }
-  } else if (main.flags.silk.cover) {
-    const cover = main.pages?.find((p) => p._id === main.flags.silk.cover);
+  } else if (main.flags.garn.cover) {
+    const cover = main.pages?.find((p) => p._id === main.flags.garn.cover);
     out.img = cover?.src || undefined;
   }
-  const { quest, questKey } = main.flags.silk;
+  const { quest, questKey } = main.flags.garn;
   const questData = quest && questKey && main.pages?.find((p) => p._id === quest)?.system;
   if (cls === 'quest' && questKey && questData) {
     const status = statusesOf('quest')[system.questStatus(questKey, questData) ?? 0];
@@ -316,13 +319,16 @@ export function readBack(
   }
   const holder = blockJournal(main, companion);
   if (holder) {
-    out.infoBlocks = infoBlockPages(holder).map((p) => ({
-      _id: p._id,
-      name: p.name,
-      text: p.text?.content ?? '',
-    }));
+    out.infoBlocks = infoBlockPages(holder).map((p) => {
+      const text = p.text?.content ?? '';
+      const block = { _id: p._id, name: p.name, text };
+      // The Appearance page's portrait is Garn's, not the block's text (v1.1 §G.4).
+      return p.flags?.garn?.appearance
+        ? { ...block, text: withoutPortrait(text), appearance: true as const }
+        : block;
+    });
     const notes = playerNotePages(holder).map((p) => {
-      const campaign = p.flags?.silk?.campaign;
+      const campaign = p.flags?.garn?.campaign;
       return {
         _id: p._id,
         name: p.name,

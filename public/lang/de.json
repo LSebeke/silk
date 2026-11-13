@@ -1,6 +1,6 @@
 {
-  "SILK": {
-    "Title": "Silk",
+  "GARN": {
+    "Title": "Garn",
     "Settings": {
       "materializeMode": {
         "Name": "Materialisierungsmodus",
@@ -27,13 +27,30 @@
       "warnUnmaterializeReveal": {
         "Name": "Warnung beim Entmaterialisieren enthüllter Inhalte",
         "Hint": "Warnen, bevor ein Element entmaterialisiert wird, das Spieler sehen können."
+      },
+      "canonWindow": {
+        "Name": "Kanon",
+        "Hint": "Kanon dieser Welt anlegen oder wählen; Checkout, Abenteuer, Kampagnen."
       }
     },
     "Commands": {
+      "pipeline": {
+        "search": "Klassenauswahl durchsuchen",
+        "pickClass": "Klasse wählen",
+        "pickSource": "Quelle wählen",
+        "cancel": "Erstellung abbrechen"
+      },
+      "picker": {
+        "search": "Kompendium-Auswahl durchsuchen",
+        "source": "Quelle der Auswahl wählen",
+        "pick": "Kompendium-Eintrag wählen",
+        "cancel": "Kompendium-Auswahl schließen"
+      },
       "canvas": {
         "open": "Weltleinwand öffnen",
         "moveNodes": "Knoten verschieben",
         "select": "Knoten auswählen",
+        "deleteSelection": "Auswahl löschen",
         "group": "Zu Gruppe zusammenfassen",
         "ungroup": "Gruppe auflösen",
         "renameGroup": "Gruppe umbenennen",
@@ -71,23 +88,30 @@
         "create": "Element erstellen",
         "rename": "Element umbenennen",
         "setImage": "Bild setzen",
+        "restoreImages": "Importierte Bilder wiederherstellen",
         "setFields": "Klassenfelder setzen",
         "changeClass": "Klasse ändern",
         "openSheet": "Bogen öffnen",
+        "openJournal": "Journal öffnen",
         "tag": "Tag hinzufügen",
         "untag": "Tag entfernen",
         "setStatus": "Status setzen",
         "toggleStatus": "Status umschalten",
         "delete": "Element löschen",
-        "openDetail": "Element-Details"
+        "openDetail": "Element-Details",
+        "openImageEditor": "Bild & Token"
       },
       "connection": {
         "create": "Verbinden",
         "setLabel": "Verbindungstext bearbeiten",
-        "cycleDirection": "Verbindungsrichtung wechseln",
         "cycleType": "Verbindungsart wechseln",
         "flip": "Verbindung umkehren",
-        "delete": "Verbindung löschen"
+        "delete": "Verbindung löschen",
+        "openDetail": "Verbindungsdetails",
+        "setNotes": "Notizen der Verbindung bearbeiten",
+        "setType": "Verbindungstyp setzen",
+        "setDirection": "Verbindungsrichtung setzen",
+        "toggleDirection": "Gerichtet ⇄ Gegenseitig"
       },
       "materialize": {
         "elements": "Materialisieren",
@@ -97,7 +121,9 @@
       "infoBlock": {
         "create": "Infoblock hinzufügen",
         "edit": "Infoblock bearbeiten",
-        "delete": "Infoblock löschen"
+        "delete": "Infoblock löschen",
+        "move": "Info-Block verschieben",
+        "open": "In Foundry öffnen"
       },
       "filter": {
         "set": "Canvas-Filter setzen",
@@ -130,9 +156,9 @@
         "cancel": "Zusammenführen abbrechen"
       },
       "adopt": {
-        "doc": "In Silk übernehmen",
-        "folder": "Ordner in Silk übernehmen",
-        "ignore": "Für Silk ignorieren"
+        "doc": "In Garn übernehmen",
+        "folder": "Ordner in Garn übernehmen",
+        "ignore": "Für Garn ignorieren"
       },
       "playerNote": {
         "create": "Spielernotiz hinzufügen",
@@ -142,9 +168,40 @@
       },
       "playerCanvas": {
         "openDoc": "Dokument öffnen"
+      },
+      "legend": {
+        "toggle": "Canvas-Legende ein-/ausblenden"
       }
     },
+    "Source": {
+      "Label": "Ausgangspunkt",
+      "compendium": "Kompendium",
+      "generator": "Generator",
+      "blank": "Leer",
+      "Cancel": "Abbrechen",
+      "Unavailable": "Noch nicht verfügbar",
+      "NotForClass": "Für diese Klasse nicht angeboten",
+      "GeneratorMissing": "Benötigt das Modul „Das Schwarze Auge 5 - Meisterwerkstatt“ (dsa5-mastersworkshop)",
+      "GeneratorGMOnly": "Nur die Spielleitung kann den Generator nutzen",
+      "GeneratorFailed": "Der NSC-Generator (NSC Zucht) konnte nicht geladen werden"
+    },
+    "Picker": {
+      "Title": "Kompendium",
+      "Search": "Suchen…",
+      "Sources": "Quellen",
+      "Results": "Ergebnisse",
+      "All": "Alle",
+      "World": "Welt",
+      "ChooseSource": "Quelle wählen",
+      "Adopt": "Übernehmen",
+      "Import": "Importieren",
+      "None": "Keine Treffer"
+    },
     "Canvas": {
+      "EdgeMenu": {
+        "OpenDetails": "Details öffnen",
+        "Reverse": "Richtung umkehren"
+      },
       "Title": "Weltleinwand",
       "ClassSearch": "Klasse…",
       "NewGroup": "Gruppe",
@@ -165,7 +222,48 @@
       "Palette": "Palette",
       "PaletteHint": "Klasse auf die Leinwand oder auf einen Knoten ziehen.",
       "Filtered": "gefiltert",
-      "FilteredTitle": "Von den Filtern verborgen; sichtbar bis zur Abwahl."
+      "FilteredTitle": "Von den Filtern verborgen; sichtbar bis zur Abwahl.",
+      "Key": {
+        "create": "{class} erstellen; mit dem gewählten Knoten verbunden, falls vorhanden",
+        "undo": "Layout rückgängig",
+        "search": "Suche",
+        "editConnection": "Text bearbeiten",
+        "rename": "Umbenennen",
+        "connect": "Verbinden",
+        "status": "Status umschalten (y/n)",
+        "pin": "Focus Pin setzen/entfernen",
+        "reveal": "Aufdecken (y/n)",
+        "delete": "Löschen (Knoten: mit Rückfrage, samt markierten Verbindungen)",
+        "group": "Gruppieren",
+        "untangle": "Entwirren",
+        "toggleDirection": "Gerichtet ⇄ gegenseitig",
+        "flip": "Richtung umkehren",
+        "cycleType": "Art wechseln",
+        "legend": "Diese Legende ein-/ausblenden"
+      },
+      "KeyWhen": {
+        "always": "",
+        "node": "bei gewähltem Knoten",
+        "edge": "bei gewählter Verbindung",
+        "nodeOrEdge": "bei gewähltem Knoten oder gewählter Verbindung"
+      },
+      "Modifier": {
+        "shift": "Umschalt: eingehend",
+        "ctrl": "Strg: gegenseitig",
+        "alt": "Alt: frei, ausgehend"
+      },
+      "Gesture": {
+        "node-sameNode": "Rechtsklick auf Knoten: Kontextmenü",
+        "node-otherNode": "Rechts ziehen Knoten → Knoten: verbinden",
+        "node-canvas": "Rechts ziehen Knoten → Leinwand: neuer verbundener Knoten",
+        "canvas-canvas": "Rechtsklick auf Leinwand: neuer Knoten",
+        "canvas-node": "Rechts ziehen Leinwand → Knoten: neuer, damit verbundener Knoten",
+        "edge-anywhere": "Rechtsklick auf Verbindung oder Beschriftung: Kontextmenü",
+        "leftDrag-node": "Knoten ziehen: verschieben (mit der Auswahl)",
+        "drag-canvas": "Leinwand ziehen (linke oder mittlere Taste): verschieben",
+        "doubleClick-node": "Doppelklick auf Knoten: Element-Details",
+        "doubleClick-edge": "Doppelklick auf Verbindung oder Beschriftung: Verbindungsdetails"
+      }
     },
     "Connection": {
       "Type": {
@@ -198,7 +296,7 @@
       "Checkout": "Checkout",
       "Main": "main (Kanon-Bearbeitung)",
       "Dirty": "ungespeicherte Änderungen",
-      "ReadOnly": "schreibgeschützt, Silk aktualisieren",
+      "ReadOnly": "schreibgeschützt, Garn aktualisieren",
       "Adventures": "Abenteuer",
       "AdventureName": "Name des Abenteuers",
       "PickCampaign": "Kampagne…",
@@ -235,10 +333,12 @@
       "Abandon": "Verwerfen…",
       "AbandonPrompt": "Verwerfen löscht alles, was dieses Abenteuer geändert hat, und setzt die Welt auf main zurück. Dokumente von Elementen, die es auf main nicht gibt, werden gelöscht. Das lässt sich nicht rückgängig machen. Zur Bestätigung den Namen des Abenteuers eingeben:",
       "AbandonConfirm": "Endgültig verwerfen",
-      "Synced": "main wurde in einer anderen Welt geändert; diese Welt wurde aktualisiert."
+      "Synced": "main wurde in einer anderen Welt geändert; diese Welt wurde aktualisiert.",
+      "NoCanon": "Noch kein Kanon",
+      "ChipMain": "main"
     },
     "Notice": {
-      "FileBrowse": "Silk-Spoilerschutz: {roles} können Dateien durchsuchen, den Silk-Kanon unter Data/silk/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Silk-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
+      "FileBrowse": "Garn-Spoilerschutz: {roles} können Dateien durchsuchen, den Garn-Kanon unter Data/garn/ finden und nicht enthüllte Inhalte lesen. Falls dich das stört, entziehe diesen Rollen unter „Berechtigungen konfigurieren“ das Recht „Dateibrowser verwenden“. Siehe Garn-README, Abschnitt „Spoiler secrecy“. Wird nur einmal angezeigt."
     },
     "Class": {
       "person": "Person",
@@ -278,10 +378,11 @@
       "event": "Ereignisse",
       "quest": "Quests",
       "note": "Notizen",
-      "companions": "Silk-Begleitjournale",
-      "scene": "Silk-Szenen"
+      "companions": "Garn-Begleitjournale",
+      "scene": "Garn-Szenen"
     },
     "Materialize": {
+      "CompendiumMissing": "{name}: Der Kompendiumseintrag fehlt; leer materialisiert.",
       "Implicit": "{name} materialisiert.",
       "VisibleTitle": "Sichtbare materialisieren",
       "VisibleConfirm": "{count} auf der Leinwand gezeigte Elemente materialisieren? Spielercharaktere werden übersprungen.",
@@ -330,7 +431,7 @@
       }
     },
     "Lifecycle": {
-      "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Silk nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",
+      "Restored": "Das Foundry-Dokument von {name} wurde gelöscht, während Garn nicht lief. Es ist wieder ein Geist, wiederhergestellt aus Commit {commit}.",
       "RestoredBadge": "Wiederhergestellt aus Commit {commit}",
       "CompanionRestored": "Das Begleitjournal von {name} wurde aus dem letzten Commit wiederhergestellt. Nicht committete Änderungen an Infoblöcken sind verloren.",
       "DeleteTitle": "Elemente löschen",
@@ -346,7 +447,7 @@
       "Unmaterialize": "Entmaterialisieren"
     },
     "EventScene": {
-      "Box": "Anwesend",
+      "Box": "Tokens",
       "Happened": "{name} ist geschehen (Ereignis-Szene aktiviert). Zum Rückgängigmachen den Status zurücksetzen.",
       "Deleted": "Die Szene von {name} wurde gelöscht. Ihr Journal bietet Szene erstellen und Aus letztem Commit wiederherstellen.",
       "NoScene": "Dieses Element hat keine Szene.",
@@ -368,11 +469,56 @@
       "Confirm": "{name} den Spielern aufdecken?",
       "UnrevealConfirm": "{name} wieder vor den Spielern verbergen?"
     },
+    "ImageEditor": {
+      "Title": "Bild & Token",
+      "SheetImage": "Bogenbild",
+      "TokenImage": "Tokenbild",
+      "SameAsImage": "Wie das Bogenbild",
+      "Choose": "Wählen…",
+      "Ring": "Tokenring",
+      "RingEnabled": "Ring an",
+      "LockRotation": "Drehung sperren",
+      "RingColor": "Ringfarbe",
+      "BackgroundColor": "Hintergrundfarbe",
+      "WorldDefault": "Ringstil der Welt",
+      "DrawOrder": "Zeichenreihenfolge",
+      "OrderRing": "Ring vorne",
+      "OrderIllustration": "Illustration vorne",
+      "Position": "Position",
+      "PositionHint": "Ziehen verschiebt den Token, Scrollen skaliert ihn",
+      "Scale": "Skalierung",
+      "Reset": "Zurücksetzen",
+      "Restore": "Importierte Bilder wiederherstellen",
+      "RestoreHint": "Zurück zu den Bildern und dem Token-Aussehen, mit denen der Akteur importiert wurde. Verhüllt gelten sie bei der Enthüllung.",
+      "HoodedHint": "Verhüllt: Die Spieler sehen die Hülle, bis das Aussehen enthüllt ist. Bild, Token und Position gelten dann; Ring und Drehsperre gelten sofort."
+    },
     "Detail": {
       "Title": "Element-Details",
       "InfoBlocks": "Infoblöcke",
       "Connections": "Verbindungen",
-      "Gone": "Dieses Element existiert nicht mehr."
+      "Gone": "Dieses Element existiert nicht mehr.",
+      "AddInfoBlock": "+ Info-Block",
+      "AddInfoBlockMenu": "Info-Block hinzufügen…",
+      "AddPresets": "Weitere Info-Block-Vorlagen",
+      "AddAppearance": "Aussehen",
+      "AddAppearanceHint": "Fügt den Aussehen-Block hinzu: das Bild bleibt verhüllt, bis er enthüllt ist.",
+      "InfoBlockName": "Name des Info-Blocks",
+      "DeleteInfoBlockTitle": "Info-Block löschen",
+      "DeleteInfoBlockConfirm": "Den Info-Block „{name}“ löschen?"
+    },
+    "ConnectionDetail": {
+      "Title": "Verbindungsdetails",
+      "Label": "Beschriftung",
+      "Type": "Typ",
+      "Direction": "Richtung",
+      "Directed": "Gerichtet",
+      "Mutual": "Gegenseitig",
+      "Reverse": "Umkehren",
+      "Notes": "Notizen",
+      "NotesHint": "Nur für die Spielleitung: nie für Spieler sichtbar, nicht auf Verbindungsseiten und nicht in der Suche.",
+      "DeleteTitle": "Verbindung löschen",
+      "DeleteConfirm": "Die Verbindung „{sentence}“ löschen?",
+      "Gone": "Diese Verbindung existiert nicht mehr."
     },
     "Merge": {
       "Title": "Zusammenführen",
@@ -466,9 +612,9 @@
       "CanonEditConfirmBody": "Das Ergebnis auf main committen und diese Welt umschreiben? Das lässt sich nicht rückgängig machen."
     },
     "Adopt": {
-      "Adopt": "In Silk übernehmen",
-      "AdoptFolder": "Ordner in Silk übernehmen",
-      "Refused": "{name} kann nicht übernommen werden: Silk übernimmt Akteure (Held, NSC, Kreatur), Gegenstände, Journale und Szenen.",
+      "Adopt": "In Garn übernehmen",
+      "AdoptFolder": "Ordner in Garn übernehmen",
+      "Refused": "{name} kann nicht übernommen werden: Garn übernimmt Akteure (Held, NSC, Kreatur), Gegenstände, Journale und Szenen.",
       "WrongClass": "{name} kann kein {class} werden.",
       "Missing": "Kein Foundry-Dokument „{uuid}“.",
       "NoFolder": "Dieser Ordner existiert nicht mehr.",
@@ -485,7 +631,7 @@
       "Ignore": "Ignorieren",
       "Close": "Schließen",
       "AdHocTitle": "Neue Dokumente dieser Sitzung",
-      "AdHocIntro": "Seit dem letzten Commit erstellt und noch nicht in Silk. Ignorierte Dokumente erscheinen nie wieder.",
+      "AdHocIntro": "Seit dem letzten Commit erstellt und noch nicht in Garn. Ignorierte Dokumente erscheinen nie wieder.",
       "EndPlaySessionLabel": "Ende der Spielsitzung"
     },
     "PlayerNote": {
@@ -497,6 +643,15 @@
     "PlayerCanvas": {
       "Title": "Spieler-Leinwand",
       "Empty": "Noch nichts enthüllt."
+    },
+    "Legend": {
+      "Title": "Steuerung",
+      "Toggle": "Legende (?)",
+      "Keys": "Tasten",
+      "Mouse": "Maus",
+      "Modifiers": "Modifikatoren (Ziffern, Loslassen beim Rechtsziehen)",
+      "Foundry": "Foundry-Tastenbelegung",
+      "None": "Keine"
     }
   }
 }

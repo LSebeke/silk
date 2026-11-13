@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import de from '../../public/lang/de.json';
 import en from '../../public/lang/en.json';
-import { registerSettings } from './settings';
+import { canonWindowMenu, registerSettings } from './settings';
 
 interface Registered {
   scope: string;
@@ -15,7 +15,7 @@ interface Registered {
 function collect() {
   const settings = new Map<string, Registered>();
   registerSettings((namespace, key, data) => {
-    expect(namespace).toBe('silk');
+    expect(namespace).toBe('garn');
     settings.set(key, data as Registered);
   });
   return settings;
@@ -29,7 +29,7 @@ describe('settings (spec §13)', () => {
     );
     expect(summary).toMatchObject({
       materializeMode: { scope: 'world', default: 'immediate' },
-      hoodedImage: { scope: 'world', default: 'modules/silk/assets/hooded.svg' },
+      hoodedImage: { scope: 'world', default: 'icons/svg/mystery-man-black.svg' },
       playerView: { scope: 'world' },
       viewState: { scope: 'world' },
       detailDrop: { scope: 'client', default: true },
@@ -39,9 +39,11 @@ describe('settings (spec §13)', () => {
       windowState: { scope: 'client' },
       playerViewState: { scope: 'client' },
       fileBrowseNoticeShown: { scope: 'world', default: false },
+      lookMigrated: { scope: 'world', default: false },
       revealState: { scope: 'world' },
+      legendOpen: { scope: 'client', default: true },
     });
-    expect(s.size).toBe(12);
+    expect(s.size).toBe(14);
   });
 
   it('hides internal settings from the config dialog', () => {
@@ -49,6 +51,8 @@ describe('settings (spec §13)', () => {
     const hidden = [...s].filter(([, d]) => !d.config).map(([k]) => k);
     expect(hidden.sort()).toEqual([
       'fileBrowseNoticeShown',
+      'legendOpen',
+      'lookMigrated',
       'playerView',
       'playerViewState',
       'revealState',
@@ -74,6 +78,29 @@ describe('settings (spec §13)', () => {
           expect(lookup(lang, label), label).toBeTypeOf('string');
       }
     }
+  });
+});
+
+describe('Module Settings menu "Open Canon window" (v1.1 §H)', () => {
+  class Base {
+    render(): Promise<unknown> {
+      throw new Error('Garn: the launcher never renders itself');
+    }
+  }
+
+  it('is GM only, with DE and EN text', () => {
+    const menu = canonWindowMenu(Base, async () => {});
+    expect(menu.restricted).toBe(true);
+    for (const lang of [en, de])
+      for (const key of [menu.name, menu.label, menu.hint])
+        expect(lookup(lang, key), key).toBeTypeOf('string');
+  });
+
+  it('opening it runs canon.openWindow', async () => {
+    const ran: string[] = [];
+    const menu = canonWindowMenu(Base, async (name) => void ran.push(name));
+    await new menu.type().render();
+    expect(ran).toEqual(['canon.openWindow']);
   });
 });
 

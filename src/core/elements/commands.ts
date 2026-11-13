@@ -9,6 +9,7 @@ import {
   type Point,
   type StoryElement,
 } from './element';
+import { classTakesSource, type ElementSource } from './sources';
 
 export interface ElementCreateArgs {
   class: string;
@@ -18,6 +19,12 @@ export interface ElementCreateArgs {
   /** Origin element: the new one is connected to it (T7). */
   from?: string;
   connection?: { type?: string; direction?: string; label?: string };
+  /** What it starts from (spec 1.1 §B.1, §D); default blank. Non-blank is stored on the element. */
+  source?: ElementSource;
+  /** Image path (a compendium pick's portrait, shown on the Ghost until Materialize). */
+  img?: string;
+  /** A Scene pick's card image (1.1 §B.2.1): its `thumb` or a WebP data URL. */
+  thumb?: string;
 }
 
 export interface ElementCreateResult {
@@ -46,18 +53,26 @@ export interface ElementCommandDeps {
 export function elementCommands(deps: ElementCommandDeps): Command[] {
   const create: Command<ElementCreateArgs, ElementCreateResult> = {
     name: 'element.create',
-    title: 'SILK.Commands.element.create',
+    title: 'GARN.Commands.element.create',
     available: (ctx) => ctx.isGM,
     async run(args) {
       const cls = elementClass(args.class);
-      if (!cls) throw new Error(`Silk: unknown Element class "${args.class}"`);
+      if (!cls) throw new Error(`Garn: unknown Element class "${args.class}"`);
       if (!cls.creatable)
-        throw new Error(`Silk: ${cls.id} elements are never created, only Adopted`);
+        throw new Error(`Garn: ${cls.id} elements are never created, only Adopted`);
+      const source = args.source;
+      if (source && !classTakesSource(cls.id, source.kind))
+        throw new Error(`Garn: ${cls.id} elements take no ${source.kind} source`);
+      if (source?.kind === 'generator' && typeof source.actorUuid !== 'string')
+        throw new Error('Garn: a generator source needs the actorUuid of the Actor it created');
       const id = deps.newId();
       const data: ElementData = {
         class: cls.id,
         name: args.name.trim(),
         position: { x: args.at?.x ?? 0, y: args.at?.y ?? 0 },
+        ...(source && source.kind !== 'blank' ? { source } : {}),
+        ...(typeof args.img === 'string' && args.img ? { img: args.img } : {}),
+        ...(typeof args.thumb === 'string' && args.thumb ? { thumb: args.thumb } : {}),
       };
       await deps.workingCopy().set([elementRecord(id, data)]);
       let result: ElementCreateResult = { id };
@@ -69,12 +84,12 @@ export function elementCommands(deps: ElementCommandDeps): Command[] {
 
   const rename: Command<{ id: string; name: string }, void> = {
     name: 'element.rename',
-    title: 'SILK.Commands.element.rename',
+    title: 'GARN.Commands.element.rename',
     available: (ctx) => ctx.isGM,
     async run({ id, name }) {
       const wc = deps.workingCopy();
       const record = wc.get(id);
-      if (!record || !readElement(record)) throw new Error(`Silk: no element "${id}"`);
+      if (!record || !readElement(record)) throw new Error(`Garn: no element "${id}"`);
       const renamed = { ...record, data: { ...record.data, name: name.trim() } };
       await wc.set([renamed]);
       for (const hook of deps.afterRename ?? []) await hook(readElement(renamed) as StoryElement);

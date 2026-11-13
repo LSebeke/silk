@@ -31,10 +31,10 @@ describe('Scene hooks (spec §7)', () => {
     ]);
   });
 
-  it('ignores Silk’s own writes and runs only on the active GM', () => {
+  it('ignores Garn’s own writes and runs only on the active GM', () => {
     const { fire, seen } = hooks();
-    fire('createToken', token, { silk: { internal: true } }, 'u');
-    fire('updateScene', { id: 's1' }, { active: true }, { silk: { internal: true } }, 'u');
+    fire('createToken', token, { garn: { internal: true } }, 'u');
+    fire('updateScene', { id: 's1' }, { active: true }, { garn: { internal: true } }, 'u');
     expect(seen).toEqual([]);
     const other = hooks(false);
     other.fire('createToken', token, {}, 'u');
@@ -44,7 +44,7 @@ describe('Scene hooks (spec §7)', () => {
 });
 
 describe('SceneDocs adapter', () => {
-  it('creates with fixed ids, migrated, as Silk’s write; tokens from the prototype', async () => {
+  it('creates with fixed ids, migrated, as Garn’s write; tokens from the prototype', async () => {
     const calls: unknown[][] = [];
     const scene: FoundryScene = {
       id: 's1',
@@ -75,20 +75,20 @@ describe('SceneDocs adapter', () => {
       [
         'create',
         { _id: 's1', name: 'S', flags: {}, migrated: true },
-        { silk: { internal: true }, keepId: true, keepEmbeddedIds: true },
+        { garn: { internal: true }, keepId: true, keepEmbeddedIds: true },
       ],
-      ['activate', { updateOptions: { silk: { internal: true } } }],
+      ['activate', { updateOptions: { garn: { internal: true } } }],
       [
         'tokens',
         'Token',
         [{ actorId: 'a1', x: 1, y: 2, hidden: true, proto: true }],
-        { silk: { internal: true } },
+        { garn: { internal: true } },
       ],
     ]);
-    expect(docs.get('s1')?.flags.silk).toEqual({});
+    expect(docs.get('s1')?.flags.garn).toEqual({});
   });
 
-  it('syncs an embedded collection by its Document name, keeping ids, as Silk’s write', async () => {
+  it('syncs an embedded collection by its Document name, keeping ids, as Garn’s write', async () => {
     const calls: unknown[][] = [];
     const scene = {
       id: 's1',
@@ -109,11 +109,11 @@ describe('SceneDocs adapter', () => {
       update: [{ _id: 'w1', c: [1] }],
       delete: ['w0'],
     });
-    const silk = { silk: { internal: true } };
+    const garn = { garn: { internal: true } };
     expect(calls).toEqual([
-      ['delete', 'Wall', ['w0'], silk],
-      ['update', 'Wall', [{ _id: 'w1', c: [1] }], { ...silk, recursive: false }],
-      ['create', 'Wall', [{ _id: 'w2' }], { ...silk, keepId: true }],
+      ['delete', 'Wall', ['w0'], garn],
+      ['update', 'Wall', [{ _id: 'w1', c: [1] }], { ...garn, recursive: false }],
+      ['create', 'Wall', [{ _id: 'w2' }], { ...garn, keepId: true }],
     ]);
     await expect(
       docs.syncEmbedded('s1', 'nope', { create: [], update: [], delete: [] }),
@@ -125,15 +125,15 @@ describe('journal Scene bar (spec §4, §6)', () => {
   const L = (k: string) => k.split('.').pop() ?? k;
   it('linked: Scene link + Activate; Event without Scene: "no Scene" + Create / Restore', () => {
     const linked = sceneBarHtml({ elementId: 'e', cls: 'event', scene: 'A<b>' }, L);
-    expect(linked).toContain('data-silk-scene-link');
+    expect(linked).toContain('data-garn-scene-link');
     expect(linked).toContain('A&#60;b&#62;');
-    expect(linked).toContain('data-silk-activate-scene');
+    expect(linked).toContain('data-garn-activate-scene');
     const none = sceneBarHtml({ elementId: 'e', cls: 'event' }, L);
-    expect(none).toContain('data-silk-no-scene');
-    expect(none).toContain('data-silk-create-scene');
-    expect(none).toContain('data-silk-restore-scene');
+    expect(none).toContain('data-garn-no-scene');
+    expect(none).toContain('data-garn-create-scene');
+    expect(none).toContain('data-garn-restore-scene');
     const location = sceneBarHtml({ elementId: 'l', cls: 'location' }, L);
-    expect(location).not.toContain('data-silk-no-scene');
-    expect(location).toContain('data-silk-create-scene');
+    expect(location).not.toContain('data-garn-no-scene');
+    expect(location).toContain('data-garn-create-scene');
   });
 });

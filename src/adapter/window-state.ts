@@ -1,7 +1,7 @@
 /**
- * Window position and detached state per Silk window (spec §2), in the client setting
+ * Window position and detached state per Garn window (spec §2), in the client setting
  * `windowState`: `{ [appId]: { position?, detached? } }`. v14 does not restore detached
- * windows after a reload, so Silk re-detaches on open.
+ * windows after a reload, so Garn re-detaches on open.
  */
 
 export interface WindowPosition {

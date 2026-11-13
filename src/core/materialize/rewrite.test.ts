@@ -41,7 +41,7 @@ describe('rewriting the World to a merge result (spec §11.3)', () => {
       resultOf(t.workingCopy.records(), { [wolf]: withData({ playerNotes: [note] }) }),
     );
     const companion = t.companion(wolf);
-    expect(page(companion, note._id).category).toBe(companion.flags.silk.playerNotes);
+    expect(page(companion, note._id).category).toBe(companion.flags.garn.playerNotes);
     expect(t.element(wolf).playerNotes).toEqual([note]);
 
     await t.rewriter.apply(
@@ -79,13 +79,16 @@ describe('rewriting the World to a merge result (spec §11.3)', () => {
     expect(t.doc(wolf).img).toBe('wolf.webp');
     expect(t.companion(wolf).name).toBe('Dire Wolf');
     expect(pageNames(t.companion(wolf))).toEqual(['Appearance', 'Tactics', 'Connections']);
-    expect(page(t.companion(wolf), must(appearance)._id).text?.content).toBe('<p>Huge</p>');
+    // v1.1 §G.4: the Appearance page keeps its portrait on top.
+    expect(page(t.companion(wolf), must(appearance)._id).text?.content).toBe(
+      '<figure data-garn-portrait=""><img src="wolf.webp"></figure><p>Huge</p>',
+    );
     expect(t.companion(wolf).pages.some((p) => p._id === must(description)._id)).toBe(false);
     expect(t.element(wolf)).toMatchObject({ name: 'Dire Wolf', img: 'wolf.webp' });
     expect(t.element(wolf).infoBlocks.map((b) => b.name)).toEqual(['Appearance', 'Tactics']);
   });
 
-  it('sets Status and class fields; keeps Silk-owned fields as the result has them', async () => {
+  it('sets Status and class fields; keeps Garn-owned fields as the result has them', async () => {
     const t = rig();
     const alrik = await t.create('person', 'Alrik');
     const result = resultOf(t.workingCopy.records(), {
@@ -119,7 +122,7 @@ describe('rewriting the World to a merge result (spec §11.3)', () => {
       name,
       type: 'equipment',
       folder: null,
-      flags: { silk: {} },
+      flags: { garn: {} },
       system: { quantity: { value: quantity } },
     });
     await t.docs.create('Item', item('sword', 'Sword', 1), actor);

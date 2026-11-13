@@ -3,8 +3,8 @@
  *
  * - Ghost: the element record in the working copy is the truth.
  * - Materialized: the Foundry doc is the truth for title, image, Info Blocks and class fields.
- *   Silk writes those to Foundry, and `sync` mirrors Foundry back into the record so the
- *   canvas and Commits see them. Tags, class and layout stay Silk-owned.
+ *   Garn writes those to Foundry, and `sync` mirrors Foundry back into the record so the
+ *   canvas and Commits see them. Tags, class and layout stay Garn-owned.
  *
  * Pure core: Foundry is the injected `FoundryDocs` port, DSA5 the `SystemMapping`.
  */
@@ -12,7 +12,11 @@ import { canonicalJson, type JsonObject } from '../canon';
 import type { Command } from '../commands/registry';
 import {
   elementClass,
+  appearanceBlock,
   elementRecord,
+  generatedActor,
+  hasAppearanceClass,
+  sceneSource,
   isGhost,
   nextStatus,
   readElement,
@@ -41,7 +45,22 @@ import {
   type DocPlan,
   type LayoutContext,
 } from './layout';
-import type { DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
+import { blockPageText, restorePortrait } from './appearance-page';
+import { deepMerge } from '../util/objects';
+import {
+  imageWrites,
+  lookOf,
+  lookSource,
+  lookWriter,
+  originalLook,
+  restoreWrites,
+  type ImageEdit,
+  type Look,
+  type LookStage,
+  type PortraitDoc,
+  type PortraitWrites,
+} from '../portrait';
+import type { DocData, DocSnapshot, FolderKey, FoundryDocs, SystemMapping } from './port';
 
 export type MaterializeMode = 'immediate' | 'onDemand';
 
@@ -81,6 +100,8 @@ export interface MaterializerDeps {
    * T12: owned Items move into a new actor).
    */
   afterMaterialize?(id: string): Promise<void>;
+  /** Placed tokens and ring subject files of a look write (v1.1 §G.3). */
+  look?: LookStage;
 }
 
 export interface Materializer {
@@ -100,27 +121,55 @@ export interface Materializer {
   afterPipeline(id: string): Promise<void>;
   /** `element.rename` hook: name → Foundry. */
   writeName(id: string): Promise<void>;
-  setImage(id: string, img: string): Promise<void>;
+  /**
+   * `element.setImage` (v1.1 §G.3), hood-aware. A Ghost's image goes to the record; a token
+   * edit (actor classes only) Materializes it first.
+   */
+  setImage(id: string, edit: ImageEdit): Promise<void>;
+  /** The real look for the image & token editor (v1.1 §G.3); a Ghost's is its record image. */
+  look(id: string): Look | undefined;
+  /** `element.restoreImages` (v1.1 §G.3.1); rejected without `flags.garn.original`. */
+  restoreImages(id: string): Promise<void>;
   setFields(id: string, fields: ClassFields): Promise<void>;
   changeClass(id: string, cls: string): Promise<void>;
-  createInfoBlock(args: { elementId: string; name?: string; text?: string }): Promise<string>;
+  /** `appearance`: the Appearance preset (v1.1 §C.2), actor classes without one only. */
+  createInfoBlock(args: {
+    elementId: string;
+    name?: string;
+    text?: string;
+    appearance?: boolean;
+  }): Promise<string>;
   editInfoBlock(args: { id: string; name?: string; text?: string }): Promise<void>;
   deleteInfoBlock(id: string): Promise<void>;
+  /** Moves an Info Block to position `index` among the element's Info Blocks (v1.1 §C.1). */
+  moveInfoBlock(id: string, index: number): Promise<void>;
+  /** "Open in Foundry" (v1.1 §C.1): the journal at the block's page; implicit Materialize. */
+  openInfoBlock(id: string): Promise<void>;
   tag(ids: readonly string[], tag: string, on: boolean): Promise<void>;
   /** Status (§4): Foundry for a Materialized Person/Creature/Quest, else the record. */
   setStatus(id: string, status: string): Promise<void>;
   /** Next Status in the class's order. Returns it. */
   toggleStatus(id: string): Promise<Status>;
+  /** The main doc only (v1.1 §G.2); implicit Materialize. */
   openSheet(id: string): Promise<void>;
+  /** The Companion Journal, or a journal class's main journal (v1.1 §G.2); implicit Materialize. */
+  openJournal(id: string): Promise<void>;
   /** Foundry → record mirror for a Materialized element (Foundry edits flow back, §7). */
   sync(id: string): Promise<void>;
-  /** The Story Element a Silk doc (or Companion Journal) belongs to. */
+  /** The Story Element a Garn doc (or Companion Journal) belongs to. */
   elementIdOf(doc: { flags?: unknown }): string | undefined;
   /** The element's docs, if Materialized and present. */
   docsOf(id: string): { main: DocSnapshot; companion?: DocSnapshot } | undefined;
 }
 
 const FOLDER_DOC = (cls: ElementClassId) => documentName(cls);
+
+/** A Ghost's edit without `sameAsImage`, its only token setting that needs no doc. */
+function ghostEdit({ token, ...edit }: ImageEdit): ImageEdit {
+  const rest = { ...token };
+  delete rest.sameAsImage;
+  return Object.keys(rest).length ? { ...edit, token: rest } : edit;
+}
 
 export function createMaterializer(deps: MaterializerDeps): Materializer {
   const { docs, system } = deps;
@@ -130,7 +179,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
 
   function element(id: string): StoryElement {
     const el = readElement(deps.workingCopy().get(id));
-    if (!el) throw new Error(`Silk: no element "${id}"`);
+    if (!el) throw new Error(`Garn: no element "${id}"`);
     return el;
   }
 
@@ -146,7 +195,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
   }
 
   function folderName(key: FolderKey) {
-    return deps.localize(`SILK.Folder.${key}`);
+    return deps.localize(`GARN.Folder.${key}`);
   }
 
   function docsOf(id: string) {
@@ -154,14 +203,14 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     if (!el?.uuid) return undefined;
     const main = docs.get(el.uuid);
     if (!main) return undefined;
-    const companionId = main.flags.silk.companion;
+    const companionId = main.flags.garn.companion;
     const companion = companionId ? docs.journal(companionId) : undefined;
     return companion ? { main, companion } : { main };
   }
 
   function requireDocs(id: string) {
     const found = docsOf(id);
-    if (!found) throw new Error(`Silk: the Foundry doc of "${id}" is missing`);
+    if (!found) throw new Error(`Garn: the Foundry doc of "${id}" is missing`);
     return found;
   }
 
@@ -170,6 +219,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     if (!el?.uuid) return;
     const found = docsOf(id);
     if (!found) return; // Foundry-side deletion is T9's.
+    await restorePortrait(docs, found);
     await write(id, readBack(el.class, found.main, found.companion, system));
   }
 
@@ -177,25 +227,103 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const el = element(id);
     if (el.uuid) return el.uuid;
     if (!elementClass(el.class)?.creatable)
-      throw new Error(`Silk: ${el.class} elements are never created, only Adopted`);
+      throw new Error(`Garn: ${el.class} elements are never created, only Adopted`);
     const name = FOLDER_DOC(el.class);
     const main = await docs.ensureFolder(name, el.class, folderName(el.class));
     const companion = hasCompanion(el.class)
       ? await docs.ensureFolder('JournalEntry', 'companions', folderName('companions'))
       : undefined;
     const folders = companion ? { main, companion } : { main };
-    const plan = deps.restorePlan?.(el, folders) ?? planDocs(el, folders, ctx);
+    const plan =
+      deps.restorePlan?.(el, folders) ?? (await fromSource(el, planDocs(el, folders, ctx)));
     const parent = name === 'Item' ? deps.parentOf?.(id) : undefined;
     if (parent) plan.main.folder = null;
     // Companion first: the doc's flag points at it.
     if (plan.companion) await docs.create('JournalEntry', plan.companion);
-    const uuid = await docs.create(plan.documentName, plan.main, parent);
+    const bound = bindable(el);
+    const uuid = bound
+      ? await bind(bound, plan.main)
+      : await docs.create(plan.documentName, plan.main, parent);
     if (el.status === 'dead') await docs.setStatusEffect(uuid, system.deadEffect, true);
     if (el.class === 'quest') await questJournal(uuid, el.name);
     await write(id, { uuid });
     await sync(id);
     await deps.afterMaterialize?.(id);
     return uuid;
+  }
+
+  /**
+   * Generator pick (v1.1 §B.3): the Actor it created, if still there and no Story Element.
+   * Otherwise Materialize creates a fresh doc as for any Ghost.
+   */
+  function bindable(el: StoryElement): string | undefined {
+    const uuid = generatedActor(el.source);
+    const doc = uuid ? docs.get(uuid) : undefined;
+    if (!doc || doc.documentName !== documentName(el.class) || doc.parent) return undefined;
+    return doc.flags.garn?.id ? undefined : doc.uuid;
+  }
+
+  /** The existing doc takes the plan's Garn-owned parts; what the generator made stays. */
+  async function bind(uuid: string, main: DocPlan['main']) {
+    const doc = docs.get(uuid) as PortraitDoc | undefined;
+    // v1.1 §G.3.1: no compendium source, so this flag is the only copy of its look.
+    const original = doc ? { original: originalLook(doc) } : {};
+    await docs.update(uuid, {
+      name: main.name,
+      folder: main.folder,
+      ownership: main.ownership,
+      flags: { garn: { ...main.flags.garn, ...original } },
+    });
+    return uuid;
+  }
+
+  /**
+   * Ghost worlds (1.1 §B.1): a Compendium-sourced element imports its entry now. The entry's
+   * data replaces the blank main doc; Garn's id, name, folder, ownership and flags stay.
+   * A Scene source (Location, Event; §B.2.1) is not the main doc: Event Scenes import it.
+   */
+  async function fromSource(el: StoryElement, plan: DocPlan): Promise<DocPlan> {
+    if (el.source?.kind !== 'compendium' || sceneSource(el.class, el.source)) return plan;
+    const data = await docs.importData(el.source.uuid);
+    if (!data) {
+      deps.notify(deps.localize('GARN.Materialize.CompendiumMissing', { name: el.name }));
+      return plan;
+    }
+    const blank = plan.main;
+    const fields = el.fields && Object.keys(el.fields).length ? el.fields : undefined;
+    const main: DocData = {
+      ...data,
+      _id: blank._id,
+      name: blank.name,
+      folder: blank.folder,
+      ...(blank.ownership ? { ownership: blank.ownership } : {}),
+      flags: {
+        ...data.flags,
+        garn: {
+          ...blank.flags.garn,
+          // v1.1 §G.3.1: the entry's look, before a Ghost image edit or the hood.
+          ...(plan.documentName === 'Actor'
+            ? { original: originalLook(data as Pick<PortraitDoc, 'img' | 'prototypeToken'>) }
+            : {}),
+        },
+      },
+      // Edits made while a Ghost win over the entry's.
+      system: fields
+        ? deepMerge(data.system ?? {}, system.toSystem(el.class, { ...fields }))
+        : (data.system ?? {}),
+    };
+    const type = data.type ?? blank.type;
+    if (type) main.type = type;
+    const img = el.img ?? data.img;
+    if (img) main.img = img;
+    return { ...plan, main };
+  }
+
+  const writeLook = deps.look && lookWriter(deps.look, (u, d) => docs.update(u, d));
+  /** A look write: the doc, its subject file and every placed token (v1.1 §G.3). */
+  async function applyLook(main: DocSnapshot, writes: PortraitWrites) {
+    if (writeLook) await writeLook(main.uuid, main, writes);
+    else if (Object.keys(writes.doc).length) await docs.update(main.uuid, writes.doc);
   }
 
   function materializeOne(id: string): Promise<string> {
@@ -222,7 +350,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
     const el = element(id);
     if (el.uuid) return el.uuid;
     const uuid = await materializeOne(id);
-    deps.notify(deps.localize('SILK.Materialize.Implicit', { name: el.name }));
+    deps.notify(deps.localize('GARN.Materialize.Implicit', { name: el.name }));
     return uuid;
   }
 
@@ -232,13 +360,13 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const block = el?.infoBlocks?.find((b) => b._id === blockId);
       if (el && block) return { el, block };
     }
-    throw new Error(`Silk: no Info Block "${blockId}"`);
+    throw new Error(`Garn: no Info Block "${blockId}"`);
   }
 
   function holderOf(id: string) {
     const { main, companion } = requireDocs(id);
     const holder = blockJournal(main, companion);
-    if (!holder) throw new Error(`Silk: "${id}" has no journal for Info Blocks`);
+    if (!holder) throw new Error(`Garn: "${id}" has no journal for Info Blocks`);
     return holder;
   }
 
@@ -248,18 +376,18 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
    */
   async function questJournal(uuid: string, name: string) {
     await docs.registerQuestJournal(uuid, name);
-    deps.notify(deps.localize('SILK.Materialize.QuestNativeFields', { name }));
+    deps.notify(deps.localize('GARN.Materialize.QuestNativeFields', { name }));
   }
 
   function quest(main: DocSnapshot) {
-    const { quest: page, questKey: key } = main.flags.silk;
+    const { quest: page, questKey: key } = main.flags.garn;
     return page && key ? { page, key } : undefined;
   }
 
   async function setStatus(id: string, status: string) {
     const el = element(id);
     const value = statusesOf(el.class).find((s) => s === status);
-    if (!value) throw new Error(`Silk: "${status}" is not a Status of ${el.class} elements`);
+    if (!value) throw new Error(`Garn: "${status}" is not a Status of ${el.class} elements`);
     const found = el.uuid ? docsOf(id) : undefined;
     if (found && (el.class === 'person' || el.class === 'creature')) {
       await docs.setStatusEffect(found.main.uuid, system.deadEffect, value === 'dead');
@@ -268,7 +396,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const index = statusesOf('quest').indexOf(value);
       await docs.updatePage(found.main.uuid, page, system.questStatusUpdate(key, index));
     } else {
-      // Ghost or Event: Silk holds the Status.
+      // Ghost or Event: Garn holds the Status.
       await write(id, { status: storedStatus(el.class, value) });
       return;
     }
@@ -293,7 +421,9 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
 
     async afterCreate(created) {
       await write(created.id, { infoBlocks: defaultInfoBlocks(created.class, ctx) });
-      if (deps.mode() === 'immediate' && !deps.deferImmediate?.()) await materialize([created.id]);
+      // A generator's Actor already exists: bound at once, in every mode (v1.1 §B.1).
+      const immediate = deps.mode() === 'immediate' && !deps.deferImmediate?.();
+      if (generatedActor(created.source) || immediate) await materialize([created.id]);
       return undefined;
     },
 
@@ -307,27 +437,54 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const { main, companion } = requireDocs(id);
       await docs.update(main.uuid, { name: el.name });
       if (companion) await docs.update(companion.uuid, { name: el.name });
-      const { quest, questKey } = main.flags.silk;
+      const { quest, questKey } = main.flags.garn;
       if (quest && questKey)
         await docs.updatePage(main.uuid, quest, system.questTitleUpdate(questKey, el.name));
       await sync(id);
     },
 
-    async setImage(id, img) {
-      const el = element(id);
-      const cover = el.uuid ? requireDocs(id).main.flags.silk.cover : undefined;
+    async setImage(id, imageEdit) {
+      let el = element(id);
+      // §G.3 Ghost: its token is its sheet image, so "same as sheet image" alone changes nothing.
+      const edit = el.uuid ? imageEdit : ghostEdit(imageEdit);
+      if (edit.token) {
+        if (documentName(el.class) !== 'Actor')
+          throw new Error(`Garn: ${el.class} elements have no token`);
+        if (!el.uuid) {
+          if (edit.img !== undefined) await write(id, { img: edit.img || undefined });
+          await ensureMaterialized(id);
+          el = element(id);
+        }
+      }
+      const img = edit.img;
+      const cover = el.uuid ? requireDocs(id).main.flags.garn.cover : undefined;
       if (!el.uuid || (documentName(el.class) === 'JournalEntry' && !cover)) {
-        // Ghost, or a Note (no Cover page): Silk holds the image.
-        await write(id, { img: img || undefined });
+        // Ghost, or a Note (no Cover page): Garn holds the image.
+        if (img !== undefined) await write(id, { img: img || undefined });
         return;
       }
       const { main } = requireDocs(id);
-      const { hood } = main.flags.silk;
-      if (cover) await docs.updatePage(main.uuid, cover, { src: img || null });
-      // Hooded (§8): the new image waits in the flag until Appearance is Revealed.
-      else if (hood && main.img === hood) await docs.update(main.uuid, { 'flags.silk.img': img });
-      else await docs.update(main.uuid, { img });
+      if (cover) {
+        if (img !== undefined) await docs.updatePage(main.uuid, cover, { src: img || null });
+      } else {
+        // Hood-aware (§8, v1.1 §G.3): the Portrait module decides what is shown.
+        await applyLook(main, imageWrites(lookSource(main, system, el.img), edit));
+      }
       await sync(id);
+    },
+
+    async restoreImages(id) {
+      const { main } = requireDocs(id);
+      await applyLook(main, restoreWrites(lookSource(main, system)));
+      await sync(id);
+    },
+
+    look(id) {
+      const el = readElement(deps.workingCopy().get(id));
+      if (!el) return undefined;
+      // A Ghost has no doc yet: its record image, no ring, centred.
+      const main = (el.uuid && docsOf(id)?.main) || { img: el.img, flags: { garn: {} } };
+      return lookOf(lookSource(main as PortraitDoc, system, el.img));
     },
 
     async setFields(id, fields) {
@@ -345,13 +502,13 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       const el = element(id);
       const target = elementClass(cls);
       const from = elementClass(el.class);
-      if (!target || !from) throw new Error(`Silk: unknown Element class "${cls}"`);
+      if (!target || !from) throw new Error(`Garn: unknown Element class "${cls}"`);
       if (target.id === el.class) return;
       if (!target.creatable || !from.creatable)
-        throw new Error('Silk: Player Characters can only be Adopted, not changed into or from');
+        throw new Error('Garn: Player Characters can only be Adopted, not changed into or from');
       if (target.docKind !== from.docKind)
         throw new Error(
-          `Silk: a ${from.id} can only become a class backed by the same kind of Foundry doc`,
+          `Garn: a ${from.id} can only become a class backed by the same kind of Foundry doc`,
         );
       if (el.uuid) {
         const { main } = requireDocs(id);
@@ -363,7 +520,7 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
           if (add.categories.length) await docs.createCategories(main.uuid, add.categories);
           if (add.pages.length) await docs.createPages(main.uuid, add.pages);
           if (Object.keys(add.flags).length)
-            await docs.update(main.uuid, { flags: { silk: add.flags } });
+            await docs.update(main.uuid, { flags: { garn: add.flags } });
         }
         const folder = await docs.ensureFolder(
           FOLDER_DOC(target.id),
@@ -378,12 +535,17 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       await sync(id);
     },
 
-    async createInfoBlock({ elementId, name, text }) {
+    async createInfoBlock({ elementId, name, text, appearance }) {
       const el = element(elementId);
+      // v1.1 §C.2: the Appearance preset, on an actor class that has none.
+      if (appearance && (!hasAppearanceClass(el.class) || appearanceBlock(el)))
+        throw new Error(`Garn: "${el.name}" cannot get an Appearance block`);
+      const fallback = appearance ? 'GARN.InfoBlock.Appearance' : 'GARN.InfoBlock.New';
       const block: InfoBlock = {
         _id: deps.newId(),
-        name: name?.trim() || deps.localize('SILK.InfoBlock.New'),
+        name: name?.trim() || deps.localize(fallback),
         text: text ?? '',
+        ...(appearance ? { appearance: true as const } : {}),
       };
       if (!el.uuid) {
         await write(elementId, { infoBlocks: [...(el.infoBlocks ?? []), block] });
@@ -412,7 +574,8 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       }
       const update: Record<string, unknown> = {};
       if (name !== undefined) update['name'] = next.name;
-      if (text !== undefined) update['text.content'] = text;
+      if (text !== undefined)
+        update['text.content'] = blockPageText(requireDocs(el.id), block._id, text);
       await docs.updatePage(holderOf(el.id).uuid, id, update);
       await sync(el.id);
     },
@@ -427,9 +590,34 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
       await sync(el.id);
     },
 
+    async moveInfoBlock(id, index) {
+      const { el, block } = findBlock(id);
+      const rest = (el.infoBlocks ?? []).filter((b) => b._id !== id);
+      const at = Math.max(0, Math.min(Math.trunc(index) || 0, rest.length));
+      const order = [...rest.slice(0, at), block, ...rest.slice(at)];
+      if (!el.uuid) {
+        await write(el.id, { infoBlocks: order });
+        return;
+      }
+      // Renumber in steps: Cover/quest (sort 0/1) stay first, Connections last.
+      const holder = holderOf(el.id);
+      const sorts = new Map(infoBlockPages(holder).map((p) => [p._id, p.sort]));
+      for (const [i, b] of order.entries()) {
+        const sort = (i + 1) * SORT_STEP;
+        if (sorts.get(b._id) !== sort) await docs.updatePage(holder.uuid, b._id, { sort });
+      }
+      await sync(el.id);
+    },
+
+    async openInfoBlock(id) {
+      const { el } = findBlock(id);
+      await ensureMaterialized(el.id);
+      await docs.open(holderOf(el.id).uuid, id);
+    },
+
     async tag(ids, tag, on) {
       const name = tag.trim();
-      if (!name) throw new Error('Silk: empty Tag');
+      if (!name) throw new Error('Garn: empty Tag');
       for (const id of ids) {
         const el = element(id);
         const tags = new Set(el.tags ?? []);
@@ -448,15 +636,18 @@ export function createMaterializer(deps: MaterializerDeps): Materializer {
 
     async openSheet(id) {
       await ensureMaterialized(id);
-      const { main, companion } = requireDocs(id);
-      await docs.open(main.uuid);
-      if (companion) await docs.open(companion.uuid);
+      await docs.open(requireDocs(id).main.uuid);
+    },
+
+    async openJournal(id) {
+      await ensureMaterialized(id);
+      await docs.open(holderOf(id).uuid);
     },
 
     elementIdOf(doc) {
-      const silk = (doc.flags as { silk?: { id?: unknown; companionOf?: unknown } } | undefined)
-        ?.silk;
-      const id = silk?.id ?? silk?.companionOf;
+      const garn = (doc.flags as { garn?: { id?: unknown; companionOf?: unknown } } | undefined)
+        ?.garn;
+      const id = garn?.id ?? garn?.companionOf;
       return typeof id === 'string' ? id : undefined;
     },
   };
@@ -471,7 +662,7 @@ export function materializeCommands(m: Materializer): Command[] {
     keys?: Command['keys'],
   ): Command<A, R> => ({
     name,
-    title: `SILK.Commands.${name}`,
+    title: `GARN.Commands.${name}`,
     available: gm,
     run,
     ...(keys ? { keys } : {}),
@@ -488,9 +679,10 @@ export function materializeCommands(m: Materializer): Command[] {
     command('materialize.visible', (args: { confirmed?: boolean }) =>
       m.materializeVisible(args.confirmed ?? false),
     ),
-    command('element.setImage', (args: { id: string; img: string }) =>
-      m.setImage(args.id, args.img),
+    command('element.setImage', ({ id, ...edit }: { id: string } & ImageEdit) =>
+      m.setImage(id, edit),
     ),
+    command('element.restoreImages', (args: { id: string }) => m.restoreImages(args.id)),
     command('element.setFields', (args: { id: string; fields: ClassFields }) =>
       m.setFields(args.id, args.fields),
     ),
@@ -504,6 +696,7 @@ export function materializeCommands(m: Materializer): Command[] {
       status: await m.toggleStatus(args.id),
     })),
     command('element.openSheet', (args: { id: string }) => m.openSheet(args.id)),
+    command('element.openJournal', (args: { id: string }) => m.openJournal(args.id)),
     command('element.tag', (args: { ids: string[]; tag: string }) =>
       m.tag(args.ids, args.tag, true),
     ),
@@ -512,7 +705,7 @@ export function materializeCommands(m: Materializer): Command[] {
     ),
     command(
       'infoBlock.create',
-      async (args: { elementId: string; name?: string; text?: string }) => ({
+      async (args: { elementId: string; name?: string; text?: string; appearance?: boolean }) => ({
         id: await m.createInfoBlock(args),
       }),
     ),
@@ -520,5 +713,10 @@ export function materializeCommands(m: Materializer): Command[] {
       m.editInfoBlock(args),
     ),
     command('infoBlock.delete', (args: { id: string }) => m.deleteInfoBlock(args.id)),
+    // `index`: 0-based among the element's Info Blocks (v1.1 §D).
+    command('infoBlock.move', (args: { id: string; index: number }) =>
+      m.moveInfoBlock(args.id, args.index),
+    ),
+    command('infoBlock.open', (args: { id: string }) => m.openInfoBlock(args.id)),
   ];
 }

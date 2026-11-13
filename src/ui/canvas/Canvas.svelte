@@ -4,6 +4,7 @@
    * this component only maps Svelte Flow events to commands and pipeline calls.
    * Never set `onlyRenderVisibleElements`: it makes fast panning worse (§10.2).
    */
+  import { fail } from './actions';
   import {
     SvelteFlow,
     Background,
@@ -11,13 +12,19 @@
     useSvelteFlow,
     type EdgeTypes,
     type NodeTypes,
-    type OnConnectEnd,
     type Viewport,
   } from '@xyflow/svelte';
   import { onDestroy, setContext, untrack } from 'svelte';
   import { cameraMove, FOCUS_SEEDS, type CameraReason } from '../../core/canvas/focus';
   import { TWEEN_MS } from '../../core/canvas/tween';
-  import type { RelativeDirection } from '../../core/connections';
+  import { sameIdSet } from '../../core/util/ids';
+  import type { PipelineOrigin } from '../../core/canvas';
+  import type { CheckoutSummary } from '../../core/campaigns';
+  import {
+    readConnection,
+    type CreateFromConnection,
+    type RelativeDirection,
+  } from '../../core/connections';
   import {
     ELEMENT_CLASSES,
     hasStatus,
@@ -29,6 +36,7 @@
     type Status,
   } from '../../core/elements';
   import ClassBox from './ClassBox.svelte';
+  import SourceStep from './SourceStep.svelte';
   import ContextMenu from './ContextMenu.svelte';
   import { edgeMenu, nodeMenu, type MenuEntry } from './menu';
   import ConnectionEdge from './ConnectionEdge.svelte';
@@ -37,8 +45,8 @@
   import Palette from './Palette.svelte';
   import SearchBox from './SearchBox.svelte';
   import GroupFrame from './GroupFrame.svelte';
+  import Legend from './Legend.svelte';
   import { canvasBridge } from './bridge';
-  import { pointKind } from './connection-points';
   import { CANVAS_CONTEXT, PALETTE_MIME, type CanvasContext } from './context';
   import { toFlowEdges, type ConnectionEdge as FlowEdge } from './flow-edges';
   import {
@@ -48,7 +56,14 @@
     type ElementNode,
     type GroupNode,
   } from './flow-model';
-  import { canvasKey, confirmKey } from './keys';
+  import { canvasKey, confirmKey, sourceKey } from './keys';
+  import {
+    connectionOf,
+    doubleClickCommand,
+    pointerTarget,
+    type PointerTarget,
+  } from './pointer-target';
+  import { rightDragAction } from './right-drag';
   import { STATUS_PROMPT, type StatusPrompt } from './status-prompt';
 
   let props: { ctx: CanvasContext } = $props();
@@ -60,6 +75,13 @@
   const nodeTypes = { element: ElementCard, frame: GroupFrame } as unknown as NodeTypes;
   const edgeTypes = { connection: ConnectionEdge } as unknown as EdgeTypes;
   const flow = useSvelteFlow();
+  // Cards grow to fit their name (spec 1.1 §E.1): layout reads the size Svelte Flow measured.
+  $effect(() =>
+    canvasState.measureWith((id) => {
+      const { width, height } = flow.getInternalNode(id)?.measured ?? {};
+      return width && height ? { width, height } : undefined;
+    }),
+  );
   const saved = viewState.get().viewport;
 
   let nodes = $state.raw<(ElementNode | GroupNode)[]>([]);
@@ -77,7 +99,6 @@
   let moving = $state(false);
   const lod = $derived(lodForZoom(zoom));
 
-  const fail = (error: unknown) => console.error(error);
   const run = (name: string, args?: object) => ctx.run(name, args).catch(fail);
 
   // Status toggle, y/n confirm with default n (§10.3 `s`, card chip).
@@ -106,13 +127,13 @@
   let revealBox: HTMLDivElement | undefined = $state();
   function askReveal(kind: 'element' | 'connection', id: string) {
     if (!ctx.available(`reveal.${kind}`)) {
-      ctx.warn(ctx.localize('SILK.Reveal.NeedsAdventure'));
+      ctx.warn(ctx.localize('GARN.Reveal.NeedsAdventure'));
       return;
     }
     const name =
       kind === 'element'
         ? (readElement(workingCopy.get(id))?.name ?? id)
-        : ctx.localize('SILK.Reveal.TheConnection');
+        : ctx.localize('GARN.Reveal.TheConnection');
     revealAsk = { kind, id, name, revealed: !ctx.reveal.isRevealed(kind, id) };
     queueMicrotask(() => revealBox?.focus());
   }
@@ -264,12 +285,7 @@
         const node = flow.getInternalNode(id);
         const at = node?.internals.positionAbsolute ?? readElement(workingCopy.get(id))?.position;
         if (!at) return undefined;
-        return {
-          x: at.x,
-          y: at.y,
-          width: node?.measured.width ?? 190,
-          height: node?.measured.height ?? 80,
-        };
+        return { ...at, ...canvasState.nodeSize(id) };
       },
     });
     if (move)
@@ -308,9 +324,13 @@
   let moveEnd: ReturnType<typeof setTimeout> | undefined;
   let saveView: ReturnType<typeof setTimeout> | undefined;
   let pendingViewport: Viewport | undefined;
-  function onMoveStart() {
+  /**
+   * On a real viewport change, not `onmovestart`: d3-zoom starts on every press, also one on
+   * an edge, and hiding edges then would send its click and double-click (§F.2) to the pane.
+   */
+  function onMove() {
     clearTimeout(moveEnd);
-    if (ctx.detailDrop) moving = true;
+    if (ctx.detailDrop && !moving) moving = true;
   }
   function onMoveEnd(_event: unknown, viewport: Viewport) {
     zoom = viewport.zoom;
@@ -330,55 +350,39 @@
   onDestroy(() => {
     clearTimeout(moveEnd);
     flushView();
+    // Edge selection is not restored on reopen: forget it, so `Del` never hits unseen ones.
+    void run('canvas.select', { ids: canvasState.get().selection, connections: [] });
   });
-
-  function onPaneContextMenu({ event }: { event: MouseEvent }) {
-    event.preventDefault();
-    if (!root) return;
-    const rect = root.getBoundingClientRect();
-    pipeline.open({
-      at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }),
-      anchor: { x: event.clientX - rect.left, y: event.clientY - rect.top },
-    });
-  }
 
   // --- Connections (T7) ---
 
-  const local = (event: { clientX: number; clientY: number }) => {
+  /** A pointer position in client (viewport) pixels. */
+  type ScreenPoint = Pick<MouseEvent, 'clientX' | 'clientY'>;
+  const local = (event: ScreenPoint) => {
     const rect = root?.getBoundingClientRect();
     return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) };
   };
-  const nodeAt = (event: { clientX: number; clientY: number }) =>
+  /** Window-local pixels of a canvas point: where a Source Step shows for a digit / palette create. */
+  const anchorAt = (at: Point) => {
+    const p = flow.flowToScreenPosition({ x: at.x + 95, y: at.y + 40 });
+    return local({ clientX: p.x, clientY: p.y });
+  };
+  /** Digit keys, palette: the class box is skipped; the Source Step shows at the new Node's spot. */
+  function createAt(origin: PipelineOrigin, cls: ElementClassId) {
+    pipeline.create({ ...origin, anchor: anchorAt(origin.at) }, cls).catch(fail);
+  }
+  const nodeAt = (event: ScreenPoint) =>
     (root?.ownerDocument ?? document)
       .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-silk-node]')?.dataset['silkNode'];
+      ?.closest<HTMLElement>('[data-garn-node]')?.dataset['garnNode'];
 
   /** Connect two existing Nodes, then open the Connection editor (§10.3). */
-  async function connect(from: string, to: string, direction: RelativeDirection = 'out') {
-    const { id } = (await ctx.run('connection.create', { from, to, direction })) as { id: string };
+  async function connect(from: string, to: string, connection: CreateFromConnection = {}) {
+    const { id } = (await ctx.run('connection.create', { from, to, ...connection })) as {
+      id: string;
+    };
     pipeline.editConnection(id);
   }
-
-  /** Drag-out from a Connection Point: onto a Node connects, onto the canvas opens the class box. */
-  const onConnectEnd: OnConnectEnd = (event, state) => {
-    const from = state.fromNode?.id;
-    if (!from) return;
-    const point = 'changedTouches' in event ? event.changedTouches[0] : event;
-    if (!point) return;
-    const direction = pointKind(state.fromHandle?.id);
-    const to = state.toNode?.id ?? nodeAt(point);
-    if (to === from) return;
-    if (to) {
-      connect(from, to, direction).catch(fail);
-      return;
-    }
-    pipeline.open({
-      at: flow.screenToFlowPosition({ x: point.clientX, y: point.clientY }),
-      anchor: local(point),
-      from,
-      connection: { direction },
-    });
-  };
 
   /** Where a Node created from `origin` goes: to its right, stacked by existing Connections. */
   function besideNode(origin: string) {
@@ -404,12 +408,12 @@
   // Adopt (§6): placement at the viewport centre, flash on a duplicate, drops from Foundry.
   canvasBridge.center = viewCenter;
   canvasBridge.flash = (id) => {
-    const card = root?.querySelector<HTMLElement>(`[data-silk-node="${CSS.escape(id)}"]`);
+    const card = root?.querySelector<HTMLElement>(`[data-garn-node="${CSS.escape(id)}"]`);
     if (!card) return;
-    card.classList.remove('silk-flash');
+    card.classList.remove('garn-flash');
     void card.offsetWidth;
-    card.classList.add('silk-flash');
-    setTimeout(() => card.classList.remove('silk-flash'), 1600);
+    card.classList.add('garn-flash');
+    setTimeout(() => card.classList.remove('garn-flash'), 1600);
   };
   onDestroy(() => {
     if (canvasBridge.center === viewCenter) {
@@ -462,12 +466,24 @@
       return;
     }
     if (event.key === 'Escape' && menu) {
+      // Closes the menu only, not the canvas window (Foundry's Escape).
+      event.stopPropagation();
       menu = undefined;
       pipeline.cancel();
       return;
     }
     if (event.key === 'Escape' && (connectFrom || searching)) {
       closeSearch();
+      return;
+    }
+    // The compass handles its own keys; this catches them when it lost focus.
+    if ($pipeline.step === 'source') {
+      const choice = sourceKey(event);
+      if (!choice) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (choice === 'cancel') void run('pipeline.cancel');
+      else void run('pipeline.pickSource', { kind: choice });
       return;
     }
     if ($pipeline.step !== 'idle') return;
@@ -479,18 +495,16 @@
     event.stopPropagation();
     switch (action.kind) {
       case 'create':
-        pipeline
-          .create(
-            node
-              ? {
-                  at: besideNode(node),
-                  from: node,
-                  ...(action.connection ? { connection: action.connection } : {}),
-                }
-              : { at: viewCenter() },
-            action.class,
-          )
-          .catch(fail);
+        createAt(
+          node
+            ? {
+                at: besideNode(node),
+                from: node,
+                ...(action.connection ? { connection: action.connection } : {}),
+              }
+            : { at: viewCenter() },
+          action.class,
+        );
         break;
       case 'connect':
         searching = false;
@@ -521,10 +535,13 @@
         if (edge) pipeline.editConnection(edge.id);
         break;
       case 'delete':
-        void run('element.delete', { ids: canvasState.get().selection });
+        void run('canvas.deleteSelection', {});
         break;
       case 'command':
         if (edge) void run(action.name, { id: edge.id });
+        break;
+      case 'legend':
+        void run('legend.toggle');
         break;
       case 'layout':
         // Ctrl+Z with nothing to undo is a no-op (not an error).
@@ -562,7 +579,8 @@
       at: besideNode(from),
       anchor: { x: (rect?.width ?? 400) / 2 - 100, y: 80 },
       from,
-      connection: { direction },
+      // Outgoing is the preselected default: the default Connection may swap it (v1.1 §F.3).
+      connection: direction === 'out' ? {} : { direction },
     });
   }
 
@@ -570,22 +588,28 @@
   $effect(() =>
     ctx.search.onJump((id) => {
       const p = readElement(workingCopy.get(id))?.position;
-      if (p) void flow.setCenter(p.x + 95, p.y + 40, { zoom: flow.getZoom(), duration: 300 });
+      const { width, height } = canvasState.nodeSize(id);
+      if (p)
+        void flow.setCenter(p.x + width / 2, p.y + height / 2, {
+          zoom: flow.getZoom(),
+          duration: 300,
+        });
     }),
   );
 
-  /** Palette drag: the Node under the pointer highlights as the connect target. */
+  /** Palette drag, right-drag: the Node under the pointer highlights as the connect target. */
   let dropEl: HTMLElement | undefined;
-  function dropTarget(event: DragEvent) {
-    const el = (root?.ownerDocument ?? document)
+  function dropTarget(event: ScreenPoint, except?: string) {
+    let el = (root?.ownerDocument ?? document)
       .elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-silk-node]');
+      ?.closest<HTMLElement>('[data-garn-node]');
+    if (except && el?.dataset['garnNode'] === except) el = null;
     if (el !== dropEl) {
-      dropEl?.classList.remove('silk-drop-target');
-      el?.classList.add('silk-drop-target');
+      dropEl?.classList.remove('garn-drop-target');
+      el?.classList.add('garn-drop-target');
       dropEl = el ?? undefined;
     }
-    return el?.dataset['silkNode'];
+    return el?.dataset['garnNode'];
   }
   function onDragOver(event: DragEvent) {
     // Foundry docs from the sidebar or a compendium: Adopt (§6).
@@ -596,7 +620,7 @@
   }
   function onDragLeave(event: DragEvent) {
     if (event.relatedTarget && root?.contains(event.relatedTarget as Node)) return;
-    dropEl?.classList.remove('silk-drop-target');
+    dropEl?.classList.remove('garn-drop-target');
     dropEl = undefined;
   }
   function onDrop(event: DragEvent) {
@@ -605,12 +629,12 @@
     if (!ELEMENT_CLASSES.some((c) => c.id === cls)) return;
     event.preventDefault();
     const target = dropTarget(event);
-    dropEl?.classList.remove('silk-drop-target');
+    dropEl?.classList.remove('garn-drop-target');
     dropEl = undefined;
     const origin = target
       ? { at: besideNode(target), from: target }
       : { at: flow.screenToFlowPosition({ x: event.clientX, y: event.clientY }) };
-    pipeline.create(origin, cls).catch(fail);
+    createAt(origin, cls);
   }
 
   function onNodeClick({ node }: { node: ElementNode | GroupNode }) {
@@ -634,31 +658,116 @@
    * Node context menu (§8 Controls, §10.3): actions, plus a class box to the right of them
    * that creates a connected Node.
    */
-  function onNodeContextMenu({
-    event,
-    node,
-  }: {
-    event: MouseEvent;
-    node: ElementNode | GroupNode;
-  }) {
-    // Inside a frame: create there, as on the canvas (the new Node joins the frame).
-    if (node.type === 'frame') return onPaneContextMenu({ event });
-    event.preventDefault();
-    const el = readElement(workingCopy.get(node.id));
+  function openNodeMenu(id: string, event: ScreenPoint) {
+    const el = readElement(workingCopy.get(id));
     if (!el) return;
     const at = local(event);
-    menu = { kind: 'node', id: node.id, ...at, entries: nodeMenu(el, menuDeps()) };
+    menu = { kind: 'node', id, ...at, entries: nodeMenu(el, menuDeps()) };
     pipeline.open({
-      at: besideNode(node.id),
+      at: besideNode(id),
       anchor: { x: at.x + MENU_WIDTH, y: at.y },
-      from: node.id,
+      from: id,
     });
   }
 
-  function onEdgeContextMenu({ event, edge }: { event: MouseEvent; edge: FlowEdge }) {
-    event.preventDefault();
+  // --- Right-click / right-drag (spec 1.1 §A): decided by where the press starts and ends ---
+
+  /** Below this many px the press is a click, not a drag (no rubber band). */
+  const DRAG_MIN = 4;
+  let rightDrag = $state<
+    { start: string | undefined; from: ScreenPoint; to?: Point } | undefined
+  >();
+  /** Rubber band, window-local: from the press point to the cursor. */
+  const band = $derived.by(() => {
+    if (!rightDrag?.to) return undefined;
+    const a = local(rightDrag.from);
+    return { x1: a.x, y1: a.y, x2: rightDrag.to.x, y2: rightDrag.to.y };
+  });
+
+  /** What the pointer is on (spec 1.1 §F.1): the one classifier for every pointer handler. */
+  const targetOf = (event: Event) => pointerTarget(event.target as Element | null);
+
+  function onPointerDown(event: PointerEvent) {
+    const target = event.button === 2 ? targetOf(event) : undefined;
+    if (!target) return;
+    const win = root?.ownerDocument.defaultView;
+    if (!win) return;
+    menu = undefined;
     pipeline.cancel();
-    menu = { kind: 'edge', id: edge.id, ...local(event), entries: edgeMenu(edge.id, menuDeps()) };
+    const start = target.kind === 'node' ? target.id : undefined;
+    const from = { clientX: event.clientX, clientY: event.clientY };
+    // An edge or its label: no rubber band, the release opens its menu (§A row "Connection edge").
+    const banded = !connectionOf(target);
+    rightDrag = { start, from };
+    const move = (e: PointerEvent) => {
+      if (!rightDrag || !banded) return;
+      const far = Math.hypot(e.clientX - from.clientX, e.clientY - from.clientY) >= DRAG_MIN;
+      if (!far && !rightDrag.to) return;
+      rightDrag = { ...rightDrag, to: local(e) };
+      dropTarget(e, start);
+    };
+    const stop = () => {
+      win.removeEventListener('pointermove', move, true);
+      win.removeEventListener('pointerup', up, true);
+      win.removeEventListener('pointercancel', stop, true);
+      win.removeEventListener('blur', stop);
+      dropEl?.classList.remove('garn-drop-target');
+      dropEl = undefined;
+      rightDrag = undefined;
+    };
+    const up = (e: PointerEvent) => {
+      if (e.button !== 2) return;
+      stop();
+      finishRightDrag(target, from, e);
+    };
+    win.addEventListener('pointermove', move, true);
+    win.addEventListener('pointerup', up, true);
+    win.addEventListener('pointercancel', stop, true);
+    win.addEventListener('blur', stop);
+  }
+
+  function finishRightDrag(start: PointerTarget, from: ScreenPoint, end: PointerEvent) {
+    const action = rightDragAction(start, nodeAt(end), end);
+    root?.focus();
+    if (action.kind === 'nodeMenu') return openNodeMenu(action.id, end);
+    if (action.kind === 'edgeMenu') return openEdgeMenu(action.id, from);
+    if (action.kind === 'connect') {
+      connect(action.from, action.to, action.connection).catch(fail);
+      return;
+    }
+    const point = action.at === 'end' ? end : from;
+    pipeline.open({
+      at: flow.screenToFlowPosition({ x: point.clientX, y: point.clientY }),
+      anchor: local(point),
+      ...(action.from ? { from: action.from, connection: action.connection } : {}),
+    });
+  }
+
+  /** The native menu never shows on the canvas: the press decides (above). */
+  function onContextMenu(event: MouseEvent) {
+    if (!targetOf(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  /**
+   * Double-click: Element Detail on a Node, Connection Detail on an edge or its label (spec 1.1
+   * §F.2). Bubble phase, so card buttons (eye, pin) keep theirs by stopping it.
+   */
+  function onDoubleClick(event: MouseEvent) {
+    const command = doubleClickCommand(targetOf(event));
+    if (!command) return;
+    event.stopPropagation();
+    void run(command.name, command.args);
+  }
+
+  function openEdgeMenu(id: string, event: ScreenPoint) {
+    pipeline.cancel();
+    // Keys (Escape) reach the canvas, not Foundry's close-the-window handler.
+    root?.focus();
+    const connection = readConnection(workingCopy.get(id));
+    if (!connection) return;
+    menu = { kind: 'edge', id, ...local(event), entries: edgeMenu(connection, menuDeps()) };
   }
 
   function onNodeDragStop({ nodes: dragged }: { nodes: (ElementNode | GroupNode)[] }) {
@@ -678,28 +787,54 @@
     return focusOn() && ctx.focus.seeds().length === 0;
   });
 
-  function onSelectionChange({ nodes: selected }: { nodes: (ElementNode | GroupNode)[] }) {
+  // Canon entry points (v1.1 §H): the toolbar chip, or "No Canon yet" while unbound.
+  /** `undefined` until read. */
+  let checkout = $state<CheckoutSummary | null | undefined>();
+  $effect(() => {
+    const read = () =>
+      void ctx.checkoutSummary().then(
+        (summary) => (checkout = summary),
+        () => (checkout = undefined),
+      );
+    read();
+    return workingCopy.watch((change) => {
+      if (change.binding) read();
+    });
+  });
+  const openCanon = () => void run('canon.openWindow');
+
+  function onSelectionChange({
+    nodes: selected,
+    edges: selectedEdges,
+  }: {
+    nodes: (ElementNode | GroupNode)[];
+    edges: FlowEdge[];
+  }) {
     const ids = selected.map((n) => n.id);
-    const current = canvasState.get().selection;
-    if (ids.length === current.length && ids.every((id) => current.includes(id))) return;
-    void run('canvas.select', { ids });
+    const connections = selectedEdges.map((e) => e.id);
+    const current = canvasState.get();
+    if (sameIdSet(ids, current.selection) && sameIdSet(connections, current.connections)) return;
+    void run('canvas.select', { ids, connections });
   }
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_static_element_interactions -->
 <div
-  class="silk-canvas lod-{lod}"
+  class="garn-canvas lod-{lod}"
   class:moving
   class:connecting={!!connectFrom}
   bind:this={root}
   tabindex="0"
   onkeydown={onKeydown}
-  data-silk-canvas
-  data-silk-lod={lod}
-  data-silk-connecting={connectFrom}
+  data-garn-canvas
+  data-garn-lod={lod}
+  data-garn-connecting={connectFrom}
   ondragover={onDragOver}
   ondragleave={onDragLeave}
   ondrop={onDrop}
+  onpointerdowncapture={onPointerDown}
+  oncontextmenucapture={onContextMenu}
+  ondblclick={onDoubleClick}
 >
   <SvelteFlow
     bind:nodes
@@ -707,11 +842,9 @@
     {nodeTypes}
     {edgeTypes}
     connectionMode={ConnectionMode.Loose}
-    onbeforeconnect={() => false}
-    onconnectend={onConnectEnd}
+    nodesConnectable={false}
+    panOnDrag={[0, 1]}
     onnodeclick={onNodeClick}
-    onnodecontextmenu={onNodeContextMenu}
-    onedgecontextmenu={onEdgeContextMenu}
     initialViewport={saved}
     fitView={!saved}
     minZoom={0.05}
@@ -719,16 +852,21 @@
     zoomOnDoubleClick={false}
     deleteKey={null}
     colorMode="light"
-    onmovestart={onMoveStart}
+    onmove={onMove}
     onmoveend={onMoveEnd}
-    onpanecontextmenu={onPaneContextMenu}
     onpaneclick={onPaneClick}
     onnodedragstop={onNodeDragStop}
     onselectionchange={onSelectionChange}
   >
     <Background gap={40} />
   </SvelteFlow>
+  {#if band}
+    <svg class="garn-rubber-band" data-garn-rubber-band aria-hidden="true">
+      <line x1={band.x1} y1={band.y1} x2={band.x2} y2={band.y2} />
+    </svg>
+  {/if}
   <ClassBox />
+  <SourceStep />
   {#if menu}
     <ContextMenu
       entries={menu.entries}
@@ -741,44 +879,57 @@
   {/if}
   {#if revealAsk}
     <div
-      class="silk-status-confirm"
+      class="garn-status-confirm"
       role="alertdialog"
       tabindex="-1"
       bind:this={revealBox}
-      data-silk-reveal-confirm={revealAsk.id}
+      data-garn-reveal-confirm={revealAsk.id}
     >
       <span>
         {ctx
-          .localize(revealAsk.revealed ? 'SILK.Reveal.Confirm' : 'SILK.Reveal.UnrevealConfirm')
+          .localize(revealAsk.revealed ? 'GARN.Reveal.Confirm' : 'GARN.Reveal.UnrevealConfirm')
           .replace('{name}', revealAsk.name)}
       </span>
-      <button type="button" onclick={() => answerReveal(true)} data-silk-action="reveal-yes">
-        {ctx.localize('SILK.Canvas.Yes')}
+      <button type="button" onclick={() => answerReveal(true)} data-garn-action="reveal-yes">
+        {ctx.localize('GARN.Canvas.Yes')}
       </button>
-      <button type="button" onclick={() => answerReveal(false)} data-silk-action="reveal-no">
-        {ctx.localize('SILK.Canvas.No')}
+      <button type="button" onclick={() => answerReveal(false)} data-garn-action="reveal-no">
+        {ctx.localize('GARN.Canvas.No')}
       </button>
     </div>
   {/if}
   <FilterBar {ctx} result={filtered} />
-  <div class="silk-canvas-tools">
+  <Legend {ctx} />
+  <div class="garn-canvas-tools">
+    {#if checkout}
+      <button
+        type="button"
+        class="garn-canon-chip"
+        title={ctx.title('canon.openWindow')}
+        disabled={!ctx.available('canon.openWindow')}
+        onclick={openCanon}
+        data-garn-canon-chip
+      >
+        {checkout.canon} · {checkout.adventure ?? ctx.localize('GARN.Canon.ChipMain')}
+      </button>
+    {/if}
     <button
       type="button"
-      title="{ctx.localize('SILK.Canvas.Search')} (Ctrl+F)"
+      title="{ctx.localize('GARN.Canvas.Search')} (Ctrl+F)"
       onclick={() => {
         connectFrom = undefined;
         searching = !searching;
       }}
-      data-silk-action="search"
+      data-garn-action="search"
     >
       <i class="fa-solid fa-magnifying-glass"></i>
     </button>
     <button
       type="button"
       class:active={paletteOpen}
-      title={ctx.localize('SILK.Canvas.Palette')}
+      title={ctx.localize('GARN.Canvas.Palette')}
       onclick={() => (paletteOpen = !paletteOpen)}
-      data-silk-action="palette"
+      data-garn-action="palette"
     >
       <i class="fa-solid fa-palette"></i>
     </button>
@@ -801,52 +952,65 @@
     {/key}
   {/if}
   {#if selectedAny && !connectFrom}
-    <div class="silk-selection-toolbar" data-silk-selection-toolbar>
-      <button type="button" onclick={() => run('canvas.group', {})} data-silk-action="group">
-        {ctx.localize('SILK.Canvas.Group')} <kbd>g</kbd>
+    <div class="garn-selection-toolbar" data-garn-selection-toolbar>
+      <button type="button" onclick={() => run('canvas.group', {})} data-garn-action="group">
+        {ctx.localize('GARN.Canvas.Group')} <kbd>g</kbd>
       </button>
       {#if selectedElements >= 2}
         <button
           type="button"
           onclick={() => run('canvas.untangle', {})}
-          data-silk-action="untangle"
+          data-garn-action="untangle"
         >
-          {ctx.localize('SILK.Canvas.Untangle')} <kbd>u</kbd>
+          {ctx.localize('GARN.Canvas.Untangle')} <kbd>u</kbd>
         </button>
       {/if}
     </div>
   {/if}
   {#if statusAsk}
     <div
-      class="silk-status-confirm"
+      class="garn-status-confirm"
       role="alertdialog"
       tabindex="-1"
       bind:this={statusBox}
-      data-silk-status-confirm={statusAsk.id}
+      data-garn-status-confirm={statusAsk.id}
     >
       <span>
         {ctx
-          .localize('SILK.Canvas.StatusConfirm')
+          .localize('GARN.Canvas.StatusConfirm')
           .replace('{name}', statusAsk.name)
           .replace('{status}', ctx.localize(statusLabelKey(statusAsk.status)))}
       </span>
-      <button type="button" onclick={() => answerStatus(true)} data-silk-action="status-yes">
-        {ctx.localize('SILK.Canvas.Yes')}
+      <button type="button" onclick={() => answerStatus(true)} data-garn-action="status-yes">
+        {ctx.localize('GARN.Canvas.Yes')}
       </button>
-      <button type="button" onclick={() => answerStatus(false)} data-silk-action="status-no">
-        {ctx.localize('SILK.Canvas.No')}
+      <button type="button" onclick={() => answerStatus(false)} data-garn-action="status-no">
+        {ctx.localize('GARN.Canvas.No')}
+      </button>
+    </div>
+  {/if}
+  {#if checkout === null}
+    <div class="garn-no-canon" role="status" data-garn-no-canon>
+      <strong>{ctx.localize('GARN.Canon.NoCanon')}</strong>
+      <button
+        type="button"
+        disabled={!ctx.available('canon.openWindow')}
+        onclick={openCanon}
+        data-garn-action="open-canon"
+      >
+        {ctx.title('canon.openWindow')}
       </button>
     </div>
   {/if}
   {#if focusHint}
-    <div class="silk-focus-hint" role="status" data-silk-focus-hint>
-      {ctx.localize('SILK.Focus.Hint')}
+    <div class="garn-focus-hint" role="status" data-garn-focus-hint>
+      {ctx.localize('GARN.Focus.Hint')}
     </div>
   {/if}
 </div>
 
 <style>
-  .silk-canvas {
+  .garn-canvas {
     position: relative;
     width: 100%;
     height: 100%;
@@ -854,10 +1018,10 @@
     color: #222;
     background: #f4efe4;
   }
-  .silk-canvas :global(.svelte-flow) {
+  .garn-canvas :global(.svelte-flow) {
     background: #f4efe4;
   }
-  .silk-selection-toolbar {
+  .garn-selection-toolbar {
     position: absolute;
     top: 8px;
     left: 50%;
@@ -871,19 +1035,19 @@
     box-shadow: 0 1px 3px #0003;
     transform: translateX(-50%);
   }
-  .silk-selection-toolbar button {
+  .garn-selection-toolbar button {
     width: auto;
     padding: 2px 8px;
     font-size: 12px;
     line-height: 20px;
     white-space: nowrap;
   }
-  .silk-selection-toolbar kbd {
+  .garn-selection-toolbar kbd {
     margin-left: 4px;
     font-size: 10px;
     opacity: 0.7;
   }
-  .silk-canvas-tools {
+  .garn-canvas-tools {
     position: absolute;
     top: 8px;
     right: 8px;
@@ -891,7 +1055,7 @@
     display: flex;
     gap: 4px;
   }
-  .silk-canvas-tools button {
+  .garn-canvas-tools button {
     width: 28px;
     height: 28px;
     min-height: 0;
@@ -900,14 +1064,58 @@
     border: 1px solid #c9bfa8;
     border-radius: 6px;
   }
-  .silk-canvas-tools button.active {
+  .garn-canvas-tools button.active {
     border-color: #2b6cb0;
   }
-  .silk-canvas :global(.silk-drop-target) {
+  .garn-canvas-tools .garn-canon-chip {
+    width: auto;
+    max-width: 280px;
+    padding: 0 10px;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-radius: 14px;
+  }
+  .garn-no-canon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    padding: 16px 20px;
+    background: #fffdf8;
+    border: 1px solid #c9bfa8;
+    border-radius: 8px;
+    transform: translate(-50%, -50%);
+    /* Over the canvas centre: Nodes and edges beneath stay reachable; only the button catches. */
+    pointer-events: none;
+  }
+  .garn-no-canon button {
+    pointer-events: auto;
+  }
+  .garn-rubber-band {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .garn-rubber-band line {
+    stroke: #2b6cb0;
+    stroke-width: 2;
+    stroke-dasharray: 6 4;
+  }
+  .garn-canvas :global(.garn-drop-target) {
     outline: 3px solid #2b6cb0;
     outline-offset: 2px;
   }
-  .silk-focus-hint {
+  .garn-focus-hint {
     position: absolute;
     bottom: 12px;
     left: 50%;
@@ -920,7 +1128,7 @@
     border-radius: 6px;
     transform: translateX(-50%);
   }
-  .silk-status-confirm {
+  .garn-status-confirm {
     position: absolute;
     bottom: 12px;
     left: 50%;
@@ -938,36 +1146,36 @@
     box-shadow: 0 1px 3px #0003;
     transform: translateX(-50%);
   }
-  .silk-status-confirm button {
+  .garn-status-confirm button {
     width: auto;
     padding: 0 8px;
     font-size: 12px;
     line-height: 20px;
   }
-  .silk-canvas :global(.silk-flash) {
-    animation: silk-flash 0.4s ease-in-out 4 alternate;
+  .garn-canvas :global(.garn-flash) {
+    animation: garn-flash 0.4s ease-in-out 4 alternate;
   }
-  @keyframes silk-flash {
+  @keyframes garn-flash {
     to {
       box-shadow:
         0 0 0 4px #f5c542,
         0 0 16px 4px #f5c542;
     }
   }
-  .silk-canvas.connecting :global(.silk-card) {
+  .garn-canvas.connecting :global(.garn-card) {
     cursor: crosshair;
   }
   /* Detail drop: paint only, no reflow; Connections and labels hidden. */
-  .silk-canvas.moving :global(.silk-card) {
-    background: var(--silk-class);
-    border-color: var(--silk-class);
+  .garn-canvas.moving :global(.garn-card) {
+    background: var(--garn-class);
+    border-color: var(--garn-class);
     box-shadow: none;
   }
-  .silk-canvas.moving :global(.silk-card > *) {
+  .garn-canvas.moving :global(.garn-card > *) {
     visibility: hidden;
   }
-  .silk-canvas.moving :global(.svelte-flow__edges),
-  .silk-canvas.moving :global(.svelte-flow__edgelabel-renderer) {
+  .garn-canvas.moving :global(.svelte-flow__edges),
+  .garn-canvas.moving :global(.svelte-flow__edgelabel-renderer) {
     visibility: hidden;
   }
 </style>

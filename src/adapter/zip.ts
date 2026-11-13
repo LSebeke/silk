@@ -17,7 +17,7 @@ export function unzipArchive(bytes: Uint8Array): ArchiveEntries {
   try {
     files = unzipSync(bytes);
   } catch (error) {
-    throw new Error(`Silk: not a readable zip file (${String(error)})`, { cause: error });
+    throw new Error(`Garn: not a readable zip file (${String(error)})`, { cause: error });
   }
   return new Map(Object.entries(files).filter(([path]) => !path.endsWith('/')));
 }

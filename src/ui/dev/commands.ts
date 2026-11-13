@@ -1,6 +1,6 @@
 /**
  * Dev-only UI commands (spec §14, §15 "Dev only"): the fast-pan bench on the real canvas.
- * Registered only in dev builds (`__SILK_DEV__`), never in a release.
+ * Registered only in dev builds (`__GARN_DEV__`), never in a release.
  */
 import type { ViewStateStore } from '../../core/canvas';
 import type { Command } from '../../core/commands/registry';
@@ -17,19 +17,19 @@ export interface DevUiDeps {
 
 /** Seed of the shared perf fixture. */
 export const BENCH_SEED = 1;
-const CANVAS_ID = 'silk-canvas';
+const CANVAS_ID = 'garn-canvas';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function canvasRoot(): HTMLElement {
   const root = findCanvasRoot();
-  if (!root) throw new Error('Silk bench: canvas not open');
+  if (!root) throw new Error('Garn bench: canvas not open');
   return root;
 }
 
 const findCanvasRoot = () =>
   foundry.applications.instances
     .get(CANVAS_ID)
-    ?.element?.querySelector<HTMLElement>('[data-silk-canvas]') ?? null;
+    ?.element?.querySelector<HTMLElement>('[data-garn-canvas]') ?? null;
 
 /** Every Node rendered and measured (Svelte Flow hides unmeasured Nodes). */
 export function canvasPainted(root: HTMLElement | null, count: number): boolean {
@@ -41,7 +41,7 @@ export function canvasPainted(root: HTMLElement | null, count: number): boolean 
 async function until(test: () => boolean, timeout = 60_000) {
   const deadline = Date.now() + timeout;
   while (!test()) {
-    if (Date.now() > deadline) throw new Error('Silk bench: timed out');
+    if (Date.now() > deadline) throw new Error('Garn bench: timed out');
     await wait(50);
   }
 }
@@ -81,7 +81,7 @@ export function devUiCommands(deps: DevUiDeps): Command[] {
       await wait(800);
       const root = canvasRoot();
       const pane = root.querySelector<HTMLElement>('.svelte-flow__pane');
-      if (!pane) throw new Error('Silk bench: no canvas pane');
+      if (!pane) throw new Error('Garn bench: no canvas pane');
       const stats = frameStats(await fastPan(pane, { ms, epf }));
       const result = {
         count,
@@ -90,7 +90,7 @@ export function devUiCommands(deps: DevUiDeps): Command[] {
         ...stats,
         env: benchEnv(root.ownerDocument.defaultView ?? window),
       };
-      console.log('silk bench', result);
+      console.log('garn bench', result);
       return result;
     },
   };

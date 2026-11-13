@@ -19,7 +19,13 @@ import {
 import { must } from '../materialize/test-setup';
 import { createOwns, type Owns } from '../owns';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
+import { emptyRevelationMap } from '../campaigns';
+import { testLookStage } from '../portrait/test-stage';
+import { createReveal } from '../reveal';
+import { HOOD } from '../reveal/test-setup';
 import { adoptCommands, createAdopt, type AdoptFolder, type UseForAnswer } from './adopt';
+
+export { HOOD };
 
 export function setup() {
   const workingCopy = createWorkingCopy(createMemoryBackend(), { canWrite: () => true });
@@ -94,7 +100,29 @@ export function setup() {
   const players = new Set(['player1']);
   const folders = new Map<string, AdoptFolder>();
   const compendium = new Map<string, DocSnapshot>();
-  const revealed: { elements: string[]; infoBlocks: string[] }[] = [];
+  const revealed: { elements: string[]; infoBlocks: string[]; appearance: string[] }[] = [];
+  const { stage: look, tokens } = testLookStage();
+  let world = emptyRevelationMap();
+  const reveal = createReveal({
+    workingCopy: () => workingCopy,
+    docs,
+    materializer,
+    system: dsa5Mapping,
+    campaign: {
+      current: async () => null,
+      read: async () => emptyRevelationMap(),
+      write: async () => {},
+    },
+    world: { get: () => world, set: async (map) => void (world = map) },
+    adventure: () => false,
+    hood: () => HOOD,
+    stage: {
+      ...look,
+      show: async () => {},
+    },
+    localize,
+    refreshPages: async () => {},
+  });
   const selected: string[][] = [];
   const flashed: string[] = [];
   const folderPrompts: { name: string; class: string }[][] = [];
@@ -114,6 +142,7 @@ export function setup() {
     newId,
     localize,
     materializer,
+    thumbnail: async (src) => `thumb:${src}`,
     foundry: {
       async importFromCompendium(uuid) {
         const entry = must(compendium.get(uuid), uuid);
@@ -152,6 +181,7 @@ export function setup() {
       await lifecycle.afterMaterialize(id);
     },
     markRevealed: async (parts) => void revealed.push(parts),
+    hood: (id) => reveal.hood(id),
     viewCenter: () => center,
     select: (ids) => void selected.push([...ids]),
     flash: (id) => void flashed.push(id),
@@ -198,7 +228,7 @@ export function setup() {
   ])
     registry.register(command);
 
-  /** Puts an existing (non-Silk) Foundry doc into the World. */
+  /** Puts an existing (non-Garn) Foundry doc into the World. */
   function foundryDoc(
     documentName: 'Actor' | 'Item' | 'JournalEntry',
     data: Partial<DocSnapshot> & { name: string },
@@ -209,7 +239,7 @@ export function setup() {
     const doc = {
       _id: id,
       folder: 'userFolder',
-      flags: { silk: {} },
+      flags: { garn: {} },
       ownership: { default: 0 },
       ...data,
       uuid,
@@ -279,6 +309,7 @@ export function setup() {
     folders,
     compendium,
     revealed,
+    tokens,
     selected,
     flashed,
     folderPrompts,

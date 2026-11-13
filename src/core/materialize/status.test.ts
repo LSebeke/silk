@@ -12,7 +12,7 @@ describe('Status (spec §4, §7 Dead)', () => {
     expect(t.element(id).status).toBeUndefined();
   });
 
-  it('an Event cycles planned → happened → skipped → planned; Silk keeps it, also Materialized', async () => {
+  it('an Event cycles planned → happened → skipped → planned; Garn keeps it, also Materialized', async () => {
     const t = setup({ mode: 'immediate' });
     const id = await t.create('event', 'Feast');
     const seen = [];
@@ -73,10 +73,10 @@ describe('Status (spec §4, §7 Dead)', () => {
     await t.registry.run('materialize.elements', { ids: [id] });
     const quest = () => {
       const q = t.doc(id);
-      const system = page(q, q.flags.silk.quest).system as {
+      const system = page(q, q.flags.garn.quest).system as {
         quests: Record<string, { status: number }>;
       };
-      return must(system.quests[q.flags.silk.questKey]);
+      return must(system.quests[q.flags.garn.questKey]);
     };
     expect(quest().status).toBe(1);
     expect(t.element(id).status).toBe('done');

@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
@@ -12,12 +12,12 @@ const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
 async function ready(page: Page) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
-  await page.evaluate(() => game.settings?.set('silk', 'materializeMode', 'immediate'));
+  await page.evaluate(() => game.settings?.set('garn', 'materializeMode', 'immediate'));
 }
 
 async function closePopups(page: Page) {
@@ -36,13 +36,13 @@ async function closePopups(page: Page) {
 
 const element = (page: Page, id: string) =>
   page.evaluate(
-    (elementId) => game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data ?? null,
+    (elementId) => game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data ?? null,
     id,
   ) as Promise<Record<string, any> | null>;
 
 const elementNamed = (page: Page, name: string) =>
   page.evaluate((n) => {
-    const records = game.modules?.get('silk')?.session?.().workingCopy.records() as Map<
+    const records = game.modules?.get('garn')?.session?.().workingCopy.records() as Map<
       string,
       any
     >;
@@ -52,7 +52,7 @@ const elementNamed = (page: Page, name: string) =>
 
 const connections = (page: Page, type: string) =>
   page.evaluate((t) => {
-    const records = game.modules?.get('silk')?.session?.().workingCopy.records() as Map<
+    const records = game.modules?.get('garn')?.session?.().workingCopy.records() as Map<
       string,
       any
     >;
@@ -91,11 +91,11 @@ test('inventory item: also adopts its actor, adds owns, writes only link flags',
   const docs = await gm.evaluate(
     ([a, i]) => {
       const actor = fromUuidSync(a) as any;
-      const companion = game.journal?.get(actor.flags.silk.companion) as any;
+      const companion = game.journal?.get(actor.flags.garn.companion) as any;
       return {
         folder: actor.folder?.name ?? null,
-        actorFlags: Object.keys(actor.flags.silk).sort(),
-        itemId: (fromUuidSync(i) as any).flags.silk.id,
+        actorFlags: Object.keys(actor.flags.garn).sort(),
+        itemId: (fromUuidSync(i) as any).flags.garn.id,
         companion: companion?.pages.size ?? -1,
       };
     },
@@ -106,7 +106,7 @@ test('inventory item: also adopts its actor, adds owns, writes only link flags',
     // Link flags; an unrevealed actor is also hooded by Reveal (§8 Appearance).
     actorFlags: expect.arrayContaining(['companion', 'id']),
     itemId: result.id,
-    companion: 1, // the Connections page only: no default Info Blocks
+    companion: 2, // Appearance (v1.1 §C.2) + Connections page: no other default Info Blocks
   });
 });
 
@@ -124,7 +124,7 @@ test('a journal dropped onto the canvas ends in the Creation Pipeline; pages bec
     return journal.uuid as string;
   });
   await api(gm, 'canvas.open');
-  const pane = gm.locator('[data-silk-canvas]');
+  const pane = gm.locator('[data-garn-canvas]');
   await expect(pane).toBeVisible();
   await pane.evaluate((el, docUuid) => {
     const box = el.getBoundingClientRect();
@@ -141,10 +141,10 @@ test('a journal dropped onto the canvas ends in the Creation Pipeline; pages bec
     );
   }, uuid);
   // Ambiguous journal: class box with Note pre-selected.
-  const options = gm.locator('[data-silk-class-option]');
-  await expect(options.first()).toHaveAttribute('data-silk-class-option', 'note');
-  await gm.locator('[data-silk-class-option="location"]').click();
-  const nameInput = gm.locator('[data-silk-name-input]');
+  const options = gm.locator('[data-garn-class-option]');
+  await expect(options.first()).toHaveAttribute('data-garn-class-option', 'note');
+  await gm.locator('[data-garn-class-option="location"]').click();
+  const nameInput = gm.locator('[data-garn-name-input]');
   await expect(nameInput).toBeFocused();
   await gm.keyboard.press('Enter');
   await expect(nameInput).toHaveCount(0);
@@ -156,14 +156,14 @@ test('a journal dropped onto the canvas ends in the Creation Pipeline; pages bec
       adopted: true,
       infoBlocks: [{ name: 'Streets', text: '<p>cobbled</p>' }],
     });
-  await expect(gm.locator('[data-silk-node]', { hasText: 'Dropped Gareth' })).toBeVisible();
+  await expect(gm.locator('[data-garn-node]', { hasText: 'Dropped Gareth' })).toBeVisible();
 
   // Adopting it again selects the Node instead.
   const again = await api<{ existing?: boolean }>(gm, 'adopt.doc', { uuid });
   expect(again.existing).toBe(true);
 });
 
-test('sidebar context menu "Adopt into Silk" adopts an actor through the pipeline', async ({
+test('sidebar context menu "Adopt into Garn" adopts an actor through the pipeline', async ({
   gm,
 }) => {
   test.setTimeout(120_000);
@@ -181,10 +181,10 @@ test('sidebar context menu "Adopt into Silk" adopts an actor through the pipelin
   await expect(entry).toBeVisible();
   // The sidebar list can sit outside the headless viewport: open the menu by event.
   await entry.dispatchEvent('contextmenu');
-  const item = gm.locator('#context-menu li', { hasText: 'Adopt into Silk' });
+  const item = gm.locator('#context-menu li', { hasText: 'Adopt into Garn' });
   await expect(item).toHaveCount(1);
   await item.dispatchEvent('click');
-  const nameInput = gm.locator('[data-silk-name-input]');
+  const nameInput = gm.locator('[data-garn-name-input]');
   await expect(nameInput).toBeFocused();
   await gm.keyboard.press('Enter');
   await expect
@@ -195,7 +195,7 @@ test('sidebar context menu "Adopt into Silk" adopts an actor through the pipelin
     });
 });
 
-test('a duplicated Silk doc has its copied Silk id stripped', async ({ gm }) => {
+test('a duplicated Garn doc has its copied Garn id stripped', async ({ gm }) => {
   test.setTimeout(120_000);
   await ready(gm);
   const { id } = await api<{ id: string }>(gm, 'element.create', {
@@ -212,7 +212,7 @@ test('a duplicated Silk doc has its copied Silk id stripped', async ({ gm }) => 
     (await element(gm, id))?.['uuid'] as string,
   );
   await expect
-    .poll(() => gm.evaluate((cid) => (game.journal?.get(cid) as any)?.flags.silk ?? null, copyId))
+    .poll(() => gm.evaluate((cid) => (game.journal?.get(cid) as any)?.flags.garn ?? null, copyId))
     .toBeNull();
 });
 
@@ -237,7 +237,7 @@ test('a folder tree becomes nested Visual Groups', async ({ gm }) => {
   const { ids } = await api<{ ids: string[] }>(gm, 'adopt.folder', { folderId, confirmed: true });
   expect(ids).toHaveLength(2);
   const layout = await gm.evaluate((elementIds) => {
-    const records = game.modules?.get('silk')?.session?.().workingCopy.records() as Map<
+    const records = game.modules?.get('garn')?.session?.().workingCopy.records() as Map<
       string,
       any
     >;
@@ -263,8 +263,8 @@ test('End Play Session commits and lists ad-hoc docs; Ignore hides them for good
   test.setTimeout(180_000);
   await ready(gm);
   await gm.evaluate(async () => {
-    const api = game.modules?.get('silk')?.api;
-    if (!game.modules?.get('silk')?.session?.().workingCopy.binding)
+    const api = game.modules?.get('garn')?.api;
+    if (!game.modules?.get('garn')?.session?.().workingCopy.binding)
       await api?.run('canon.create', { name: 'Adopt Canon' });
     await api?.run('history.commit', { label: 'before session' });
   });
@@ -283,12 +283,12 @@ test('End Play Session commits and lists ad-hoc docs; Ignore hides them for good
   );
   expect(first.commit).toBeTruthy();
   expect(first.adHoc.map((d) => d.uuid)).toContain(extra);
-  const row = gm.locator(`[data-silk-adhoc="${extra}"]`);
+  const row = gm.locator(`[data-garn-adhoc="${extra}"]`);
   await expect(row).toBeVisible();
-  await row.locator('[data-silk-adhoc-ignore]').click();
+  await row.locator('[data-garn-adhoc-ignore]').click();
   await expect(row).toHaveCount(0);
   await expect
-    .poll(() => gm.evaluate((u) => (fromUuidSync(u) as any).flags.silk?.ignored ?? false, extra))
+    .poll(() => gm.evaluate((u) => (fromUuidSync(u) as any).flags.garn?.ignored ?? false, extra))
     .toBe(true);
   const second = await api<{ adHoc: { uuid: string }[] }>(gm, 'history.endPlaySession');
   expect(second.adHoc.map((d) => d.uuid)).not.toContain(extra);

@@ -14,7 +14,7 @@ function world(files: CanonFiles) {
     files,
     workingCopy,
     author: () => 'Gamemaster',
-    createdWith: 'silk test',
+    createdWith: 'garn test',
   });
   return { workingCopy, history };
 }
@@ -142,7 +142,7 @@ describe('history', () => {
       files,
       workingCopy,
       author: () => 'GM',
-      createdWith: 'silk test',
+      createdWith: 'garn test',
       beforeCommit: () => workingCopy.set([sheet]),
     });
     await history.createCanon({ name: 'A' });

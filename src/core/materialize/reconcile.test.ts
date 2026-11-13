@@ -23,7 +23,7 @@ describe('Commit capture (spec §11.2)', () => {
 });
 
 describe('reconcile on load (spec §7)', () => {
-  it('a doc deleted while Silk wasn’t listening: Ghost with the last Commit’s snapshot, flagged', async () => {
+  it('a doc deleted while Garn wasn’t listening: Ghost with the last Commit’s snapshot, flagged', async () => {
     const t = setup({ mode: 'immediate' });
     const alrik = await t.create('person', 'Alrik');
     t.doc(alrik).system = { status: { wounds: { value: 4 } } };
@@ -58,7 +58,7 @@ describe('reconcile on load (spec §7)', () => {
 
     await t.lifecycle.reconcile();
 
-    expect(t.companion(alrik).flags.silk.companionOf).toBe(alrik);
+    expect(t.companion(alrik).flags.garn.companionOf).toBe(alrik);
     expect(t.element(inn).name).toBe('The Inn');
   });
 

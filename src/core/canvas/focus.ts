@@ -1,6 +1,6 @@
 /**
  * Focus View (spec §10.6): the N-hop Canvas Filter seeded by the active Scene, its tokens'
- * elements and the current selection, plus Focus Pins (always shown, not seeds) and the
+ * elements and the current selection (sticky without Scene seeds, v1.1 §E.2), plus Focus Pins (always shown, not seeds) and the
  * camera rules. Focus View is on while the `hops` dimension holds `FOCUS_SEEDS`.
  */
 import type { Snapshot } from '../canon';
@@ -18,7 +18,7 @@ export const FOCUS_SEEDS = 'focus';
 /** The Foundry Scene that is active, as plain data (adapter). */
 export interface ActiveScene {
   id: string;
-  /** Element linked to the Scene (`flags.silk.sceneOf`, Event Scenes). */
+  /** Element linked to the Scene (`flags.garn.sceneOf`, Event Scenes). */
   sceneOf?: string | undefined;
   /** World Actor ids of its tokens. */
   actorIds: readonly (string | null)[];
@@ -39,7 +39,10 @@ export function sceneSeeds(records: Snapshot, scene: ActiveScene | undefined): s
 }
 
 export interface Focus {
-  /** Scene seeds ∪ selection (element ids). */
+  /**
+   * Scene seeds ∪ selection (element ids). Without Scene seeds a cleared selection leaves the
+   * last one as sticky seeds (v1.1 §E.2): a new selection replaces them, Scene seeds clear them.
+   */
   seeds(): string[];
   /** N of the N-hop filter. */
   hops(): number;
@@ -74,11 +77,26 @@ export function createFocus(deps: FocusDeps): Focus {
     return active;
   };
   let selection = deps.state.get().selection;
+  /** The last non-empty selection; in memory only. */
+  let sticky: readonly string[] = selection;
   deps.state.subscribe(({ selection: next }) => {
     if (next === selection) return;
     selection = next;
+    if (next.length) sticky = next;
     emit('local');
   });
+
+  /** Scene seeds now; any clear the sticky seeds. */
+  function currentSceneSeeds() {
+    let seeds: string[] = [];
+    try {
+      seeds = sceneSeeds(deps.workingCopy().records(), scene());
+    } catch {
+      // No Canon bound yet: no Scene seeds.
+    }
+    if (seeds.length) sticky = [];
+    return seeds;
+  }
 
   /** Unsaved changes: the canvas follows at once, not after the setting round trip. */
   let pending: Pick<ViewState, 'pins' | 'hops'> = {};
@@ -97,18 +115,13 @@ export function createFocus(deps: FocusDeps): Focus {
 
   return {
     seeds() {
-      let records;
-      try {
-        records = deps.workingCopy().records();
-      } catch {
-        return [...selection];
-      }
-      return [...new Set([...sceneSeeds(records, scene()), ...selection])];
+      const fromScene = currentSceneSeeds();
+      return [...new Set([...fromScene, ...(selection.length ? selection : sticky)])];
     },
     hops: () => view().hops ?? DEFAULT_HOPS,
     pins: () => view().pins ?? [],
     async setHops(n) {
-      if (!Number.isInteger(n) || n < 0) throw new Error(`Silk: bad Focus View hops "${n}"`);
+      if (!Number.isInteger(n) || n < 0) throw new Error(`Garn: bad Focus View hops "${n}"`);
       await save({ hops: n });
     },
     async pin(ids) {
@@ -121,6 +134,7 @@ export function createFocus(deps: FocusDeps): Focus {
     sceneChanged() {
       const first = sceneId === null;
       const next = scene()?.id;
+      currentSceneSeeds();
       const changed = !first && next !== sceneId;
       sceneId = next;
       emit(changed ? 'scene' : 'local');
@@ -135,19 +149,19 @@ export function createFocus(deps: FocusDeps): Focus {
 export function focusCommands(focus: Focus): Command[] {
   const setHops: Command<{ n: number }, void> = {
     name: 'focus.setHops',
-    title: 'SILK.Commands.focus.setHops',
+    title: 'GARN.Commands.focus.setHops',
     available: (ctx) => ctx.isGM,
     run: ({ n }) => focus.setHops(n),
   };
   const pin: Command<{ ids: string[] }, void> = {
     name: 'focus.pin',
-    title: 'SILK.Commands.focus.pin',
+    title: 'GARN.Commands.focus.pin',
     available: (ctx) => ctx.isGM,
     run: ({ ids }) => focus.pin(ids ?? []),
   };
   const unpin: Command<{ ids: string[] }, void> = {
     name: 'focus.unpin',
-    title: 'SILK.Commands.focus.unpin',
+    title: 'GARN.Commands.focus.unpin',
     available: (ctx) => ctx.isGM,
     run: ({ ids }) => focus.unpin(ids ?? []),
   };

@@ -1,1 +1,1 @@
-export const MODULE_ID = 'silk';
+export const MODULE_ID = 'garn';

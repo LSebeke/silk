@@ -4,27 +4,38 @@
    * Info Block and each Connection, plus the Node context menu. Every toggle runs a Reveal
    * command, which writes through to Foundry ownership. The GM sees every Connection here,
    * also those not Revealed (the journal Connections page lists Revealed ones only).
+   *
+   * Info Blocks (v1.1 §C.1): add, rename inline, delete with confirmation, edit the text in
+   * Foundry's ProseMirror editor, open the page in Foundry, reorder by drag. All commands.
    */
-  import { onDestroy, untrack } from 'svelte';
-  import type { Snapshot } from '../../core/canon';
+  import { tick, untrack } from 'svelte';
   import { connectionSentence, connectionsIn } from '../../core/connections';
-  import { classLabelKey, readElement } from '../../core/elements';
+  import {
+    appearanceBlock,
+    classLabelKey,
+    hasAppearanceClass,
+    readElement,
+  } from '../../core/elements';
   import { nodeMenu, type MenuEntry } from '../canvas/menu';
   import type { DetailContext } from './context';
+  import DetailSection from './DetailSection.svelte';
+  import DetailShell from './DetailShell.svelte';
+  import Eye from './Eye.svelte';
+  import RichText from './RichText.svelte';
+  import { liveRecords, runner } from './live.svelte';
 
-  let props: { ctx: DetailContext; id: string } = $props();
+  let props: { ctx: DetailContext; id: string; focus?: string | undefined } = $props();
   const ctx = untrack(() => props.ctx);
   const id = untrack(() => props.id);
   const reveal = ctx.reveal;
 
-  let records = $state.raw<Snapshot>(ctx.workingCopy.records());
-  const off = ctx.workingCopy.subscribe((r) => (records = r));
-  onDestroy(off);
+  const live = liveRecords(ctx);
+  const run = runner(ctx);
 
-  const element = $derived(readElement(records.get(id)));
-  const name = (x: string) => readElement(records.get(x))?.name ?? '';
+  const element = $derived(readElement(live.current.get(id)));
+  const name = (x: string) => readElement(live.current.get(x))?.name ?? '';
   const connections = $derived(
-    connectionsIn(records)
+    connectionsIn(live.current)
       .filter((c) => c.from === id || c.to === id)
       .map((c) => ({ id: c.id, text: connectionSentence(c, name, ctx.format) })),
   );
@@ -32,7 +43,14 @@
     void $reveal;
     return ctx.available('reveal.element');
   });
-  const appearance = $derived(element?.class === 'person' || element?.class === 'creature');
+  // v1.1 §C.2: the Appearance block (by its flag) guards the image; deleted, nothing to Reveal.
+  const appearance = $derived(!!element && !!appearanceBlock(element));
+  /** An actor class without one: "+ Info Block" offers the Appearance preset. */
+  const appearancePreset = $derived(!!element && hasAppearanceClass(element.class) && !appearance);
+  /** Person/Creature: the Image & token button (v1.1 §G.3). */
+  const imageEditor = $derived(
+    !!element && hasAppearanceClass(element.class) && ctx.available('element.openImageEditor'),
+  );
   const entries = $derived.by(() => {
     void $reveal;
     if (!element) return [];
@@ -41,120 +59,336 @@
       title: ctx.title,
       isRevealed: ctx.reveal.isRevealed,
       selection: [],
-    }).filter((e) => e.action !== 'rename' && e.key !== 'element.openDetail');
+    }).filter((e) => e.action !== 'rename' && !e.key.startsWith('element.openDetail'));
   });
+  const blocks = $derived(element?.infoBlocks ?? []);
+  const canEdit = ctx.available('infoBlock.edit');
+  const canOpenConnection = ctx.available('connection.openDetail');
 
-  async function run(name: string, args: object) {
-    try {
-      await ctx.run(name, args);
-    } catch (error) {
-      ctx.error(error instanceof Error ? error.message : String(error));
-    }
-  }
   const toggle = (kind: 'element' | 'appearance' | 'infoBlock' | 'connection', target: string) =>
     run(`reveal.${kind}`, { id: target, revealed: !ctx.reveal.isRevealed(kind, target) });
   const pick = (entry: MenuEntry) => {
     if (entry.action === 'status') return run('element.toggleStatus', { id });
     if (entry.command) return run(entry.command, entry.args ?? {});
   };
+
+  /** Focuses (and selects) a block's name field once it is rendered. */
+  async function focusName(block: string) {
+    await tick();
+    const input = root?.querySelector<HTMLInputElement>(`[data-garn-detail-block-name="${block}"]`);
+    input?.focus();
+    input?.select();
+  }
+  let root = $state<HTMLElement>();
+  $effect(() => {
+    const block = props.focus;
+    if (block && blocks.some((b) => b._id === block)) void focusName(block);
+  });
+
+  // v1.1 §G.1: the pencil beside the name renames inline; Enter/blur save, Esc cancels.
+  const canRename = ctx.available('element.rename');
+  let naming = $state(false);
+  function saveName(value: string) {
+    if (!naming) return;
+    naming = false;
+    const next = value.trim();
+    if (next && next !== element?.name) void run('element.rename', { id, name: next });
+  }
+
+  /** The preset menu on "+ Info Block" is open. */
+  let presets = $state(false);
+  async function addBlock(preset?: 'appearance') {
+    try {
+      const args = preset ? { elementId: id, appearance: true } : { elementId: id };
+      const { id: block } = (await ctx.run('infoBlock.create', args)) as {
+        id: string;
+      };
+      await focusName(block);
+    } catch (error) {
+      ctx.error(error instanceof Error ? error.message : String(error));
+    }
+  }
+  function rename(block: { _id: string; name: string }, input: HTMLInputElement) {
+    const next = input.value.trim();
+    if (!next) input.value = block.name;
+    else if (next !== block.name) void run('infoBlock.edit', { id: block._id, name: next });
+  }
+  async function remove(block: { _id: string; name: string }) {
+    const yes = await ctx.confirm(
+      ctx.localize('GARN.Detail.DeleteInfoBlockTitle'),
+      ctx.format('GARN.Detail.DeleteInfoBlockConfirm', { name: block.name }),
+    );
+    if (yes) await run('infoBlock.delete', { id: block._id });
+  }
+
+  // Drag reorder (page `sort`), among Info Blocks only.
+  let dragging = $state<string>();
+  let over = $state<string>();
+  function drop(target: string) {
+    const moved = dragging;
+    dragging = over = undefined;
+    if (!moved || moved === target) return;
+    const index = blocks.findIndex((b) => b._id === target);
+    if (index >= 0) void run('infoBlock.move', { id: moved, index });
+  }
 </script>
 
 {#snippet eye(kind: 'element' | 'appearance' | 'infoBlock' | 'connection', target: string)}
-  {@const on = $reveal && ctx.reveal.isRevealed(kind, target)}
-  <button
-    type="button"
-    class="eye"
-    class:on
-    disabled={!canReveal}
-    title={ctx.localize(
-      canReveal
-        ? on
-          ? 'SILK.Reveal.Unreveal'
-          : 'SILK.Reveal.Reveal'
-        : 'SILK.Reveal.NeedsAdventure',
-    )}
+  <Eye
+    on={$reveal && ctx.reveal.isRevealed(kind, target)}
+    enabled={canReveal}
+    localize={ctx.localize}
     onclick={() => toggle(kind, target)}
-    data-silk-eye={on ? 'on' : 'off'}
-    ><i class="fa-solid {on ? 'fa-eye' : 'fa-eye-slash'}"></i></button
-  >
+  />
 {/snippet}
 
-<div class="silk-detail" data-silk-detail={id}>
+{#snippet header()}
   {#if element}
-    <header>
-      {@render eye('element', id)}
-      <div>
-        <div class="cls">{ctx.localize(classLabelKey(element.class))}</div>
-        <h2>{element.name}</h2>
-      </div>
-    </header>
-    {#if !canReveal}
-      <p class="hint" data-silk-detail-hint>{ctx.localize('SILK.Reveal.NeedsAdventure')}</p>
-    {/if}
-    {#if appearance}
-      <section>
-        <div class="row" data-silk-detail-appearance>
-          {@render eye('appearance', id)}
-          <span>{ctx.localize('SILK.Reveal.Appearance')}</span>
+    {@render eye('element', id)}
+    <div class="title">
+      <div class="cls">{ctx.localize(classLabelKey(element.class))}</div>
+      {#if naming}
+        <input
+          type="text"
+          class="name-input"
+          value={element.name}
+          aria-label={ctx.title('element.rename')}
+          {@attach (input) => {
+            input.focus();
+            input.select();
+          }}
+          onkeydown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+            else if (e.key === 'Escape') {
+              // Before Foundry's Escape (closes the window) and the blur save.
+              e.preventDefault();
+              e.stopPropagation();
+              naming = false;
+            }
+          }}
+          onblur={(e) => saveName(e.currentTarget.value)}
+          data-garn-detail-name-input
+        />
+      {:else}
+        <div class="row">
+          <h2>{element.name}</h2>
+          {#if canRename}
+            <button
+              type="button"
+              class="icon"
+              title={ctx.title('element.rename')}
+              onclick={() => (naming = true)}
+              data-garn-detail-rename><i class="fa-solid fa-pencil"></i></button
+            >
+          {/if}
         </div>
-      </section>
+      {/if}
+    </div>
+  {/if}
+{/snippet}
+
+<DetailShell data-garn-detail={id} bind:root header={element ? header : undefined}>
+  {#if element}
+    {#if !canReveal}
+      <p class="hint" data-garn-detail-hint>{ctx.localize('GARN.Reveal.NeedsAdventure')}</p>
     {/if}
-    <section>
-      <h3>{ctx.localize('SILK.Detail.InfoBlocks')}</h3>
-      {#each element.infoBlocks ?? [] as block (block._id)}
-        <div class="row" data-silk-detail-block={block._id}>
-          {@render eye('infoBlock', block._id)}
-          <span>{block.name}</span>
+    {#if appearance || imageEditor}
+      <DetailSection>
+        <div class="row">
+          {#if appearance}
+            <span class="row appearance" data-garn-detail-appearance>
+              {@render eye('appearance', id)}
+              <span>{ctx.localize('GARN.Reveal.Appearance')}</span>
+            </span>
+          {/if}
+          {#if imageEditor}
+            <!-- v1.1 §G.3: Garn's editor, hood-aware (not Foundry's TokenConfig). -->
+            <button
+              type="button"
+              class="image"
+              onclick={() => run('element.openImageEditor', { id })}
+              data-garn-detail-image-editor
+              ><i class="fa-solid fa-image"></i>
+              {ctx.title('element.openImageEditor')}</button
+            >
+          {/if}
+        </div>
+      </DetailSection>
+    {/if}
+    <DetailSection title={ctx.localize('GARN.Detail.InfoBlocks')}>
+      {#each blocks as block (block._id)}
+        <div
+          class="block"
+          class:over={over === block._id && dragging !== block._id}
+          data-garn-detail-block={block._id}
+          role="listitem"
+          ondragover={(e) => {
+            if (!dragging) return;
+            e.preventDefault();
+            over = block._id;
+          }}
+          ondrop={(e) => {
+            e.preventDefault();
+            drop(block._id);
+          }}
+        >
+          <div class="row">
+            <span
+              class="grip"
+              draggable={canEdit}
+              role="button"
+              tabindex="-1"
+              title={ctx.title('infoBlock.move')}
+              data-garn-detail-block-handle={block._id}
+              ondragstart={(e) => {
+                dragging = block._id;
+                e.dataTransfer?.setData('text/plain', block._id);
+                const row = (e.currentTarget as HTMLElement).closest('.block');
+                if (row && e.dataTransfer) e.dataTransfer.setDragImage(row, 0, 0);
+              }}
+              ondragend={() => (dragging = over = undefined)}
+              ><i class="fa-solid fa-grip-vertical"></i></span
+            >
+            {@render eye('infoBlock', block._id)}
+            <input
+              type="text"
+              class="name"
+              value={block.name}
+              disabled={!canEdit}
+              aria-label={ctx.localize('GARN.Detail.InfoBlockName')}
+              data-garn-detail-block-name={block._id}
+              onchange={(e) => rename(block, e.currentTarget)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+                if (e.key === 'Escape') {
+                  e.currentTarget.value = block.name;
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+            <button
+              type="button"
+              class="icon"
+              title={ctx.title('infoBlock.open')}
+              onclick={() => run('infoBlock.open', { id: block._id })}
+              data-garn-detail-block-open={block._id}
+              ><i class="fa-solid fa-arrow-up-right-from-square"></i></button
+            >
+            <button
+              type="button"
+              class="icon danger"
+              disabled={!canEdit}
+              title={ctx.title('infoBlock.delete')}
+              onclick={() => remove(block)}
+              data-garn-detail-block-delete={block._id}><i class="fa-solid fa-trash"></i></button
+            >
+          </div>
+          {#if block.appearance && element.img}
+            <!-- v1.1 §G.4: the page's Garn-managed portrait, read-only; the editor has only the text. -->
+            <figure class="text portrait" data-garn-detail-portrait={block._id}>
+              <img src={element.img} alt={element.name} />
+            </figure>
+          {/if}
+          {#if canEdit}
+            <div class="text">
+              <RichText
+                mount={ctx.editor}
+                html={block.text}
+                save={(text) => void run('infoBlock.edit', { id: block._id, text })}
+                data-garn-detail-block-text={block._id}
+              />
+            </div>
+          {/if}
         </div>
       {/each}
-    </section>
-    <section>
-      <h3>{ctx.localize('SILK.Detail.Connections')}</h3>
+      <div class="add-group" data-garn-detail-add>
+        <button
+          type="button"
+          class="add"
+          disabled={!canEdit}
+          onclick={() => addBlock()}
+          data-garn-detail-add-block>{ctx.localize('GARN.Detail.AddInfoBlock')}</button
+        >
+        {#if appearancePreset}
+          <!-- v1.1 §C.2: the "+ Info Block" control offers the Appearance preset. -->
+          <button
+            type="button"
+            class="add caret"
+            disabled={!canEdit}
+            aria-haspopup="menu"
+            aria-expanded={presets}
+            aria-label={ctx.localize('GARN.Detail.AddPresets')}
+            title={ctx.localize('GARN.Detail.AddPresets')}
+            onclick={() => (presets = !presets)}
+            data-garn-detail-add-menu>▾</button
+          >
+          {#if presets}
+            <div class="presets" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                title={ctx.localize('GARN.Detail.AddAppearanceHint')}
+                onclick={() => {
+                  presets = false;
+                  void addBlock('appearance');
+                }}
+                data-garn-detail-add-appearance>{ctx.localize('GARN.Detail.AddAppearance')}</button
+              >
+            </div>
+          {/if}
+        {/if}
+      </div>
+    </DetailSection>
+    <DetailSection title={ctx.localize('GARN.Detail.Connections')}>
       {#each connections as c (c.id)}
-        <div class="row" data-silk-detail-connection={c.id}>
+        <div class="row" data-garn-detail-connection={c.id}>
           {@render eye('connection', c.id)}
-          <span>{c.text}</span>
+          <span class="name">{c.text}</span>
+          {#if canOpenConnection}
+            <!-- v1.1 §F.2: opens its Connection Detail. -->
+            <button
+              type="button"
+              class="icon"
+              title={ctx.title('connection.openDetail')}
+              onclick={() => run('connection.openDetail', { id: c.id })}
+              data-garn-detail-connection-open={c.id}><i class="fa-solid fa-pencil"></i></button
+            >
+          {/if}
         </div>
       {:else}
         <p class="hint">–</p>
       {/each}
-    </section>
-    <section class="actions" data-silk-detail-actions>
-      {#each entries as entry (entry.key)}
-        <button
-          type="button"
-          class:danger={entry.danger}
-          disabled={entry.disabled}
-          title={entry.hint ? ctx.localize(entry.hint) : undefined}
-          onclick={() => pick(entry)}
-          data-silk-menu-item={entry.key}>{ctx.localize(entry.label)}</button
-        >
-      {/each}
-    </section>
+    </DetailSection>
+    <DetailSection data-garn-detail-actions>
+      <div class="actions">
+        {#each entries as entry (entry.key)}
+          <button
+            type="button"
+            class:danger={entry.danger}
+            disabled={entry.disabled}
+            title={entry.hint ? ctx.localize(entry.hint) : undefined}
+            onclick={() => pick(entry)}
+            data-garn-menu-item={entry.key}>{ctx.localize(entry.label)}</button
+          >
+        {/each}
+      </div>
+    </DetailSection>
   {:else}
-    <p class="hint">{ctx.localize('SILK.Detail.Gone')}</p>
+    <p class="hint">{ctx.localize('GARN.Detail.Gone')}</p>
   {/if}
-</div>
+</DetailShell>
 
 <style>
-  .silk-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 4px;
-  }
-  header {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
   h2 {
     margin: 0;
     border: 0;
   }
-  h3 {
-    margin: 4px 0;
-    font-size: 13px;
+  .title {
+    flex: 1;
+    min-width: 0;
+  }
+  .name-input {
+    width: 100%;
   }
   .cls {
     font-size: 10px;
@@ -166,15 +400,79 @@
     gap: 6px;
     align-items: center;
   }
-  .eye {
+  .appearance {
+    flex: 1;
+  }
+  .image {
+    width: auto;
+    margin-left: auto;
+    padding: 0 8px;
+  }
+  .block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-top: 2px solid transparent;
+  }
+  .block.over {
+    border-top-color: #2b6cb0;
+  }
+  .grip {
+    flex: none;
+    cursor: grab;
+    opacity: 0.6;
+  }
+  .name {
+    flex: 1;
+    min-width: 0;
+  }
+  .icon {
     flex: none;
     width: 26px;
     height: 22px;
     padding: 0;
-    color: #999;
   }
-  .eye.on {
-    color: #2b6cb0;
+  .text {
+    margin-left: 22px;
+  }
+  .portrait {
+    margin-top: 2px;
+    margin-right: 0;
+    margin-bottom: 2px;
+  }
+  .portrait img {
+    display: block;
+    max-width: 100%;
+    max-height: 240px;
+    border: none;
+  }
+  .add {
+    width: auto;
+    align-self: flex-start;
+    padding: 0 8px;
+  }
+  .add-group {
+    position: relative;
+    display: flex;
+    align-self: flex-start;
+    gap: 2px;
+  }
+  .add.caret {
+    padding: 0 4px;
+  }
+  .presets {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    min-width: 140px;
+    padding: 2px;
+    background: #fff;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px #0003;
   }
   .hint {
     margin: 0;

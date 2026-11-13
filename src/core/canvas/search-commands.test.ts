@@ -31,7 +31,11 @@ async function setup(records: CanonRecord[]) {
   let n = 0;
   for (const c of [
     ...filterCommands(filter),
-    ...canvasCoreCommands({ workingCopy: () => workingCopy, state }),
+    ...canvasCoreCommands({
+      workingCopy: () => workingCopy,
+      state,
+      run: (n, a) => registry.run(n, a),
+    }),
     ...searchCommands(search),
     ...elementCommands({
       workingCopy: () => workingCopy,

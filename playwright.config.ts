@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
-/** `@perf` tests (spec §14) run only with SILK_PERF=1 (`npm run test:perf`), never by default. */
-const perf = process.env['SILK_PERF'] === '1';
+/** `@perf` tests (spec §14) run only with GARN_PERF=1 (`npm run test:perf`), never by default. */
+const perf = process.env['GARN_PERF'] === '1';
 
 // Runs against the built module in dist/: `npm run build` first (test:e2e does).
 export default defineConfig({

@@ -3,29 +3,29 @@ import type { CanonRecord } from '../src/core/canon';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
 
 const records = (page: Page, kind: string): Promise<CanonRecord[]> =>
   page.evaluate((k) => {
-    const all = game.modules?.get('silk')?.session?.().workingCopy.records();
+    const all = game.modules?.get('garn')?.session?.().workingCopy.records();
     return [...(all?.values() ?? [])].filter((r) => r.kind === k);
   }, kind);
 
 async function resetCanvas(page: Page) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
   await page.evaluate(async () => {
-    const wc = game.modules?.get('silk')?.session?.().workingCopy;
+    const wc = game.modules?.get('garn')?.session?.().workingCopy;
     await wc?.delete([...(wc.records().keys() ?? [])]);
-    await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
+    await game.settings?.set('garn', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
   });
 }
 
@@ -49,9 +49,9 @@ async function boxOf(locator: Locator) {
   return box;
 }
 
-const card = (page: Page, name: string) => page.locator('[data-silk-node]', { hasText: name });
+const card = (page: Page, name: string) => page.locator('[data-garn-node]', { hasText: name });
 
-test('Connections: drag-out, digit keys, c, editor, Tab/q, rendering', async ({ gm }) => {
+test('Connections: right-drag, digit keys, c, editor, Tab/q, rendering', async ({ gm }) => {
   test.setTimeout(240_000);
   await resetCanvas(gm);
   const { id: alrik } = await api<{ id: string }>(gm, 'element.create', {
@@ -63,31 +63,29 @@ test('Connections: drag-out, digit keys, c, editor, Tab/q, rendering', async ({ 
   await api(gm, 'canvas.open');
   await expect(card(gm, 'Alrik')).toBeVisible();
 
-  // Drag-out from the outgoing point on the right → class box → Item. Counting real
-  // inputs: one drag gesture, one click: the connected Element exists (§14: ≤ 2).
-  const out = card(gm, 'Alrik').locator('[data-silk-point="out"][data-silk-point-side="right"]');
-  await expect(out).toBeVisible();
-  const p = await boxOf(out);
+  // Right-drag from Alrik onto the canvas → class box → Item. Counting real inputs: one
+  // drag gesture, one click: the connected Element exists (spec 1.1 §B.4: ≤ 2).
+  const p = await boxOf(card(gm, 'Alrik'));
   await gm.mouse.move(p.x + p.width / 2, p.y + p.height / 2);
-  await gm.mouse.down();
-  await gm.mouse.move(p.x + 150, p.y + 40, { steps: 5 });
-  await gm.mouse.move(p.x + 300, p.y + 80, { steps: 5 });
-  await gm.mouse.up();
-  await expect(gm.locator('[data-silk-class-box]')).toBeVisible();
-  await gm.locator('[data-silk-class-option="item"]').click();
+  await gm.mouse.down({ button: 'right' });
+  await gm.mouse.move(p.x + 250, p.y + 80, { steps: 5 });
+  await gm.mouse.move(p.x + 450, p.y + 120, { steps: 5 });
+  await gm.mouse.up({ button: 'right' });
+  await expect(gm.locator('[data-garn-class-box]')).toBeVisible();
+  await gm.locator('[data-garn-class-option="item"]').click();
   await expect.poll(async () => (await records(gm, 'connection')).length).toBe(1);
   const [owns] = await records(gm, 'connection');
   expect(owns?.data).toMatchObject({ from: alrik, type: 'owns', direction: 'directed' });
 
   // Name, then the Connection editor (Behavioural: Enter closes it).
-  await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
+  await expect(gm.locator('[data-garn-name-input]')).toBeFocused();
   await gm.keyboard.type('Sword');
   await gm.keyboard.press('Enter');
-  await expect(gm.locator('[data-silk-connection-editor] button').first()).toBeFocused();
+  await expect(gm.locator('[data-garn-connection-editor] button').first()).toBeFocused();
   await gm.keyboard.press('Enter');
-  await expect(gm.locator('[data-silk-connection-editor]')).toHaveCount(0);
-  const ownsLabel = gm.locator(`[data-silk-edge="${owns?.id}"]`);
-  await expect(ownsLabel).toHaveAttribute('data-silk-edge-type', 'owns');
+  await expect(gm.locator('[data-garn-connection-editor]')).toHaveCount(0);
+  const ownsLabel = gm.locator(`[data-garn-edge="${owns?.id}"]`);
+  await expect(ownsLabel).toHaveAttribute('data-garn-edge-type', 'owns');
   await expect(ownsLabel).toContainText('owns');
   // Directed: arrowhead on the edge path.
   await expect(
@@ -98,58 +96,58 @@ test('Connections: drag-out, digit keys, c, editor, Tab/q, rendering', async ({ 
   await card(gm, 'Alrik').click();
   await expect(card(gm, 'Alrik')).toHaveClass(/selected/);
   await gm.keyboard.press('Digit1');
-  await expect(gm.locator('[data-silk-name-input]')).toBeFocused();
+  // Person takes the Source Step (spec 1.1 §B.1): → Blank.
+  await expect(gm.locator('[data-garn-source-step="person"]')).toBeFocused();
+  await gm.keyboard.press('ArrowRight');
+  await expect(gm.locator('[data-garn-name-input]')).toBeFocused();
   await gm.keyboard.type('Rondra');
   await gm.keyboard.press('Enter');
-  const label = gm.locator('[data-silk-label-input]');
+  const label = gm.locator('[data-garn-label-input]');
   await expect(label).toBeFocused();
   await gm.keyboard.type('loves');
   await gm.keyboard.press('Enter');
   await expect(label).toHaveCount(0);
-  const loves = gm.locator('[data-silk-edge]', { hasText: 'loves' });
-  await expect(loves).toHaveAttribute('data-silk-edge-from', alrik);
-  await expect(loves).toHaveAttribute('data-silk-edge-direction', 'directed');
+  const loves = gm.locator('[data-garn-edge]', { hasText: 'loves' });
+  await expect(loves).toHaveAttribute('data-garn-edge-from', alrik);
+  await expect(loves).toHaveAttribute('data-garn-edge-direction', 'directed');
 
-  // Tab cycles direction on the selected Connection through A→B, B→A, mutual.
-  const lovesId = (await loves.getAttribute('data-silk-edge')) ?? '';
+  // v1.1 §F.1: Tab toggles directed ⇄ mutual (never reverses); Shift+Tab reverses.
+  const lovesId = (await loves.getAttribute('data-garn-edge')) ?? '';
   const lovesPath = gm.locator(`.svelte-flow__edge[data-id="${lovesId}"] .svelte-flow__edge-path`);
-  const state = async () =>
-    `${await loves.getAttribute('data-silk-edge-direction')}:${await loves.getAttribute('data-silk-edge-from')}`;
   await loves.click();
-  const seen = [await state()];
-  for (let i = 0; i < 3; i++) {
-    await gm.keyboard.press('Tab');
-    await expect.poll(state).not.toBe(seen.at(-1));
-    seen.push(await state());
-    if (seen.at(-1)?.startsWith('mutual'))
-      await expect(lovesPath).not.toHaveAttribute('marker-end', /url/);
-  }
-  expect(new Set(seen.slice(0, 3)).size).toBe(3);
-  expect(seen.filter((s) => s.startsWith('mutual'))).toHaveLength(1);
-  expect(seen[3]).toBe(seen[0]);
+  await gm.keyboard.press('Tab');
+  await expect(loves).toHaveAttribute('data-garn-edge-direction', 'mutual');
+  await expect(lovesPath).not.toHaveAttribute('marker-end', /url/);
+  await gm.keyboard.press('Tab');
+  await expect(loves).toHaveAttribute('data-garn-edge-direction', 'directed');
+  // Mutual → directed points A→B in id order (§D `connection.setDirection`), ids are random.
+  const lovesData = (await records(gm, 'connection')).find((r) => r.id === lovesId)?.data;
+  const [first = '', second = ''] = [String(lovesData?.['from']), String(lovesData?.['to'])].sort();
+  await expect(loves).toHaveAttribute('data-garn-edge-from', first);
+  await gm.keyboard.press('Shift+Tab');
+  await expect(loves).toHaveAttribute('data-garn-edge-from', second);
+  await expect(loves).toHaveAttribute('data-garn-edge-direction', 'directed');
 
-  // q cycles type: Person → Item has `owns`, so a free-form Connection becomes owns.
-  // Use `c` to connect Rondra to the Sword, then q.
+  // `c` Rondra → Sword: the default Connection (v1.1 §F.3) is owns.
   await card(gm, 'Rondra').click();
   await gm.keyboard.press('KeyC');
-  await expect(gm.locator('[data-silk-connect-hint]')).toBeVisible();
+  await expect(gm.locator('[data-garn-connect-hint]')).toBeVisible();
   await card(gm, 'Sword').click();
-  await expect(gm.locator('[data-silk-label-input]')).toBeFocused();
-  await gm.keyboard.press('Escape');
-  const rondraSword = gm.locator('[data-silk-edge][data-silk-edge-type="free"]', {
-    hasNotText: 'loves',
-  });
+  await expect(gm.locator('[data-garn-connection-editor] button').first()).toBeFocused();
+  await gm.keyboard.press('Enter');
+  // Rondra now owns the Sword; the old owner's Connection is replaced (≤1 owner).
+  const rondraSword = gm.locator('[data-garn-edge][data-garn-edge-type="owns"]');
   await expect(rondraSword).toHaveCount(1);
+  await expect(gm.locator(`[data-garn-edge="${owns?.id}"]`)).toHaveCount(0);
+  // q cycles type: owns → free-form.
   await rondraSword.click();
   await gm.keyboard.press('KeyQ');
-  // Rondra now owns the Sword; the old owner's Connection is replaced (≤1 owner).
-  await expect(gm.locator('[data-silk-edge-type="owns"]')).toHaveCount(1);
-  await expect(gm.locator(`[data-silk-edge="${owns?.id}"]`)).toHaveCount(0);
+  await expect(gm.locator('[data-garn-edge-type="owns"]')).toHaveCount(0);
 
   // Parallel Connections between one pair: separate curves, separate labels.
   const rondra = (await records(gm, 'element')).find((r) => r.data['name'] === 'Rondra')?.id;
   await api(gm, 'connection.create', { from: alrik, to: rondra, label: 'fears' });
-  const fears = gm.locator('[data-silk-edge]', { hasText: 'fears' });
+  const fears = gm.locator('[data-garn-edge]', { hasText: 'fears' });
   await expect(fears).toBeVisible();
   const a = await boxOf(fears);
   const b = await boxOf(loves);
@@ -158,6 +156,6 @@ test('Connections: drag-out, digit keys, c, editor, Tab/q, rendering', async ({ 
   // F2 on a selected Connection opens its editor.
   await fears.click();
   await gm.keyboard.press('F2');
-  await expect(gm.locator('[data-silk-label-input]')).toBeFocused();
+  await expect(gm.locator('[data-garn-label-input]')).toBeFocused();
   await gm.keyboard.press('Escape');
 });

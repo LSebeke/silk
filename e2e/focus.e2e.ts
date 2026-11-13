@@ -3,13 +3,13 @@ import type { CanonRecord } from '../src/core/canon';
 import { expect, test } from './fixtures';
 
 const api = (page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [name, args] as const);
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [name, args] as const);
 
 /** Fresh working copy with `records`, no filters or pins, the canvas open. */
 async function openWith(page: Page, records: CanonRecord[]) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
@@ -23,19 +23,19 @@ async function openWith(page: Page, records: CanonRecord[]) {
       el.remove();
     ui.notifications?.clear();
     document.getElementById('notifications')?.style.setProperty('display', 'none');
-    await foundry.applications.instances.get('silk-canvas')?.close();
-    while (foundry.applications.instances.get('silk-canvas'))
+    await foundry.applications.instances.get('garn-canvas')?.close();
+    while (foundry.applications.instances.get('garn-canvas'))
       await new Promise((r) => setTimeout(r, 20));
-    await game.settings?.set('silk', 'materializeMode', 'onDemand');
+    await game.settings?.set('garn', 'materializeMode', 'onDemand');
     for (const s of [...(game.scenes ?? [])])
-      if ((s.flags as { silk?: { focusTest?: boolean } }).silk?.focusTest) await s.delete();
-    const wc = game.modules?.get('silk')?.session?.().workingCopy;
+      if ((s.flags as { garn?: { focusTest?: boolean } }).garn?.focusTest) await s.delete();
+    const wc = game.modules?.get('garn')?.session?.().workingCopy;
     await wc?.delete([...(wc.records().keys() ?? [])]);
     await wc?.set(JSON.parse(json));
-    await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
+    await game.settings?.set('garn', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
   }, JSON.stringify(records));
   await api(page, 'canvas.open');
-  await expect(page.locator('[data-silk-canvas]')).toBeVisible();
+  await expect(page.locator('[data-garn-canvas]')).toBeVisible();
 }
 
 const el = (id: string, x: number, y = 100, cls = 'person'): CanonRecord => ({
@@ -65,48 +65,48 @@ const WEB = [
 
 const shown = (page: Page) =>
   page
-    .locator('[data-silk-node]')
-    .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset['silkNode']).sort());
+    .locator('[data-garn-node]')
+    .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset['garnNode']).sort());
 const camera = (page: Page) =>
   page.locator('.svelte-flow__viewport').evaluate((e) => (e as HTMLElement).style.transform);
 
 test('Focus View: Scene seeds, selection, pins, hops, camera', async ({ gm }) => {
   test.setTimeout(180_000);
   await openWith(gm, WEB);
-  await expect(gm.locator('[data-silk-node]')).toHaveCount(7);
+  await expect(gm.locator('[data-garn-node]')).toHaveCount(7);
 
   // On with no active Scene and nothing selected: only pins show, plus a hint.
-  await gm.locator('[data-silk-action="focus-toggle"]').click();
-  await expect(gm.locator('[data-silk-node]')).toHaveCount(0);
-  await expect(gm.locator('[data-silk-focus-hint]')).toBeVisible();
+  await gm.locator('[data-garn-action="focus-toggle"]').click();
+  await expect(gm.locator('[data-garn-node]')).toHaveCount(0);
+  await expect(gm.locator('[data-garn-focus-hint]')).toBeVisible();
   await api(gm, 'focus.pin', { ids: ['qx'] });
   await expect.poll(() => shown(gm)).toEqual(['qx']);
 
   // A Scene linked to qloc becomes active: N = 2 hops around it, and the camera fits.
   const before = await camera(gm);
   await gm.evaluate(async () => {
-    const data = { name: 'Focus test', flags: { silk: { sceneOf: 'qloc', focusTest: true } } };
+    const data = { name: 'Focus test', flags: { garn: { sceneOf: 'qloc', focusTest: true } } };
     const scene = (await Scene.create(data as never)) as
       { activate(): Promise<unknown> } | undefined;
     await scene?.activate();
   });
   await expect.poll(() => shown(gm)).toEqual(['qa', 'qb', 'qloc', 'qx']);
-  await expect(gm.locator('[data-silk-focus-hint]')).toHaveCount(0);
+  await expect(gm.locator('[data-garn-focus-hint]')).toHaveCount(0);
   await expect.poll(() => camera(gm)).not.toBe(before);
 
   // N from the chip bar.
-  await gm.locator('[data-silk-focus-hops]').selectOption('1');
+  await gm.locator('[data-garn-focus-hops]').selectOption('1');
   await expect.poll(() => shown(gm)).toEqual(['qa', 'qloc', 'qx']);
 
   // Selection is a temporary seed: selecting qa shows qb; deselecting collapses it.
-  await gm.locator('[data-silk-node="qa"]').click();
+  await gm.locator('[data-garn-node="qa"]').click();
   await expect.poll(() => shown(gm)).toEqual(['qa', 'qb', 'qloc', 'qx']);
 
   // `p` pins the selection; the card's Focus Pin button unpins.
-  await gm.locator('[data-silk-canvas]').press('p');
-  await expect(gm.locator('[data-silk-node="qa"] [data-silk-pin="pinned"]')).toHaveCount(1);
-  await gm.locator('[data-silk-node="qa"] .pin').click();
-  await expect(gm.locator('[data-silk-node="qa"] [data-silk-pin="pinned"]')).toHaveCount(0);
+  await gm.locator('[data-garn-canvas]').press('p');
+  await expect(gm.locator('[data-garn-node="qa"] [data-garn-pin="pinned"]')).toHaveCount(1);
+  await gm.locator('[data-garn-node="qa"] .pin').click();
+  await expect(gm.locator('[data-garn-node="qa"] [data-garn-pin="pinned"]')).toHaveCount(0);
   await api(gm, 'canvas.select', { ids: [] });
   await expect.poll(() => shown(gm)).toEqual(['qa', 'qloc', 'qx']);
 
@@ -115,7 +115,7 @@ test('Focus View: Scene seeds, selection, pins, hops, camera', async ({ gm }) =>
   const held = await camera(gm);
   await gm.keyboard.down('Shift');
   await api(gm, 'focus.pin', { ids: ['qf'] });
-  await expect(gm.locator('[data-silk-node="qf"]')).toHaveCount(1);
+  await expect(gm.locator('[data-garn-node="qf"]')).toHaveCount(1);
   await gm.waitForTimeout(800);
   expect(await camera(gm)).toBe(held);
   await gm.keyboard.up('Shift');
@@ -127,7 +127,7 @@ test('Focus View: Scene seeds, selection, pins, hops, camera', async ({ gm }) =>
 
   // Pins persist in the view state.
   const pins = await gm.evaluate(
-    () => (game.settings?.get('silk', 'viewState') as { pins?: string[] }).pins,
+    () => (game.settings?.get('garn', 'viewState') as { pins?: string[] }).pins,
   );
   expect(pins).toEqual(['qx', 'qf', 'qg']);
 
@@ -135,6 +135,6 @@ test('Focus View: Scene seeds, selection, pins, hops, camera', async ({ gm }) =>
   await api(gm, 'focus.unpin', { ids: ['qx', 'qf', 'qg'] });
   await gm.evaluate(async () => {
     for (const s of [...(game.scenes ?? [])])
-      if ((s.flags as { silk?: { focusTest?: boolean } }).silk?.focusTest) await s.delete();
+      if ((s.flags as { garn?: { focusTest?: boolean } }).garn?.focusTest) await s.delete();
   });
 });

@@ -20,26 +20,26 @@
 </script>
 
 <div
-  class="silk-merge-card {data.badge}"
+  class="garn-merge-card {data.badge}"
   class:selected
   class:deleted={data.deleted}
   class:resolved
-  style:--silk-class={cls?.color ?? '#666'}
-  data-silk-merge-node={id}
-  data-silk-merge-badge={data.badge}
-  data-silk-merge-open={data.open}
+  style:--garn-class={cls?.color ?? '#666'}
+  data-garn-merge-node={id}
+  data-garn-merge-badge={data.badge}
+  data-garn-merge-open={data.open}
 >
   <img class="portrait" src={data.img ?? cls?.icon} alt="" draggable="false" />
   <div class="title">{data.name}</div>
   {#if mark[data.badge]}
     <span class="badge">{resolved ? '✓' : data.open || mark[data.badge]}</span>
   {/if}
-  <Handle type="target" position={Position.Top} class="silk-merge-handle" />
-  <Handle type="source" position={Position.Bottom} class="silk-merge-handle" />
+  <Handle type="target" position={Position.Top} class="garn-merge-handle" />
+  <Handle type="source" position={Position.Bottom} class="garn-merge-handle" />
 </div>
 
 <style>
-  .silk-merge-card {
+  .garn-merge-card {
     --edge: #5a554e;
     position: relative;
     display: flex;
@@ -51,11 +51,11 @@
     background: #2f2c28;
     color: #e8e2d8;
     border: 2px solid var(--edge);
-    border-left: 6px solid var(--silk-class);
+    border-left: 6px solid var(--garn-class);
     border-radius: 6px;
     cursor: pointer;
   }
-  .silk-merge-card.selected {
+  .garn-merge-card.selected {
     box-shadow: 0 0 0 3px #d9a44188;
   }
   .conflict {
@@ -77,10 +77,10 @@
   .canonOnly {
     --edge: #6fa8dc;
   }
-  .silk-merge-card.deleted .title {
+  .garn-merge-card.deleted .title {
     text-decoration: line-through;
   }
-  .silk-merge-card.deleted {
+  .garn-merge-card.deleted {
     opacity: 0.6;
   }
   .portrait {
@@ -108,7 +108,7 @@
     line-height: 20px;
     font-size: 12px;
   }
-  :global(.silk-merge-handle) {
+  :global(.garn-merge-handle) {
     opacity: 0;
     pointer-events: none;
   }

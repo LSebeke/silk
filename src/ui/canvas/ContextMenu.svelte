@@ -15,18 +15,18 @@
     y: number;
     localize(key: string): string;
     onpick(entry: MenuEntry): void;
-    /** `data-silk-menu` value: the Node or Connection id. */
+    /** `data-garn-menu` value: the Node or Connection id. */
     target: string;
   } = $props();
 </script>
 
 <div
-  class="silk-menu"
+  class="garn-menu"
   style:left="{x}px"
   style:top="{y}px"
   role="menu"
   tabindex="-1"
-  data-silk-menu={target}
+  data-garn-menu={target}
 >
   {#each entries as entry (entry.key)}
     <button
@@ -39,13 +39,13 @@
         e.stopPropagation();
         onpick(entry);
       }}
-      data-silk-menu-item={entry.key}>{localize(entry.label)}</button
+      data-garn-menu-item={entry.key}>{localize(entry.label)}</button
     >
   {/each}
 </div>
 
 <style>
-  .silk-menu {
+  .garn-menu {
     position: absolute;
     z-index: 25;
     display: flex;

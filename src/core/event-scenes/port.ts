@@ -3,13 +3,16 @@
  * as plain data. The adapter implements it with real Scenes (`src/adapter/scenes.ts`),
  * tests with `createMemoryScenes`. Decisions live in the core; the port only executes them.
  */
+import type { StoredPreset } from './presets';
 
-/** `flags.silk` on a Silk Scene. */
-export interface SilkSceneFlags {
+/** `flags.garn` on a Garn Scene. */
+export interface GarnSceneFlags {
   /** The Event (or Location, Overview Scene) owning the Scene. */
   sceneOf?: string;
   /** Set on the first activation: Happened is set once, then the GM may undo it (§7). */
   activated?: boolean;
+  /** The Scene Preset it was made from (1.1 §I). */
+  preset?: StoredPreset;
 }
 
 export interface TokenData {
@@ -27,7 +30,7 @@ export interface SceneData {
   _id: string;
   name: string;
   folder?: string | null;
-  flags: { silk?: SilkSceneFlags; [scope: string]: unknown };
+  flags: { garn?: GarnSceneFlags; [scope: string]: unknown };
   tokens?: TokenData[];
   walls?: object[];
   drawings?: object[];
@@ -47,7 +50,7 @@ export interface NewToken {
 }
 
 export interface SceneDocs {
-  /** Id of Silk's Scene folder, created if missing. */
+  /** Id of Garn's Scene folder, created if missing. */
   ensureFolder(name: string): Promise<string>;
   scenes(): SceneSnapshot[];
   get(id: string): SceneSnapshot | undefined;
@@ -56,7 +59,9 @@ export interface SceneDocs {
   delete(id: string): Promise<void>;
   /** Foundry update data; dotted keys allowed. */
   update(id: string, data: Record<string, unknown>): Promise<void>;
-  /** Activates the Scene (Silk's write: Silk's own hooks skip it). */
+  /** Sets the Scene's `padding`; placeables keep their place relative to the map. */
+  setPadding(id: string, padding: number): Promise<void>;
+  /** Activates the Scene (Garn's write: Garn's own hooks skip it). */
   activate(id: string): Promise<void>;
   /** Views the Scene on this client (GM). */
   view(id: string): Promise<void>;
@@ -65,7 +70,7 @@ export interface SceneDocs {
   deleteTokens(sceneId: string, ids: string[]): Promise<void>;
   /**
    * Makes an embedded collection (`tokens`, `walls`, `lights`, …) match: creates (with the
-   * given `_id`s), updates, deletes, as Silk's write (merge result, spec §11.4).
+   * given `_id`s), updates, deletes, as Garn's write (merge result, spec §11.4).
    */
   syncEmbedded(sceneId: string, collection: string, ops: EmbeddedOps): Promise<void>;
 }
@@ -74,4 +79,22 @@ export interface EmbeddedOps {
   create: { _id: string; [key: string]: unknown }[];
   update: { _id: string; [key: string]: unknown }[];
   delete: string[];
+}
+
+interface Texture {
+  src?: string | null;
+}
+
+/**
+ * A Scene's background image (1.1 §B.2.1 Images). v14 keeps it on the first Level
+ * (`levels[0].background.src`; top-level `background` is only a deprecated shim, absent from
+ * `toObject()` and pack indexes); older data has `background.src`. `levels` may be an array
+ * or a live EmbeddedCollection.
+ */
+export function sceneBackground(scene: {
+  levels?: Iterable<{ background?: Texture | null }> | null;
+  background?: Texture | null;
+}): string | undefined {
+  const [first] = scene.levels ?? [];
+  return first?.background?.src || scene.background?.src || undefined;
 }

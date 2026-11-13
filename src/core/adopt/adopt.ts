@@ -1,9 +1,9 @@
 /**
  * Adopt (spec §6 Adopt): an existing Foundry doc becomes a Story Element. The doc stays where
- * it is and is Materialized from the start; Silk writes only its link flags to it.
+ * it is and is Materialized from the start; Garn writes only its link flags to it.
  *
  * - Class inference (`infer.ts`), content (journal pages = Info Blocks, Actor/Item get an
- *   empty Companion Journal), duplicates (already adopted, copied Silk ids,
+ *   empty Companion Journal), duplicates (already adopted, copied Garn ids,
  *   `_stats.compendiumSource` matching a Ghost), placement (`placement.ts`).
  * - Inferred Connections: only **owns** (embedded Items between Story Elements) and
  *   **present at** (tokens on Event Scenes). A doc players can already see counts as Revealed.
@@ -20,17 +20,22 @@ import {
   connectionsIn,
   resolveCreateFrom,
   validTypes,
+  type CreateFromConnection,
 } from '../connections';
 import {
+  appearanceBlock,
   elementClass,
   elementRecord,
+  hasAppearanceClass,
   readElement,
   type ElementClassId,
   type ElementData,
+  type InfoBlock,
   type Point,
   type StoryElement,
 } from '../elements';
-import type { SceneDocs, SceneSnapshot } from '../event-scenes/port';
+import { sceneBackground, type SceneDocs, type SceneSnapshot } from '../event-scenes/port';
+import { NO_PRESET } from '../event-scenes/presets';
 import {
   OWNERSHIP_NONE,
   connectionsPage,
@@ -47,9 +52,10 @@ import {
   type LifecycleContributor,
   type Materializer,
   type PageData,
-  type SilkDocFlags,
+  type GarnDocFlags,
   type SystemMapping,
 } from '../materialize';
+import { originalLook, type PortraitDoc } from '../portrait';
 import type { WorkingCopy } from '../working-copy';
 import { QUEST_PAGE, allowedClasses, bulkClass, inferClass, type Inference } from './infer';
 import { folderLayout, type FolderNode } from './placement';
@@ -69,7 +75,7 @@ export interface WorldDoc {
   documentName: string;
   /** `_stats.createdTime` (ms). */
   createdTime: number;
-  flags: { silk?: object };
+  flags: { garn?: object };
 }
 
 /** What Adopt needs from Foundry beyond the docs ports. */
@@ -93,13 +99,22 @@ export interface AdoptDeps {
   newId(): string;
   localize(key: string, data?: Record<string, string>): string;
   materializer: Pick<Materializer, 'sync' | 'materialize'>;
+  /** A card thumbnail made from an image (1.1 §B.2.1 Images). */
+  thumbnail?(src: string): Promise<string | undefined>;
   foundry: AdoptFoundry;
   /** Registry runner (`connection.create` for drops onto a Node). */
   run(name: string, args: object): Promise<unknown>;
   /** After an adopted element got its doc (owns / lifecycle `afterMaterialize`). */
   afterAdopt?(id: string): Promise<void>;
   /** Record what players can already see as Revealed (Revelation Map, §8). */
-  markRevealed?(parts: { elements: string[]; infoBlocks: string[] }): Promise<void>;
+  markRevealed?(parts: {
+    elements: string[];
+    infoBlocks: string[];
+    /** Person/Creature: its Appearance (unhooded, v1.1 §C.2). */
+    appearance: string[];
+  }): Promise<void>;
+  /** Person/Creature players can't see yet: hood img and tokens, ownership untouched. */
+  hood?(id: string): Promise<void>;
   /** Canvas viewport centre (canvas coordinates). */
   viewCenter(): Point;
   select?(ids: string[]): Promise<void> | void;
@@ -123,6 +138,8 @@ export interface AdoptDocArgs {
   at?: Point;
   /** Dropped onto this Node: connect it to the new element (§6 Ways in). */
   connectTo?: string;
+  /** With `connectTo`: the wanted Connection, direction relative to `connectTo` (§10.3). */
+  connection?: CreateFromConnection;
   /** Inventory item: also adopt its actor (and add owns). */
   alsoAdoptActor?: boolean;
 }
@@ -163,11 +180,11 @@ export interface Adopt {
   /** Docs created since the last Commit that aren't Story Elements (§6 Ad-hoc docs). */
   adHoc(): Promise<AdHocDoc[]>;
   endPlaySession(): Promise<{ commit: string; adHoc: AdHocDoc[] }>;
-  /** A doc created in Foundry (not by Silk): strip a copied Silk id (§6 Duplicates). */
+  /** A doc created in Foundry (not by Garn): strip a copied Garn id (§6 Duplicates). */
   docCreated(doc: {
     uuid: string;
     documentName: string;
-    flags: { silk?: SilkDocFlags & { sceneOf?: string } };
+    flags: { garn?: GarnDocFlags & { sceneOf?: string } };
   }): Promise<void>;
   /** Reconcile: owns for adopted actors' Story Element Items. */
   contributor: LifecycleContributor;
@@ -236,27 +253,27 @@ export function createAdopt(deps: AdoptDeps): Adopt {
   /** The Story Element this doc already is (or the one its Companion / Scene belongs to). */
   function existingOf(c: Candidate): StoryElement | undefined {
     if (c.kind === 'scene') {
-      const el = element(c.scene.flags.silk?.sceneOf);
-      return el && scenes.scenes().find((s) => s.flags.silk?.sceneOf === el.id)?._id === c.scene._id
+      const el = element(c.scene.flags.garn?.sceneOf);
+      return el && scenes.scenes().find((s) => s.flags.garn?.sceneOf === el.id)?._id === c.scene._id
         ? el
         : undefined;
     }
-    const silk = c.doc.flags.silk;
-    const el = element(silk.id);
+    const garn = c.doc.flags.garn;
+    const el = element(garn.id);
     if (el?.uuid === c.doc.uuid) return el;
-    const owner = element(silk.companionOf);
+    const owner = element(garn.companionOf);
     const main = owner?.uuid ? docs.get(owner.uuid) : undefined;
-    return owner && main?.flags.silk.companion === c.doc._id ? owner : undefined;
+    return owner && main?.flags.garn.companion === c.doc._id ? owner : undefined;
   }
 
-  /** A copied Silk id (or other Silk flags) on a doc that is no Story Element. */
+  /** A copied Garn id (or other Garn flags) on a doc that is no Story Element. */
   async function stripStale(c: Candidate) {
     if (c.kind === 'scene') {
-      if (Object.keys(c.scene.flags.silk ?? {}).length)
-        await scenes.update(c.scene._id, { 'flags.-=silk': null });
+      if (Object.keys(c.scene.flags.garn ?? {}).length)
+        await scenes.update(c.scene._id, { 'flags.-=garn': null });
       return;
     }
-    if (Object.keys(c.doc.flags.silk).length) await docs.unflag(c.doc.uuid);
+    if (Object.keys(c.doc.flags.garn).length) await docs.unflag(c.doc.uuid);
   }
 
   async function writeElement(id: string, data: ElementData) {
@@ -272,7 +289,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
   function resolveClass(c: Candidate, wanted: string | undefined): ElementClassId {
     const inference = inferOf(c);
     if ('refused' in inference)
-      throw new Error(deps.localize('SILK.Adopt.Refused', { name: nameOf(c) }));
+      throw new Error(deps.localize('GARN.Adopt.Refused', { name: nameOf(c) }));
     if (!wanted) return bulkClass(inference) as ElementClassId;
     const allowed =
       c.kind === 'scene'
@@ -284,7 +301,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
           });
     const cls = elementClass(wanted)?.id;
     if (!cls || !allowed.includes(cls))
-      throw new Error(deps.localize('SILK.Adopt.WrongClass', { name: nameOf(c), class: wanted }));
+      throw new Error(deps.localize('GARN.Adopt.WrongClass', { name: nameOf(c), class: wanted }));
     return cls;
   }
 
@@ -303,19 +320,33 @@ export function createAdopt(deps: AdoptDeps): Adopt {
 
   /** Link flags and layout pieces onto the doc; Actor/Item get their Companion Journal. */
   async function linkDoc(id: string, cls: ElementClassId, doc: DocSnapshot, ghost?: StoryElement) {
-    const flags: SilkDocFlags = { id };
+    const flags: GarnDocFlags = { id };
+    // v1.1 §G.3.1: an adopted actor's look as it came in, before any hood.
+    if (doc.documentName === 'Actor')
+      flags.original = doc.flags.garn.original ?? originalLook(doc as PortraitDoc);
     if (hasCompanion(cls)) {
       const folder = await docs.ensureFolder(
         'JournalEntry',
         'companions',
-        deps.localize('SILK.Folder.companions'),
+        deps.localize('GARN.Folder.companions'),
       );
       const sheet = ghost ? readSheet(wc().get(sheetId(ghost.id))) : undefined;
       const companionId = deps.newId();
       const connections = connectionsPage(deps.newId(), ctx);
       const notes = playerNotesCategory(deps.newId(), ctx);
-      // A Ghost brings its Info Blocks; a fresh Adopt starts empty (no default blocks).
-      const blocks: PageData[] = (ghost?.infoBlocks ?? []).map((b, i) =>
+      // A Ghost brings its Info Blocks. A fresh Adopt gets no default blocks, except the
+      // Appearance of a Person/Creature (v1.1 §C.2; hooded below unless players see it).
+      const fresh: InfoBlock[] = hasAppearanceClass(cls)
+        ? [
+            {
+              _id: deps.newId(),
+              name: deps.localize('GARN.InfoBlock.Appearance'),
+              text: '',
+              appearance: true,
+            },
+          ]
+        : [];
+      const blocks: PageData[] = (ghost?.infoBlocks ?? fresh).map((b, i) =>
         blockPage(b, (i + 1) * SORT_STEP),
       );
       const companion = sheet?.companion
@@ -325,7 +356,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
             name: doc.name,
             folder,
             flags: {
-              silk: { companionOf: id, connections: connections._id, playerNotes: notes._id },
+              garn: { companionOf: id, connections: connections._id, playerNotes: notes._id },
             },
             pages: [...blocks, connections],
             categories: [notes],
@@ -336,7 +367,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
         folder,
         ownership: { default: OWNERSHIP_NONE },
       });
-      companion.flags = { ...companion.flags, silk: { ...companion.flags.silk, companionOf: id } };
+      companion.flags = { ...companion.flags, garn: { ...companion.flags.garn, companionOf: id } };
       await docs.create('JournalEntry', companion);
       flags.companion = companion._id;
     } else {
@@ -346,11 +377,11 @@ export function createAdopt(deps: AdoptDeps): Adopt {
       if (cls === 'quest' && quest && key)
         Object.assign(flags, { quest: quest._id, questKey: key });
       const add = missingLayout(
-        { flags: { silk: flags }, pages: doc.pages ?? [], categories: doc.categories ?? [] },
+        { flags: { garn: flags }, pages: doc.pages ?? [], categories: doc.categories ?? [] },
         { class: cls, name: doc.name, img: undefined, status: undefined },
         ctx,
       );
-      // No Cover: the journal keeps its own first page (Silk writes as little as possible).
+      // No Cover: the journal keeps its own first page (Garn writes as little as possible).
       const cover = add.flags.cover;
       delete add.flags.cover;
       const pages = add.pages.filter((p) => p._id !== cover);
@@ -358,14 +389,22 @@ export function createAdopt(deps: AdoptDeps): Adopt {
       if (pages.length) await docs.createPages(doc.uuid, pages);
       Object.assign(flags, add.flags);
     }
-    await docs.update(doc.uuid, { flags: { silk: flags } });
+    await docs.update(doc.uuid, { flags: { garn: flags } });
     if (cls === 'quest') await docs.registerQuestJournal(doc.uuid, doc.name);
   }
 
-  /** §8: a doc players can already see counts as Revealed (ownership untouched). */
-  async function revealVisible(id: string, doc: DocSnapshot) {
+  /**
+   * §8: a doc players can already see counts as Revealed (ownership untouched), and so does
+   * a Person/Creature's Appearance; one they can't see yet is hooded (v1.1 §C.2).
+   */
+  async function revealVisible(id: string, cls: ElementClassId, doc: DocSnapshot) {
     const ownership = doc.ownership as Record<string, number> | undefined;
-    if (!deps.markRevealed || !playersSee(ownership, deps.foundry.isPlayer, LIMITED)) return;
+    const seen = playersSee(ownership, deps.foundry.isPlayer, LIMITED);
+    if (!seen) {
+      if (hasAppearanceClass(cls)) await deps.hood?.(id);
+      return;
+    }
+    if (!deps.markRevealed) return;
     const infoBlocks =
       doc.documentName === 'JournalEntry'
         ? (element(id)?.infoBlocks ?? [])
@@ -375,7 +414,9 @@ export function createAdopt(deps: AdoptDeps): Adopt {
             })
             .map((b) => b._id)
         : [];
-    await deps.markRevealed({ elements: [id], infoBlocks });
+    const el = element(id);
+    const appearance = el && appearanceBlock(el) ? [id] : [];
+    await deps.markRevealed({ elements: [id], infoBlocks, appearance });
   }
 
   /** owns for every Story Element Item embedded in a Story Element actor (§6 Connections). */
@@ -414,7 +455,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     const actorOf = (actorId: string | null) =>
       all.find((el) => PRESENT.has(el.class) && el.uuid === `Actor.${actorId}`);
     for (const scene of scenes.scenes()) {
-      const event = all.find((el) => el.id === scene.flags.silk?.sceneOf);
+      const event = all.find((el) => el.id === scene.flags.garn?.sceneOf);
       if (event?.class !== 'event') continue;
       for (const token of scene.tokens) {
         const actor = actorOf(token.actorId);
@@ -430,10 +471,25 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     at: Point,
   ) {
     const id = deps.newId();
-    await writeElement(id, { class: cls, name: c.scene.name, position: at, adopted: true });
+    // 1.1 §B.2.1 Images: img (journal Cover) = background, card image = the Scene's thumb.
+    const img = sceneBackground(c.scene as Parameters<typeof sceneBackground>[0]);
+    const own = c.scene['thumb'];
+    const thumb =
+      typeof own === 'string' && own
+        ? own
+        : img && (await deps.thumbnail?.(img).catch(() => undefined));
+    await writeElement(id, {
+      class: cls,
+      name: c.scene.name,
+      position: at,
+      adopted: true,
+      ...(img ? { img } : {}),
+      ...(thumb ? { thumb } : {}),
+    });
     await join(id, at);
     // Link first: the Materialize then finds the Scene instead of generating one.
-    await scenes.update(c.scene._id, { 'flags.silk.sceneOf': id });
+    // Adopted: config untouched, no Preset (1.1 §I).
+    await scenes.update(c.scene._id, { 'flags.garn.sceneOf': id, 'flags.garn.preset': NO_PRESET });
     if (cls === 'event') await inferPresentAt(id);
     await deps.materializer.materialize([id]);
     return id;
@@ -456,7 +512,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     await inferOwns();
     if (PRESENT.has(cls)) await inferPresentAt(id);
     await deps.afterAdopt?.(id);
-    await revealVisible(id, docs.get(doc.uuid) ?? doc);
+    await revealVisible(id, element(id)?.class ?? cls, docs.get(doc.uuid) ?? doc);
     return id;
   }
 
@@ -468,7 +524,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     bulk: boolean,
   ): Promise<{ id: string; name: string; existing?: boolean } | null> {
     const c = candidate(uuid);
-    if (!c) throw new Error(deps.localize('SILK.Adopt.Missing', { uuid }));
+    if (!c) throw new Error(deps.localize('GARN.Adopt.Missing', { uuid }));
     const existing = existingOf(c);
     if (existing) return { id: existing.id, name: existing.name, existing: true };
     const cls = resolveClass(c, wanted);
@@ -509,12 +565,8 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     const origin = element(args.connectTo);
     const created = element(done.id);
     if (origin && created && origin.id !== created.id) {
-      const connection = resolveCreateFrom(origin.class, created.class);
-      const made = (await deps.run('connection.create', {
-        from: origin.id,
-        to: created.id,
-        ...connection,
-      })) as { id: string };
+      const connection = resolveCreateFrom(origin, created, args.connection);
+      const made = (await deps.run('connection.create', connection)) as { id: string };
       result.connectionId = made.id;
     }
     return result;
@@ -522,7 +574,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
 
   async function adoptFolder({ folderId, confirmed }: { folderId: string; confirmed?: boolean }) {
     const root = deps.foundry.folder(folderId);
-    if (!root) throw new Error(deps.localize('SILK.Adopt.NoFolder'));
+    if (!root) throw new Error(deps.localize('GARN.Adopt.NoFolder'));
     // Rows: what will be adopted (refused docs and Story Elements are skipped).
     const rows: { uuid: string; name: string; class: ElementClassId }[] = [];
     const prune = (folder: AdoptFolder): FolderNode | undefined => {
@@ -543,7 +595,7 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     if (!tree) return { ids: [] };
     if (!confirmed && deps.confirmFolder) {
       const ok = await deps.confirmFolder(
-        rows.map((r) => ({ name: r.name, class: deps.localize(`SILK.Class.${r.class}`) })),
+        rows.map((r) => ({ name: r.name, class: deps.localize(`GARN.Class.${r.class}`) })),
       );
       if (!ok) return { ids: [] };
     }
@@ -583,9 +635,9 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     return deps.foundry
       .worldDocs()
       .filter((d) => {
-        const silk = (d.flags.silk ?? {}) as Record<string, unknown>;
-        if (silk['id'] || silk['companionOf'] || silk['sceneOf'] || silk['ignored']) return false;
-        if (silk['workingCopy'] || known.has(d.uuid)) return false;
+        const garn = (d.flags.garn ?? {}) as Record<string, unknown>;
+        if (garn['id'] || garn['companionOf'] || garn['sceneOf'] || garn['ignored']) return false;
+        if (garn['workingCopy'] || known.has(d.uuid)) return false;
         return since === null || d.createdTime > since;
       })
       .map(({ uuid, name, documentName }) => ({ uuid, name, documentName }));
@@ -593,8 +645,8 @@ export function createAdopt(deps: AdoptDeps): Adopt {
 
   async function ignore(uuid: string) {
     const sceneId = sceneIdOf(uuid);
-    if (sceneId) await scenes.update(sceneId, { 'flags.silk.ignored': true });
-    else await docs.update(uuid, { 'flags.silk.ignored': true });
+    if (sceneId) await scenes.update(sceneId, { 'flags.garn.ignored': true });
+    else await docs.update(uuid, { 'flags.garn.ignored': true });
   }
 
   const contributor: LifecycleContributor = {
@@ -621,22 +673,22 @@ export function createAdopt(deps: AdoptDeps): Adopt {
     adHoc,
     async endPlaySession() {
       const rows = await adHoc();
-      const commit = await deps.commit(deps.localize('SILK.Adopt.EndPlaySessionLabel'));
+      const commit = await deps.commit(deps.localize('GARN.Adopt.EndPlaySessionLabel'));
       if (rows.length) deps.showAdHoc?.(rows);
       return { commit, adHoc: rows };
     },
     async docCreated(doc) {
-      const silk = doc.flags.silk ?? {};
+      const garn = doc.flags.garn ?? {};
       if (doc.documentName === 'Scene') {
         const sceneId = sceneIdOf(doc.uuid);
-        const owner = silk.sceneOf;
+        const owner = garn.sceneOf;
         const original = scenes
           .scenes()
-          .find((s) => s._id !== sceneId && s.flags.silk?.sceneOf === owner);
-        if (sceneId && owner && original) await scenes.update(sceneId, { 'flags.-=silk': null });
+          .find((s) => s._id !== sceneId && s.flags.garn?.sceneOf === owner);
+        if (sceneId && owner && original) await scenes.update(sceneId, { 'flags.-=garn': null });
         return;
       }
-      if (!silk.id && !silk.companionOf) return;
+      if (!garn.id && !garn.companionOf) return;
       const c = candidate(doc.uuid);
       if (c && !existingOf(c)) await docs.unflag(doc.uuid);
     },
@@ -650,25 +702,25 @@ export function adoptCommands(adopt: Adopt): Command[] {
   return [
     {
       name: 'adopt.doc',
-      title: 'SILK.Commands.adopt.doc',
+      title: 'GARN.Commands.adopt.doc',
       available: gm,
       run: (args: AdoptDocArgs) => adopt.adoptDoc(args),
     },
     {
       name: 'adopt.folder',
-      title: 'SILK.Commands.adopt.folder',
+      title: 'GARN.Commands.adopt.folder',
       available: gm,
       run: (args: { folderId: string; confirmed?: boolean }) => adopt.adoptFolder(args),
     },
     {
       name: 'adopt.ignore',
-      title: 'SILK.Commands.adopt.ignore',
+      title: 'GARN.Commands.adopt.ignore',
       available: gm,
       run: (args: { uuid: string }) => adopt.ignore(args.uuid),
     },
     {
       name: 'history.endPlaySession',
-      title: 'SILK.Commands.history.endPlaySession',
+      title: 'GARN.Commands.history.endPlaySession',
       available: gm,
       run: () => adopt.endPlaySession(),
     },

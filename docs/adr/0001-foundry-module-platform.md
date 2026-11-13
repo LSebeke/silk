@@ -1,6 +1,6 @@
-# 1. Silk is a FoundryVTT module
+# 1. Garn is a FoundryVTT module
 
-Silk is built as a FoundryVTT module, not as a standalone app or an Obsidian plugin.
+Garn is built as a FoundryVTT module, not as a standalone app or an Obsidian plugin.
 
 ## Context
 
@@ -8,7 +8,7 @@ The GM needs World State to flow both ways between the Story and the Foundry wor
 
 ## Decision
 
-Build Silk as a Foundry module. v1 targets the Foundry versions that the DSA5 system supports. Editing the Canon outside Foundry is deferred, but the Canon should stay in a form that makes it possible later.
+Build Garn as a Foundry module. v1 targets the Foundry versions that the DSA5 system supports. Editing the Canon outside Foundry is deferred, but the Canon should stay in a form that makes it possible later.
 
 ## Consequences
 

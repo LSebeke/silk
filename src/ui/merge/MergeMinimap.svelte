@@ -31,11 +31,11 @@
   const same = (a: At | undefined, b: At | undefined) => !!a && !!b && a.x === b.x && a.y === b.y;
 </script>
 
-<figure class="silk-merge-minimap" data-silk-merge-minimap>
+<figure class="garn-merge-minimap" data-garn-merge-minimap>
   <svg viewBox="0 0 {width} {height}" preserveAspectRatio="xMidYMid meet">
     <rect x="0" y="0" {width} {height} class="frame" stroke-width={r / 4} />
     {#each tokens as tok (tok.id)}
-      <g data-silk-merge-minimap-token={tok.id}>
+      <g data-garn-merge-minimap-token={tok.id}>
         <title>{tok.label}</title>
         {#if tok.base && tok.ours && !same(tok.base, tok.ours)}
           <line
@@ -70,14 +70,14 @@
     {/each}
   </svg>
   <figcaption>
-    ○ {t('SILK.Merge.Base')} · <span class="ours-text">●</span>
-    {t('SILK.Merge.CanonNow')} · <span class="theirs-text">●</span>
-    {t('SILK.Merge.Adventure')}
+    ○ {t('GARN.Merge.Base')} · <span class="ours-text">●</span>
+    {t('GARN.Merge.CanonNow')} · <span class="theirs-text">●</span>
+    {t('GARN.Merge.Adventure')}
   </figcaption>
 </figure>
 
 <style>
-  .silk-merge-minimap {
+  .garn-merge-minimap {
     margin: 0.4rem 0;
   }
   svg {

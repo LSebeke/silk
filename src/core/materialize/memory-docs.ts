@@ -6,12 +6,15 @@ import type {
   DocumentName,
   FolderKey,
   FoundryDocs,
+  ImportData,
   PageData,
 } from './port';
 
 export interface MemoryDocs extends FoundryDocs {
   /** All docs, by uuid. Mutate to simulate Foundry-side edits. */
   readonly docs: Map<string, DocSnapshot>;
+  /** Compendium entries by uuid, as `importData` returns them. */
+  readonly compendium: Map<string, ImportData>;
   readonly folders: { id: string; type: DocumentName; key: FolderKey; name: string }[];
   readonly opened: string[];
   /** DSA5 `questlogJournals` stand-in. */
@@ -53,6 +56,7 @@ export function applyUpdate(target: Record<string, unknown>, data: Record<string
 
 export function createMemoryDocs(): MemoryDocs {
   const docs = new Map<string, DocSnapshot>();
+  const compendium = new Map<string, ImportData>();
   const folders: MemoryDocs['folders'] = [];
   const opened: string[] = [];
   const questJournals: MemoryDocs['questJournals'] = [];
@@ -71,6 +75,7 @@ export function createMemoryDocs(): MemoryDocs {
 
   return {
     docs,
+    compendium,
     folders,
     opened,
     questJournals,
@@ -94,6 +99,7 @@ export function createMemoryDocs(): MemoryDocs {
         if (key === uuid || key.startsWith(`${uuid}.`)) docs.delete(key);
     },
     get: (uuid) => (docs.has(uuid) ? clone(must(uuid)) : undefined),
+    importData: async (uuid) => (compendium.has(uuid) ? clone(compendium.get(uuid)) : undefined),
     journal: (id) =>
       docs.has(`JournalEntry.${id}`) ? clone(must(`JournalEntry.${id}`)) : undefined,
     async update(uuid, data) {
@@ -132,11 +138,11 @@ export function createMemoryDocs(): MemoryDocs {
     },
     async unflag(uuid) {
       const doc = must(uuid);
-      doc.flags = { ...doc.flags, silk: {} };
+      doc.flags = { ...doc.flags, garn: {} };
     },
-    async open(uuid) {
+    async open(uuid, pageId) {
       must(uuid);
-      opened.push(uuid);
+      opened.push(pageId ? `${uuid}.JournalEntryPage.${pageId}` : uuid);
     },
   };
 }

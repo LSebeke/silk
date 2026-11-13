@@ -1,11 +1,11 @@
 /**
  * Foundry side of Materialize (spec §6, §7): the real `FoundryApi`, and the hooks that let
  * Foundry edits flow back into Story Elements. Hooks fire on every client; only the
- * active GM mirrors, and Silk's own writes (tagged `SILK_WRITE`) are skipped.
+ * active GM mirrors, and Garn's own writes (tagged `GARN_WRITE`) are skipped.
  */
 import type { Materializer } from '../core/materialize';
 import type { FoundryApi, FoundryDoc, FoundryDocumentClass } from './foundry-docs';
-import { isSilkWrite } from './working-copy-journal';
+import { isGarnWrite } from './working-copy-journal';
 
 /** `FoundryApi` over the running Foundry. Globals are read lazily, per call. */
 export function foundryApi(): FoundryApi {
@@ -14,6 +14,18 @@ export function foundryApi(): FoundryApi {
       (CONFIG as unknown as Record<string, { documentClass: FoundryDocumentClass }>)[name]
         ?.documentClass as FoundryDocumentClass,
     fromUuid: (uuid) => fromUuidSync(uuid) as FoundryDoc | null,
+    async importData(uuid) {
+      // The data half of a normal Foundry import (`importFromCompendium`): no id, folder,
+      // sort or ownership; `_stats.compendiumSource` set.
+      const entry = (await fromUuid(uuid)) as unknown as {
+        pack?: string;
+        documentName: string;
+      } | null;
+      if (!entry?.pack) return undefined;
+      const collection = game.collections?.get(entry.documentName as never) as unknown as
+        { fromCompendium(doc: unknown, options?: object): object } | undefined;
+      return collection?.fromCompendium(entry);
+    },
     journal: (id) => game.journal?.get(id) as unknown as FoundryDoc | undefined,
     folders: () => (game.folders ?? []) as never,
     replace: (value) => foundry.data.operators.ForcedReplacement.create(value) as object,
@@ -51,7 +63,7 @@ export function registerMaterializeHooks(
   },
 ): void {
   const handle = (doc: unknown, options: unknown, embedded: boolean) => {
-    if (!deps.isActiveGM() || isSilkWrite(options)) return;
+    if (!deps.isActiveGM() || isGarnWrite(options)) return;
     const id = hookedElementId(materializer, doc as Doc, embedded);
     if (id) materializer.sync(id).catch((error: unknown) => console.error(error));
   };

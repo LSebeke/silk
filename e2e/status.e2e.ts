@@ -4,37 +4,37 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
 
 const status = (page: Page, id: string) =>
   page.evaluate(
-    (i) => game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['status'] ?? null,
+    (i) => game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data['status'] ?? null,
     id,
   );
 
 async function ready(page: Page) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
   await page.evaluate(async () => {
-    const wc = game.modules?.get('silk')?.session?.().workingCopy;
+    const wc = game.modules?.get('garn')?.session?.().workingCopy;
     await wc?.delete([...(wc.records().keys() ?? [])]);
-    await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
-    await game.settings?.set('silk', 'materializeMode', 'immediate');
+    await game.settings?.set('garn', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
+    await game.settings?.set('garn', 'materializeMode', 'immediate');
   });
 }
 
 /** The element's actor (Foundry doc), evaluated in the page. */
 const isDead = (page: Page, id: string) =>
   page.evaluate((i) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data['uuid'];
     return !!(fromUuidSync(uuid as string) as any)?.hasCondition('dead');
   }, id);
 
@@ -52,7 +52,7 @@ async function closePopups(page: Page) {
   });
 }
 
-const card = (page: Page, name: string) => page.locator('[data-silk-node]', { hasText: name });
+const card = (page: Page, name: string) => page.locator('[data-garn-node]', { hasText: name });
 
 test('Person dead ↔ dsa5 dead condition, both ways; s with y/n confirm; Status chip', async ({
   gm,
@@ -66,14 +66,14 @@ test('Person dead ↔ dsa5 dead condition, both ways; s with y/n confirm; Status
   });
   await closePopups(gm);
   await api(gm, 'canvas.open');
-  const chip = card(gm, 'Alrik').locator('[data-silk-status]');
-  await expect(chip).toHaveAttribute('data-silk-status', 'alive');
+  const chip = card(gm, 'Alrik').locator('[data-garn-status]');
+  await expect(chip).toHaveAttribute('data-garn-status', 'alive');
 
   // `s`, then n: nothing changes (default n).
   await card(gm, 'Alrik').locator('.portrait').click();
   await expect(card(gm, 'Alrik')).toHaveClass(/selected/);
   await gm.keyboard.press('KeyS');
-  const prompt = gm.locator('[data-silk-status-confirm]');
+  const prompt = gm.locator('[data-garn-status-confirm]');
   await expect(prompt).toContainText('Alrik');
   await gm.keyboard.press('Enter');
   await expect(prompt).toHaveCount(0);
@@ -84,19 +84,19 @@ test('Person dead ↔ dsa5 dead condition, both ways; s with y/n confirm; Status
   await expect(prompt).toBeVisible();
   await gm.keyboard.press('KeyY');
   await expect.poll(() => isDead(gm, id)).toBe(true);
-  await expect(chip).toHaveAttribute('data-silk-status', 'dead');
+  await expect(chip).toHaveAttribute('data-garn-status', 'dead');
 
   // Foundry side: the GM removes the condition on the actor → the element is alive again.
   await gm.evaluate(async (i) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data['uuid'];
     await (fromUuidSync(uuid as string) as any).removeCondition('dead');
   }, id);
   await expect.poll(() => status(gm, id)).toBe(null);
-  await expect(chip).toHaveAttribute('data-silk-status', 'alive');
+  await expect(chip).toHaveAttribute('data-garn-status', 'alive');
 
   // And adds it again (as from the token HUD).
   await gm.evaluate(async (i) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data['uuid'];
     await (fromUuidSync(uuid as string) as any).addCondition('dead');
   }, id);
   await expect.poll(() => status(gm, id)).toBe('dead');
@@ -105,11 +105,11 @@ test('Person dead ↔ dsa5 dead condition, both ways; s with y/n confirm; Status
   await gm.evaluate(() => ui.notifications?.clear());
   await chip.click();
   await expect(prompt).toBeVisible();
-  await gm.locator('[data-silk-action="status-yes"]').click();
+  await gm.locator('[data-garn-action="status-yes"]').click();
   await expect.poll(() => isDead(gm, id)).toBe(false);
-  await expect(chip).toHaveAttribute('data-silk-status', 'alive');
+  await expect(chip).toHaveAttribute('data-garn-status', 'alive');
 
-  await gm.evaluate(() => foundry.applications.instances.get('silk-canvas')?.close());
+  await gm.evaluate(() => foundry.applications.instances.get('garn-canvas')?.close());
 });
 
 test('Quest: status ↔ dsaquestlog status, questlogJournals; Event planned/happened/skipped', async ({
@@ -123,9 +123,9 @@ test('Quest: status ↔ dsaquestlog status, questlogJournals; Event planned/happ
   });
   const quest = () =>
     gm.evaluate((i) => {
-      const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['uuid'];
+      const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data['uuid'];
       const doc = fromUuidSync(uuid as string) as any;
-      const q = doc.pages.get(doc.flags.silk.quest).system.quests[doc.flags.silk.questKey];
+      const q = doc.pages.get(doc.flags.garn.quest).system.quests[doc.flags.garn.questKey];
       const journals = (game.settings as any).get('dsa5', 'questlogJournals').activated;
       return { status: q.status, registered: journals.some((j: any) => j.uuid === uuid) };
     }, id);
@@ -139,11 +139,11 @@ test('Quest: status ↔ dsaquestlog status, questlogJournals; Event planned/happ
 
   // Edited in the DSA5 quest log: flows back.
   await gm.evaluate(async (i) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data['uuid'];
     const doc = fromUuidSync(uuid as string) as any;
     await doc.pages
-      .get(doc.flags.silk.quest)
-      .update({ [`system.quests.${doc.flags.silk.questKey}.status`]: 1 });
+      .get(doc.flags.garn.quest)
+      .update({ [`system.quests.${doc.flags.garn.questKey}.status`]: 1 });
   }, id);
   await expect.poll(() => status(gm, id)).toBe('done');
 

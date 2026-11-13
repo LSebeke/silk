@@ -78,8 +78,8 @@ describe('Join Campaigns (spec §11.5)', () => {
     expect(view.title).toEqual({ adventure: 'Phileasson', campaign: 'Borbarad' });
     expect(view.columns).toEqual({
       base: '',
-      ours: 'SILK.Merge.Target',
-      theirs: 'SILK.Merge.Source',
+      ours: 'GARN.Merge.Target',
+      theirs: 'GARN.Merge.Source',
     });
     expect(view.counts.open).toBe(0);
     const g = view.records.find((r) => r.id === 'el-gareth');

@@ -12,10 +12,23 @@ export type Dsa5ActorType = 'character' | 'npc' | 'creature' | 'group' | 'vehicl
 /** `DSA5.merchantTypes`. */
 export type Dsa5MerchantType = 'none' | 'merchant' | 'loot' | 'epic';
 
-/** The slice of actor `system` Silk reads/writes. */
+/** `DSA5.tokenSizeCategories` keys. */
+export type Dsa5Size = 'tiny' | 'small' | 'average' | 'big' | 'giant';
+
+/** The slice of actor `system` Garn reads/writes. */
 export interface Dsa5ActorSystem {
   merchant?: { merchantType?: Dsa5MerchantType };
+  status?: { size?: { value?: Dsa5Size } };
 }
+
+/** `DSA5.tokenSizeCategories` (config-dsa5.js). */
+const TOKEN_SIZES: Record<Dsa5Size, number> = {
+  tiny: 0.5,
+  small: 0.8,
+  average: 1,
+  big: 2,
+  giant: 4,
+};
 
 /** Quest status 0 open / 1 done / 2 failed; audience 0 Party / 1 players / 2 GM. */
 export interface Dsa5Quest {
@@ -26,7 +39,7 @@ export interface Dsa5Quest {
   linkedPages?: Record<string, { uuid: string; visible: boolean; sort?: number }>;
 }
 
-/** `dsaquestlog` page system data: a TypedObject of quests (Silk uses one per page). */
+/** `dsaquestlog` page system data: a TypedObject of quests (Garn uses one per page). */
 export interface Dsa5QuestlogSystem {
   quests: Record<string, Dsa5Quest>;
 }
@@ -78,6 +91,13 @@ export const dsa5Mapping: SystemMapping = {
   }),
   /** First of `DSA5.statusEffects`; set via `actor.addCondition('dead')` (§7 Dead). */
   deadEffect: 'dead',
+  sizeFactor(system) {
+    const size = (system as Dsa5ActorSystem | undefined)?.status?.size?.value;
+    // Own data: an unknown size (another system version, a hand edit) has no factor.
+    const factor = size && Object.hasOwn(TOKEN_SIZES, size) ? TOKEN_SIZES[size] : undefined;
+    // `DSA5_Utility.calcTokenSize`: below 1 the scale, above it width/height (scale 1).
+    return factor && factor < 1 ? factor : 1;
+  },
   questTitleUpdate: (questKey, title) => ({ [`system.quests.${questKey}.title`]: title }),
   questVisibility(questKey, pageSystem, visible, blocks) {
     const quest = (pageSystem as Dsa5QuestlogSystem | undefined)?.quests?.[questKey];
@@ -96,7 +116,7 @@ export const dsa5Mapping: SystemMapping = {
   },
 };
 
-const SECTION = 'SILK.Merge.Section';
+const SECTION = 'GARN.Merge.Section';
 /** Actor `system` top-level keys → the DSA5 sheet part they show on (dsa5 8.1 data models). */
 const ACTOR_SECTIONS: Record<string, string> = {
   characteristics: 'characteristics',

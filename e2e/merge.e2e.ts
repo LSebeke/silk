@@ -4,15 +4,15 @@ import type { CanonRecord } from '../src/core/canon';
 import type { CommandRegistry } from '../src/core/commands/registry';
 import { expect, test } from './fixtures';
 
-/** Runs `fn` in the page with Silk's api and session. */
-function silk<A, R>(
+/** Runs `fn` in the page with Garn's api and session. */
+function garn<A, R>(
   page: Page,
   fn: (s: { api: CommandRegistry; session: Session }, arg: A) => R | Promise<R>,
   arg?: A,
 ): Promise<R> {
   return page.evaluate(
     ([src, a]) => {
-      const mod = game.modules?.get('silk') as unknown as {
+      const mod = game.modules?.get('garn') as unknown as {
         api: CommandRegistry;
         session(): Session;
       };
@@ -41,16 +41,16 @@ test('End Adventure: resolve a conflict with a Canon edit, confirm, back on main
   test.setTimeout(240_000);
   await gm.waitForFunction(() => {
     try {
-      (game.modules?.get('silk') as unknown as { session(): unknown }).session();
+      (game.modules?.get('garn') as unknown as { session(): unknown }).session();
       return true;
     } catch {
       return false;
     }
   });
-  await gm.evaluate(() => game.settings?.set('silk', 'materializeMode', 'onDemand'));
+  await gm.evaluate(() => game.settings?.set('garn', 'materializeMode', 'onDemand'));
 
   // Bound, on clean main (an earlier test in this worker may have left an Adventure running).
-  const ids = await silk(gm, async ({ api, session }) => {
+  const ids = await garn(gm, async ({ api, session }) => {
     if (!session.workingCopy.binding) await api.run('canon.create', { name: 'E2E' });
     if ('adventure' in (session.workingCopy.binding?.checkout ?? {})) {
       await api.run('adventure.end');
@@ -69,13 +69,13 @@ test('End Adventure: resolve a conflict with a Canon edit, confirm, back on main
   });
 
   // Adventure side.
-  await silk(
+  await garn(
     gm,
     ({ api }, id) => api.run('element.rename', { id, name: 'Gareth (Adventure)' }),
     ids.gareth,
   );
   // Canon side: another World's Canon edit, committed straight to main.
-  await silk(
+  await garn(
     gm,
     async ({ session }, { gareth, ulf }) => {
       const canon = await session.history.canon();
@@ -100,47 +100,47 @@ test('End Adventure: resolve a conflict with a Canon edit, confirm, back on main
   );
 
   await closePopups(gm);
-  await silk(gm, ({ api }) => api.run('canon.openWindow'));
-  await gm.locator('[data-silk-adventure-end]').click();
+  await garn(gm, ({ api }) => api.run('canon.openWindow'));
+  await gm.locator('[data-garn-adventure-end]').click();
 
-  const win = gm.locator('[data-silk-merge]');
+  const win = gm.locator('[data-garn-merge]');
   // Under load (other agents' Foundry runs) the first render takes a while.
   await expect(win).toBeVisible({ timeout: 90_000 });
-  await expect(win.locator('[data-silk-merge-title]')).toContainText('Blutige Klinge');
-  await expect(win.locator('[data-silk-merge-count="conflict"]')).toContainText('1');
-  await expect(win.locator(`[data-silk-merge-node="${ids.gareth}"]`)).toHaveAttribute(
-    'data-silk-merge-badge',
+  await expect(win.locator('[data-garn-merge-title]')).toContainText('Blutige Klinge');
+  await expect(win.locator('[data-garn-merge-count="conflict"]')).toContainText('1');
+  await expect(win.locator(`[data-garn-merge-node="${ids.gareth}"]`)).toHaveAttribute(
+    'data-garn-merge-badge',
     'conflict',
   );
-  const confirm = win.locator('[data-silk-merge-confirm]');
+  const confirm = win.locator('[data-garn-merge-confirm]');
   await expect(confirm).toBeDisabled();
 
   // ⏎ = Next conflict: opens Gareth's drawer.
   await win.focus();
   await gm.keyboard.press('Enter');
-  const drawer = win.locator(`[data-silk-merge-drawer="${ids.gareth}"]`);
+  const drawer = win.locator(`[data-garn-merge-drawer="${ids.gareth}"]`);
   await expect(drawer).toBeVisible({ timeout: 30_000 });
-  const row = drawer.locator('[data-silk-merge-field="/name"]');
-  await expect(row.locator('[data-silk-merge-cell="ours"]')).toContainText('Gareth (Canon)');
-  await row.locator('[data-silk-merge-cell="theirs"]').click();
-  await expect(row.locator('[data-silk-merge-result]')).toContainText('Gareth (Adventure)', {
+  const row = drawer.locator('[data-garn-merge-field="/name"]');
+  await expect(row.locator('[data-garn-merge-cell="ours"]')).toContainText('Gareth (Canon)');
+  await row.locator('[data-garn-merge-cell="theirs"]').click();
+  await expect(row.locator('[data-garn-merge-result]')).toContainText('Gareth (Adventure)', {
     timeout: 30_000,
   });
 
   // The draft is in the World.
-  const picks = await silk(gm, ({ session }) => session.workingCopy.meta('mergeDraft'));
+  const picks = await garn(gm, ({ session }) => session.workingCopy.meta('mergeDraft'));
   expect(picks).toMatchObject({
     picks: [{ recordId: ids.gareth, field: '/name', side: 'theirs' }],
   });
 
   await expect(confirm).toBeEnabled({ timeout: 30_000 });
   await confirm.click();
-  const dialog = gm.locator('#silk-merge-confirm');
+  const dialog = gm.locator('#garn-merge-confirm');
   await expect(dialog).toContainText('no undo');
   await dialog.locator('button[data-action="yes"]').click();
   await expect(win).toHaveCount(0, { timeout: 30_000 });
 
-  const after = await silk(
+  const after = await garn(
     gm,
     async ({ session }, { gareth, ulf }) => {
       const canon = await session.history.canon();
@@ -168,7 +168,7 @@ test('End Adventure: resolve a conflict with a Canon edit, confirm, back on main
     draft: null,
   });
   expect(after.binding?.head).toBe(after.head);
-  await expect(gm.locator('[data-silk-checkout]')).toContainText('main');
+  await expect(gm.locator('[data-garn-checkout]')).toContainText('main');
 });
 
 test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layout, attribution', async ({
@@ -177,16 +177,16 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
   test.setTimeout(300_000);
   await gm.waitForFunction(() => {
     try {
-      (game.modules?.get('silk') as unknown as { session(): unknown }).session();
+      (game.modules?.get('garn') as unknown as { session(): unknown }).session();
       return true;
     } catch {
       return false;
     }
   });
-  await gm.evaluate(() => game.settings?.set('silk', 'materializeMode', 'onDemand'));
+  await gm.evaluate(() => game.settings?.set('garn', 'materializeMode', 'onDemand'));
 
   // Main: Materialized Ulf (with a torch) present at a Materialized Event with its Scene.
-  const ids = await silk(gm, async ({ api, session }) => {
+  const ids = await garn(gm, async ({ api, session }) => {
     if (!session.workingCopy.binding) await api.run('canon.create', { name: 'E2E' });
     if ('adventure' in (session.workingCopy.binding?.checkout ?? {})) {
       await api.run('adventure.end');
@@ -205,12 +205,12 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
     };
     await actor.createEmbeddedDocuments(
       'Item',
-      [{ _id: 'silktorch0000001', name: 'Torch', type: 'equipment' }],
+      [{ _id: 'garntorch0000001', name: 'Torch', type: 'equipment' }],
       { keepId: true },
     );
     for (let i = 0; i < 100; i++) {
       const scene = game.scenes?.find(
-        (s) => (s.flags as { silk?: { sceneOf?: string } }).silk?.sceneOf === brawl,
+        (s) => (s.flags as { garn?: { sceneOf?: string } }).garn?.sceneOf === brawl,
       );
       if (scene && scene.tokens.size) break;
       await new Promise((r) => setTimeout(r, 200));
@@ -219,7 +219,7 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
     const campaign = await session.campaigns.create({ name: 'Freitagsrunde' });
     await api.run('adventure.start', { name: 'Schatten', campaignId: campaign.id });
     const scene = game.scenes?.find(
-      (s) => (s.flags as { silk?: { sceneOf?: string } }).silk?.sceneOf === brawl,
+      (s) => (s.flags as { garn?: { sceneOf?: string } }).garn?.sceneOf === brawl,
     );
     return {
       ulf,
@@ -231,7 +231,7 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
   });
 
   // Adventure side: Ulf's token and Node move.
-  await silk(
+  await garn(
     gm,
     async ({ session }, { ulf, scene, token }) => {
       await game.scenes?.get(scene)?.tokens.get(token)?.update({ x: 1000, y: 1000 });
@@ -241,7 +241,7 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
     ids,
   );
   // Canon side (another World): a sword in Ulf's sheet, his token and Node elsewhere, a wall.
-  await silk(
+  await garn(
     gm,
     async ({ session }, { ulf, brawl, token }) => {
       const canon = await session.history.canon();
@@ -250,7 +250,7 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
       const snapshot = new Map(await canon.readSnapshot(head));
       const sheet = structuredClone(snapshot.get(`${ulf}-sheet`) as CanonRecord);
       const doc = sheet.data.doc as { items: object[] };
-      doc.items.push({ _id: 'silksword0000001', name: 'Sword', type: 'equipment', system: {} });
+      doc.items.push({ _id: 'garnsword0000001', name: 'Sword', type: 'equipment', system: {} });
       snapshot.set(sheet.id, sheet);
       const record = structuredClone(snapshot.get(`${brawl}-scene`) as CanonRecord);
       const data = record.data.scene as {
@@ -259,7 +259,7 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
       };
       const t = data.tokens.find((x) => x._id === token);
       if (t) Object.assign(t, { x: 200, y: 400 });
-      data.walls = [...(data.walls ?? []), { _id: 'silkwall00000001', c: [100, 100, 600, 100] }];
+      data.walls = [...(data.walls ?? []), { _id: 'garnwall00000001', c: [100, 100, 600, 100] }];
       snapshot.set(record.id, record);
       const el = snapshot.get(ulf) as CanonRecord;
       snapshot.set(ulf, { ...el, data: { ...el.data, position: { x: -400, y: 0 } } });
@@ -275,66 +275,66 @@ test('Merge UI: sheet sections, embedded Items, Event Scene tokens + walls, layo
   );
 
   await closePopups(gm);
-  await silk(gm, ({ api }) => api.run('canon.openWindow'));
-  await gm.locator('[data-silk-adventure-end]').click();
-  const win = gm.locator('[data-silk-merge]');
+  await garn(gm, ({ api }) => api.run('canon.openWindow'));
+  await gm.locator('[data-garn-adventure-end]').click();
+  const win = gm.locator('[data-garn-merge]');
   await expect(win).toBeVisible({ timeout: 90_000 });
   // Layout: a move count, and an outline where the Canon has Ulf's Node.
-  await expect(win.locator('[data-silk-merge-moves]')).toBeVisible();
-  await expect(win.locator('[data-silk-merge-outline="ours"]')).toHaveCount(1);
-  await expect(win.locator(`[data-silk-merge-node="${ids.brawl}"]`)).toHaveAttribute(
-    'data-silk-merge-badge',
+  await expect(win.locator('[data-garn-merge-moves]')).toBeVisible();
+  await expect(win.locator('[data-garn-merge-outline="ours"]')).toHaveCount(1);
+  await expect(win.locator(`[data-garn-merge-node="${ids.brawl}"]`)).toHaveAttribute(
+    'data-garn-merge-badge',
     'conflict',
   );
 
   // The wall and the sword are Canon-only: show them.
-  await win.locator('[data-silk-merge-canon-only]').check({ timeout: 30_000 });
+  await win.locator('[data-garn-merge-canon-only]').check({ timeout: 30_000 });
 
   // Event Scene: minimap, one token row (conflict), a walls count row.
   // ⏎ (the world is shared with the test above: Brawl's Node may sit under Gareth's).
   await win.focus();
   await gm.keyboard.press('Enter');
-  const drawer = win.locator(`[data-silk-merge-drawer="${ids.brawl}"]`);
-  await expect(drawer.locator('[data-silk-merge-minimap]')).toBeVisible({ timeout: 30_000 });
-  const tokenRow = drawer.locator(`[data-silk-merge-field="/scene/tokens/${ids.token}"]`);
-  await expect(tokenRow).toHaveAttribute('data-silk-merge-kind', 'token');
-  await expect(tokenRow.locator('[data-silk-merge-cell="ours"]')).toContainText('(200, 400)');
-  await expect(tokenRow.locator('[data-silk-merge-by]')).toContainText('Canon edit');
-  const walls = drawer.locator('[data-silk-merge-field="/scene/walls"]');
-  await expect(walls).toHaveAttribute('data-silk-merge-kind', 'count');
-  await expect(walls.locator('[data-silk-merge-result]')).toContainText('1');
-  await tokenRow.locator('[data-silk-merge-cell="ours"]').click();
-  await expect(tokenRow.locator('[data-silk-merge-result]')).toContainText('(200, 400)', {
+  const drawer = win.locator(`[data-garn-merge-drawer="${ids.brawl}"]`);
+  await expect(drawer.locator('[data-garn-merge-minimap]')).toBeVisible({ timeout: 30_000 });
+  const tokenRow = drawer.locator(`[data-garn-merge-field="/scene/tokens/${ids.token}"]`);
+  await expect(tokenRow).toHaveAttribute('data-garn-merge-kind', 'token');
+  await expect(tokenRow.locator('[data-garn-merge-cell="ours"]')).toContainText('(200, 400)');
+  await expect(tokenRow.locator('[data-garn-merge-by]')).toContainText('Canon edit');
+  const walls = drawer.locator('[data-garn-merge-field="/scene/walls"]');
+  await expect(walls).toHaveAttribute('data-garn-merge-kind', 'count');
+  await expect(walls.locator('[data-garn-merge-result]')).toContainText('1');
+  await tokenRow.locator('[data-garn-merge-cell="ours"]').click();
+  await expect(tokenRow.locator('[data-garn-merge-result]')).toContainText('(200, 400)', {
     timeout: 30_000,
   });
 
   // Sheet: the sword under Inventory, matched by id.
-  await win.locator(`[data-silk-merge-node="${ids.ulf}"]`).click();
-  const ulfDrawer = win.locator(`[data-silk-merge-drawer="${ids.ulf}"]`);
+  await win.locator(`[data-garn-merge-node="${ids.ulf}"]`).click();
+  const ulfDrawer = win.locator(`[data-garn-merge-drawer="${ids.ulf}"]`);
   const inventory = ulfDrawer.locator(
-    '[data-silk-merge-section="SILK.Merge.Section.dsa5.inventory"]',
+    '[data-garn-merge-section="GARN.Merge.Section.dsa5.inventory"]',
   );
   await expect(inventory).toContainText('Sword', { timeout: 30_000 });
   await expect(inventory).toContainText('Inventory');
 
-  const confirm = win.locator('[data-silk-merge-confirm]');
+  const confirm = win.locator('[data-garn-merge-confirm]');
   await expect(confirm).toBeEnabled({ timeout: 30_000 });
   await confirm.click();
-  await gm.locator('#silk-merge-confirm button[data-action="yes"]').click();
+  await gm.locator('#garn-merge-confirm button[data-action="yes"]').click();
   await expect(win).toHaveCount(0, { timeout: 60_000 });
 
   // The World follows the result: the sword, the token at the Canon's spot, the wall.
-  const after = await silk(
+  const after = await garn(
     gm,
     (_s, { uuid, scene, token }) => {
       const actor = fromUuidSync(uuid) as unknown as { items: { get(id: string): unknown } };
       const s = game.scenes?.get(scene);
       const t = s?.tokens.get(token);
       return {
-        sword: !!actor.items.get('silksword0000001'),
-        torch: !!actor.items.get('silktorch0000001'),
+        sword: !!actor.items.get('garnsword0000001'),
+        torch: !!actor.items.get('garntorch0000001'),
         token: t ? { x: t.x, y: t.y } : null,
-        wall: !!s?.walls.get('silkwall00000001'),
+        wall: !!s?.walls.get('garnwall00000001'),
       };
     },
     ids,

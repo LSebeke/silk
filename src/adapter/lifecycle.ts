@@ -1,10 +1,10 @@
 /**
  * Foundry side of the element lifecycle (spec §6 Foundry-side deletion): delete hooks hand
- * the deleted doc to the core. Only the active GM reacts; Silk's own deletes are skipped.
+ * the deleted doc to the core. Only the active GM reacts; Garn's own deletes are skipped.
  */
 import type { DeletedDoc, Lifecycle } from '../core/materialize';
 import { snapshot, type FoundryDoc } from './foundry-docs';
-import { isSilkWrite } from './working-copy-journal';
+import { isGarnWrite } from './working-copy-journal';
 
 /** Scenes too: an Event Scene deletion clears its link (T13, via a lifecycle contributor). */
 const DELETED = ['Actor', 'Item', 'JournalEntry', 'Scene'];
@@ -20,7 +20,7 @@ export function registerLifecycleHooks(
     deps.on(`delete${name}`, (doc, options) => {
       const d = doc as FoundryDoc & { isToken?: boolean };
       // An unlinked token's synthetic actor carries the base actor's flags: not the element.
-      if (!deps.isActiveGM() || isSilkWrite(options) || d.isToken) return;
+      if (!deps.isActiveGM() || isGarnWrite(options) || d.isToken) return;
       const deleted = snapshot(d) as DeletedDoc | undefined;
       if (deleted) lifecycle.docDeleted(deleted).catch((error: unknown) => console.error(error));
     });
@@ -51,9 +51,9 @@ export function lifecycleDialogs(deps: {
   disable(setting: 'confirmDelete' | 'warnUnmaterializeReveal'): Promise<unknown>;
 }) {
   const L = (key: string, data?: Record<string, string>) =>
-    deps.localize(`SILK.Lifecycle.${key}`, data);
+    deps.localize(`GARN.Lifecycle.${key}`, data);
   const dontAsk = () =>
-    `<label class="silk-dont-ask"><input type="checkbox" name="dontAsk" data-silk-dont-ask> ${L('DontAsk')}</label>`;
+    `<label class="garn-dont-ask"><input type="checkbox" name="dontAsk" data-garn-dont-ask> ${L('DontAsk')}</label>`;
   /** Runs `answer` with the checkbox state when a button is pressed. */
   const press =
     <T>(answer: T, setting: 'confirmDelete' | 'warnUnmaterializeReveal') =>

@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
@@ -12,12 +12,12 @@ const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
 async function ready(page: Page) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
   });
-  await page.evaluate(() => game.settings?.set('silk', 'materializeMode', 'immediate'));
+  await page.evaluate(() => game.settings?.set('garn', 'materializeMode', 'immediate'));
 }
 
 const create = async (page: Page, cls: string, name: string, from?: string) =>
@@ -32,12 +32,12 @@ const create = async (page: Page, cls: string, name: string, from?: string) =>
 /** The element's Scene and journal link, as Foundry has them. */
 const sceneOf = (page: Page, id: string) =>
   page.evaluate((elementId) => {
-    const wc = game.modules?.get('silk')?.session?.().workingCopy;
+    const wc = game.modules?.get('garn')?.session?.().workingCopy;
     const el = wc?.get(elementId)?.data as any;
     const journal = el?.uuid ? (fromUuidSync(el.uuid) as any) : null;
-    const scene = (game.scenes as any)?.find((s: any) => s.flags.silk?.sceneOf === elementId);
+    const scene = (game.scenes as any)?.find((s: any) => s.flags.garn?.sceneOf === elementId);
     return {
-      link: journal?.flags.silk?.scene ?? null,
+      link: journal?.flags.garn?.scene ?? null,
       status: (el?.status as string | undefined) ?? null,
       scene: scene
         ? {
@@ -54,13 +54,13 @@ const sceneOf = (page: Page, id: string) =>
 
 const actorId = (page: Page, id: string) =>
   page.evaluate((elementId) => {
-    const uuid = game.modules?.get('silk')?.session?.().workingCopy.get(elementId)?.data['uuid'];
+    const uuid = game.modules?.get('garn')?.session?.().workingCopy.get(elementId)?.data['uuid'];
     return (fromUuidSync(uuid as string) as any).id as string;
   }, id);
 
 const presentAt = (page: Page, event: string) =>
   page.evaluate((eventId) => {
-    const records = game.modules?.get('silk')?.session?.().workingCopy.records() as Map<
+    const records = game.modules?.get('garn')?.session?.().workingCopy.records() as Map<
       string,
       any
     >;
@@ -115,10 +115,10 @@ test('Event Scene: Narrative preset, present at ↔ hidden tokens, Happened, del
 
   // Journal: Scene link + Activate (GM). Activate → active + Happened.
   await api(gm, 'element.openSheet', { id: ambush });
-  const bar = gm.locator('[data-silk-scene-bar]').first();
-  await expect(bar.locator('[data-silk-scene-link]')).toContainText('Scene Ambush');
+  const bar = gm.locator('[data-garn-scene-bar]').first();
+  await expect(bar.locator('[data-garn-scene-link]')).toContainText('Scene Ambush');
   // dispatchEvent: a real click on the journal sheet never settles here (Playwright hangs).
-  await bar.locator('[data-silk-activate-scene]').dispatchEvent('click');
+  await bar.locator('[data-garn-activate-scene]').dispatchEvent('click');
   await expect
     .poll(async () => (await sceneOf(gm, ambush)).scene?.active, { timeout: 30_000 })
     .toBe(true);
@@ -129,10 +129,10 @@ test('Event Scene: Narrative preset, present at ↔ hidden tokens, Happened, del
   await expect.poll(async () => (await sceneOf(gm, ambush)).link).toBeNull();
   expect(await presentAt(gm, ambush)).toEqual([alrik]);
   await api(gm, 'element.openSheet', { id: ambush });
-  const none = gm.locator('[data-silk-scene-bar]').first();
-  await expect(none.locator('[data-silk-no-scene]')).toBeVisible();
-  await expect(none.locator('[data-silk-restore-scene]')).toBeVisible();
-  await none.locator('[data-silk-create-scene]').dispatchEvent('click');
+  const none = gm.locator('[data-garn-scene-bar]').first();
+  await expect(none.locator('[data-garn-no-scene]')).toBeVisible();
+  await expect(none.locator('[data-garn-restore-scene]')).toBeVisible();
+  await none.locator('[data-garn-create-scene]').dispatchEvent('click');
   await expect
     .poll(async () => (await sceneOf(gm, ambush)).scene?.tokens, { timeout: 30_000 })
     .toEqual([{ actorId: alrikActor, hidden: true }]);

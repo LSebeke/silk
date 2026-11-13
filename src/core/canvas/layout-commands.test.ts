@@ -15,7 +15,8 @@ function setup(records: CanonRecord[] = []) {
   const registry = createRegistry(() => ({ isGM: true }));
   let n = 0;
   const deps = { workingCopy: () => workingCopy, state };
-  for (const c of canvasCoreCommands(deps)) registry.register(c);
+  for (const c of canvasCoreCommands({ ...deps, run: (n, a) => registry.run(n, a) }))
+    registry.register(c);
   for (const c of layoutCommands({ ...deps, newId: () => `g${++n}`, groupLabel: () => 'Group' }))
     registry.register(c);
   const data = (id: string) => workingCopy.get(id)?.data;
@@ -318,5 +319,41 @@ describe('Untangle', () => {
         ['b', { x: 10, y: 10 }],
       ],
     ]);
+  });
+});
+
+describe('measured card size (spec 1.1 §E.1)', () => {
+  // A card with a long, wrapped name: taller than the 80 px default.
+  const tall = (ids: string[]) => (id: string) =>
+    ids.includes(id) ? { width: 190, height: 200 } : undefined;
+
+  it('canvas.group frames the measured card height', async () => {
+    const { registry, state, data } = setup([el('a', 0, 0), el('b', 300, 100)]);
+    state.measureWith(tall(['b']));
+    await registry.run('canvas.group', { ids: ['a', 'b'] });
+    // b's bottom at 300; 30 px padding below, 70 above.
+    expect(data('g1')).toMatchObject({ position: { x: -30, y: -70 }, size: { height: 400 } });
+  });
+
+  it('a dropped Node joins the frame under its measured centre', async () => {
+    const { registry, state, data } = setup([frame('i', null, 0, 0, 400, 150), el('a', 900, 900)]);
+    state.measureWith(tall(['a']));
+    // Centre at y = 100 + 100 = 200: below the frame (with 80 px it would be 140, inside).
+    await registry.run('canvas.moveNodes', { moves: [{ id: 'a', x: 0, y: 100 }] });
+    expect(data('a')?.['group']).toBeUndefined();
+  });
+
+  it('Untangle keeps measured cards from overlapping; unregistering falls back', async () => {
+    const { registry, state, data } = setup([el('a', 0, 0), el('b', 0, 0), el('c', 0, 0)]);
+    const stop = state.measureWith(tall(['a', 'b', 'c']));
+    await registry.run('canvas.untangle', { ids: ['a', 'b', 'c'] });
+    const [y0, y1, y2] = ['a', 'b', 'c']
+      .map((id) => (data(id)?.['position'] as { y: number }).y)
+      .sort((p, q) => p - q) as [number, number, number];
+    // Unconnected: one column, stacked with the measured height.
+    expect(y1 - y0).toBeGreaterThanOrEqual(200);
+    expect(y2 - y1).toBeGreaterThanOrEqual(200);
+    stop();
+    expect(state.nodeSize('a')).toEqual({ width: 190, height: 80 });
   });
 });

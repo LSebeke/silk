@@ -1,6 +1,6 @@
 /**
  * Behavioural Connection rules (spec §5): class-pair validity, cardinality, no cycles,
- * owns xor located in, create-from defaults. Pure.
+ * owns xor located in, default Connection. Pure.
  */
 import type { Snapshot } from '../canon';
 import { readElement, type ElementClassId } from '../elements';
@@ -10,6 +10,7 @@ import {
   type BehaviouralType,
   type Connection,
   type ConnectionData,
+  type ConnectionType,
 } from './connection';
 
 const ACTORS: readonly ElementClassId[] = ['person', 'creature', 'playerCharacter'];
@@ -30,21 +31,19 @@ export function validTypes(from: ElementClassId, to: ElementClassId): Behavioura
 }
 
 /**
- * Default Connection when a Node of class `created` is made from a Node of class `origin`
- * (spec §5 table). `reverse`: the new element is the source.
+ * The default Connection asked from → to (spec 1.1 §F.3): the one Behavioural type valid
+ * between the classes in either direction. `reverse`: only to → from is valid, so the
+ * endpoints swap. Valid both ways: as asked. None or several: undefined (free-form).
  */
-export function createFromDefault(
-  origin: ElementClassId,
-  created: ElementClassId,
+export function defaultConnection(
+  from: ElementClassId,
+  to: ElementClassId,
 ): { type: BehaviouralType; reverse: boolean } | undefined {
-  const isPersonish = created === 'person' || created === 'creature';
-  if ((origin === 'person' || origin === 'creature') && created === 'item')
-    return { type: 'owns', reverse: false };
-  if (origin === 'event' && isPersonish) return { type: 'presentAt', reverse: true };
-  if (origin === 'location' && (created === 'location' || created === 'item'))
-    return { type: 'locatedIn', reverse: true };
-  if (origin === 'location' && created === 'event') return { type: 'takesPlaceAt', reverse: true };
-  return undefined;
+  const forward = validTypes(from, to);
+  const types = new Set([...forward, ...validTypes(to, from)]);
+  const [type] = types;
+  if (types.size !== 1 || !type) return undefined;
+  return { type, reverse: !forward.includes(type) };
 }
 
 export const connectionsIn = (records: Snapshot): Connection[] =>
@@ -116,4 +115,21 @@ export function duplicateOf(records: Snapshot, data: ConnectionData): Connection
   return connectionsIn(records).find(
     (c) => c.type === data.type && c.from === data.from && c.to === data.to,
   );
+}
+
+/**
+ * The types Connection `c` can take, in cycle order: the valid Behavioural types for its
+ * pair (directed, as stored) that pass `check`, then free-form. Empty if an endpoint is gone.
+ */
+export function typeOptions(records: Snapshot, c: Connection): ConnectionType[] {
+  const from = readElement(records.get(c.from));
+  const to = readElement(records.get(c.to));
+  if (!from || !to) return [];
+  const { id, ...data } = c;
+  return [
+    ...validTypes(from.class, to.class).filter(
+      (type) => check(records, { ...data, type, direction: 'directed' }, id).ok,
+    ),
+    'free',
+  ];
 }

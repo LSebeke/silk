@@ -12,15 +12,15 @@ import { expect, test } from './fixtures';
 const SYNC = { timeout: 45_000 };
 
 const api = <T = unknown>(page: Page, name: string, args: object = {}) =>
-  page.evaluate(([n, a]) => game.modules?.get('silk')?.api?.run(n, a), [
+  page.evaluate(([n, a]) => game.modules?.get('garn')?.api?.run(n, a), [
     name,
     args,
   ] as const) as Promise<T>;
 
-async function waitForSilk(page: Page) {
+async function waitForGarn(page: Page) {
   await page.waitForFunction(() => {
     try {
-      return !!game.modules?.get('silk')?.session?.();
+      return !!game.modules?.get('garn')?.session?.();
     } catch {
       return false;
     }
@@ -31,8 +31,8 @@ async function waitForSilk(page: Page) {
 async function ensureAdventure(page: Page) {
   await startAdventure(page);
   await page.evaluate(async () => {
-    await game.settings?.set('silk', 'materializeMode', 'immediate');
-    await game.settings?.set('silk', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
+    await game.settings?.set('garn', 'materializeMode', 'immediate');
+    await game.settings?.set('garn', 'viewState', { viewport: { x: 0, y: 0, zoom: 1 } });
   });
 }
 
@@ -52,7 +52,7 @@ async function closePopups(page: Page) {
 
 const uuidOf = (page: Page, id: string) =>
   page.evaluate(
-    (i) => game.modules?.get('silk')?.session?.().workingCopy.get(i)?.data['uuid'] as string,
+    (i) => game.modules?.get('garn')?.session?.().workingCopy.get(i)?.data['uuid'] as string,
     id,
   );
 
@@ -62,8 +62,8 @@ const playerView = (page: Page, uuid: string) =>
     const doc = fromUuidSync(u) as any;
     if (!doc) return null;
     const can = (d: any, level: string) => d.testUserPermission(game.user, level) as boolean;
-    const companion = doc.flags?.silk?.companion
-      ? game.journal?.get(doc.flags.silk.companion)
+    const companion = doc.flags?.garn?.companion
+      ? game.journal?.get(doc.flags.garn.companion)
       : undefined;
     const journal = doc.documentName === 'JournalEntry' ? doc : companion;
     const pages = journal
@@ -71,7 +71,7 @@ const playerView = (page: Page, uuid: string) =>
           [...journal.pages].map((p: any) => [p.name, can(p, 'OBSERVER') ? 'observe' : 'none']),
         )
       : {};
-    const connections = journal?.pages.get(journal.flags.silk?.connections);
+    const connections = journal?.pages.get(journal.flags.garn?.connections);
     return {
       limited: can(doc, 'LIMITED'),
       observer: can(doc, 'OBSERVER'),
@@ -82,19 +82,21 @@ const playerView = (page: Page, uuid: string) =>
     };
   }, uuid);
 
-const card = (page: Page, name: string) => page.locator('[data-silk-node]', { hasText: name });
+const card = (page: Page, name: string) => page.locator('[data-garn-node]', { hasText: name });
 
 test('Reveal through menu, r, Element Detail and header buttons; the player sees exactly that', async ({
   gm,
   player,
 }) => {
   test.setTimeout(300_000);
-  await waitForSilk(gm);
+  await waitForGarn(gm);
   await ensureAdventure(gm);
   const create = async (cls: string, name: string, x: number) =>
     (await api<{ id: string }>(gm, 'element.create', { class: cls, name, at: { x, y: 200 } })).id;
   const gareth = await create('location', 'Gareth-T16', 600);
   const alrik = await create('person', 'Alrik-T16', 200);
+  // A real image: DSA5's default actor icon is the core hood itself (v1.1 §C.4).
+  await api(gm, 'element.setImage', { id: alrik, img: 'icons/svg/cowled.svg' });
   const livesIn = (
     await api<{ id: string }>(gm, 'connection.create', {
       from: alrik,
@@ -107,24 +109,24 @@ test('Reveal through menu, r, Element Detail and header buttons; the player sees
   const garethUuid = await uuidOf(gm, gareth);
   const alrikUuid = await uuidOf(gm, alrik);
 
-  await waitForSilk(player);
+  await waitForGarn(player);
   await expect.poll(() => playerView(player, garethUuid), SYNC).toMatchObject({ limited: false });
   // Before Reveal the actor is hooded even in Foundry, for tokens on any Scene.
   await expect
     .poll(async () => (await playerView(player, alrikUuid))?.img, SYNC)
-    .toBe('modules/silk/assets/hooded.svg');
+    .toBe('icons/svg/mystery-man-black.svg');
 
   await closePopups(gm);
   await api(gm, 'canvas.open');
   // Context menu → Reveal (the class box sits to the right of the actions).
   await card(gm, 'Gareth-T16').locator('.portrait').click({ button: 'right' });
-  const menu = gm.locator(`[data-silk-menu="${gareth}"]`);
+  const menu = gm.locator(`[data-garn-menu="${gareth}"]`);
   await expect(menu).toBeVisible();
-  await expect(gm.locator('[data-silk-class-box]')).toBeVisible();
-  await menu.locator('[data-silk-menu-item="reveal.element"]').click();
-  await expect(card(gm, 'Gareth-T16')).toHaveAttribute('data-silk-revealed', '');
-  await expect(card(gm, 'Gareth-T16').locator('[data-silk-eye]')).toHaveAttribute(
-    'data-silk-eye',
+  await expect(gm.locator('[data-garn-class-box]')).toBeVisible();
+  await menu.locator('[data-garn-menu-item="reveal.element"]').click();
+  await expect(card(gm, 'Gareth-T16')).toHaveAttribute('data-garn-revealed', '');
+  await expect(card(gm, 'Gareth-T16').locator('[data-garn-eye]')).toHaveAttribute(
+    'data-garn-eye',
     'on',
   );
   await expect
@@ -137,7 +139,7 @@ test('Reveal through menu, r, Element Detail and header buttons; the player sees
   // `r` on Alrik: n declines, y Reveals (LIMITED, still hooded).
   await card(gm, 'Alrik-T16').locator('.portrait').click();
   await gm.keyboard.press('KeyR');
-  const confirm = gm.locator('[data-silk-reveal-confirm]');
+  const confirm = gm.locator('[data-garn-reveal-confirm]');
   await expect(confirm).toContainText('Alrik-T16');
   await gm.keyboard.press('KeyN');
   await expect(confirm).toHaveCount(0);
@@ -149,12 +151,12 @@ test('Reveal through menu, r, Element Detail and header buttons; the player sees
 
   // Element Detail (double-click): eye on one Connection; the GM sees both.
   await card(gm, 'Alrik-T16').locator('.portrait').dblclick();
-  const detail = gm.locator(`[data-silk-detail="${alrik}"]`);
-  await expect(detail.locator('[data-silk-detail-connection]')).toHaveCount(2);
-  await detail.locator(`[data-silk-detail-connection="${livesIn}"] [data-silk-eye]`).click();
+  const detail = gm.locator(`[data-garn-detail="${alrik}"]`);
+  await expect(detail.locator('[data-garn-detail-connection]')).toHaveCount(2);
+  await detail.locator(`[data-garn-detail-connection="${livesIn}"] [data-garn-eye]`).click();
   await expect(
-    detail.locator(`[data-silk-detail-connection="${livesIn}"] [data-silk-eye]`),
-  ).toHaveAttribute('data-silk-eye', 'on');
+    detail.locator(`[data-garn-detail-connection="${livesIn}"] [data-garn-eye]`),
+  ).toHaveAttribute('data-garn-eye', 'on');
   // Players see only the Revealed sentence, on both endpoints' Connections pages.
   await expect
     .poll(async () => (await playerView(player, garethUuid))?.connections, SYNC)
@@ -167,10 +169,10 @@ test('Reveal through menu, r, Element Detail and header buttons; the player sees
     });
 
   // Appearance from the detail window: the real image comes back.
-  await detail.locator('[data-silk-detail-appearance] [data-silk-eye]').click();
+  await detail.locator('[data-garn-detail-appearance] [data-garn-eye]').click();
   await expect
     .poll(async () => (await playerView(player, alrikUuid))?.img, SYNC)
-    .not.toBe('modules/silk/assets/hooded.svg');
+    .not.toBe('icons/svg/mystery-man-black.svg');
 
   // Sheet header button: Un-reveal Gareth reverses everything for the player.
   const labels = await gm.evaluate(async (u) => {

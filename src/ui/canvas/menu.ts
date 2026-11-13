@@ -4,7 +4,14 @@
  * Pure; the canvas and the Element Detail window render the same entries.
  */
 import type { RevealKind } from '../../core/campaigns';
-import { hasStatus, type ElementClassId } from '../../core/elements';
+import { togglesDirection, type Connection } from '../../core/connections';
+import {
+  appearanceBlock,
+  elementClass,
+  hasStatus,
+  type ElementClassId,
+  type InfoBlock,
+} from '../../core/elements';
 
 export interface MenuEntry {
   key: string;
@@ -31,7 +38,8 @@ export interface MenuDeps {
   selection: readonly string[];
 }
 
-const NEEDS_ADVENTURE = 'SILK.Reveal.NeedsAdventure';
+const NEEDS_ADVENTURE = 'GARN.Reveal.NeedsAdventure';
+const ADD_INFO_BLOCK = 'GARN.Detail.AddInfoBlockMenu';
 
 function command(deps: MenuDeps, name: string, args: object, label?: string): MenuEntry {
   const off = !deps.available(name);
@@ -50,28 +58,36 @@ function toggle(deps: MenuDeps, kind: Exclude<RevealKind, 'playerNote'>, id: str
   const label =
     kind === 'appearance'
       ? revealed
-        ? 'SILK.Reveal.HideAppearance'
-        : 'SILK.Reveal.RevealAppearance'
+        ? 'GARN.Reveal.HideAppearance'
+        : 'GARN.Reveal.RevealAppearance'
       : revealed
-        ? 'SILK.Reveal.Unreveal'
-        : 'SILK.Reveal.Reveal';
+        ? 'GARN.Reveal.Unreveal'
+        : 'GARN.Reveal.Reveal';
   return command(deps, `reveal.${kind}`, { id, revealed: !revealed }, label);
 }
 
 export function nodeMenu(
-  el: { id: string; class: ElementClassId; name: string; uuid?: string },
+  el: { id: string; class: ElementClassId; name: string; uuid?: string; infoBlocks?: InfoBlock[] },
   deps: MenuDeps,
 ): MenuEntry[] {
   const { id } = el;
   const ids = deps.selection.includes(id) ? [...deps.selection] : [id];
   const entries: MenuEntry[] = [toggle(deps, 'element', id)];
-  if (el.class === 'person' || el.class === 'creature')
-    entries.push(toggle(deps, 'appearance', id));
+  // Only while the Appearance block exists (v1.1 §C.2).
+  if (appearanceBlock(el)) entries.push(toggle(deps, 'appearance', id));
   entries.push(command(deps, 'reveal.showToPlayers', { id }));
   if (hasStatus(el.class))
     entries.push({ ...command(deps, 'element.toggleStatus', { id }), action: 'status' });
   entries.push(command(deps, 'element.openDetail', { id }));
-  entries.push(command(deps, 'element.openSheet', { id }));
+  // v1.1 §C.1: Element Detail with a new Info Block, its name field focused.
+  entries.push({
+    ...command(deps, 'element.openDetail', { id, addInfoBlock: true }, ADD_INFO_BLOCK),
+    key: 'element.openDetail.addInfoBlock',
+  });
+  // v1.1 §G.2: a journal class's sheet is its journal.
+  if (elementClass(el.class)?.docKind !== 'journal')
+    entries.push(command(deps, 'element.openSheet', { id }));
+  entries.push(command(deps, 'element.openJournal', { id }));
   entries.push({ ...command(deps, 'element.rename', { id }), action: 'rename' });
   if (ids.length >= 2) entries.push(command(deps, 'canvas.untangle', { ids }));
   entries.push(
@@ -83,13 +99,18 @@ export function nodeMenu(
   return entries;
 }
 
-export function edgeMenu(id: string, deps: MenuDeps): MenuEntry[] {
+/** Spec 1.1 §F.1. */
+export function edgeMenu(c: Pick<Connection, 'id' | 'type'>, deps: MenuDeps): MenuEntry[] {
+  const { id } = c;
+  const directedMutual = command(deps, 'connection.toggleDirection', { id });
   return [
+    command(deps, 'connection.openDetail', { id }, 'GARN.Canvas.EdgeMenu.OpenDetails'),
     toggle(deps, 'connection', id),
     { ...command(deps, 'connection.setLabel', { id }), action: 'editConnection' },
-    command(deps, 'connection.cycleDirection', { id }),
+    // Behavioural Connections are always directed.
+    togglesDirection(c) ? directedMutual : { ...directedMutual, disabled: true },
     command(deps, 'connection.cycleType', { id }),
-    command(deps, 'connection.flip', { id }),
+    command(deps, 'connection.flip', { id }, 'GARN.Canvas.EdgeMenu.Reverse'),
     { ...command(deps, 'connection.delete', { ids: [id] }), danger: true },
   ];
 }

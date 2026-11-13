@@ -39,7 +39,7 @@ function world(mode: 'immediate' | 'onDemand' = 'immediate') {
   const content = async (id: string) => {
     await pages.idle();
     const journal: TestDoc = t.element(id).class === 'location' ? t.doc(id) : t.companion(id);
-    return page(journal, journal.flags.silk.connections).text?.content;
+    return page(journal, journal.flags.garn.connections).text?.content;
   };
   const connect = async (from: string, to: string, extra: object = {}) =>
     (await t.registry.run<{ id: string }>('connection.create', { from, to, ...extra })).id;
@@ -68,6 +68,15 @@ describe('Connections page', () => {
     await w.registry.run('connection.delete', { ids: [id] });
     expect(await w.content(alrik)).toBe('');
     expect(await w.content(inn)).toBe('');
+  });
+
+  it('never shows Connection Notes (v1.1 §F.2)', async () => {
+    const w = world();
+    const alrik = await w.create('person', 'Alrik');
+    const inn = await w.create('location', 'Inn');
+    const id = await w.connect(alrik, inn, { label: 'runs' });
+    await w.registry.run('connection.setNotes', { id, notes: '<p>secret debt</p>' });
+    expect(await w.content(inn)).toBe('<ul><li>Alrik runs Inn</li></ul>');
   });
 
   it('a renamed endpoint renames the sentence on the other page', async () => {

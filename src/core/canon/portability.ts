@@ -3,8 +3,8 @@
  * the archive (zip path → bytes) are injected; the adapter does zip, FilePicker and download.
  *
  * Archive layout:
- *   silk-export.json      `ExportManifest` (kind, Canon id, assets with SHA-256)
- *   canon/<path>          Canon files, relative to `Data/silk/<canon-id>/`
+ *   garn-export.json      `ExportManifest` (kind, Canon id, assets with SHA-256)
+ *   canon/<path>          Canon files, relative to `Data/garn/<canon-id>/`
  *   assets/<data path>    referenced `Data/` files
  */
 import type { CanonFiles } from './files';
@@ -23,7 +23,7 @@ export interface AssetFiles {
 export type ArchiveEntries = Map<string, Uint8Array>;
 
 export const EXPORT_FORMAT = 1;
-export const MANIFEST_PATH = 'silk-export.json';
+export const MANIFEST_PATH = 'garn-export.json';
 
 export interface ExportManifest {
   exportFormat: number;
@@ -66,7 +66,7 @@ export async function exportBackup(args: {
   const { files, canonId: id } = args;
   const read = async (path: string) => {
     const text = await files.read(`${id}/${path}`);
-    if (text === null) throw new Error(`Silk: Canon file missing: ${id}/${path}`);
+    if (text === null) throw new Error(`Garn: Canon file missing: ${id}/${path}`);
     return text;
   };
   const out = new Map<string, string>();
@@ -187,14 +187,14 @@ export const decodeText = (bytes: Uint8Array) => decoder.decode(bytes);
 export class ImportRefused extends Error {
   readonly reason = 'diverged';
   constructor(readonly canonId: string) {
-    super('Silk: this Backup has diverged from the Canon on this server; import it as a copy');
+    super('Garn: this Backup has diverged from the Canon on this server; import it as a copy');
   }
 }
 
 /** The GM declined to overwrite conflicting files. Nothing was written. */
 export class ImportCancelled extends Error {
   constructor() {
-    super('Silk: import cancelled');
+    super('Garn: import cancelled');
   }
 }
 
@@ -216,7 +216,7 @@ export interface ImportResult {
   };
 }
 
-/** `canon.import`: write a Backup or Share archive into `Data/silk/` and its assets into `Data/`. */
+/** `canon.import`: write a Backup or Share archive into `Data/garn/` and its assets into `Data/`. */
 export async function importArchive(args: {
   files: CanonFiles;
   assets: AssetFiles;
@@ -230,20 +230,20 @@ export async function importArchive(args: {
   const { files, entries } = args;
   const newId = args.newId ?? newCanonId;
   const manifestBytes = entries.get(MANIFEST_PATH);
-  if (!manifestBytes) throw new Error('Silk: not a Silk Canon export (no silk-export.json)');
+  if (!manifestBytes) throw new Error('Garn: not a Garn Canon export (no garn-export.json)');
   const manifest = JSON.parse(decodeText(manifestBytes)) as ExportManifest;
   if (manifest.exportFormat > EXPORT_FORMAT)
-    throw new Error('Silk: this export was made by a newer Silk. Update Silk.');
+    throw new Error('Garn: this export was made by a newer Garn. Update Garn.');
 
   const canon = new Map<string, string>();
   for (const [path, bytes] of entries) {
     if (!path.startsWith('canon/')) continue;
     if (!CANON_PATH.test(path.slice(6)))
-      throw new Error(`Silk: unexpected file in this export: ${path}`);
+      throw new Error(`Garn: unexpected file in this export: ${path}`);
     canon.set(path.slice(6), decodeText(bytes));
   }
   for (const { path } of manifest.assets)
-    if (dataPath(path) !== path) throw new Error(`Silk: unsafe asset path in this export: ${path}`);
+    if (dataPath(path) !== path) throw new Error(`Garn: unsafe asset path in this export: ${path}`);
 
   // Plan: which Canon id, and is it a fast-forward?
   let mode: ImportResult['mode'] = 'new';
@@ -283,7 +283,7 @@ export async function importArchive(args: {
       continue;
     }
     if ((await sha256Hex(bytes)) !== sha256)
-      throw new Error(`Silk: ${path} in this export is damaged (SHA-256 mismatch)`);
+      throw new Error(`Garn: ${path} in this export is damaged (SHA-256 mismatch)`);
     const existing = await args.assets.read(path);
     if (existing === null) writes.push([path, bytes]);
     else if ((await sha256Hex(existing)) === sha256) result.assets.skipped.push(path);
@@ -319,11 +319,11 @@ export async function importArchive(args: {
 const CANON_PATH =
   /^(canon\.json|refs\/main\.json|refs\/adventures\/[\w-]+\.json|commits\/[0-9a-f]{64}\.json|objects\/[0-9a-f]{2}\/[0-9a-f]{64}\.json|campaigns\/[\w-]+\/(campaign|revelation-map)\.json)$/;
 
-/** `dir/name.ext` →`dir/name.silk-<hash8>.ext` (spec §11.6). */
+/** `dir/name.ext` →`dir/name.garn-<hash8>.ext` (spec §11.6). */
 function hashedName(path: string, sha256: string): string {
   const slash = path.lastIndexOf('/');
   const dot = path.lastIndexOf('.');
-  const tag = `.silk-${sha256.slice(0, 8)}`;
+  const tag = `.garn-${sha256.slice(0, 8)}`;
   return dot > slash ? `${path.slice(0, dot)}${tag}${path.slice(dot)}` : `${path}${tag}`;
 }
 
@@ -409,12 +409,12 @@ async function importShare(
 ) {
   const staged = createMemoryFiles();
   const manifest = canon.get('canon.json');
-  if (!manifest) throw new Error('Silk: this Share has no canon.json');
+  if (!manifest) throw new Error('Garn: this Share has no canon.json');
   const sourceId = (JSON.parse(manifest) as Manifest).id;
   for (const [path, text] of canon) staged.contents.set(`${sourceId}/${path}`, text);
   const source = await openCanon(staged, sourceId);
   const head = await source.getMain();
-  if (!head) throw new Error('Silk: this Share has no Commit');
+  if (!head) throw new Error('Garn: this Share has no Commit');
   const commit = await source.readCommit(head);
   const snapshot = new Map(
     [...(await source.readSnapshot(head))].map(([id, r]) => [

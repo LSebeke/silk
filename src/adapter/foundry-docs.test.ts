@@ -36,7 +36,8 @@ function fakeApi() {
         return doc(`${name}.${(data as { _id: string })._id}`, data);
       },
     }),
-    fromUuid: (uuid) => doc(uuid, { _id: 'x', name: 'X', flags: { silk: { id: 'el' } } }),
+    fromUuid: (uuid) => doc(uuid, { _id: 'x', name: 'X', flags: { garn: { id: 'el' } } }),
+    importData: async () => undefined,
     journal: () => null,
     folders: () => folders,
     replace: (value) => ({ replaced: value }),
@@ -49,23 +50,23 @@ function fakeApi() {
 }
 
 describe('FoundryDocs adapter', () => {
-  it('runs migrateData before creating, keeps ids and tags the write as Silk', async () => {
+  it('runs migrateData before creating, keeps ids and tags the write as Garn', async () => {
     const { api, calls } = fakeApi();
     const docs = createFoundryDocs(api);
     const uuid = await docs.create('Actor', {
       _id: 'a1',
       name: 'A',
       folder: null,
-      flags: { silk: {} },
+      flags: { garn: {} },
     });
     expect(uuid).toBe('Actor.a1');
     expect(calls.map((c) => c.op)).toEqual(['migrate', 'create']);
     const [, data, options] = calls[1]?.args as [string, object, object];
     expect(data).toMatchObject({ migrated: true, _id: 'a1' });
-    expect(options).toEqual({ silk: { internal: true }, keepId: true, keepEmbeddedIds: true });
+    expect(options).toEqual({ garn: { internal: true }, keepId: true, keepEmbeddedIds: true });
   });
 
-  it('creates each Silk folder once and finds it again by flag', async () => {
+  it('creates each Garn folder once and finds it again by flag', async () => {
     const { api, folders } = fakeApi();
     const docs = createFoundryDocs(api);
     const [a, b] = await Promise.all([
@@ -79,7 +80,7 @@ describe('FoundryDocs adapter', () => {
     expect(folders[0]).toMatchObject({
       type: 'Actor',
       name: 'Persons',
-      flags: { silk: { folder: 'person' } },
+      flags: { garn: { folder: 'person' } },
     });
   });
 
@@ -89,7 +90,7 @@ describe('FoundryDocs adapter', () => {
     expect(calls).toEqual([
       {
         op: 'update',
-        args: [{ type: 'creature', system: { replaced: { a: 1 } } }, { silk: { internal: true } }],
+        args: [{ type: 'creature', system: { replaced: { a: 1 } } }, { garn: { internal: true } }],
       },
     ]);
   });
@@ -99,13 +100,13 @@ describe('FoundryDocs adapter', () => {
     expect(createFoundryDocs(api).get('Item.x')).toEqual({
       _id: 'x',
       name: 'X',
-      flags: { silk: { id: 'el' } },
+      flags: { garn: { id: 'el' } },
       uuid: 'Item.x',
       documentName: 'Item',
     });
   });
 
-  it('creates an Item in an actor’s inventory and deletes docs, as Silk writes (T12)', async () => {
+  it('creates an Item in an actor’s inventory and deletes docs, as Garn writes (T12)', async () => {
     const { api, calls } = fakeApi();
     const base = api.fromUuid;
     api.fromUuid = (uuid) => {
@@ -121,16 +122,16 @@ describe('FoundryDocs adapter', () => {
       };
     };
     const docs = createFoundryDocs(api);
-    const data = { _id: 'i1', name: 'Sword', folder: null, flags: { silk: { id: 'el' } } };
+    const data = { _id: 'i1', name: 'Sword', folder: null, flags: { garn: { id: 'el' } } };
     expect(await docs.create('Item', data, 'Actor.a1')).toBe('Actor.a1.Item.i1');
     await docs.delete('Actor.a1.Item.i1');
     expect(calls.map((c) => c.op)).toEqual(['migrate', 'createEmbedded', 'delete']);
     expect(calls[1]?.args).toEqual([
       'Item',
       [{ ...data, migrated: true }],
-      { silk: { internal: true }, keepId: true },
+      { garn: { internal: true }, keepId: true },
     ]);
-    expect(calls[2]?.args).toEqual(['Actor.a1.Item.i1', { silk: { internal: true } }]);
+    expect(calls[2]?.args).toEqual(['Actor.a1.Item.i1', { garn: { internal: true } }]);
   });
 
   it('snapshots an embedded doc with its parent uuid', () => {
@@ -140,7 +141,7 @@ describe('FoundryDocs adapter', () => {
       parent: { uuid: 'Actor.a' },
       toObject: () => ({ _id: 'i', name: 'I', flags: {} }),
     };
-    expect(snapshot(doc as never)).toMatchObject({ parent: 'Actor.a', flags: { silk: {} } });
+    expect(snapshot(doc as never)).toMatchObject({ parent: 'Actor.a', flags: { garn: {} } });
   });
 
   it('registers a quest journal in DSA5 questlogJournals once, keeping other entries', async () => {
@@ -182,14 +183,14 @@ describe('FoundryDocs adapter', () => {
     expect(ops).toEqual(['add dead', 'remove dead']);
   });
 
-  it('deletes and unflags as Silk writes', async () => {
+  it('deletes and unflags as Garn writes', async () => {
     const { api, calls } = fakeApi();
     const docs = createFoundryDocs(api);
     await docs.delete('Actor.a1');
     await docs.unflag('Actor.a1');
     expect(calls).toEqual([
-      { op: 'delete', args: ['Actor.a1', { silk: { internal: true } }] },
-      { op: 'update', args: [{ flags: { '-=silk': null } }, { silk: { internal: true } }] },
+      { op: 'delete', args: ['Actor.a1', { garn: { internal: true } }] },
+      { op: 'update', args: [{ flags: { '-=garn': null } }, { garn: { internal: true } }] },
     ]);
   });
 

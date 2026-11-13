@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { must } from '../materialize/test-setup';
-import { BOX } from './presets';
 import { setup } from './test-setup';
 
 const grid = (scene: Record<string, unknown>) => (scene['grid'] as { type: number }).type;
@@ -11,7 +10,7 @@ describe('Event Scenes: generated from the Preset (spec §4, §6 Immediate)', ()
     const ambush = await t.create('event', 'Ambush');
     const scene = t.scene(ambush);
     expect(scene.name).toBe('Ambush');
-    expect(t.doc(ambush).flags.silk.scene).toBe(scene._id);
+    expect(t.doc(ambush).flags.garn.scene).toBe(scene._id);
     expect(scene.tokenVision).toBe(false);
     expect(grid(scene)).toBe(0);
     expect(scene.drawings).toHaveLength(1);
@@ -48,7 +47,7 @@ describe('Event Scenes: generated from the Preset (spec §4, §6 Immediate)', ()
     ).rejects.toThrow();
     await t.registry.run('event.createScene', { id: town });
     expect([grid(t.scene(town)), t.scene(town).tokenVision]).toEqual([0, false]);
-    expect(t.doc(town).flags.silk.scene).toBe(t.scene(town)._id);
+    expect(t.doc(town).flags.garn.scene).toBe(t.scene(town)._id);
     const ambush = await t.create('event', 'Ambush');
     await expect(
       t.registry.run('event.createScene', { id: ambush, preset: 'overview' }),
@@ -108,33 +107,6 @@ describe('Event Scenes: activation and Happened (spec §7)', () => {
 });
 
 describe('present at ↔ tokens (spec §5, §7)', () => {
-  it('creating present at adds one hidden token in the Narrative box', async () => {
-    const t = setup();
-    const ambush = await t.create('event', 'Ambush');
-    const alrik = await t.create('person', 'Alrik');
-    await t.connect(alrik, ambush);
-    const [token] = t.scene(ambush).tokens;
-    expect(t.scene(ambush).tokens).toHaveLength(1);
-    expect(token).toMatchObject({ actorId: t.actorId(alrik), hidden: true });
-    const { x, y } = must(token);
-    expect(x >= BOX.x && x < BOX.x + BOX.width && y >= BOX.y && y < BOX.y + BOX.height).toBe(true);
-  });
-
-  it('Battle/Travel stack the hidden tokens at the left edge', async () => {
-    const t = setup({ mode: 'onDemand' });
-    const fight = await t.create('event', 'Fight');
-    await t.registry.run('event.createScene', { id: fight, preset: 'battle' });
-    const wolf = await t.create('creature', 'Wolf');
-    const bear = await t.create('creature', 'Bear');
-    await t.materialize(wolf, bear);
-    await t.connect(wolf, fight);
-    await t.connect(bear, fight);
-    expect(t.scene(fight).tokens.map((tk) => [tk.x, tk.y, tk.hidden])).toEqual([
-      [0, 0, true],
-      [0, 100, true],
-    ]);
-  });
-
   it('deleting present at removes all of the actor’s tokens, hidden or not', async () => {
     const t = setup();
     const ambush = await t.create('event', 'Ambush');
@@ -232,7 +204,7 @@ describe('Event Scenes follow the element lifecycle (spec §6)', () => {
     expect(t.scene(ambush)._id).toBe(sceneId);
     expect(t.scene(ambush).walls).toEqual([{ _id: 'w1', c: [0, 0, 100, 0] }]);
     expect(t.tokens(ambush)).toEqual([t.actorId(alrik)]);
-    expect(t.doc(ambush).flags.silk.scene).toBe(sceneId);
+    expect(t.doc(ambush).flags.garn.scene).toBe(sceneId);
   });
 
   it('Unmaterializing a present actor deletes its tokens; Materializing it adds one again', async () => {
@@ -255,13 +227,13 @@ describe('Event Scenes follow the element lifecycle (spec §6)', () => {
     await t.commit('c1');
     const deleted = t.scene(ambush);
     await t.deleteSceneInFoundry(ambush);
-    expect(t.doc(ambush).flags.silk.scene).toBeUndefined();
+    expect(t.doc(ambush).flags.garn.scene).toBeUndefined();
     expect(t.element(ambush).uuid).toBeTruthy();
     expect(t.presentAt(ambush)).toEqual([alrik]);
     await t.registry.run('event.restoreScene', { id: ambush });
     expect(t.scene(ambush)._id).toBe(deleted._id);
     expect(t.tokens(ambush)).toEqual([t.actorId(alrik)]);
-    expect(t.doc(ambush).flags.silk.scene).toBe(deleted._id);
+    expect(t.doc(ambush).flags.garn.scene).toBe(deleted._id);
   });
 
   it('Create Scene after a deletion makes a fresh one; restore without a Commit fails', async () => {
@@ -309,6 +281,6 @@ describe('Event Scenes follow the element lifecycle (spec §6)', () => {
     t.scenes.all.delete(t.scene(feast)._id);
     await t.lifecycle.reconcile();
     expect(t.presentAt(ambush)).toEqual([alrik]);
-    expect(t.doc(feast).flags.silk.scene).toBeUndefined();
+    expect(t.doc(feast).flags.garn.scene).toBeUndefined();
   });
 });

@@ -21,7 +21,7 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
   return [
     {
       name: 'adventure.end',
-      title: 'SILK.Commands.adventure.end',
+      title: 'GARN.Commands.adventure.end',
       available: gm,
       async run() {
         await getMerges().endAdventure();
@@ -31,7 +31,7 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
     {
       // Join Campaigns (spec §11.5): reviewed in the merge window; `merge.confirm` applies it.
       name: 'campaign.join',
-      title: 'SILK.Commands.campaign.join',
+      title: 'GARN.Commands.campaign.join',
       available: gm,
       async run(args: { sourceId: string; targetId: string; closeSource?: boolean }) {
         await getMerges().join(args);
@@ -41,7 +41,7 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
     {
       // Typed confirmation (the Canon window asks for the Adventure name): irreversible.
       name: 'adventure.abandon',
-      title: 'SILK.Commands.adventure.abandon',
+      title: 'GARN.Commands.adventure.abandon',
       available: gm,
       async run(args: { confirm: string }) {
         await getMerges().abandon(args);
@@ -51,7 +51,7 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
     {
       // ⏎ is handled inside the merge window (a global Enter keybinding would be wrong).
       name: 'merge.nextConflict',
-      title: 'SILK.Commands.merge.nextConflict',
+      title: 'GARN.Commands.merge.nextConflict',
       available: gm,
       async run() {
         const next = await getMerges().nextConflict();
@@ -61,13 +61,13 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
     },
     {
       name: 'merge.pick',
-      title: 'SILK.Commands.merge.pick',
+      title: 'GARN.Commands.merge.pick',
       available: gm,
       run: (args: Pick) => getMerges().pick(args),
     },
     {
       name: 'merge.confirm',
-      title: 'SILK.Commands.merge.confirm',
+      title: 'GARN.Commands.merge.confirm',
       available: gm,
       async run(args: { confirmed?: boolean } = {}) {
         if (!args.confirmed && !(await ui.confirmNoUndo())) return { confirmed: false };
@@ -84,7 +84,7 @@ export function mergeCommands(getMerges: () => Merges, ui: MergeUi): Command[] {
     },
     {
       name: 'merge.cancel',
-      title: 'SILK.Commands.merge.cancel',
+      title: 'GARN.Commands.merge.cancel',
       available: gm,
       async run() {
         await getMerges().cancel();

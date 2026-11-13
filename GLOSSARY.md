@@ -39,7 +39,26 @@ _Avoid_: merge Revelation Maps, merge Campaigns
 
 **Node**: The representation of one Story Element on a World Canvas. Where Nodes sit is part of the Canon, so every World and Adventure starts from the same layout.
 
-**Behavioural Connection**: A Connection of a fixed type, valid only between certain Element Classes, that drives behaviour in Foundry or Silk (e.g. "owns", "present at"). All other Connections are free-form, with a label.
+**Connection Notes**: The GM's private notes on one Connection. Never shown to players, never Revealed.
+
+**Portrait**: The image a Story Element shows (sheet image and token). For a Person or Creature whose Appearance is not Revealed, players see the hooded image while the real Portrait waits.
+_Avoid_: avatar
+
+**Look**: Everything about how a Person's or Creature's Portrait appears: sheet image, token image, token ring and its colours, the image's position and zoom (its pose), Draw order and Lock rotation. The GM changes it in the image & token editor. Hooded or not, the Look is the real one; the hood only covers it.
+_Avoid_: appearance (that is the Info Block guarding the image), token style
+
+**Subject file**: The image file Garn renders for a token with the ring on: the token image, positioned and zoomed, cut to a circle at the ring's edge. Foundry draws it over the ring; the token image itself stays uncut.
+_Avoid_: crop, token subject
+
+**Draw order**: Whether the ring or the illustration shows in front on a ringed token: Ring in front (the default) or Illustration in front.
+
+**Original look**: The Look an imported Person or Creature (Adopted, picked from a Compendium, or from NSC Zucht) came in with. Garn keeps it, never changes it on its own, and the GM can restore it.
+_Avoid_: default look
+
+**Unhooded**: What the hood covered, kept while the hood shows (for the actor and for each placed token), so the Reveal puts every token back exactly as it was.
+_Avoid_: backup
+
+**Behavioural Connection**: A Connection of a fixed type, valid only between certain Element Classes, that drives behaviour in Foundry or Garn (e.g. "owns", "present at"). All other Connections are free-form, with a label.
 
 **Reveal**: The GM sharing a Story Element, a single Info Block, or a single Connection with the whole party of a Campaign. Revealing an Info Block or Connection also Reveals the Story Element(s) it belongs to, but nothing more. Can be undone.
 
@@ -49,7 +68,7 @@ _Avoid_: merge Revelation Maps, merge Campaigns
 
 **Cover**: The image a Revealed Story Element shows players first, before any of its Info Blocks are Revealed.
 
-**Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
+**Info Block**: A named piece of strategic Story information inside a Story Element's body. Each Info Block can be Revealed on its own, and only by the GM's deliberate choice. A Person's or Creature's Appearance block guards its image: until it is Revealed, players see a hooded image. Not to be confused with tactical knowledge players earn through skill rolls, which stays a Game System mechanic.
 
 **Player Note**: An Info Block the players write on a Story Element to record their own thoughts and findings. Any player of the party can write, edit or delete any Player Note, and the whole party sees them. Player Notes are kept together on the element and become part of the Canon like other Info Blocks; players of other Campaigns see one only if their GM Reveals it. The GM can turn one into an ordinary Info Block.
 
@@ -65,7 +84,7 @@ _Avoid_: import, promote, link
 
 **Ghost**: A Node whose Story Element is not Materialized in this World.
 
-**Focus View**: A canvas mode that shows only the Story Elements within a few Connections of the active Foundry Scene and the actors in it, or of the selected Story Element, plus any Focus Pins.
+**Focus View**: A canvas mode that shows only the Story Elements within a few Connections of the active Foundry Scene and the actors in it, or of the selected Story Element (kept after deselecting when no Scene gives a focus), plus any Focus Pins.
 
 **Focus Pin**: A Story Element the GM has marked to always show in Focus View, regardless of distance.
 _Avoid_: anchor, favourite
@@ -75,14 +94,18 @@ _Avoid_: auto-layout
 
 **Scene Preset**: One of a fixed set of templates (Travel, Battle, Narrative, Overview) that sets how a Story Element's Foundry Scene is set up for play.
 
+**Token Box**: The marked area beside an Event's Scene, outside the map, where Garn places the tokens of the actors present at the Event, hidden, for the GM to move onto the map.
+
 **Canvas Filter**: A view setting that hides Story Elements from the canvas by Element Class, Status, Revealed, Materialized, Tag, Visual Group, or distance from a focus. Filters never change the Story itself.
 
 **Tag**: A free-form label the GM puts on a Story Element. Tags are part of the Canon and never shown to players.
 
 **Visual Group**: A labelled frame on a World Canvas that holds Nodes for the GM's overview. Visual Groups can sit inside other Visual Groups. Visual Groups are layout: they are part of the Canon like Node positions, but do not change the Story.
 
-**Connection Point**: A spot on a Node from which the GM drags out a Connection. The kind of Connection Point (outgoing, incoming or mutual) sets the new Connection's direction. Connections attach on the side of the Node that faces the other Node.
-
 **Status**: The one toggleable state an Element Class may carry, e.g. dead for a Person, happened for an Event, open/done/failed for a Quest. Classes without one have no Status.
 
-**Creation Pipeline**: The fixed sequence every way of creating a Story Element on the canvas ends in: pick the Element Class, type the name, and, if it was created from another Node, label the Connection.
+**Creation Pipeline**: The fixed sequence every way of creating a Story Element on the canvas ends in: pick the Element Class, take the Source Step if the class has one, type the name, and, if it was created from or onto another Node, label the Connection.
+
+**Source Step**: The Creation Pipeline step, after the class, where the GM picks what a new Story Element starts from: a compendium entry, a Generator, or blank. Only some Element Classes have one.
+
+**Generator**: A tool offered in the Source Step that builds a new Foundry document for the GM, e.g. the DSA5 Master's Workshop NPC generator (NSC Zucht) for a Person.

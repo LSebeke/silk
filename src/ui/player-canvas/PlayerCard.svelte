@@ -1,10 +1,12 @@
 <script lang="ts">
   /**
-   * Player Canvas Node (spec §9): class colour, name and Cover (hooded until Appearance).
+   * Player Canvas Node (spec §9): class colour, name and Cover (hooded until Appearance). The
+   * name wraps and the card grows, as on the GM's cards (CardName, spec 1.1 §G.5).
    * No Status, no Info Blocks, no Reveal controls. A click opens the doc (PlayerCanvas).
    */
   import { Handle, Position } from '@xyflow/svelte';
   import { getContext } from 'svelte';
+  import CardName from '../CardName.svelte';
   import { classLabelKey, elementClass } from '../../core/elements';
   import { PLAYER_CANVAS_CONTEXT, type PlayerCanvasContext } from './context';
   import type { PlayerNodeData } from './player-flow';
@@ -18,13 +20,13 @@
 </script>
 
 <div
-  class="silk-player-card"
-  style:--silk-class={cls?.color ?? '#666'}
-  data-silk-player-node={id}
-  data-silk-class={data.class}
-  data-silk-img={data.img ?? ''}
+  class="garn-player-card"
+  style:--garn-class={cls?.color ?? '#666'}
+  data-garn-player-node={id}
+  data-garn-class={data.class}
+  data-garn-img={data.img ?? ''}
 >
-  <div class="block-title">{name}</div>
+  <CardName {name} variant="block" />
   <img
     class="portrait"
     class:icon={!data.img}
@@ -34,20 +36,20 @@
   />
   <div class="body">
     <div class="cls">{label}</div>
-    <div class="title" data-silk-player-title>{name}</div>
+    <CardName {name} variant="title" data-garn-player-title />
   </div>
   <!-- Hidden anchors only: edges attach on the facing side themselves (PlayerEdge). -->
   <Handle
     type="source"
     position={Position.Right}
-    class="silk-player-anchor"
+    class="garn-player-anchor"
     isConnectable={false}
   />
-  <Handle type="target" position={Position.Left} class="silk-player-anchor" isConnectable={false} />
+  <Handle type="target" position={Position.Left} class="garn-player-anchor" isConnectable={false} />
 </div>
 
 <style>
-  .silk-player-card {
+  .garn-player-card {
     position: relative;
     display: flex;
     gap: 8px;
@@ -58,12 +60,12 @@
     color: #222;
     background: #fffdf8;
     border: 1px solid #c9bfa8;
-    border-left: 6px solid var(--silk-class);
+    border-left: 6px solid var(--garn-class);
     border-radius: 6px;
     box-shadow: 0 1px 2px #0002;
     cursor: pointer;
   }
-  .silk-player-card :global(.silk-player-anchor) {
+  .garn-player-card :global(.garn-player-anchor) {
     visibility: hidden;
   }
   .portrait {
@@ -76,7 +78,7 @@
   }
   .portrait.icon {
     padding: 4px;
-    background: var(--silk-class);
+    background: var(--garn-class);
   }
   .body {
     display: flex;
@@ -90,39 +92,16 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--silk-class);
-  }
-  .title {
-    overflow: hidden;
-    font-size: 13px;
-    font-weight: 700;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .block-title {
-    display: none;
+    color: var(--garn-class);
   }
   :global(.lod-title) .cls {
     display: none;
   }
-  :global(.lod-title) .title {
-    font-size: 18px;
-    white-space: normal;
+  :global(.lod-block) .garn-player-card {
+    background: var(--garn-class);
+    border-color: var(--garn-class);
   }
-  :global(.lod-block) .silk-player-card {
-    background: var(--silk-class);
-    border-color: var(--silk-class);
-  }
-  :global(.lod-block) .silk-player-card > :not(.block-title) {
+  :global(.lod-block) .garn-player-card > :not(:global(.garn-card-name)) {
     display: none;
-  }
-  :global(.lod-block) .silk-player-card .block-title {
-    display: block;
-    max-height: 66px;
-    overflow: hidden;
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.1;
-    color: #fff;
   }
 </style>

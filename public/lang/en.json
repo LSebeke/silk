@@ -1,6 +1,6 @@
 {
-  "SILK": {
-    "Title": "Silk",
+  "GARN": {
+    "Title": "Garn",
     "Settings": {
       "materializeMode": {
         "Name": "Materialize mode",
@@ -27,13 +27,30 @@
       "warnUnmaterializeReveal": {
         "Name": "Warn on Unmaterialize of Revealed content",
         "Hint": "Warn before Unmaterializing an Element players can see."
+      },
+      "canonWindow": {
+        "Name": "Canon",
+        "Hint": "Create or pick this World's Canon; Checkout, Adventures, Campaigns."
       }
     },
     "Commands": {
+      "pipeline": {
+        "search": "Search the class box",
+        "pickClass": "Pick a class",
+        "pickSource": "Pick a source",
+        "cancel": "Cancel the creation"
+      },
+      "picker": {
+        "search": "Search the Compendium picker",
+        "source": "Pick a picker source",
+        "pick": "Pick a Compendium entry",
+        "cancel": "Close the Compendium picker"
+      },
       "canvas": {
         "open": "Open the World Canvas",
         "moveNodes": "Move Nodes",
         "select": "Select Nodes",
+        "deleteSelection": "Delete selection",
         "group": "Group into a Visual Group",
         "ungroup": "Dissolve Visual Group",
         "renameGroup": "Rename Visual Group",
@@ -71,23 +88,30 @@
         "create": "Create Element",
         "rename": "Rename Element",
         "setImage": "Set image",
+        "restoreImages": "Restore imported images",
         "setFields": "Set class fields",
         "changeClass": "Change class",
         "openSheet": "Open sheet",
+        "openJournal": "Open journal",
         "tag": "Add Tag",
         "untag": "Remove Tag",
         "setStatus": "Set Status",
         "toggleStatus": "Toggle Status",
         "delete": "Delete Element",
-        "openDetail": "Element Detail"
+        "openDetail": "Element Detail",
+        "openImageEditor": "Image & token"
       },
       "connection": {
         "create": "Connect",
         "setLabel": "Edit Connection label",
-        "cycleDirection": "Cycle Connection direction",
         "cycleType": "Cycle Connection type",
         "flip": "Flip Connection",
-        "delete": "Delete Connection"
+        "delete": "Delete Connection",
+        "openDetail": "Connection Detail",
+        "setNotes": "Edit Connection notes",
+        "setType": "Set Connection type",
+        "setDirection": "Set Connection direction",
+        "toggleDirection": "Directed ⇄ Mutual"
       },
       "materialize": {
         "elements": "Materialize",
@@ -97,7 +121,9 @@
       "infoBlock": {
         "create": "Add Info Block",
         "edit": "Edit Info Block",
-        "delete": "Delete Info Block"
+        "delete": "Delete Info Block",
+        "move": "Move Info Block",
+        "open": "Open in Foundry"
       },
       "filter": {
         "set": "Set Canvas Filter",
@@ -130,9 +156,9 @@
         "cancel": "Cancel merge"
       },
       "adopt": {
-        "doc": "Adopt into Silk",
-        "folder": "Adopt folder into Silk",
-        "ignore": "Ignore for Silk"
+        "doc": "Adopt into Garn",
+        "folder": "Adopt folder into Garn",
+        "ignore": "Ignore for Garn"
       },
       "playerNote": {
         "create": "Add Player Note",
@@ -142,9 +168,40 @@
       },
       "playerCanvas": {
         "openDoc": "Open the doc"
+      },
+      "legend": {
+        "toggle": "Show/hide the canvas legend"
       }
     },
+    "Source": {
+      "Label": "Start from",
+      "compendium": "Compendium",
+      "generator": "Generator",
+      "blank": "Blank",
+      "Cancel": "Cancel",
+      "Unavailable": "Not available yet",
+      "NotForClass": "Not offered for this class",
+      "GeneratorMissing": "Needs the module “The Dark Eye 5th Ed. - Master's Workshop” (dsa5-mastersworkshop)",
+      "GeneratorGMOnly": "Only the GM can use the generator",
+      "GeneratorFailed": "The NPC generator (NSC Zucht) could not be loaded"
+    },
+    "Picker": {
+      "Title": "Compendium",
+      "Search": "Search…",
+      "Sources": "Sources",
+      "Results": "Results",
+      "All": "All",
+      "World": "World",
+      "ChooseSource": "Choose a source",
+      "Adopt": "Adopt",
+      "Import": "Import",
+      "None": "No matches"
+    },
     "Canvas": {
+      "EdgeMenu": {
+        "OpenDetails": "Open details",
+        "Reverse": "Reverse direction"
+      },
       "Title": "World Canvas",
       "ClassSearch": "Class…",
       "NewGroup": "Group",
@@ -165,7 +222,48 @@
       "Palette": "Palette",
       "PaletteHint": "Drag a class onto the canvas or onto a Node.",
       "Filtered": "filtered",
-      "FilteredTitle": "Hidden by the filters; shown until deselected."
+      "FilteredTitle": "Hidden by the filters; shown until deselected.",
+      "Key": {
+        "create": "Create a {class}; connected to the selected Node if any",
+        "undo": "Undo layout",
+        "search": "Search",
+        "editConnection": "Edit the label",
+        "rename": "Rename",
+        "connect": "Connect",
+        "status": "Toggle Status (y/n)",
+        "pin": "Pin/unpin Focus",
+        "reveal": "Reveal (y/n)",
+        "delete": "Delete (Nodes: with confirmation, plus the selected Connections)",
+        "group": "Group",
+        "untangle": "Untangle",
+        "toggleDirection": "Directed ⇄ mutual",
+        "flip": "Reverse direction",
+        "cycleType": "Cycle type",
+        "legend": "Show/hide this legend"
+      },
+      "KeyWhen": {
+        "always": "",
+        "node": "on a selected Node",
+        "edge": "on a selected Connection",
+        "nodeOrEdge": "on a selected Node or Connection"
+      },
+      "Modifier": {
+        "shift": "Shift: incoming",
+        "ctrl": "Ctrl: mutual",
+        "alt": "Alt: free-form outgoing"
+      },
+      "Gesture": {
+        "node-sameNode": "Right-click a Node: context menu",
+        "node-otherNode": "Right-drag Node → Node: connect",
+        "node-canvas": "Right-drag Node → canvas: new connected Node",
+        "canvas-canvas": "Right-click the canvas: new Node",
+        "canvas-node": "Right-drag canvas → Node: new Node connected to it",
+        "edge-anywhere": "Right-click a Connection or its label: context menu",
+        "leftDrag-node": "Drag a Node: move it (with the selection)",
+        "drag-canvas": "Drag the canvas (left or middle button): pan",
+        "doubleClick-node": "Double-click a Node: Element Detail",
+        "doubleClick-edge": "Double-click a Connection or its label: Connection Detail"
+      }
     },
     "Connection": {
       "Type": {
@@ -198,7 +296,7 @@
       "Checkout": "Checkout",
       "Main": "main (Canon edit mode)",
       "Dirty": "uncommitted changes",
-      "ReadOnly": "read-only, update Silk",
+      "ReadOnly": "read-only, update Garn",
       "Adventures": "Adventures",
       "AdventureName": "Adventure name",
       "PickCampaign": "Campaign…",
@@ -235,10 +333,12 @@
       "Abandon": "Abandon…",
       "AbandonPrompt": "Abandoning drops everything this Adventure changed and resets the World to main. Docs of elements not on main are deleted. This cannot be undone. Type the Adventure name to confirm:",
       "AbandonConfirm": "Abandon for good",
-      "Synced": "Main moved in another World; this World was updated."
+      "Synced": "Main moved in another World; this World was updated.",
+      "NoCanon": "No Canon yet",
+      "ChipMain": "main"
     },
     "Notice": {
-      "FileBrowse": "Silk spoiler secrecy: {roles} can browse files, so they can find the Silk Canon under Data/silk/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Silk README, section \"Spoiler secrecy\". Shown once."
+      "FileBrowse": "Garn spoiler secrecy: {roles} can browse files, so they can find the Garn Canon under Data/garn/ and read unrevealed content. If that matters, remove \"Use File Browser\" from these roles in Configure Permissions. See the Garn README, section \"Spoiler secrecy\". Shown once."
     },
     "Class": {
       "person": "Person",
@@ -278,10 +378,11 @@
       "event": "Events",
       "quest": "Quests",
       "note": "Notes",
-      "companions": "Silk Companions",
-      "scene": "Silk Scenes"
+      "companions": "Garn Companions",
+      "scene": "Garn Scenes"
     },
     "Materialize": {
+      "CompendiumMissing": "{name}: its compendium entry is gone; Materialized blank.",
       "Implicit": "Materialized {name}.",
       "VisibleTitle": "Materialize visible",
       "VisibleConfirm": "Materialize {count} elements shown on the canvas? Player Characters are skipped.",
@@ -330,7 +431,7 @@
       }
     },
     "Lifecycle": {
-      "Restored": "The Foundry doc of {name} was deleted while Silk was not running. It is a Ghost again, restored from commit {commit}.",
+      "Restored": "The Foundry doc of {name} was deleted while Garn was not running. It is a Ghost again, restored from commit {commit}.",
       "RestoredBadge": "Restored from commit {commit}",
       "CompanionRestored": "The Companion Journal of {name} was restored from the last commit. Uncommitted Info Block edits are lost.",
       "DeleteTitle": "Delete elements",
@@ -346,7 +447,7 @@
       "Unmaterialize": "Unmaterialize"
     },
     "EventScene": {
-      "Box": "Present",
+      "Box": "Tokens",
       "Happened": "{name} happened (Event Scene activated). Set the Status back to undo.",
       "Deleted": "The Scene of {name} was deleted. Its journal offers Create Scene and Restore from last commit.",
       "NoScene": "This element has no Scene.",
@@ -368,11 +469,56 @@
       "Confirm": "Reveal {name} to the players?",
       "UnrevealConfirm": "Hide {name} from the players again?"
     },
+    "ImageEditor": {
+      "Title": "Image & token",
+      "SheetImage": "Sheet image",
+      "TokenImage": "Token image",
+      "SameAsImage": "Same as sheet image",
+      "Choose": "Choose…",
+      "Ring": "Token ring",
+      "RingEnabled": "Ring on",
+      "LockRotation": "Lock rotation",
+      "RingColor": "Ring colour",
+      "BackgroundColor": "Background colour",
+      "WorldDefault": "World ring style",
+      "DrawOrder": "Draw order",
+      "OrderRing": "Ring in front",
+      "OrderIllustration": "Illustration in front",
+      "Position": "Position",
+      "PositionHint": "Drag to position the token, scroll to scale it",
+      "Scale": "Scale",
+      "Reset": "Reset",
+      "Restore": "Restore imported images",
+      "RestoreHint": "Back to the images and token look the actor was imported with. Hooded, they apply at the Reveal.",
+      "HoodedHint": "Hooded: players see the hood until the Appearance is Revealed. Image, token and position apply then; the ring and Lock rotation apply at once."
+    },
     "Detail": {
       "Title": "Element Detail",
       "InfoBlocks": "Info Blocks",
       "Connections": "Connections",
-      "Gone": "This element no longer exists."
+      "Gone": "This element no longer exists.",
+      "AddInfoBlock": "+ Info Block",
+      "AddInfoBlockMenu": "Add Info Block…",
+      "AddPresets": "More Info Block presets",
+      "AddAppearance": "Appearance",
+      "AddAppearanceHint": "Adds the Appearance block: the image stays hooded until it is Revealed.",
+      "InfoBlockName": "Info Block name",
+      "DeleteInfoBlockTitle": "Delete Info Block",
+      "DeleteInfoBlockConfirm": "Delete the Info Block \"{name}\"?"
+    },
+    "ConnectionDetail": {
+      "Title": "Connection Detail",
+      "Label": "Label",
+      "Type": "Type",
+      "Direction": "Direction",
+      "Directed": "Directed",
+      "Mutual": "Mutual",
+      "Reverse": "Reverse",
+      "Notes": "Notes",
+      "NotesHint": "GM only: never shown to players, on Connections pages or in Search.",
+      "DeleteTitle": "Delete Connection",
+      "DeleteConfirm": "Delete the Connection \"{sentence}\"?",
+      "Gone": "This Connection no longer exists."
     },
     "Merge": {
       "Title": "Merge",
@@ -466,9 +612,9 @@
       "CanonEditConfirmBody": "Commit the merged result to main and rewrite this World? There is no undo."
     },
     "Adopt": {
-      "Adopt": "Adopt into Silk",
-      "AdoptFolder": "Adopt folder into Silk",
-      "Refused": "{name} can't be adopted: Silk adopts Actors (character, npc, creature), Items, Journals and Scenes.",
+      "Adopt": "Adopt into Garn",
+      "AdoptFolder": "Adopt folder into Garn",
+      "Refused": "{name} can't be adopted: Garn adopts Actors (character, npc, creature), Items, Journals and Scenes.",
       "WrongClass": "{name} can't become a {class}.",
       "Missing": "No Foundry doc \"{uuid}\".",
       "NoFolder": "That folder no longer exists.",
@@ -485,7 +631,7 @@
       "Ignore": "Ignore",
       "Close": "Close",
       "AdHocTitle": "New docs this session",
-      "AdHocIntro": "Created since the last commit and not in Silk yet. Ignored docs never show up again.",
+      "AdHocIntro": "Created since the last commit and not in Garn yet. Ignored docs never show up again.",
       "EndPlaySessionLabel": "End of play session"
     },
     "PlayerNote": {
@@ -497,6 +643,15 @@
     "PlayerCanvas": {
       "Title": "Player Canvas",
       "Empty": "Nothing has been revealed yet."
+    },
+    "Legend": {
+      "Title": "Controls",
+      "Toggle": "Legend (?)",
+      "Keys": "Keys",
+      "Mouse": "Mouse",
+      "Modifiers": "Modifiers (digits, right-drag release)",
+      "Foundry": "Foundry keybindings",
+      "None": "None"
     }
   }
 }

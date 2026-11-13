@@ -4,6 +4,7 @@
    * Parallel Connections bend apart by `data.offset`. Hosts the Connection editor (pipeline
    * step 3, §10.3) in its label.
    */
+  import { fail } from './actions';
   import { BaseEdge, EdgeLabel, useStore, type EdgeProps, type InternalNode } from '@xyflow/svelte';
   import { getContext } from 'svelte';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
@@ -25,7 +26,7 @@
   const behavioural = $derived(data?.type !== 'free');
   const text = $derived(
     behavioural
-      ? ctx.localize(`SILK.Connection.Type.${data?.type}`)
+      ? ctx.localize(`GARN.Connection.Type.${data?.type}`)
       : data?.label || (data?.direction === 'mutual' ? '—' : '→'),
   );
 
@@ -57,21 +58,24 @@
     };
   });
 
-  const fail = (error: unknown) => console.error(error);
-  const run = (name: string) => ctx.run(name, { id }).catch(fail);
+  const run = (name: string, args: object = {}) => ctx.run(name, { id, ...args }).catch(fail);
+  // v1.1 §F.1: Directed ⇄ Mutual; never reverses.
+  const toggleDirection = () => run('connection.toggleDirection');
 
   function onKeydown(event: KeyboardEvent & { currentTarget: HTMLElement }) {
     event.stopPropagation();
     if (event.key === 'Enter') {
       event.preventDefault();
       const input = event.currentTarget
-        .closest('[data-silk-connection-editor]')
+        .closest('[data-garn-connection-editor]')
         ?.querySelector('input');
       pipeline.submitLabel(input?.value ?? '').catch(fail);
     } else if (event.key === 'Escape') pipeline.cancel();
     else if (event.key === 'Tab') {
+      // v1.1 §F.1: Tab toggles directed ⇄ mutual, Shift+Tab reverses.
       event.preventDefault();
-      void run('connection.cycleDirection');
+      if (event.shiftKey) void run('connection.flip');
+      else void toggleDirection();
     }
   }
 
@@ -92,22 +96,23 @@
     {id}
     path={geometry.path}
     {markerEnd}
-    class={['silk-edge', behavioural ? 'behavioural' : 'free', selected && 'selected']}
+    interactionWidth={16}
+    class={['garn-edge', behavioural ? 'behavioural' : 'free', selected && 'selected']}
   />
   <EdgeLabel
     x={geometry.x}
     y={geometry.y}
     selectEdgeOnClick
-    class={['silk-edge-label', behavioural ? 'behavioural' : 'free', selected && 'selected']}
-    data-silk-edge={id}
-    data-silk-edge-type={data?.type}
-    data-silk-edge-direction={data?.direction}
-    data-silk-edge-from={source}
-    data-silk-edge-to={target}
+    class={['garn-edge-label', behavioural ? 'behavioural' : 'free', selected && 'selected']}
+    data-garn-edge={id}
+    data-garn-edge-type={data?.type}
+    data-garn-edge-direction={data?.direction}
+    data-garn-edge-from={source}
+    data-garn-edge-to={target}
   >
     {#if editing}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="editor nodrag nopan" data-silk-connection-editor onkeydown={onKeydown}>
+      <div class="editor nodrag nopan" data-garn-connection-editor onkeydown={onKeydown}>
         {#if behavioural}
           <button
             type="button"
@@ -121,23 +126,23 @@
           <button
             type="button"
             onmousedown={(e) => e.preventDefault()}
-            onclick={() => run('connection.cycleDirection')}
-            data-silk-cycle-direction
+            onclick={toggleDirection}
+            data-garn-toggle-direction
           >
             {data?.direction === 'mutual' ? '⟷' : '→'}
           </button>
           <input
             value={data?.label ?? ''}
-            placeholder={ctx.localize('SILK.Canvas.LabelPlaceholder')}
+            placeholder={ctx.localize('GARN.Canvas.LabelPlaceholder')}
             onblur={(e) => pipeline.submitLabel(e.currentTarget.value).catch(fail)}
             use:focus
-            data-silk-label-input
+            data-garn-label-input
           />
           <button
             type="button"
             onmousedown={(e) => e.preventDefault()}
             onclick={() => run('connection.cycleType')}
-            data-silk-cycle-type>⟳</button
+            data-garn-cycle-type>⟳</button
           >
         {/if}
       </div>
@@ -148,19 +153,19 @@
 {/if}
 
 <style>
-  :global(.silk-edge.svelte-flow__edge-path) {
+  :global(.garn-edge.svelte-flow__edge-path) {
     stroke: #555;
     stroke-width: 1.6;
   }
-  :global(.silk-edge.behavioural.svelte-flow__edge-path) {
+  :global(.garn-edge.behavioural.svelte-flow__edge-path) {
     stroke: #b07a10;
     stroke-width: 2;
   }
-  :global(.silk-edge.selected.svelte-flow__edge-path) {
+  :global(.garn-edge.selected.svelte-flow__edge-path) {
     stroke: #2b6cb0;
     stroke-width: 2.6;
   }
-  :global(.silk-edge-label) {
+  :global(.garn-edge-label) {
     padding: 1px 5px;
     font-size: 11px;
     color: #333;
@@ -170,11 +175,11 @@
     border-radius: 8px;
     cursor: pointer;
   }
-  :global(.silk-edge-label.behavioural) {
+  :global(.garn-edge-label.behavioural) {
     font-style: italic;
     color: #7a5208;
   }
-  :global(.silk-edge-label.selected) {
+  :global(.garn-edge-label.selected) {
     border-color: #2b6cb0;
   }
   .editor {

@@ -1,5 +1,5 @@
 /**
- * File seam for the Canon store (spec §11.1). Paths are relative to `Data/silk/`,
+ * File seam for the Canon store (spec §11.1). Paths are relative to `Data/garn/`,
  * e.g. `<canon-id>/refs/main.json`. The Foundry adapter implements it over
  * `FilePicker.upload('data')` / `browse` + `fetch`; tests use `createMemoryFiles`.
  */

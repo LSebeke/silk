@@ -4,15 +4,15 @@ import PlayerCanvasRoot from './PlayerCanvasRoot.svelte';
 import type { PlayerCanvasContext } from './context';
 
 export class PlayerCanvasWindow extends SvelteApplication<{ ctx: PlayerCanvasContext }> {
-  static readonly ID = 'silk-player-canvas';
+  static readonly ID = 'garn-player-canvas';
 
   static override persistWindowState = true;
 
   static override DEFAULT_OPTIONS = {
     id: PlayerCanvasWindow.ID,
-    classes: ['silk', 'silk-canvas-window', 'silk-player-canvas-window'],
+    classes: ['garn', 'garn-canvas-window', 'garn-player-canvas-window'],
     window: {
-      title: 'SILK.PlayerCanvas.Title',
+      title: 'GARN.PlayerCanvas.Title',
       resizable: true,
       icon: 'fa-solid fa-diagram-project',
     },

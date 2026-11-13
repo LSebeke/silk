@@ -3,6 +3,7 @@
    * Visual Group frame (spec §10.4). Double-click the title to rename; × dissolves the group
    * (contents move to the parent frame). Size comes from the record (Node `width`/`height`).
    */
+  import { fail } from './actions';
   import { getContext } from 'svelte';
   import { CANVAS_CONTEXT, type CanvasContext } from './context';
   import type { GroupNodeData } from './flow-model';
@@ -11,8 +12,6 @@
 
   const ctx = getContext<CanvasContext>(CANVAS_CONTEXT);
   let editing = $state(false);
-
-  const fail = (error: unknown) => console.error(error);
 
   function submit(value: string) {
     if (!editing) return;
@@ -34,7 +33,7 @@
   };
 </script>
 
-<div class="silk-frame" class:selected data-silk-group={id}>
+<div class="garn-frame" class:selected data-garn-group={id}>
   <div class="frame-title">
     {#if editing}
       <input
@@ -43,33 +42,33 @@
         onkeydown={onKeydown}
         onblur={(e) => submit(e.currentTarget.value)}
         use:focus
-        data-silk-group-label-input
+        data-garn-group-label-input
       />
     {:else}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span class="label" ondblclick={() => (editing = true)} data-silk-group-label>
+      <span class="label" ondblclick={() => (editing = true)} data-garn-group-label>
         {data.label}
       </span>
       <button
         class="nodrag ungroup"
         type="button"
-        title={ctx.localize('SILK.Canvas.Ungroup')}
+        title={ctx.localize('GARN.Canvas.Ungroup')}
         onclick={() => ctx.run('canvas.ungroup', { groupId: id }).catch(fail)}
-        data-silk-ungroup={id}>×</button
+        data-garn-ungroup={id}>×</button
       >
     {/if}
   </div>
 </div>
 
 <style>
-  .silk-frame {
+  .garn-frame {
     width: 100%;
     height: 100%;
     background: #ece3cf88;
     border: 2px dashed #b9a77f;
     border-radius: 12px;
   }
-  .silk-frame.selected {
+  .garn-frame.selected {
     border-color: #2b6cb0;
   }
   .frame-title {
@@ -107,8 +106,8 @@
     border: 0;
     visibility: hidden;
   }
-  .silk-frame:hover .ungroup,
-  .silk-frame.selected .ungroup {
+  .garn-frame:hover .ungroup,
+  .garn-frame.selected .ungroup {
     visibility: visible;
   }
   :global(.lod-block) .frame-title {

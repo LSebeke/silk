@@ -6,33 +6,46 @@ import { readElement, type ElementCommandDeps, type ElementClassId } from '../el
 import type { WorkingCopy } from '../working-copy';
 import type { ConnectionCreateArgs, RelativeDirection } from './commands';
 import type { ConnectionType } from './connection';
-import { createFromDefault } from './rules';
+import { defaultConnection } from './rules';
 
 type AfterCreate = NonNullable<ElementCommandDeps['afterCreate']>[number];
 
 /** `element.create`'s `connection` arg: direction is relative to the origin. */
 export interface CreateFromConnection {
   type?: ConnectionType;
+  /** Explicit (a modifier, a pick): kept as asked. Undefined: the default (below). */
   direction?: RelativeDirection;
   label?: string;
+  /**
+   * The gesture started on the new element (right-drag canvas → Node, v1.1 §A): a free-form
+   * default points new → origin instead of origin → new.
+   */
+  newFirst?: boolean;
+}
+
+interface End {
+  id: string;
+  class: ElementClassId;
 }
 
 /**
- * The Connection args from origin to the new element. An explicit direction keeps the
- * default Behavioural type only when that type points the same way; otherwise free-form.
+ * The `connection.create` args for a new element and its origin, the same for every gesture.
+ * Explicit direction: as asked, never swapped. Without a direction, a Behavioural default is
+ * asked new → origin (v1 §5: a new Location sits inside its origin; `connection.create` swaps
+ * it where only origin → new is valid, v1.1 §F.3); free-form points origin → new (`newFirst`:
+ * new → origin).
  */
 export function resolveCreateFrom(
-  origin: ElementClassId,
-  created: ElementClassId,
-  wanted: CreateFromConnection = {},
-): Omit<ConnectionCreateArgs, 'from' | 'to'> {
-  const label = wanted.label === undefined ? {} : { label: wanted.label };
-  if (wanted.type) return { type: wanted.type, direction: wanted.direction ?? 'out', ...label };
-  const fallback = createFromDefault(origin, created);
-  const way: RelativeDirection | undefined = fallback && (fallback.reverse ? 'in' : 'out');
-  if (fallback && (wanted.direction === undefined || wanted.direction === way))
-    return { type: fallback.type, direction: way, ...label };
-  return { type: 'free', direction: wanted.direction ?? 'out', ...label };
+  origin: End,
+  created: End,
+  { newFirst, ...wanted }: CreateFromConnection = {},
+): ConnectionCreateArgs {
+  const towardsOrigin =
+    wanted.direction === undefined &&
+    (!!newFirst || (!wanted.type && !!defaultConnection(created.class, origin.class)));
+  return towardsOrigin
+    ? { ...wanted, from: created.id, to: origin.id }
+    : { ...wanted, from: origin.id, to: created.id };
 }
 
 export function connectOnCreate(deps: {
@@ -44,15 +57,11 @@ export function connectOnCreate(deps: {
     const origin = readElement(deps.workingCopy().get(args.from));
     if (!origin) return undefined;
     const connection = resolveCreateFrom(
-      origin.class,
-      element.class,
+      origin,
+      element,
       args.connection as CreateFromConnection | undefined,
     );
-    const { id } = (await deps.run('connection.create', {
-      from: origin.id,
-      to: element.id,
-      ...connection,
-    })) as { id: string };
+    const { id } = (await deps.run('connection.create', connection)) as { id: string };
     return { connectionId: id };
   };
 }

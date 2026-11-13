@@ -5,21 +5,23 @@ import { createRegistry } from '../commands/registry';
 import { connectionCommands } from '../connections';
 import { elementCommands, readElement, type InfoBlock, type StoryElement } from '../elements';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
+import { testLookStage } from '../portrait/test-stage';
+import { appearanceMigration } from './appearance-migration';
 import { createLifecycle, lifecycleCommands, type DeleteAnswer, type Lifecycle } from './lifecycle';
 import { createMaterializer, materializeCommands, type MaterializeMode } from './materializer';
 import { createMemoryDocs } from './memory-docs';
-import type { CategoryData, DocSnapshot, PageData, SilkDocFlags } from './port';
+import type { CategoryData, DocSnapshot, PageData, GarnDocFlags } from './port';
 
 export function must<T>(value: T | null | undefined, what = 'value'): T {
   if (value === null || value === undefined) throw new Error(`missing ${what}`);
   return value;
 }
 
-/** A created doc as tests read it: embedded arrays and Silk flags present. */
+/** A created doc as tests read it: embedded arrays and Garn flags present. */
 export type TestDoc = DocSnapshot & {
   pages: PageData[];
   categories: CategoryData[];
-  flags: { silk: Required<SilkDocFlags> };
+  flags: { garn: Required<GarnDocFlags> };
 };
 export type TestElement = StoryElement & { infoBlocks: InfoBlock[] };
 
@@ -46,6 +48,8 @@ export function setup(
   const docs = createMemoryDocs();
   const registry = createRegistry(() => ({ isGM: true }));
   const toasts: string[] = [];
+  /** Placed-token writes and subject files (`look` dep). */
+  const { stage: look, tokens, subjects } = testLookStage();
   const confirms: number[] = [];
   let mode: MaterializeMode = opts.mode ?? 'onDemand';
   let n = 0;
@@ -65,6 +69,7 @@ export function setup(
     },
     visibleIds: () => opts.visible ?? [...workingCopy.records().keys()],
     selection: () => selection,
+    look,
     restorePlan: (el, folders) => lifecycle.restorePlan(el, folders),
     afterMaterialize: async (id) => {
       await lifecycle.afterMaterialize(id);
@@ -104,6 +109,15 @@ export function setup(
     },
     lastCommit: async () => lastCommit,
   });
+  // Before any other contributor (Reveal reads the flag), as in `module.ts`.
+  lifecycle.contribute(
+    appearanceMigration({
+      workingCopy: () => workingCopy,
+      docs,
+      materializer,
+      localize: (key) => key.split('.').pop() ?? key,
+    }),
+  );
   for (const command of [
     ...(opts.connections ? connectionCommands({ workingCopy: () => workingCopy, newId }) : []),
     ...lifecycleCommands(lifecycle, () => selection),
@@ -129,7 +143,7 @@ export function setup(
     return live as TestDoc;
   };
   const companion = (id: string) => {
-    const live = must(docs.docs.get(`JournalEntry.${doc(id).flags.silk.companion}`), 'companion');
+    const live = must(docs.docs.get(`JournalEntry.${doc(id).flags.garn.companion}`), 'companion');
     return live as TestDoc;
   };
   return {
@@ -146,6 +160,9 @@ export function setup(
     /** Simulate a Commit: the head snapshot is the working copy now. */
     commit: (hash: string) => (lastCommit = { hash, snapshot: new Map(workingCopy.records()) }),
     toasts,
+    tokens,
+    subjects,
+    look,
     confirms,
     create,
     element,

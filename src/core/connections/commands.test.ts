@@ -4,6 +4,7 @@ import { elementRecord, type ElementClassId } from '../elements';
 import { createMemoryBackend, createWorkingCopy } from '../working-copy';
 import { connectionCommands } from './commands';
 import { readConnection } from './connection';
+import { typeOptions } from './rules';
 
 function setup(isGM = true) {
   const workingCopy = createWorkingCopy(createMemoryBackend(), { canWrite: () => true });
@@ -45,6 +46,48 @@ describe('connection.create', () => {
     expect(connection(back)).toMatchObject({ from: 'b', to: 'a', direction: 'directed' });
     const both = await create({ from: 'a', to: 'b', direction: 'mutual', label: 'are allies' });
     expect(connection(both)).toMatchObject({ from: 'a', to: 'b', direction: 'mutual' });
+  });
+
+  it('without type: the one valid Behavioural type, swapped if only the reverse is valid (v1.1 §F.3)', async () => {
+    const { add, create, connection } = setup();
+    await add('alrik', 'person');
+    await add('sword', 'item');
+    await add('gareth', 'location');
+    await add('festum', 'location');
+    expect(connection(await create({ from: 'sword', to: 'alrik' }))).toMatchObject({
+      type: 'owns',
+      from: 'alrik',
+      to: 'sword',
+    });
+    // Shift (in) asks festum → gareth; located in is valid both ways, so as asked.
+    expect(
+      connection(await create({ from: 'gareth', to: 'festum', direction: 'in' })),
+    ).toMatchObject({ type: 'locatedIn', from: 'festum', to: 'gareth' });
+  });
+
+  it('an explicit direction is never swapped: no Behavioural type that way is free-form (v1.1 §F.3)', async () => {
+    const { add, create, connection } = setup();
+    await add('alrik', 'person');
+    await add('sword', 'item');
+    // Shift on a drag Alrik → sword: sword → Alrik, which owns does not fit.
+    expect(connection(await create({ from: 'alrik', to: 'sword', direction: 'in' }))).toMatchObject(
+      { type: 'free', from: 'sword', to: 'alrik', direction: 'directed' },
+    );
+    expect(
+      connection(await create({ from: 'alrik', to: 'sword', direction: 'out' })),
+    ).toMatchObject({ type: 'owns', from: 'alrik', to: 'sword' });
+  });
+
+  it('without type: mutual (Ctrl) and an explicit free type (Alt) stay free-form', async () => {
+    const { add, create, connection } = setup();
+    await add('alrik', 'person');
+    await add('sword', 'item');
+    expect(
+      connection(await create({ from: 'alrik', to: 'sword', direction: 'mutual' })),
+    ).toMatchObject({ type: 'free', direction: 'mutual' });
+    expect(
+      connection(await create({ from: 'alrik', to: 'sword', type: 'free', label: 'covets' })),
+    ).toMatchObject({ type: 'free', direction: 'directed', label: 'covets' });
   });
 
   it('refuses unknown endpoints and self-connections', async () => {
@@ -148,27 +191,34 @@ describe('editing Connections', () => {
     await expect(registry.run('connection.setLabel', { id: 'x', label: '' })).rejects.toThrow(/x/);
   });
 
-  it('connection.cycleDirection cycles A→B, B→A, mutual on free-form Connections', async () => {
-    const { add, create, registry, connection } = setup();
-    await add('a', 'person');
-    await add('b', 'person');
-    const id = await create({ from: 'a', to: 'b' });
-    const seen: string[] = [];
-    for (let i = 0; i < 3; i++) {
-      await registry.run('connection.cycleDirection', { id });
-      const c = connection(id);
-      seen.push(c?.direction === 'mutual' ? 'mutual' : `${c?.from}→${c?.to}`);
-    }
-    expect(seen).toEqual(['b→a', 'mutual', 'a→b']);
+  it('connection.cycleDirection is removed (v1.1 §D): Tab runs setDirection, Shift+Tab flip', () => {
+    const { registry } = setup();
+    expect(registry.get('connection.cycleDirection')).toBeUndefined();
   });
 
-  it('connection.cycleDirection leaves a Behavioural direction alone', async () => {
+  it('connection.setDirection leaves a Behavioural direction alone', async () => {
     const { add, create, registry, connection } = setup();
     await add('alrik', 'person');
     await add('sword', 'item');
     const id = await create({ from: 'alrik', to: 'sword', type: 'owns' });
-    await registry.run('connection.cycleDirection', { id });
-    expect(connection(id)).toMatchObject({ from: 'alrik', to: 'sword' });
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
+    expect(connection(id)).toMatchObject({ from: 'alrik', to: 'sword', direction: 'directed' });
+  });
+
+  it('connection.toggleDirection: directed ⇄ mutual, never reverses; a no-op on Behavioural', async () => {
+    const { add, create, registry, connection } = setup();
+    await add('alrik', 'person');
+    await add('sword', 'item');
+    await add('rondra', 'person');
+    const loves = await create({ from: 'rondra', to: 'alrik' });
+    await registry.run('connection.toggleDirection', { id: loves });
+    expect(connection(loves)).toMatchObject({ direction: 'mutual' });
+    await registry.run('connection.toggleDirection', { id: loves });
+    // Mutual → directed points in id order (A→B), as `setDirection`.
+    expect(connection(loves)).toMatchObject({ direction: 'directed', from: 'alrik' });
+    const owns = await create({ from: 'alrik', to: 'sword' });
+    await registry.run('connection.toggleDirection', { id: owns });
+    expect(connection(owns)).toMatchObject({ type: 'owns', direction: 'directed' });
   });
 
   it('connection.cycleType steps through the valid types, then free-form', async () => {
@@ -186,22 +236,65 @@ describe('editing Connections', () => {
     expect(connection(other)).toMatchObject({ type: 'free' });
   });
 
+  it('connection.setType sets one of typeOptions (Connection Detail select)', async () => {
+    const { add, create, registry, connection, workingCopy } = setup();
+    await add('alrik', 'person');
+    await add('fest', 'event');
+    const id = await create({ from: 'alrik', to: 'fest', direction: 'mutual', label: 'x' });
+    const c = connection(id);
+    expect(c && typeOptions(workingCopy.records(), c)).toEqual(['presentAt', 'free']);
+    await registry.run('connection.setType', { id, type: 'presentAt' });
+    expect(connection(id)).toMatchObject({ type: 'presentAt', direction: 'directed' });
+    await registry.run('connection.setType', { id, type: 'presentAt' });
+    expect(connection(id)?.type).toBe('presentAt');
+    await expect(registry.run('connection.setType', { id, type: 'owns' })).rejects.toThrow(/owns/);
+    await registry.run('connection.setType', { id, type: 'free' });
+    expect(connection(id)?.type).toBe('free');
+  });
+
+  it('connection.setType replaces conflicting Connections like the cycle', async () => {
+    const { add, create, registry, connections } = setup();
+    await add('realm', 'location');
+    await add('city', 'location');
+    await add('inn', 'location');
+    const up = await create({ from: 'city', to: 'realm', type: 'locatedIn' });
+    const free = await create({ from: 'city', to: 'inn' });
+    await registry.run('connection.setType', { id: free, type: 'locatedIn' });
+    expect(connections()).toEqual([free]);
+    expect(connections()).not.toContain(up);
+  });
+
+  it('connection.setDirection sets directed or mutual', async () => {
+    const { add, create, registry, connection } = setup();
+    await add('a', 'person');
+    await add('b', 'person');
+    const id = await create({ from: 'b', to: 'a' });
+    await registry.run('connection.setDirection', { id, direction: 'directed' });
+    expect(connection(id)).toMatchObject({ from: 'b', to: 'a', direction: 'directed' });
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
+    expect(connection(id)?.direction).toBe('mutual');
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
+    expect(connection(id)?.direction).toBe('mutual');
+    await registry.run('connection.setDirection', { id, direction: 'directed' });
+    expect(connection(id)).toMatchObject({ from: 'a', to: 'b', direction: 'directed' });
+  });
+
   it('connection.cycleType applies cardinality and skips types that would cycle', async () => {
     const { add, create, registry, connection, connections } = setup();
     await add('realm', 'location');
     await add('city', 'location');
     await add('inn', 'location');
     const up = await create({ from: 'city', to: 'realm', type: 'locatedIn' });
-    const free = await create({ from: 'city', to: 'inn' });
+    const free = await create({ from: 'city', to: 'inn', type: 'free' });
     await registry.run('connection.cycleType', { id: free });
     expect(connection(free)?.type).toBe('locatedIn');
     expect(connections()).toEqual([free]);
     expect(connections()).not.toContain(up);
     // city → realm was replaced, so realm in city is no cycle; inn in realm would be one.
-    const loop = await create({ from: 'realm', to: 'city' });
+    const loop = await create({ from: 'realm', to: 'city', type: 'free' });
     await registry.run('connection.cycleType', { id: loop });
     expect(connection(loop)?.type).toBe('locatedIn');
-    const back = await create({ from: 'inn', to: 'realm' });
+    const back = await create({ from: 'inn', to: 'realm', type: 'free' });
     await registry.run('connection.cycleType', { id: back });
     expect(connection(back)?.type).toBe('free');
   });
@@ -235,5 +328,33 @@ describe('editing Connections', () => {
   it('are GM-only', () => {
     const { registry } = setup(false);
     for (const c of registry.list()) expect(registry.isAvailable(c.name)).toBe(false);
+  });
+});
+
+describe('Connection Notes (v1.1 §F.2)', () => {
+  it('connection.setNotes stores HTML notes; empty notes leave no field', async () => {
+    const { add, create, registry, workingCopy, connection } = setup();
+    await add('a', 'person');
+    await add('b', 'person');
+    const id = await create({ from: 'a', to: 'b', label: 'knows' });
+    await registry.run('connection.setNotes', { id, notes: '<p>Owes <b>money</b></p>' });
+    expect(connection(id)?.notes).toBe('<p>Owes <b>money</b></p>');
+    await registry.run('connection.setNotes', { id, notes: '' });
+    expect(workingCopy.get(id)?.data).not.toHaveProperty('notes');
+    expect(connection(id)?.notes).toBeUndefined();
+    await expect(registry.run('connection.setNotes', { id: 'x', notes: '' })).rejects.toThrow(/x/);
+  });
+
+  it('notes survive every other edit', async () => {
+    const { add, create, registry, connection } = setup();
+    await add('a', 'person');
+    await add('b', 'person');
+    const id = await create({ from: 'a', to: 'b', label: 'knows' });
+    await registry.run('connection.setNotes', { id, notes: '<p>n</p>' });
+    await registry.run('connection.setLabel', { id, label: 'trusts' });
+    await registry.run('connection.setDirection', { id, direction: 'mutual' });
+    await registry.run('connection.flip', { id });
+    await registry.run('connection.cycleType', { id });
+    expect(connection(id)?.notes).toBe('<p>n</p>');
   });
 });
